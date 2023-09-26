@@ -375,6 +375,39 @@ class statistic_analysis():
             T.save_npy(zscore_dic, outf)
 
         pass
+class selection():
+    def __init__(self):
+        pass
+    def run(self):
+        self.select_drying_wetting_trend()
+        pass
+    def select_drying_wetting_trend(self):
+
+        f_sm=data_root+'Extraction\\GLEAM_SMroot.npy'
+
+
+        dic=T.load_npy(f_sm)
+        result_dic={}
+
+        for pix in tqdm(dic):
+            time_series=dic[pix]
+            time_series=np.array(time_series)
+            time_series[time_series<-999]=np.nan
+            if np.isnan(np.nanmean(time_series)):
+                continue
+            a,b,r,p=T.nan_line_fit(np.arange(len(time_series)),time_series)
+            if a>0 and p<0.05:
+                result_dic[pix]='sig_wetting'
+            elif a<0 and p<0.05:
+                result_dic[pix]='sig_drying'
+            elif a>0 and p>0.05:
+                result_dic[pix]='non_sig_wetting'
+            else:
+                result_dic[pix]='non_sig_drying'
+        T.save_npy(result_dic,data_root+'Base_data\\GLEAM_SMroot_trend_label_mark.npy')
+
+
+        pass
 class build_dataframe():
 
 
@@ -391,9 +424,11 @@ class build_dataframe():
     def run(self):
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
-        df = self.add_detrend_zscore_to_df(df)
-        df=self.add_AI_classfication(df)
+        # df=self.foo1(df)
+        # df = self.add_detrend_zscore_to_df(df)
+        # df=self.add_AI_classfication(df)
+        df=self.add_SM_trend_label(df)
+
         #
         # df = self.add_row(df)
 
@@ -636,16 +671,42 @@ class build_dataframe():
 
         df['AI_classfication'] = val_list
         return df
+    def add_SM_trend_label(self, df):
+
+        f = data_root + rf'\\Base_data\GLEAM_SMroot_trend_label_mark.npy'
+
+
+        val_dic = T.load_npy(f)
+
+
+        f_name = f.split('.')[0]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+
+            val_list.append(val)
+
+        df['wetting_drying_trend'] = val_list
+        return df
+
 
 class plot_dataframe():
     def __init__(self):
         pass
     def run(self):
 
-        self.plot_annual_zscore()
+        # self.plot_annual_zscore_based_region()
+        self.plot_annual_zscore_based_trend()
         pass
 
-    def plot_annual_zscore(self):
+    def plot_annual_zscore_based_region(self):   #based on semi-arid, arid and sub-humid
         df= T.load_df(result_root + 'Dataframe\zscore\zscore.df')
 
         product_list = ['LAI4g','NDVI4g','GPP_CFE','GPP_baseline']
@@ -664,6 +725,57 @@ class plot_dataframe():
 
                 colunm_name = variable
                 df_region = df[df['AI_classfication'] == region]
+                mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value = self.calculation_annual_average(df_region, colunm_name)
+                xaxis = range(len(mean_value_yearly))
+                xaxis = list(xaxis)
+
+                ax.plot(xaxis, mean_value_yearly, label=variable, color=color_list[flag])
+                # ax.plot(xaxis, fit_value_yearly, label='k={:0.2f},p={:0.4f}'.format(k_value, p_value), linestyle='--')
+
+                # print(f'{region}_{variable}', 'k={:0.2f},p={:0.4f}'.format(k_value, p_value))
+                flag = flag + 1
+
+
+            plt.legend()
+            plt.xlabel('year')
+            plt.title(f'{region}')
+            # create xticks
+
+            yearlist = list(range(1982, 2021))
+            yearlist_str = [int(i) for i in yearlist]
+            ax.set_xticks(xaxis[::5])
+            ax.set_xticklabels(yearlist_str[::5], rotation=45)
+
+
+            major_yticks = np.arange(-1.1, 1)
+            ax.set_yticks(major_yticks)
+
+            plt.grid(which='major', alpha=0.5)
+            plt.tight_layout()
+            i = i + 1
+
+        plt.show()
+
+
+    def plot_annual_zscore_based_trend(self):  ##based on wetting, drying, significant wetting and drylng trend
+        df= T.load_df(result_root + 'Dataframe\zscore\zscore.df')
+
+        product_list = ['LAI4g','NDVI4g','GPP_CFE','GPP_baseline']
+
+        fig = plt.figure()
+        i = 1
+
+        for region in ['sig_wetting', 'sig_drying', 'non_sig_wetting', 'non_sig_drying']:
+
+            ax = fig.add_subplot(2, 2, i)
+
+            flag = 0
+            color_list=['blue','green','red','orange']
+
+            for variable in product_list:
+
+                colunm_name = variable
+                df_region = df[df['wetting_drying_trend'] == region]
                 mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value = self.calculation_annual_average(df_region, colunm_name)
                 xaxis = range(len(mean_value_yearly))
                 xaxis = list(xaxis)
@@ -770,6 +882,7 @@ class plot_dataframe():
 
 def main():
     # statistic_analysis().run()
+    # selection().run()
     # build_dataframe().run()
     plot_dataframe().run()
 
