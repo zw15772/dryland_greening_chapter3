@@ -18,7 +18,8 @@ import re
 from osgeo import ogr
 from osgeo import osr
 from tqdm import tqdm
-import datetime
+from datetime import datetime
+import matplotlib.dates as mdates
 from scipy import stats, linalg
 import pandas as pd
 import seaborn as sns
@@ -446,13 +447,13 @@ class build_dataframe():
         pix_list = []
         change_rate_list = []
         year = []
-        f_name = f.split('\\')[-2] + '_' + f.split('\\')[-1].split('.')[0]
+        f_name = f.split('.')[0]
         print(f_name)
 
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 2002
+            y = 1982
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -508,7 +509,7 @@ class build_dataframe():
                 #     NDVI_list.append(np.nan)
                 #     continue
                 try:
-                    v1 = vals[year - 1982]
+                    v1 = vals[year - 1981]
                     NDVI_list.append(v1)
                 except:
                     NDVI_list.append(np.nan)
@@ -606,9 +607,12 @@ class build_dataframe():
         return df
     def add_AI_classfication(self, df):
 
-        f = data_root + rf'\\Base_data\dryland_AI.tif\\dryland_classfication.npy'
+        f = data_root + rf'\\Base_data\dryland_AI.tif\\dryland_classfication.tif'
 
-        val_dic = T.load_npy(f)
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
 
         f_name = f.split('.')[0]
         print(f_name)
@@ -620,18 +624,154 @@ class build_dataframe():
             if not pix in val_dic:
                 val_list.append(np.nan)
                 continue
-            vals = val_dic[pix]
-            val_list.append(vals)
+            val = val_dic[pix]
+            if val==0:
+                label='Arid'
+            elif val==1:
+                label='Semi-Arid'
+            else:
+                label='Sub-Humid'
+
+            val_list.append(label)
 
         df['AI_classfication'] = val_list
         return df
 
+class plot_dataframe():
+    def __init__(self):
+        pass
+    def run(self):
+
+        self.plot_annual_zscore()
+        pass
+
+    def plot_annual_zscore(self):
+        df= T.load_df(result_root + 'Dataframe\zscore\zscore.df')
+
+        product_list = ['LAI4g','NDVI4g','GPP_CFE','GPP_baseline']
+
+        fig = plt.figure()
+        i = 1
+
+        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
+
+            ax = fig.add_subplot(2, 2, i)
+
+            flag = 0
+            color_list=['blue','green','red','orange']
+
+            for variable in product_list:
+
+                colunm_name = variable
+                df_region = df[df['AI_classfication'] == region]
+                mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value = self.calculation_annual_average(df_region, colunm_name)
+                xaxis = range(len(mean_value_yearly))
+                xaxis = list(xaxis)
+
+                ax.plot(xaxis, mean_value_yearly, label=variable, color=color_list[flag])
+                # ax.plot(xaxis, fit_value_yearly, label='k={:0.2f},p={:0.4f}'.format(k_value, p_value), linestyle='--')
+
+                # print(f'{region}_{variable}', 'k={:0.2f},p={:0.4f}'.format(k_value, p_value))
+                flag = flag + 1
+
+
+            plt.legend()
+            plt.xlabel('year')
+            plt.title(f'{region}')
+            # create xticks
+
+            yearlist = list(range(1982, 2021))
+            yearlist_str = [int(i) for i in yearlist]
+            ax.set_xticks(xaxis[::5])
+            ax.set_xticklabels(yearlist_str[::5], rotation=45)
+
+
+            major_yticks = np.arange(-1.1, 1)
+            ax.set_yticks(major_yticks)
+
+            plt.grid(which='major', alpha=0.5)
+            plt.tight_layout()
+            i = i + 1
+
+        plt.show()
+
+    def calculation_annual_average(self,df,column_name):
+        dic = {}
+        mean_val = {}
+        confidence_value = {}
+        std_val = {}
+        # year_list = df['year'].to_list()
+        # year_list = set(year_list)  # 取唯一
+        # year_list = list(year_list)
+        # year_list.sort()
+
+        year_list = []
+        for i in range(1982, 2021):
+            year_list.append(i)
+        print(year_list)
+
+        for year in tqdm(year_list):  # 构造字典的键值，并且字典的键：值初始化
+            dic[year] = []
+            mean_val[year] = []
+            confidence_value[year] = []
+
+        for year in year_list:
+            df_pick = df[df['year'] == year]
+            for i, row in tqdm(df_pick.iterrows(), total=len(df_pick)):
+                pix = row.pix
+                val = row[column_name]
+                dic[year].append(val)
+            val_list = np.array(dic[year])
+            # val_list[val_list>1000]=np.nan
+
+            n = len(val_list)
+            mean_val_i = np.nanmean(val_list)
+            std_val_i = np.nanstd(val_list)
+            se = stats.sem(val_list)
+            h = se * stats.t.ppf((1 + 0.95) / 2., n - 1)
+            confidence_value[year] = h
+            mean_val[year] = mean_val_i
+            std_val[year] = std_val_i
+
+        # a, b, r = KDE_plot().linefit(xaxis, val)
+        mean_val_list = []  # mean_val_list=下面的mean_value_yearly
+
+        for year in year_list:
+            mean_val_list.append(mean_val[year])
+        xaxis = range(len(mean_val_list))
+        xaxis = list(xaxis)
+        print(len(mean_val_list))
+        # r, p_value = stats.pearsonr(xaxis, mean_val_list)
+        # k_value, b_value = np.polyfit(xaxis, mean_val_list, 1)
+        k_value, b_value, r, p_value = T.nan_line_fit(xaxis, mean_val_list)
+        print(k_value)
+
+        mean_value_yearly = []
+        up_list = []
+        bottom_list = []
+        fit_value_yearly = []
+        p_value_yearly = []
+
+        for year in year_list:
+            mean_value_yearly.append(mean_val[year])
+            # up_list.append(mean_val[year] + confidence_value[year])
+            # bottom_list.append(mean_val[year] - confidence_value[year])
+            up_list.append(mean_val[year] + 0.125 * std_val[year])
+            bottom_list.append(mean_val[year] - 0.125 * std_val[year])
+
+            fit_value_yearly.append(k_value * (year - year_list[0]) + b_value)
+
+
+
+        return mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value
+        # exit()
+
+
+
 def main():
     # statistic_analysis().run()
-    build_dataframe().run()
-
-
-
+    # build_dataframe().run()
+    plot_dataframe().run()
 
 
     pass
