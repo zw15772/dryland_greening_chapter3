@@ -375,6 +375,261 @@ class statistic_analysis():
             T.save_npy(zscore_dic, outf)
 
         pass
+class moving_window():
+    def __init__(self):
+        pass
+    def run(self):
+        self.moving_window_extraction()
+        pass
+    def moving_window_extraction(self):
+        variables=['LAI4g','NDVI4g','GPP_CFE','GPP_baseline']
+        fdir = data_root + rf'Extraction\\'
+        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window\\'
+        T.mk_dir(outdir, force=True)
+        for variable in variables:
+
+            f=fdir+variable+'.npy'
+            outf=outdir+variable+'.npy'
+            outf_i = join(outdir, fdir)
+            if os.path.isfile(outf_i):
+                continue
+            dic = T.load_npy(f)
+            window = 15
+
+            new_x_extraction_by_window = {}
+            for pix in tqdm(dic):
+
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    print('error')
+                    continue
+                print((len(time_series)))
+                ### if all values are identical, then continue
+                if np.nanmax(time_series) == np.nanmin(time_series):
+                    continue
+
+                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
+
+            T.save_npy(new_x_extraction_by_window, outf)
+class multi_regression():
+    def __init__(self):
+        self.fdirX=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\X\\'
+        self.y_f=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\Y\\GPP_CFE.npy'
+
+        self.multi_regression_result_f = result_root + rf'multi_regression_result.npy'
+        pass
+
+    def run(self):
+
+
+
+        # step 1 build dataframe
+        df = self.build_df(self.fdirX, self.y_f,)
+        x_var_list = self.__get_x_var_list(self.fdirX)
+        # # # step 2 cal correlation
+        self.cal_multi_regression_beta(df, x_var_list)  # 修改参数
+
+    def build_df(self):
+
+        window=15
+        fdir_X=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\\X\\'
+        fdir_Y=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\\Y\\'
+        fx_list=['Tmax','GLEAM_SMroot']
+        fy_list=['GPP_CFE']
+
+        df = pd.DataFrame()
+        dic_y=T.load_npy(fdir_Y+fy_list[0]+'.npy')
+        pix_list = []
+        y_val_list=[]
+
+        for w in range(window):
+
+            for pix in dic_y:
+                vals = dic_y[pix][w]
+                # print(vals)
+                # exit()
+                if len(vals) == 0:
+                    continue
+                vals = np.array(vals)
+                vals = vals
+                pix_list.append(pix)
+                y_val_list.append(vals)
+            df['pix'] = pix_list
+            df['y'] = y_val_list
+
+            # build x
+
+            x_var_list = []
+            for xvar in fx_list:
+                # print(x_f)
+
+                x_var_list.append(xvar)
+                # print(var_name)
+                x_val_list = []
+                x_arr = T.load_npy(fdir_X+xvar+'.npy')
+                for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
+                    pix = row.pix
+                    if not pix in x_arr:
+                        x_val_list.append([])
+                        continue
+                    vals = x_arr[pix]
+                    vals = np.array(vals)
+                    if len(vals) == 0:
+                        x_val_list.append([])
+                        continue
+                    x_val_list.append(vals)
+                # x_val_list = np.array(x_val_list)
+                df[xvar] = x_val_list
+
+            return df
+
+    def __get_x_var_list(self, x_dir, ):
+
+        x_f_list = []
+        for x_f in T.listdir(x_dir):
+
+            x_f_list.append(x_dir + x_f)
+
+        print(x_f_list)
+        x_var_list = []
+        for x_f in x_f_list:
+            split1 = x_f.split('/')[-1]
+            split2 = split1.split('.')[0]
+            var_name = '_'.join(split2.split('_')[0:-2])
+            # var_name = '_'.join(split2.split('_')[0:-3])
+            x_var_list.append(var_name)
+        return x_var_list
+
+    def __linearfit(self, x, y):
+        '''
+        最小二乘法拟合直线
+        :param x:
+        :param y:
+        :return:
+        '''
+        N = float(len(x))
+        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
+        for i in range(0, int(N)):
+            sx += x[i]
+            sy += y[i]
+            sxx += x[i] * x[i]
+            syy += y[i] * y[i]
+            sxy += x[i] * y[i]
+        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
+        b = (sy - a * sx) / N
+        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
+        return a, b, r
+
+
+    def cal_multi_regression_beta(self, df, x_var_list):
+
+
+        outf = self.multi_regression_result_f
+
+        multi_derivative = {}
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row.pix
+
+            y_vals = row['y']
+            y_vals = T.remove_np_nan(y_vals)
+
+
+            #  calculate partial derivative with multi-regression
+            df_new = pd.DataFrame()
+            x_var_list_valid = []
+
+            for x in x_var_list:
+                x_vals = row[x]
+                # if not len(x_vals) == val_len:  ##
+                #     continue
+                if len(x_vals) == 0:
+                    continue
+
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+                x_vals = T.interp_nan(x_vals)
+                # print(x_vals)
+                if x_vals[0] == None:
+                    continue
+                # x_vals_detrend = signal.detrend(x_vals) #detrend
+                df_new[x] = x_vals
+                # df_new[x] = x_vals_detrend   #detrend
+
+                x_var_list_valid.append(x)
+            if len(df_new) <= 3:
+                continue
+
+            df_new['y'] = y_vals  # 不detrend
+
+            # T.print_head_n(df_new)
+            df_new = df_new.dropna(axis=1, how='all')
+            x_var_list_valid_new = []
+            for v_ in x_var_list_valid:
+                if not v_ in df_new:
+                    continue
+                else:
+                    x_var_list_valid_new.append(v_)
+            # T.print_head_n(df_new)
+
+            df_new = df_new.dropna()
+            linear_model = LinearRegression()
+
+            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+            # coef_ = np.array(linear_model.coef_) / y_mean
+            coef_ = np.array(linear_model.coef_)
+            coef_dic = dict(zip(x_var_list_valid_new, coef_))
+            # print(df_new['y'])
+            # exit()
+            multi_derivative[pix] = coef_dic
+        T.save_npy(multi_derivative, outf)
+
+    pass
+
+    def forward_window_extraction(self, x, window):
+        # 前窗滤波
+        # window = window-1
+        # 不改变数据长度
+
+        if window < 0:
+            raise IOError('window must be greater than 0')
+        elif window == 0:
+            return x
+        else:
+            pass
+
+        x = np.array(x)
+
+        # new_x = np.array([])
+        # plt.plot(x)
+        # plt.show()
+        new_x_extraction_by_window=[]
+        for i in range(len(x)):
+            if i + window >= len(x):
+                continue
+            else:
+                anomaly = []
+                x_vals=[]
+                for w in range(window):
+                    x_val=(x[i + w])
+                    x_vals.append(x_val)
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+
+                # x_mean=np.nanmean(x_vals)
+
+                # for i in range(len(x_vals)):
+                #     if x_vals[0]==None:
+                #         continue
+                #     x_anomaly=x_vals[i]-x_mean
+                #
+                #     anomaly.append(x_anomaly)
+                new_x_extraction_by_window.append(x_vals)
+        return new_x_extraction_by_window
+
+
 class selection():
     def __init__(self):
         pass
@@ -883,8 +1138,10 @@ class plot_dataframe():
 def main():
     # statistic_analysis().run()
     # selection().run()
+    moving_window().run()
+    multi_regression().run()
     # build_dataframe().run()
-    plot_dataframe().run()
+    # plot_dataframe().run()
 
 
     pass
