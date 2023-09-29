@@ -397,166 +397,6 @@ class moving_window():
                 new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
 
             T.save_npy(new_x_extraction_by_window, outf)
-class multi_regression_window():
-    def __init__(self):
-        self.fdirX=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\X\\'
-        self.y_f=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\Y\\GPP_CFE.npy'
-
-
-        self.xvar_list = ['Tmax', 'GLEAM_SMroot']
-        self.y_var = ['LAI']
-        pass
-
-    def run(self):
-
-        window = 15
-        # step 1 build dataframe
-        for i in range(window):
-            df_i = self.build_df(self.fdirX, self.y_f, self.xvar_list, i)
-            outdir=result_root+rf'multi_regression_moving_window\\'
-            T.mk_dir(outdir,force=True)
-            outf= result_root + rf'multi_regression_moving_window\\window15\\LAI_SMroot_window{i:02d}.npy'
-
-            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-
-    def build_df(self, fdir_X, y_f, x_var_list, w):
-
-
-
-        df = pd.DataFrame()
-        dic_y=T.load_npy(y_f)
-        pix_list = []
-        y_val_list=[]
-
-
-        for pix in dic_y:
-            vals = dic_y[pix][w]
-            # print(vals)
-            # exit()
-            if len(vals) == 0:
-                continue
-            vals = np.array(vals)
-            vals = vals
-            pix_list.append(pix)
-            y_val_list.append(vals)
-        df['pix'] = pix_list
-        df['y'] = y_val_list
-
-        # build x
-
-        x_var_list = []
-        for xvar in x_var_list:
-            # print(x_f)
-
-            x_var_list.append(xvar)
-            # print(var_name)
-            x_val_list = []
-            x_arr = T.load_npy(fdir_X+xvar+'.npy')
-            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
-                pix = row.pix
-                if not pix in x_arr:
-                    x_val_list.append([])
-                    continue
-                vals = x_arr[pix]
-                vals = np.array(vals)
-                if len(vals) == 0:
-                    x_val_list.append([])
-                    continue
-                x_val_list.append(vals)
-            # x_val_list = np.array(x_val_list)
-            df[xvar] = x_val_list
-
-        return df
-
-
-
-    def __linearfit(self, x, y):
-        '''
-        最小二乘法拟合直线
-        :param x:
-        :param y:
-        :return:
-        '''
-        N = float(len(x))
-        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
-        for i in range(0, int(N)):
-            sx += x[i]
-            sy += y[i]
-            sxx += x[i] * x[i]
-            syy += y[i] * y[i]
-            sxy += x[i] * y[i]
-        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
-        b = (sy - a * sx) / N
-        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
-        return a, b, r
-
-
-    def cal_multi_regression_beta(self, df, x_var_list, outf):
-
-
-        multi_derivative = {}
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            pix = row.pix
-
-            y_vals = row['y']
-            y_vals = T.remove_np_nan(y_vals)
-            if len(y_vals) == 0:
-                continue
-            y_vals_detrend=signal.detrend(y_vals)
-
-
-            #  calculate partial derivative with multi-regression
-            df_new = pd.DataFrame()
-            x_var_list_valid = []
-
-            for x in x_var_list:
-                x_vals = row[x]
-
-                if len(x_vals) == 0:
-                    continue
-
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-                x_vals = T.interp_nan(x_vals)
-                # print(x_vals)
-                if x_vals[0] == None:
-                    continue
-                x_vals_detrend = signal.detrend(x_vals) #detrend
-                # df_new[x] = x_vals
-                df_new[x] = x_vals_detrend   #detrend
-
-                x_var_list_valid.append(x)
-            if len(df_new) <= 3:
-                continue
-
-            df_new['y'] = y_vals_detrend  # detrend
-
-            # T.print_head_n(df_new)
-            df_new = df_new.dropna(axis=1, how='all')
-            x_var_list_valid_new = []
-            for v_ in x_var_list_valid:
-                if not v_ in df_new:
-                    continue
-                else:
-                    x_var_list_valid_new.append(v_)
-            # T.print_head_n(df_new)
-
-            df_new = df_new.dropna()
-            linear_model = LinearRegression()
-
-            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
-            # coef_ = np.array(linear_model.coef_) / y_mean
-            coef_ = np.array(linear_model.coef_)
-            coef_dic = dict(zip(x_var_list_valid_new, coef_))
-            ## pvalue
-
-
-            multi_derivative[pix] = coef_dic
-
-        T.save_npy(multi_derivative, outf)
-
-    pass
-
     def forward_window_extraction(self, x, window):
         # 前窗滤波
         # window = window-1
@@ -597,6 +437,218 @@ class multi_regression_window():
                 #     anomaly.append(x_anomaly)
                 new_x_extraction_by_window.append(x_vals)
         return new_x_extraction_by_window
+class multi_regression_window():
+    def __init__(self):
+        self.fdirX=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\X\\'
+        self.y_f=result_root+rf'extract_window\extract_detrend_original_window\15_year_window_1982_2020\Y\\LAI4g_clean.npy'
+
+        self.xvar_list = ['Tmax', 'GLEAM_SMroot']
+        self.y_var = ['LAI4g_clean']
+        pass
+
+    def run(self):
+
+        window = 39-15
+
+        # step 1 build dataframe
+        for i in range(window):
+            outdir = result_root + rf'multi_regression_moving_window\\window{window}\\'
+            df_i = self.build_df(self.fdirX, self.y_f, self.xvar_list, i)
+
+            T.mk_dir(outdir,force=True)
+            outf= result_root + rf'multi_regression_moving_window\\window15\\LAI_SMroot_window{i:02d}.npy'
+            # if os.path.isfile(outf):
+            #     continue
+            print(outf)
+
+            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+            # self.plt_multi_regression_result(outdir,self.y_var,i)
+
+    def build_df(self, fdir_X, y_f, xvar_list, w):
+
+
+        df = pd.DataFrame()
+        dic_y=T.load_npy(y_f)
+        pix_list = []
+        y_val_list=[]
+
+        for pix in dic_y:
+            if len(dic_y[pix]) == 0:
+                continue
+            vals = dic_y[pix][w]
+            # print(vals)
+            # exit()
+            if len(vals) == 0:
+                continue
+            vals = np.array(vals)
+            vals = vals
+            pix_list.append(pix)
+            y_val_list.append(vals)
+        df['pix'] = pix_list
+        df['y'] = y_val_list
+
+        # build x
+
+        for xvar in xvar_list:
+
+
+            x_val_list = []
+            x_arr = T.load_npy(fdir_X+xvar+'.npy')
+            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
+                pix = row.pix
+                if not pix in x_arr:
+                    x_val_list.append([])
+                    continue
+                vals = x_arr[pix][w]
+                vals = np.array(vals)
+                if len(vals) == 0:
+                    x_val_list.append([])
+                    continue
+                x_val_list.append(vals)
+
+            df[xvar] = x_val_list
+
+        return df
+
+
+
+    def __linearfit(self, x, y):
+        '''
+        最小二乘法拟合直线
+        :param x:
+        :param y:
+        :return:
+        '''
+        N = float(len(x))
+        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
+        for i in range(0, int(N)):
+            sx += x[i]
+            sy += y[i]
+            sxx += x[i] * x[i]
+            syy += y[i] * y[i]
+            sxy += x[i] * y[i]
+        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
+        b = (sy - a * sx) / N
+        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
+        return a, b, r
+
+
+    def cal_multi_regression_beta(self, df, x_var_list, outf):
+
+        multi_derivative = {}
+        multi_pvalue = {}
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row.pix
+
+            y_vals = row['y']
+            y_vals = T.remove_np_nan(y_vals)
+            if len(y_vals) == 0:
+                continue
+            y_vals = np.array(y_vals)
+            # y_vals_detrend=signal.detrend(y_vals)
+
+
+            #  calculate partial derivative with multi-regression
+            df_new = pd.DataFrame()
+            x_var_list_valid = []
+
+            for x in x_var_list:
+                x_vals = row[x]
+
+                if len(x_vals) == 0:
+                    continue
+
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+                x_vals = T.interp_nan(x_vals)
+                # print(x_vals)
+                if x_vals[0] == None:
+                    continue
+                # x_vals_detrend = signal.detrend(x_vals) #detrend
+                df_new[x] = x_vals
+                # df_new[x] = x_vals_detrend   #detrend
+
+                x_var_list_valid.append(x)
+            if len(df_new) <= 3:
+                continue
+
+            df_new['y'] = y_vals  # nodetrend
+
+            # T.print_head_n(df_new)
+            df_new = df_new.dropna(axis=1, how='all')
+            x_var_list_valid_new = []
+            for v_ in x_var_list_valid:
+                if not v_ in df_new:
+                    continue
+                else:
+                    x_var_list_valid_new.append(v_)
+            # T.print_head_n(df_new)
+
+            df_new = df_new.dropna()
+            linear_model = LinearRegression()
+
+            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+            # coef_ = np.array(linear_model.coef_) / y_mean
+            coef_ = np.array(linear_model.coef_)
+            coef_dic = dict(zip(x_var_list_valid_new, coef_))
+            ## pvalue
+            X=df_new[x_var_list_valid_new]
+            Y=df_new['y']
+            try:
+                sse = np.sum((linear_model.predict(X) -Y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
+
+                se = np.array([
+                    np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X))))
+                    for i in range(sse.shape[0])
+                ])
+
+                t = coef_ / se
+                p = 2 * (1 - stats.t.cdf(np.abs(t), Y.shape[0] - X.shape[1]))
+            except:
+                p=np.nan
+
+            multi_derivative[pix] = coef_dic
+            multi_pvalue[pix] = p
+
+        T.save_npy(multi_derivative, outf)
+        T.save_npy(multi_pvalue, outf.replace('.npy', '_pvalue.npy'))
+
+    pass
+
+    def plt_multi_regression_result(self, multi_regression_result_dir,y_var,w):
+
+        f='D:\Project3\Result\multi_regression_moving_window\window15\\LAI_SMroot_window00.npy'
+
+        dic = T.load_npy(f)
+        var_list = []
+        for pix in dic:
+            # print(pix)
+            vals = dic[pix]
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in dic:
+                dic_i = dic[pix]
+                if not var_i in dic_i:
+                    continue
+                val = dic_i[var_i]
+                spatial_dic[pix] = val
+            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_{y_var}_{w:02d}.tif')
+            std = np.nanstd(arr)
+            mean = np.nanmean(arr)
+            vmin = mean - std
+            vmax = mean + std
+            plt.figure()
+            # arr[arr > 0.1] = 1
+            plt.imshow(arr,vmin=-5,vmax=5)
+
+            plt.title(var_i)
+            plt.colorbar()
+
+        plt.show()
 
 class multi_regression():
     def __init__(self):
@@ -799,6 +851,7 @@ class selection():
         pass
     def run(self):
         self.select_drying_wetting_trend()
+        self.select_drought_event()
         pass
     def select_drying_wetting_trend(self):
 
@@ -832,8 +885,123 @@ class selection():
         T.save_npy(result_dic,data_root+'Base_data\\GLEAM_SMroot_trend_label_mark.npy')
 
         pass
-class build_dataframe():
 
+class pick_event():
+    def __init__(self):
+        pass
+
+    def run(self):
+        f=rf'C:\Users\wenzhang1\Desktop\\per_pix_dic_010.npy'
+        dic=T.load_npy(f)
+        threshold_upper=-1
+        threshold_bottom=-2
+        threshold_start=-1
+        event_dic={}
+        for pix in dic:
+            vals=dic[pix]
+
+            drought_events_list_extreme, _=self.kernel_find_drought_period(vals,threshold_upper,threshold_bottom,threshold_start)
+            if len(drought_events_list_extreme)==0:
+                continue
+            event_dic[pix]=drought_events_list_extreme
+        df=pd.DataFrame()
+        pix_list=[]
+        drought_range_list=[]
+        for pix in event_dic:
+            events_list=event_dic[pix]
+            for event in events_list:
+                pix_list.append(pix)
+                drought_range_list.append(event)
+        df['pix']=pix_list
+        df['drought_range']=drought_range_list
+        T.print_head_n(df)
+        T.save_df(df,result_root+'drought_event.df')
+        pass
+
+    def kernel_find_drought_period(self, vals, threshold_upper, threshold_bottom, threshold_start):
+
+        vals = np.array(vals)
+
+        start_of_drought_list = []
+        end_of_drought_list = []
+        for i in range(len(vals)):
+            if i + 1 == len(vals):
+                break
+            val_left = vals[i]
+            vals_right = vals[i + 1]
+            if val_left < threshold_start and vals_right > threshold_start:
+                end_of_drought_list.append(i + 1)
+            if val_left > threshold_start and vals_right < threshold_start:
+                start_of_drought_list.append(i)
+
+        drought_events_list = []
+        for s in start_of_drought_list:
+            for e in end_of_drought_list:
+                if e > s:
+                    drought_events_list.append((s, e))
+                    break
+
+        drought_events_list_extreme = []
+        drought_timing_list = []
+        for event in drought_events_list:
+            s = event[0]
+            e = event[1]
+            min_index = T.pick_min_indx_from_1darray(vals, list(range(s, e)))
+            drought_timing_month = min_index % 12 + 1
+            min_val = vals[min_index]
+            if min_val <  threshold_upper and min_val > threshold_bottom:
+                drought_events_list_extreme.append(event)
+                drought_timing_list.append(drought_timing_month)
+        return drought_events_list_extreme, drought_timing_list
+
+        pass
+    def extract_variables_during_droughts_GS(self):
+        df_path=result_root+'drought_event.df'
+        df=T.load_df(df_path)
+        var_name='NDVI'
+        fpath=result_root+rf'monthly_data\\{var_name}.npy'
+        data_dict=T.load_npy(fpath)
+        pix_list = T.get_df_unique_val_list(df, 'pix')
+
+
+        mean_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df), ):
+            pix = row['pix']
+            GS = global_get_gs(pix)
+
+            drought_range = row['drought_range']
+            e,s = drought_range[1],drought_range[0]
+            picked_index = []
+            for idx in range(s,e+1):
+                mon = idx % 12 + 1
+                if not mon in GS:
+                    continue
+                picked_index.append(idx)
+            if len(picked_index) == 0:
+                mean_list.append(np.nan)
+                continue
+            vals = data_dict[pix]
+            picked_vals = T.pick_vals_from_1darray(vals,picked_index)
+            mean = np.nanmean(picked_vals)
+            if mean == 0:
+                mean_list.append(np.nan)
+                continue
+            mean_list.append(mean)
+        df[f'{var_name}_GS'] = mean_list
+
+
+    # pd.concat([df,df1],axis=1)
+
+        return df
+
+######concatenate
+def global_get_gs(pix):
+    r,c = pix
+    if r > 360:
+        return [11, 12, 1, 2, 3, 4]
+    else:
+        return [5,6, 7, 8, 9, 10]
+class build_dataframe():
 
 
     def __init__(self):
@@ -1302,16 +1470,35 @@ class plot_dataframe():
         return mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value
         # exit()
 
+# class check_data():
+#     f= data_root + rf'GPP\LT_Baseline_NT-009\DIC\per_pix_dic_000.npy'
+#     dic=T.load_npy(f)
+#
+#     len_dic={}
+#     for pix in dic:
+#         vals=dic[pix]
+#
+#         len_dic[pix]=len(vals)
+#     arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
+#     plt.imshow(arr)
+#     plt.colorbar()
+#     plt.show()
+
+
+
+
 
 
 def main():
     # statistic_analysis().run()
+    pick_event().run()
     # selection().run()
     # multi_regression().run()
     # moving_window().run()
-    multi_regression_window().run()
+    # multi_regression_window().run()
     # build_dataframe().run()
     # plot_dataframe().run()
+    # check_data()
 
 
     pass
