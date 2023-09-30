@@ -1018,40 +1018,55 @@ class pick_event():
         pass
 
     def run(self):
-        fdir = result_root+'detrend_zscore\\SPEI3\\'
+
+        # self.pick_drought_event()
+        # self.extract_variables_during_droughts_GS()
+        self.concat_df()
+
+    def pick_drought_event(self):
+
+        fdir = result_root+rf'detrend_zscore\\SPEI3\\'
         outdir = result_root + rf'pick_event\\SPEI3\\'
+        T.mk_dir(outdir, force=True)
 
         spatial_dic={}
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
-            outf=outdir+f.split('.')[0]+'.df'
+
             dic_i=T.load_npy(fdir+f)
             spatial_dic.update(dic_i)
 
-        threshold_upper=-1
-        threshold_bottom=-2
-        threshold_start=-1
-        event_dic={}
-        for pix in spatial_dic:
-            vals=spatial_dic[pix]
+            threshold_upper=-3
+            threshold_bottom=-4
+            threshold_start=-1
+            outf=outdir+f.split('.')[0]+f'_({threshold_bottom},{threshold_upper}).df'
 
-            drought_events_list_extreme, _=self.kernel_find_drought_period(vals,threshold_upper,threshold_bottom,threshold_start)
-            if len(drought_events_list_extreme)==0:
-                continue
-            event_dic[pix]=drought_events_list_extreme
-        df=pd.DataFrame()
-        pix_list=[]
-        drought_range_list=[]
-        for pix in event_dic:
-            events_list=event_dic[pix]
-            for event in events_list:
-                pix_list.append(pix)
-                drought_range_list.append(event)
-        df['pix']=pix_list
-        df['drought_range']=drought_range_list
-        T.print_head_n(df)
-        T.save_df(df,outf)
+
+            print(outf)
+            event_dic={}
+            for pix in spatial_dic:
+                vals=spatial_dic[pix]
+
+                drought_events_list_extreme, _=self.kernel_find_drought_period(vals,threshold_upper,threshold_bottom,threshold_start)
+                if len(drought_events_list_extreme)==0:
+                    continue
+                event_dic[pix]=drought_events_list_extreme
+            df=pd.DataFrame()
+            pix_list=[]
+            drought_range_list=[]
+            for pix in event_dic:
+                events_list=event_dic[pix]
+                for event in events_list:
+                    pix_list.append(pix)
+                    drought_range_list.append(event)
+            df['pix']=pix_list
+            df['drought_range']=drought_range_list
+            T.print_head_n(df)
+            T.save_df(df,outf)
+            self.__df_to_excel(df, outf)
+
+
         pass
 
     def kernel_find_drought_period(self, vals, threshold_upper, threshold_bottom, threshold_start):
@@ -1092,43 +1107,98 @@ class pick_event():
 
         pass
     def extract_variables_during_droughts_GS(self):
-        df_path=result_root+'drought_event.df'
-        df=T.load_df(df_path)
-        var_name='NDVI'
-        fpath=result_root+rf'monthly_data\\{var_name}.npy'
-        data_dict=T.load_npy(fpath)
-        pix_list = T.get_df_unique_val_list(df, 'pix')
-
-
-        mean_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df), ):
-            pix = row['pix']
-            GS = global_get_gs(pix)
-
-            drought_range = row['drought_range']
-            e,s = drought_range[1],drought_range[0]
-            picked_index = []
-            for idx in range(s,e+1):
-                mon = idx % 12 + 1
-                if not mon in GS:
-                    continue
-                picked_index.append(idx)
-            if len(picked_index) == 0:
-                mean_list.append(np.nan)
+        fdir_drought = result_root + rf'pick_event\\SPEI3\\'
+        fdir_variables_all = result_root + rf'detrend_zscore\\'
+        for f in os.listdir(fdir_drought):
+            if not f.endswith('.df'):
                 continue
-            vals = data_dict[pix]
-            picked_vals = T.pick_vals_from_1darray(vals,picked_index)
-            mean = np.nanmean(picked_vals)
-            if mean == 0:
-                mean_list.append(np.nan)
-                continue
-            mean_list.append(mean)
-        df[f'{var_name}_GS'] = mean_list
+            time_range= f.split('_')[0]+'_'+f.split('_')[1]
+            threshold=f.split('_')[-1].split('.')[0]
+            print(threshold)
+            df= T.load_df(fdir_drought + f)
+            df_new=pd.DataFrame()
+            outdir = result_root + rf'pick_event\\extract_variables_during_droughts_GS\\'
+            T.mk_dir(outdir, force=True)
+            # print(outdir)
 
+            for fvariable in os.listdir(fdir_variables_all):
+
+                fvariable_path=fdir_variables_all+fvariable+'\\'+f'{time_range}.npy'
+                print(fvariable_path)
+                var_name=fvariable.split('.')[0]+'_'+threshold+'_'+time_range
+                print(var_name)
+                # exit()
+
+                data_dict=T.load_npy(fvariable_path)
+                # pix_list = T.get_df_unique_val_list(df, 'pix')
+
+                mean_list = []
+                for i, row in tqdm(df.iterrows(), total=len(df), ):
+                    pix = row['pix']
+                    GS = global_get_gs(pix)
+
+                    drought_range = row['drought_range']
+                    e,s = drought_range[1],drought_range[0]
+                    picked_index = []
+                    for idx in range(s,e+1):
+                        mon = idx % 12 + 1
+                        if not mon in GS:
+                            continue
+                        picked_index.append(idx)
+
+                    if len(picked_index) == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    if not pix in data_dict:
+                        mean_list.append(np.nan)
+                        continue
+                    vals = data_dict[pix]
+                    # print(len(vals))
+                    if picked_index[-1] >= len(vals):
+                        mean_list.append(np.nan)
+                        continue
+                    picked_vals = T.pick_vals_from_1darray(vals,picked_index)
+                    mean = np.nanmean(picked_vals)
+                    if mean == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    mean_list.append(mean)
+
+                df_new['pix'] = df['pix']
+                df_new[f'{var_name}'] = mean_list
+            T.print_head_n(df_new)
+            T.save_df(df_new, outdir + f'{time_range}_{threshold}.df')
+            self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
+
+    def concat_df(self):
+        fdir = result_root + rf'pick_event\\extract_variables_during_droughts_GS\\'
+        df = pd.DataFrame()
+        for f in os.listdir(fdir):
+            if not f.endswith('.df'):
+                continue
+            df_i = T.load_df(fdir + f)
+            df = pd.concat([df, df_i], axis=1)
+        T.print_head_n(df)
+        T.save_df(df, result_root + rf'pick_event\\extract_variables_during_droughts_GS\\concat_df.df')
+        self.__df_to_excel(df, result_root + rf'pick_event\\extract_variables_during_droughts_GS\\concat_df.df')
 
     # pd.concat([df,df1],axis=1)
 
-        return df
+    def __df_to_excel(self, df, dff, n=1000, random=False):
+        dff = dff.split('.')[0]
+        if n == None:
+            df.to_excel('{}.xlsx'.format(dff))
+        else:
+            if random:
+                df = df.sample(n=n, random_state=1)
+                df.to_excel('{}.xlsx'.format(dff))
+            else:
+                df = df.head(n)
+                df.to_excel('{}.xlsx'.format(dff))
+
+        pass
+
+
 
 ######concatenate
 def global_get_gs(pix):
@@ -1137,6 +1207,9 @@ def global_get_gs(pix):
         return [11, 12, 1, 2, 3, 4]
     else:
         return [5,6, 7, 8, 9, 10]
+
+
+
 class build_dataframe():
 
 
@@ -1168,6 +1241,7 @@ class build_dataframe():
         # df = self.drop_field_df(df)
 
         T.save_df(df, self.dff)
+
         self.__df_to_excel(df, self.dff)
 
     def __gen_df_init(self, file):
@@ -1643,15 +1717,15 @@ class check_data():
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
-    # pick_event().run()
+    # statistic_analysis().run()
+    pick_event().run()
     # selection().run()
     # multi_regression().run()
     # moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
     # plot_dataframe().run()
-    check_data().run()
+    # check_data().run()
 
 
 
