@@ -73,13 +73,143 @@ result_root = 'D:/Project3/Result/'
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
+
+class data_processing():
+    def __init__(self):
+        pass
+    def run(self):
+        # self.tif_to_dic()
+        self.split_data()
+    def tif_to_dic(self):
+
+        fdir = data_root+'monthly_data\SPEI3\\TIFF\\'
+        outdir=data_root+'monthly_data\SPEI3\\DIC\\'
+        T.mk_dir(outdir, force=True)
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+
+        year_list = list(range(1982, 2021))
+        all_array=  []# 作为筛选条件
+
+        for f in tqdm(sorted(os.listdir(fdir)), desc='loading...'):
+            if f.startswith('.'):
+                continue
+            if not f.endswith('.tif'):
+                continue
+            if isfile(outdir):
+                continue
+            print(f)
+
+            if int(f.split('.')[0][0:4]) not in year_list:  #
+                continue
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+                fdir + f)
+            array = np.array(array, dtype=float)
+            # extract 360 and 720
+            array_unify = array[:720][:720,
+                          :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+
+            array_unify[array_unify < -999] = np.nan
+            # array[array ==0] = np.nan
+            # array_unify[array_unify < 0] = np.nan  # 当变量是LAI 的时候，<0!!
+            # plt.imshow(array)
+            # plt.show()
+            array_mask = np.array(array_mask, dtype=float)
+            # plt.imshow(array_mask)
+            # plt.show()
+            array_dryland = array_unify * array_mask
+            # plt.imshow(array_dryland)
+            # plt.show()
+
+            all_array.append(array_dryland)
+
+        row = len(all_array[0])
+        col = len(all_array[0][0])
+        key_list = []
+        dic = {}
+
+        for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+            for c in range(col):
+                dic[(r, c)] = []
+                key_list.append((r, c))
+        # print(dic_key_list)
+
+        for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+            for c in range(col):
+                for arr in all_array:
+                    value = arr[r][c]
+                    dic[(r, c)].append(value)
+                # print(dic)
+        time_series = []
+        flag = 0
+        temp_dic = {}
+        for key in tqdm(key_list, desc='output...'):  # 存数据
+            flag = flag + 1
+            time_series = dic[key]
+            time_series = np.array(time_series)
+            temp_dic[key] = time_series
+            if flag % 10000 == 0:
+                # print(flag)
+                np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                temp_dic = {}
+        np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+    def split_data(self):
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask= DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir_all=data_root+'monthly_data\\'
+        for fdir in os.listdir(fdir_all):
+            if not 'NDVI4g' in fdir:
+                continue
+            outdir=data_root+rf'split\{fdir}\\'
+            T.mk_dir(outdir,force=True)
+
+            for fdir_dic in os.listdir(fdir_all+fdir):
+                if not 'DIC' in fdir_dic:
+                    continue
+                dic = {}
+                dic_i = {}
+                dic_ii = {}
+                for f in os.listdir(fdir_all+fdir+'\\'+fdir_dic):
+                    if not f.endswith('.npy'):
+                        continue
+
+                    dic_temp=np.load(fdir_all+fdir+'\\'+fdir_dic+'\\'+f,allow_pickle=True).item()
+                    dic.update(dic_temp)
+
+                for pix in tqdm(dic):
+                    if pix not in dic_dryland_mask:
+                        continue
+                    time_series=dic[pix]
+                    # time_series[time_series > 10000] = np.nan
+                    # time_series=np.array(time_series)/10000.
+                    # time_series[time_series >7] = np.nan
+
+
+                    if len(time_series) < 12*39:
+                        continue
+                    time_series_i=time_series[:12*19]
+                    time_series_ii=time_series[12*19:]
+
+                    dic_i[pix]=time_series_i
+                    dic_ii[pix]=time_series_ii
+                np.save(outdir+'1982_2000.npy',dic_i)
+                np.save(outdir+'2001_2020.npy',dic_ii)
+
+
+
 class statistic_analysis():
     def __init__(self):
         pass
     def run(self):
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.detrend_zscore()
-        # self.detrend_zscore_monthly()
+        self.detrend_zscore_monthly()
         # self.zscore()
 
 
@@ -211,77 +341,74 @@ class statistic_analysis():
 
     def detrend_zscore_monthly(self): #
 
-        dic_mask_lc_file = data_root+'Base_data/LC_reclass2.npy'
-        dic_mask_lc = T.load_npy(dic_mask_lc_file)
 
-        tiff_mask_landcover_change = data_root+'/Base_data/lc_trend/max_trend.tif'
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        array_mask_landcover_change, originX, originY, pixelWidth, pixelHeight = to_raster.raster2array(
-            tiff_mask_landcover_change)
-        array_mask_landcover_change[array_mask_landcover_change * 20 > 10] = np.nan
-        array_mask_landcover_change = DIC_and_TIF().spatial_arr_to_dic(array_mask_landcover_change)
+        fdir_all = data_root + 'split\\'
+        for fdir in os.listdir(fdir_all):
 
 
-        product_list = ['precip','Temp','SMroot','SMsurf','Et']
+            outdir = result_root + rf'detrend_zscore\\{fdir}\\'
+            if os.path.isdir(outdir):
+                continue
+            Tools().mk_dir(outdir, force=True)
+
+            for f in os.listdir(fdir_all+fdir):
+
+                outf=outdir+f.split('.')[0]
+                print(outf)
 
 
-        for period in ['early', 'peak', 'late', 'early_peak']:
-
-            for product in product_list:
-                outdir = result_root + rf'detrend_zscore\\climate_monthly\{period}\\'
-                outf=outdir+product+'.npy'
-                # print(outf)
-                # exit()
-                f = result_root + rf'\extraction_original_val\Climate_monthly\\during_{period}_{product}.npy'
-
-                Tools().mk_dir(outdir,force=True)
-                dic = {}
-
-
-                dic = dict(np.load( f, allow_pickle=True, ).item())
-
+                dic = dict(np.load(fdir_all+fdir+'\\'+f, allow_pickle=True, ).item())
 
                 detrend_zscore_dic={}
 
-                for pix in tqdm(dic):
 
-                    val_lc_change = array_mask_landcover_change[pix]
-                    if val_lc_change < -9999:
+                for pix in tqdm(dic):
+                    detrend_delta_time_series_list = []
+                    if pix not in dic_dryland_mask:
                         continue
-                    if pix not in dic_mask_lc:
-                        continue
-                    if dic_mask_lc[pix] == 'Crop':
-                        continue
-                    if array_mask_landcover_change[pix] == np.nan:
-                        continue
+
                     print(len(dic[pix]))
-                    time_series = dic[pix][:19]
+                    time_series = dic[pix]
                     print(len(time_series))
 
                     time_series=np.array(time_series)
-                    # plt.plot(time_series)
-                    # plt.show()
-
                     time_series[time_series < -999] = np.nan
+
 
                     if np.isnan(np.nanmean(time_series)):
                         continue
                     if np.nanmean(time_series) <= 0.:
                         continue
+                    time_series_reshape=time_series.reshape(-1,12)
+                    time_series_reshape_T=time_series_reshape.T
+                    for i in range(len(time_series_reshape_T)):
+                        time_series_i=time_series_reshape_T[i]
 
-                    delta_time_series = []
-                    mean = np.nanmean(time_series)
-                    std=np.nanstd(time_series)
-                    if std == 0:
-                        continue
-                    delta_time_series = (time_series - mean) / std
+                        mean = np.nanmean(time_series_i)
+                        std=np.nanstd(time_series_i)
+                        if std == 0:
+                            continue
 
-                    detrend_delta_time_series = signal.detrend(delta_time_series)
+                        delta_time_series = (time_series_i - mean) / std
+                        if np.isnan(delta_time_series).any():
+                            continue
 
-                    # plt.plot(detrend_delta_time_series)
+                        detrend_delta_time_series = signal.detrend(delta_time_series)
+                        detrend_delta_time_series_list.append(detrend_delta_time_series)
+                    detrend_delta_time_series_array=np.array(detrend_delta_time_series_list)
+                    detrend_delta_time_series_array=detrend_delta_time_series_array.T
+                    detrend_delta_time_series_result=detrend_delta_time_series_array.flatten()
+                    # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
+                    ##plot
+                    # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
+                    # plt.plot(detrend_delta_time_series_result,'b' ,linewidth=1,linestyle='--')
                     # plt.show()
 
-                    detrend_zscore_dic[pix] = detrend_delta_time_series
+                    detrend_zscore_dic[pix] = detrend_delta_time_series_result
 
                 np.save(outf, detrend_zscore_dic)
 
@@ -891,14 +1018,23 @@ class pick_event():
         pass
 
     def run(self):
-        f=rf'C:\Users\wenzhang1\Desktop\\per_pix_dic_010.npy'
-        dic=T.load_npy(f)
+        fdir = result_root+'detrend_zscore\\SPEI3\\'
+        outdir = result_root + rf'pick_event\\SPEI3\\'
+
+        spatial_dic={}
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            outf=outdir+f.split('.')[0]+'.df'
+            dic_i=T.load_npy(fdir+f)
+            spatial_dic.update(dic_i)
+
         threshold_upper=-1
         threshold_bottom=-2
         threshold_start=-1
         event_dic={}
-        for pix in dic:
-            vals=dic[pix]
+        for pix in spatial_dic:
+            vals=spatial_dic[pix]
 
             drought_events_list_extreme, _=self.kernel_find_drought_period(vals,threshold_upper,threshold_bottom,threshold_start)
             if len(drought_events_list_extreme)==0:
@@ -915,7 +1051,7 @@ class pick_event():
         df['pix']=pix_list
         df['drought_range']=drought_range_list
         T.print_head_n(df)
-        T.save_df(df,result_root+'drought_event.df')
+        T.save_df(df,outf)
         pass
 
     def kernel_find_drought_period(self, vals, threshold_upper, threshold_bottom, threshold_start):
@@ -1470,35 +1606,53 @@ class plot_dataframe():
         return mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value
         # exit()
 
-# class check_data():
-#     f= data_root + rf'GPP\LT_Baseline_NT-009\DIC\per_pix_dic_000.npy'
-#     dic=T.load_npy(f)
-#
-#     len_dic={}
-#     for pix in dic:
-#         vals=dic[pix]
-#
-#         len_dic[pix]=len(vals)
-#     arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
-#     plt.imshow(arr)
-#     plt.colorbar()
-#     plt.show()
+class check_data():
+    def run (self):
+        self.plot_sptial()
+        # self.plot_time_series()
+        pass
+    def plot_sptial(self):
 
+        f= data_root + rf'split\NDVI4g\\1982_2000.npy'
+        dic=T.load_npy(f)
+
+        len_dic={}
+        for pix in dic:
+            vals=dic[pix]
+
+            len_dic[pix]=np.nanmean(vals)
+        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
+        plt.imshow(arr)
+        plt.colorbar()
+        plt.show()
+    def plot_time_series(self):
+        # f=data_root+rf'monthly_data\LAI4g\DIC\\per_pix_dic_048.npy'
+        f= data_root+ rf'split\LAI4g\\1982_2000.npy'
+        dic=T.load_npy(f)
+        for pix in dic:
+            vals=dic[pix]
+            vals=np.array(vals)
+            if np.isnan(np.nanmean(vals)):
+                continue
+            plt.plot(vals)
+            plt.show()
 
 
 
 
 
 def main():
-    # statistic_analysis().run()
-    pick_event().run()
+    # data_processing().run()
+    statistic_analysis().run()
+    # pick_event().run()
     # selection().run()
     # multi_regression().run()
     # moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
     # plot_dataframe().run()
-    # check_data()
+    check_data().run()
+
 
 
     pass
