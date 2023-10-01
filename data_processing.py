@@ -779,10 +779,10 @@ class multi_regression_window():
 
 class multi_regression():
     def __init__(self):
-        self.fdirX=data_root+rf'Extraction\\'
-        self.fdirY=data_root+rf'\\Extraction\\'
+        self.fdirX=data_root+rf'detrend_zscore\\'
+        self.fdirY=data_root+rf'detrend_zscore\\'
         self.xvar=['Tmax','GLEAM_SMroot']
-        self.y_var=['LAI']
+        self.y_var=['LAI4g']
         self.multi_regression_result_dir=result_root+rf'multi_regression\\'
         T.mk_dir(self.multi_regression_result_dir,force=True)
 
@@ -791,16 +791,14 @@ class multi_regression():
 
     def run(self):
 
-
-
         #step 1 build dataframe
-        # df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-        #
-        # # # # step 2 cal correlation
-        # self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
+        df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
+
+        # # # step 2 cal correlation
+        self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
 
         # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
+        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
 
@@ -1020,8 +1018,10 @@ class pick_event():
     def run(self):
 
         # self.pick_drought_event()
-        # self.extract_variables_during_droughts_GS()
-        self.concat_df()
+        self.extract_variables_during_droughts_GS()
+        # self.concat_df()
+        # self.plot_df()
+        self.plt_spatial_df()
 
     def pick_drought_event(self):
 
@@ -1144,6 +1144,7 @@ class pick_event():
                         mon = idx % 12 + 1
                         if not mon in GS:
                             continue
+
                         picked_index.append(idx)
 
                     if len(picked_index) == 0:
@@ -1167,17 +1168,21 @@ class pick_event():
                 df_new['pix'] = df['pix']
                 df_new[f'{var_name}'] = mean_list
             T.print_head_n(df_new)
+
             T.save_df(df_new, outdir + f'{time_range}_{threshold}.df')
             self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
 
     def concat_df(self):
         fdir = result_root + rf'pick_event\\extract_variables_during_droughts_GS\\'
-        df = pd.DataFrame()
+
+        df_list=[]
         for f in os.listdir(fdir):
             if not f.endswith('.df'):
                 continue
-            df_i = T.load_df(fdir + f)
-            df = pd.concat([df, df_i], axis=1)
+            df=T.load_df(fdir+f)
+            df_list.append(df)
+        df=pd.concat(df_list,axis=0)
+
         T.print_head_n(df)
         T.save_df(df, result_root + rf'pick_event\\extract_variables_during_droughts_GS\\concat_df.df')
         self.__df_to_excel(df, result_root + rf'pick_event\\extract_variables_during_droughts_GS\\concat_df.df')
@@ -1197,10 +1202,72 @@ class pick_event():
                 df.to_excel('{}.xlsx'.format(dff))
 
         pass
+    def plot_df(self):
+        f=result_root+'pick_event\extract_variables_during_droughts_GS\\concat_df.df'
+        df=T.load_df(f)
+        time_range_list=['1982_2000','2001_2020']
+        varname='LAI4g'
+
+        threshold=[-4,-3,-2,-1]
+
+        val_mean_dic = {}
+        label_list = []
+
+
+        for th in threshold:
+
+            for time_range in time_range_list:
+
+                th1=th
+                th2=th+1
+                if th2>threshold[-1]:
+                    continue
+
+                threshold_str=f'({th1},{th2})'
+
+                column_name=f'{varname}_{threshold_str}_{time_range}'
+
+                print(column_name)
+                vals=df[column_name]
+                vals=T.remove_np_nan(vals)
+                vals=np.array(vals)
+                val_mean=np.nanmean(vals)
+                val_mean_dic[column_name]=val_mean
+                label_list.append(join(column_name.split('_')[1],column_name.split('_')[2]))
+        plt.bar(range(len(val_mean_dic)),val_mean_dic.values(),tick_label=label_list)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+    def plt_spatial_df(self):
+        f=result_root+'pick_event\extract_variables_during_droughts_GS\\2001_2020_(-2,-1).df'
+        df=T.load_df(f)
+        print(df)
+        col_name='LAI4g_(-2,-1)_2001_2020'
+        dic={}
+        dic_group=T.df_groupby(df,'pix')
+        for pix in dic_group:
+            df_i=dic_group[pix]
+            val=df_i[col_name].tolist()
+            mean=np.nanmean(val)
+            dic[pix]=mean
+        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic)
+        # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,result_root+'pick_event\extract_variables_during_droughts_GS\\1982_2000_(-3,-2).tif')
+        plt.imshow(arr,vmin=-0.5,vmax=0.1)
+        plt.colorbar()
+        plt.show()
 
 
 
-######concatenate
+        pass
+
+
+
+
+        pass
+
+
+
 def global_get_gs(pix):
     r,c = pix
     if r > 360:
