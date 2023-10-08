@@ -164,8 +164,9 @@ class data_processing():
 
         fdir_all=data_root+'monthly_data\\'
         for fdir in os.listdir(fdir_all):
-            if not 'NDVI4g' in fdir:
+            if not 'LAI4g' in fdir:
                 continue
+
             outdir=data_root+rf'split\{fdir}\\'
             T.mk_dir(outdir,force=True)
 
@@ -186,9 +187,9 @@ class data_processing():
                     if pix not in dic_dryland_mask:
                         continue
                     time_series=dic[pix]
-                    # time_series[time_series > 10000] = np.nan
-                    # time_series=np.array(time_series)/10000.
-                    # time_series[time_series >7] = np.nan
+                    time_series[time_series > 10000] = np.nan
+                    time_series=np.array(time_series)/100.
+                    time_series[time_series >7] = np.nan
 
 
                     if len(time_series) < 12*39:
@@ -209,8 +210,9 @@ class statistic_analysis():
     def run(self):
         # self.trend_analysis()
         # self.detrend_zscore()
-        self.detrend_zscore_monthly()
-        # self.zscore()
+        # self.detrend_zscore_monthly()
+        self.zscore()
+        self.detrend()
 
 
     def trend_analysis(self):
@@ -339,7 +341,7 @@ class statistic_analysis():
 
                 np.save(outf, detrend_zscore_dic)
 
-    def detrend_zscore_monthly(self): #
+    def detrend_zscore_monthly(self): #  detrend based on each month
 
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
@@ -351,8 +353,8 @@ class statistic_analysis():
 
 
             outdir = result_root + rf'detrend_zscore\\{fdir}\\'
-            if os.path.isdir(outdir):
-                continue
+            # if os.path.isdir(outdir):
+            #     continue
             Tools().mk_dir(outdir, force=True)
 
             for f in os.listdir(fdir_all+fdir):
@@ -402,6 +404,7 @@ class statistic_analysis():
                     detrend_delta_time_series_array=np.array(detrend_delta_time_series_list)
                     detrend_delta_time_series_array=detrend_delta_time_series_array.T
                     detrend_delta_time_series_result=detrend_delta_time_series_array.flatten()
+
                     # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
                     ##plot
                     # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
@@ -412,79 +415,123 @@ class statistic_analysis():
 
                 np.save(outf, detrend_zscore_dic)
 
+
     def zscore(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        dic_mask_lc_file = data_root+'/Base_data/LC_reclass2.npy'
 
-        dic_mask_lc = T.load_npy(dic_mask_lc_file)
+        fdir_all=data_root+'split\\'
 
-        tiff_mask_landcover_change = data_root+'Base_data/lc_trend/max_trend.tif'
 
-        array_mask_landcover_change, originX, originY, pixelWidth, pixelHeight = ToRaster(
-            ).raster2array(tiff_mask_landcover_change)
-        array_mask_landcover_change[array_mask_landcover_change * 20 > 10] = np.nan
-        array_mask_landcover_change = DIC_and_TIF().spatial_arr_to_dic(array_mask_landcover_change)
+        for fdir in os.listdir(fdir_all):
 
-        product_list = ['LAI4g','NDVI4g','GPP_CFE','GPP_baseline']
 
-        outdir = result_root + rf'zscore\\'
-        for product in product_list:
-            outf = outdir + product + '.npy'
-            # print(outf)
-            # exit()
-            f = data_root + rf'Extraction\\{product}.npy'
-
+            outdir = result_root + rf'zscore\\{fdir}\\'
+            # if os.path.isdir(outdir):
+            #     continue
             Tools().mk_dir(outdir, force=True)
-            dic = {}
 
-            dic = dict(np.load(f, allow_pickle=True, ).item())
+            for f in os.listdir(fdir_all + fdir):
 
-            zscore_dic = {}
+                outf = outdir + f.split('.')[0]
+                print(outf)
 
-            for pix in tqdm(dic):
-                if pix not in dic_mask_lc:
-                    continue
+                dic = dict(np.load(fdir_all + fdir + '\\' + f, allow_pickle=True, ).item())
 
-                val_lc_change = array_mask_landcover_change[pix]
-                if val_lc_change < -9999:
-                    continue
-                if pix not in dic_mask_lc:
-                    continue
-                if dic_mask_lc[pix] == 'Crop':
-                    continue
-                if array_mask_landcover_change[pix] == np.nan:
-                    continue
-                # print(len(dic[pix]))
-                time_series = dic[pix]
-                # print(time_series)
+                zscore_dic = {}
 
-                time_series = np.array(time_series)
-                # plt.plot(time_series)
-                # plt.show()
+                for pix in tqdm(dic):
+                    delta_time_series_list = []
+                    if pix not in dic_dryland_mask:
+                        continue
 
-                time_series[time_series < -999] = np.nan
+                    # print(len(dic[pix]))
+                    time_series = dic[pix]
+                    # print(len(time_series))
 
-                if np.isnan(np.nanmean(time_series)):
-                    continue
-                if np.nanmean(time_series) <= 0.:
-                    continue
+                    time_series = np.array(time_series)
+                    time_series[time_series < -999] = np.nan
 
-                delta_time_series = []
-                mean = np.nanmean(time_series)
-                std = np.nanstd(time_series)
-                if std == 0:
-                    continue
-                delta_time_series = (time_series - mean) / std
+                    if np.isnan(np.nanmean(time_series)):
+                        continue
+                    if np.nanmean(time_series) <= 0.:
+                        continue
+                    time_series_reshape = time_series.reshape(-1, 12)
+                    time_series_reshape_T = time_series_reshape.T
+                    for i in range(len(time_series_reshape_T)):
+                        time_series_i = time_series_reshape_T[i]
 
-                # plt.plot(delta_time_series)
-                # plt.title(len(delta_time_series))
-                # plt.show()
+                        mean = np.nanmean(time_series_i)
+                        std = np.nanstd(time_series_i)
 
-                zscore_dic[pix] = delta_time_series
+                        delta_time_series = (time_series_i - mean) / std
 
-            T.save_npy(zscore_dic, outf)
+                        delta_time_series_list.append(delta_time_series)
+                    delta_time_series_array = np.array(delta_time_series_list)
+                    delta_time_series_array = delta_time_series_array.T
+                    delta_time_series_result = delta_time_series_array.flatten()
+
+                    # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
+                    ##plot
+                    # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
+                    # plt.plot(detrend_delta_time_series_result,'b' ,linewidth=1,linestyle='--')
+                    # plt.show()
+
+                    zscore_dic[pix] = delta_time_series_result
+
+                np.save(outf, zscore_dic)
 
         pass
+
+    def detrend(self):  # detrend based on two period 1982-2000 and 2001-2020
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir_all = result_root + 'zscore\\'
+        for fdir in os.listdir(fdir_all):
+
+
+            outdir = result_root + rf'detrend_zscore_Yang\\{fdir}\\'
+            # if os.path.isdir(outdir):
+            #     continue
+            Tools().mk_dir(outdir, force=True)
+
+            for f in os.listdir(fdir_all + fdir):
+
+                outf = outdir + f.split('.')[0]
+                print(outf)
+
+                dic = dict(np.load(fdir_all + fdir + '\\' + f, allow_pickle=True, ).item())
+
+                detrend_zscore_dic = {}
+
+                for pix in tqdm(dic):
+
+                    if pix not in dic_dryland_mask:
+                        continue
+
+                    print(len(dic[pix]))
+                    time_series = dic[pix]
+                    print(len(time_series))
+
+                    time_series = np.array(time_series)
+                    time_series[time_series < -999] = np.nan
+
+                    if np.isnan(np.nanmean(time_series)):
+                        continue
+
+                    # if np.isnan(time_series).any():
+                    #     continue
+                    detrend_time_series=T.detrend_vals(time_series)
+                    detrend_zscore_dic[pix] = detrend_time_series
+                    # plt.plot(detrend_time_series)
+                    # plt.show()
+
+                np.save(outf, detrend_zscore_dic)
 class moving_window():
     def __init__(self):
         pass
@@ -1018,15 +1065,21 @@ class pick_event():
     def run(self):
 
         # self.pick_drought_event()
-        self.extract_variables_during_droughts_GS()
-        # self.concat_df()
+        # self.extract_variables_during_droughts_GS()
+        # self.extract_variables_after_droughts_GS() ##### extract variables after droughts mean
+        # self.extract_variables_after_droughts_GS_in_nth_year()  ### extract variables after droughts in nth year
+        # self.multiregression_based_on_during_droughts()  ###
+        # self.statistic_variables()
+        # self.rename_variables()
+
+
         # self.plot_df()
         self.plt_spatial_df()
 
     def pick_drought_event(self):
 
-        fdir = result_root+rf'detrend_zscore\\SPEI3\\'
-        outdir = result_root + rf'pick_event\\SPEI3\\'
+        fdir = result_root+rf'detrend_zscore_Yang\\SPEI3\\'
+        outdir = result_root + rf'pick_event_scheme2\\SPEI3\\'
         T.mk_dir(outdir, force=True)
 
         spatial_dic={}
@@ -1037,8 +1090,8 @@ class pick_event():
             dic_i=T.load_npy(fdir+f)
             spatial_dic.update(dic_i)
 
-            threshold_upper=-3
-            threshold_bottom=-4
+            threshold_upper=-2
+            threshold_bottom=-3
             threshold_start=-1
             outf=outdir+f.split('.')[0]+f'_({threshold_bottom},{threshold_upper}).df'
 
@@ -1068,6 +1121,8 @@ class pick_event():
 
 
         pass
+
+
 
     def kernel_find_drought_period(self, vals, threshold_upper, threshold_bottom, threshold_start):
 
@@ -1107,8 +1162,8 @@ class pick_event():
 
         pass
     def extract_variables_during_droughts_GS(self):
-        fdir_drought = result_root + rf'pick_event\\SPEI3\\'
-        fdir_variables_all = result_root + rf'detrend_zscore\\'
+        fdir_drought = result_root + rf'pick_event_scheme2\\SPEI3\\'
+        fdir_variables_all = result_root + rf'detrend_zscore_Yang\\'
         for f in os.listdir(fdir_drought):
             if not f.endswith('.df'):
                 continue
@@ -1117,11 +1172,14 @@ class pick_event():
             print(threshold)
             df= T.load_df(fdir_drought + f)
             df_new=pd.DataFrame()
-            outdir = result_root + rf'pick_event\\extract_variables_during_droughts_GS\\'
+            outdir = result_root + rf'pick_event_scheme2\\extract_variables_during_droughts_GS\\'
             T.mk_dir(outdir, force=True)
             # print(outdir)
+            fvariable_list = ['Tmax', 'GLEAM_SMroot', 'LAI4g', 'NDVI4g']
 
             for fvariable in os.listdir(fdir_variables_all):
+                if not fvariable in fvariable_list:
+                    continue
 
                 fvariable_path=fdir_variables_all+fvariable+'\\'+f'{time_range}.npy'
                 print(fvariable_path)
@@ -1168,9 +1226,358 @@ class pick_event():
                 df_new['pix'] = df['pix']
                 df_new[f'{var_name}'] = mean_list
             T.print_head_n(df_new)
+            return df_new
+
+            # T.save_df(df_new, outdir + f'{time_range}_{threshold}.df')
+            # self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
+
+    def extract_variables_after_droughts_GS(self):
+        n_list = [ 1, 2, 3, 4]
+        fdir_drought = result_root + rf'pick_event_scheme2\\SPEI3\\'
+        fdir_variables_all = result_root + rf'detrend_zscore_Yang\\'
+        for f in os.listdir(fdir_drought):
+            if not f.endswith('.df'):
+                continue
+            time_range = f.split('_')[0] + '_' + f.split('_')[1]
+            threshold = f.split('_')[-1].split('.')[0]
+            print(threshold)
+            df = T.load_df(fdir_drought + f)
+            df_new = pd.DataFrame()
+
+            outdir = result_root + rf'pick_event_scheme2\\extract_variables_during_droughts_GS\\'
+            T.mk_dir(outdir, force=True)
+            # print(outdir)
+            fvariable_list=['Tmax','GLEAM_SMroot','LAI4g','NDVI4g']
+
+            for fvariable in os.listdir(fdir_variables_all):
+                if not fvariable in fvariable_list:
+                    continue
+                fvariable_path = fdir_variables_all + fvariable + '\\' + f'{time_range}.npy'
+                print(fvariable_path)
+                var_name = fvariable.split('.')[0] + '_' + threshold + '_' + time_range
+                print(var_name)
+
+                data_dict = T.load_npy(fvariable_path)
+
+            ################ add during drought year
+                mean_list = []
+                for i, row in tqdm(df.iterrows(), total=len(df), desc=f'add_post_0_{var_name}'):
+                    pix = row['pix']
+                    GS = global_get_gs(pix)
+                    if not pix in data_dict:
+                        mean_list.append(np.nan)
+                        continue
+                    vals = data_dict[pix]
+                    drought_range = row['drought_range']
+
+                    drought_range_index = list(range(drought_range[0], drought_range[-1] + 1))
+
+                    picked_index = []
+                    for idx in drought_range_index:
+                        mon = idx % 12 + 1
+                        if not mon in GS:
+                            continue
+                        if idx >= len(vals):
+                            picked_index = []
+                            break
+                        picked_index.append(idx)
+                    if len(picked_index) == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    picked_vals = T.pick_vals_from_1darray(vals, picked_index)
+                    mean = np.nanmean(picked_vals)
+                    if mean == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    mean_list.append(mean)
+                df_new[f'{var_name}_post_0_GS'] = mean_list
+
+                ################ add post drought year
+
+                for n in n_list:
+
+                    delta_mon = n*12
+                    mean_list = []
+                    for i, row in tqdm(df.iterrows(), total=len(df), desc=f'add_post_{n}_{var_name}'):
+                        pix = row['pix']
+                        GS = global_get_gs(pix)
+                        if not pix in data_dict:
+                            mean_list.append(np.nan)
+                            continue
+                        vals = data_dict[pix]
+                        drought_range = row['drought_range']
+                        end_mon = drought_range[-1]
+                        post_drought_range = []
+                        for m in range(delta_mon):
+                            post_drought_range.append(end_mon + m + 1)
+                        picked_index = []
+                        for idx in post_drought_range:
+                            mon = idx % 12 + 1
+                            if not mon in GS:
+                                continue
+                            if idx >= len(vals):
+                                picked_index = []
+                                break
+                            picked_index.append(idx)
+                        if len(picked_index) == 0:
+                            mean_list.append(np.nan)
+                            continue
+                        picked_vals = T.pick_vals_from_1darray(vals, picked_index)
+                        mean = np.nanmean(picked_vals)
+                        if mean == 0:
+                            mean_list.append(np.nan)
+                            continue
+                        mean_list.append(mean)
+                    df_new[f'{var_name}_post_{n}_GS'] = mean_list
+
+
+
+            df_new['pix'] = df['pix']
+
+            T.print_head_n(df_new)
+
 
             T.save_df(df_new, outdir + f'{time_range}_{threshold}.df')
             self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
+
+    def extract_variables_after_droughts_GS_in_nth_year(self):
+        n_list = [1, 2, 3, 4]
+        fdir_drought = result_root + rf'pick_event_scheme2\\SPEI3\\'
+        fdir_variables_all = result_root + rf'detrend_zscore_Yang\\'
+        for f in os.listdir(fdir_drought):
+            if not f.endswith('.df'):
+                continue
+            time_range = f.split('_')[0] + '_' + f.split('_')[1]
+            threshold = f.split('_')[-1].split('.')[0]
+            print(threshold)
+            df = T.load_df(fdir_drought + f)
+            df_new = pd.DataFrame()
+
+            outdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS_in_nth_year\\'
+            outf = outdir + f'{time_range}_{threshold}.df'
+            if os.path.exists(outf):
+                continue
+            T.mk_dir(outdir, force=True)
+            # print(outdir)
+            fvariable_list=['Tmax','GLEAM_SMroot','LAI4g','NDVI4g']
+
+            for fvariable in os.listdir(fdir_variables_all):
+                if not fvariable in fvariable_list:
+                    continue
+                fvariable_path = fdir_variables_all + fvariable + '\\' + f'{time_range}.npy'
+                print(fvariable_path)
+                var_name = fvariable.split('.')[0] + '_' + threshold + '_' + time_range
+                print(var_name)
+
+                data_dict = T.load_npy(fvariable_path)
+
+                ################ add during drought year
+                mean_list = []
+                for i, row in tqdm(df.iterrows(), total=len(df), desc=f'add_post_0_{var_name}'):
+                    pix = row['pix']
+                    GS = global_get_gs(pix)
+                    if not pix in data_dict:
+                        mean_list.append(np.nan)
+                        continue
+                    vals = data_dict[pix]
+                    drought_range = row['drought_range']
+
+                    drought_range_index = list(range(drought_range[0], drought_range[-1] + 1))
+
+                    picked_index = []
+                    for idx in drought_range_index:
+                        mon = idx % 12 + 1
+                        if not mon in GS:
+                            continue
+                        if idx >= len(vals):
+                            picked_index = []
+                            break
+                        picked_index.append(idx)
+                    if len(picked_index) == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    picked_vals = T.pick_vals_from_1darray(vals, picked_index)
+                    mean = np.nanmean(picked_vals)
+                    if mean == 0:
+                        mean_list.append(np.nan)
+                        continue
+                    mean_list.append(mean)
+                df_new[f'{var_name}_post_0_GS'] = mean_list
+
+                ################ add post nth year
+
+                for n in n_list:
+
+                    mean_list = []
+                    for i, row in tqdm(df.iterrows(), total=len(df), desc=f'add_post_{n}_{var_name}'):
+                        pix = row['pix']
+                        GS = global_get_gs(pix)
+                        if not pix in data_dict:
+                            mean_list.append(np.nan)
+                            continue
+                        vals = data_dict[pix]
+                        drought_range = row['drought_range']
+                        end_mon = drought_range[-1]
+                        post_drought_range = []
+                        assert n>0
+                        for m in range((n-1)*12,n*12):
+
+                            post_drought_range.append(end_mon + m + 1)
+                        picked_index = []
+                        for idx in post_drought_range:
+                            mon = idx % 12 + 1
+                            if not mon in GS:
+                                continue
+                            if idx >= len(vals):
+                                picked_index = []
+                                break
+                            picked_index.append(idx)
+                        if len(picked_index) == 0:
+                            mean_list.append(np.nan)
+                            continue
+                        picked_vals = T.pick_vals_from_1darray(vals, picked_index)
+                        mean = np.nanmean(picked_vals)
+                        if mean == 0:
+                            mean_list.append(np.nan)
+                            continue
+                        mean_list.append(mean)
+                    df_new[f'{var_name}_post_{n}_GS'] = mean_list
+
+
+            df_new['pix'] = df['pix']
+
+            T.print_head_n(df_new)
+
+
+            T.save_df(df_new, outdir + f'{time_range}_{threshold}.df')
+            self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
+    def statistic_variables(self):
+        time_range = ['1982_2000', '2001_2020']
+        # threshold = '(-4,-3)'
+        threshold = '(-3,-2)'
+        threshold = '(-2,-1)'
+
+
+        fdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS\\'
+        variable_list=['GLEAM_SMroot','LAI4g','NDVI4g']
+        for time_range in time_range:
+            plt.figure(figsize=(10, 5))
+            flag = 1
+
+
+            f_path = fdir + f'{time_range}_{threshold}.df'
+
+            df = T.load_df(f_path)
+
+            n_list = [0, 1, 2, 3, 4]
+
+            for variable in variable_list:
+                plt.subplot(1, 3, flag)
+                average_list = []
+                for n in n_list:
+                    vals=df[f'{variable}_{threshold}_{time_range}_post_{n}_GS'].tolist()
+                    average=np.nanmean(vals)
+                    average_list.append(average)
+                plt.bar(n_list,average_list,label=variable)
+                flag = flag + 1
+                plt.legend()
+                plt.ylim(-0.6, 0.3)
+                plt.title(f'{variable}_{threshold}_{time_range}')
+                plt.xticks(n_list, [f'post_{n}' for n in n_list])
+                plt.xticks(rotation=45)
+            plt.show()
+
+
+
+    def multiregression_based_on_during_droughts(self):   ## LAI/SM
+        time_range=['1982_2000','2001_2020']
+        threshold='(-4,-3)'
+        plt.figure(figsize=(10,5))
+        flag=1
+
+        fdir=result_root+rf'pick_event_scheme2\\extract_variables_after_droughts_GS\\'
+        for time_range in time_range:
+            plt.subplot(1,2,flag)
+
+            f_path=fdir+f'{time_range}_{threshold}.df'
+
+            df=T.load_df(f_path)
+
+            n_list=[0,1,2,3,4]
+
+            bar_list={}
+
+            for n in n_list:
+                outf = result_root + rf'multi_regression\\LAI_SMroot_post_{n}_GS.npy'
+                df_new = pd.DataFrame()
+
+                # x_var_list=[f'Tmax_{threshold}_{time_range}_post_{n}_GS',f'GLEAM_SMroot_{threshold}_{time_range}_post_{n}_GS']
+                # y_vals = df[f'LAI4g_{threshold}_{time_range}_post_{n}_GS']
+
+                x_var_list=[f'LAI4g_{threshold}_{time_range}_post_{n}_GS',f'Tmax_{threshold}_{time_range}_post_{n}_GS']
+                y_vals = df[f'GLEAM_SMroot_{threshold}_{time_range}_post_{n}_GS']
+
+
+
+                df_new['y'] = y_vals
+                for x_var in x_var_list:
+                    x_vals=df[x_var]
+                    df_new[x_var]=x_vals
+
+
+                ## remove nan
+                df_new = df_new.dropna()
+
+                # T.print_head_n(df_new)
+
+                linear_model = LinearRegression()
+
+                linear_model.fit(df_new[x_var_list], df_new['y'])
+                coef_ = np.array(linear_model.coef_)
+                coef_dic = dict(zip(x_var_list, coef_))
+                bar_list[n]=coef_dic
+
+            SM_corr_list=[]
+            for n in bar_list:
+                SM_corr=bar_list[n][f'GLEAM_SMroot_{threshold}_{time_range}_post_{n}_GS']
+                SM_corr = bar_list[n][f'LAI4g_{threshold}_{time_range}_post_{n}_GS']
+                SM_corr_list.append(SM_corr)
+            plt.bar(range(len(SM_corr_list)),SM_corr_list)
+            plt.xticks(range(len(SM_corr_list)), [f'post_{n}' for n in n_list])
+            plt.ylim(0,0.6)
+            plt.title(f'delta LAI/delta GLEAM_SMroot_{threshold}_{time_range}')
+
+            flag=flag+1
+
+        plt.show()
+
+
+
+
+            # plt.bar(bar_list[n].keys(),bar_list[n].values(),label=f'post_{n}')
+        # plt.legend()
+        # plt.xticks(rotation=90)
+        # plt.tight_layout()
+        # plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        pass
+
 
     def concat_df(self):
         fdir = result_root + rf'pick_event\\extract_variables_during_droughts_GS\\'
@@ -1240,32 +1647,58 @@ class pick_event():
         plt.show()
 
     def plt_spatial_df(self):
-        f=result_root+'pick_event\extract_variables_during_droughts_GS\\2001_2020_(-2,-1).df'
-        df=T.load_df(f)
-        print(df)
-        col_name='LAI4g_(-2,-1)_2001_2020'
-        dic={}
-        dic_group=T.df_groupby(df,'pix')
-        for pix in dic_group:
-            df_i=dic_group[pix]
-            val=df_i[col_name].tolist()
-            mean=np.nanmean(val)
-            dic[pix]=mean
-        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic)
-        # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,result_root+'pick_event\extract_variables_during_droughts_GS\\1982_2000_(-3,-2).tif')
-        plt.imshow(arr,vmin=-0.5,vmax=0.1)
-        plt.colorbar()
+
+
+        flag=1
+        plt.figure(figsize=(10, 5))
+
+        for n in [0,1,2,3]:
+            arr_list = []
+            plt.subplot(2, 2, flag)
+
+            for period in ['1982_2000','2001_2020']:
+
+                f=result_root+f'pick_event_scheme2\extract_variables_after_droughts_GS\\{period}_(-2,-1).df'
+                f = result_root + f'pick_event_scheme2\extract_variables_after_droughts_GS_in_nth_year\\{period}_(-2,-1).df'
+                df=T.load_df(f)
+                print(df)
+                # col_name=rf'NDVI4g_(-2,-1)_{period}_post_{n}_GS'
+                col_name = rf'NDVI4g_(-2,-1)_{period}_post_{n}_GS'
+
+                dic={}
+                dic_group=T.df_groupby(df,'pix')
+                for pix in dic_group:
+                    df_i=dic_group[pix]
+                    val=df_i[col_name].tolist()
+                    mean=np.nanmean(val)
+                    dic[pix]=mean
+                arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic)
+                arr_list.append(arr)
+            arr_difference=(arr_list[1]-arr_list[0])
+                # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,result_root+'pick_event\extract_variables_during_droughts_GS\\1982_2000_(-3,-2).tif')
+            plt.imshow(arr_difference,vmin=-0.5,vmax=0.5,cmap='RdBu',interpolation='nearest')
+            plt.colorbar()
+            title=f'NDVI4g_(-2,-1)_post_{n}_GS'
+            plt.title(title)
+            flag=flag+1
         plt.show()
 
-
-
-        pass
-
-
-
-
-        pass
-
+    def rename_variables(self):
+        fdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS_in_nth_year_rename\\'
+        outdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS_in_nth_year_rename2\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.df'):
+                continue
+            df=T.load_df(fdir+f)
+            rename_dic={}
+            for col in df.columns:
+                if '_nth' in col:
+                    rename_dic[col]=col.replace('_nth','')
+            df=df.rename(columns=rename_dic)
+            T.print_head_n(df)
+            T.save_df(df,outdir+f)
+            self.__df_to_excel(df,outdir+f)
 
 
 def global_get_gs(pix):
@@ -1754,29 +2187,138 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f= data_root + rf'split\NDVI4g\\1982_2000.npy'
+        f= result_root+ rf'detrend_zscore_Yang\GLEAM_SMroot\\1982_2000.npy'
+        # f = data_root + rf'split\NDVI4g\2001_2020.npy'
         dic=T.load_npy(f)
 
         len_dic={}
         for pix in dic:
             vals=dic[pix]
 
-            len_dic[pix]=np.nanmean(vals)
+            # len_dic[pix]=np.nanmean(vals)
+            len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
         plt.imshow(arr)
         plt.colorbar()
+        plt.title('SPEI')
         plt.show()
     def plot_time_series(self):
-        # f=data_root+rf'monthly_data\LAI4g\DIC\\per_pix_dic_048.npy'
-        f= data_root+ rf'split\LAI4g\\1982_2000.npy'
+        f=data_root+rf'split\LAI4g\1982_2000.npy'
+        # f= result_root+ rf'detrend_zscore_Yang\LAI4g\\1982_2000.npy'
         dic=T.load_npy(f)
         for pix in dic:
             vals=dic[pix]
             vals=np.array(vals)
+            # if not len(vals)==19*12:
+            #     continue
+            # if True in np.isnan(vals):
+            #     continue
+            # print(len(vals))
             if np.isnan(np.nanmean(vals)):
                 continue
             plt.plot(vals)
             plt.show()
+
+
+class Dataframe_func:
+
+    def __init__(self,df,is_clean_df=True):
+        print('add lon lat')
+        df = self.add_lon_lat(df)
+
+        print('add NDVI mask')
+        # df = self.add_NDVI_mask(df)
+
+        # if is_clean_df == True:
+        #     df = self.clean_df(df)
+
+        # print('add landcover')
+        # df = self.add_GLC_landcover_data_to_df(df)
+
+        print('add Aridity Index')
+        df = self.add_AI_to_df(df)
+
+
+        print('add AI_reclass')
+        df = self.AI_reclass(df)
+
+
+        self.df = df
+
+    def clean_df(self,df):
+
+        df = df[df['lat']>=30]
+        # df = df[df['landcover_GLC'] != 'Crop']
+        df = df[df['NDVI_MASK'] == 1]
+        # df = df[df['ELI_significance'] == 1]
+        return df
+
+    def add_GLC_landcover_data_to_df(self, df):
+        f = join(data_root,'GLC2000/reclass_lc_dic.npy')
+        val_dic=T.load_npy(f)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix]
+            val_list.append(vals)
+        df['landcover_GLC'] = val_list
+        return df
+
+    def add_NDVI_mask(self,df):
+        # f =rf'C:/Users/pcadmin/Desktop/Data/Base_data/NDVI_mask.tif'
+        f = join(data_root, 'Base_data', 'NDVI_mask.tif')
+        print(f)
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+        f_name = 'NDVI_MASK'
+        print(f_name)
+        # exit()
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix]
+            if vals < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(vals)
+        df[f_name] = val_list
+        return df
+
+    def add_AI_to_df(self, df):
+        f = join(data_root, 'Base_data/Aridity_Index/aridity_index.tif')
+        spatial_dict = DIC_and_TIF().spatial_tif_to_dic(f)
+        df = T.add_spatial_dic_to_df(df, spatial_dict, 'HI_class')
+        return df
+
+    def add_lon_lat(self,df):
+        df = T.add_lon_lat_to_df(df, DIC_and_TIF())
+        return df
+
+
+    def AI_reclass(self,df):
+        AI_class = []
+        for i,row in df.iterrows():
+            AI = row['HI_class']
+            if AI < 0.65:
+                AI_class.append('Dryland')
+            elif AI >= 0.65:
+                AI_class.append('Humid')
+            elif np.isnan(AI):
+                AI_class.append(np.nan)
+            else:
+                print(AI)
+                raise ValueError('AI error')
+        df['HI_class'] = AI_class
+        return df
 
 
 
