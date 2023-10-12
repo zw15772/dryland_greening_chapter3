@@ -78,8 +78,166 @@ class data_processing():
     def __init__(self):
         pass
     def run(self):
+        # self.nc_to_tif()
+        # self.resample_trendy()
+        self.unify_TIFF()
         # self.tif_to_dic()
-        self.split_data()
+        # self.split_data()
+
+    def nc_to_tif(self):
+
+        fdir=data_root+'TRENDY\LAI\\'
+        outdir=data_root+'monthly_data\\Trendy\\'
+        T.mk_dir(outdir,force=True)
+
+
+        for f in os.listdir(fdir):
+
+            if f.startswith('.'):
+                continue
+
+            outdir_name = f.split('.')[0]
+            print(outdir_name)
+
+            outdir = data_root + rf'/Trendy_TIFF/{outdir_name}//'
+            Tools().mk_dir(outdir, force=True)
+            yearlist = list(range(1982, 2021))
+
+            # # check nc variables
+            # print(nc.variables.keys())
+            # exit()
+
+            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+            try:
+                self.nc_to_tif_template(fdir + f, var_name='lai', outdir=outdir, yearlist=yearlist)
+            except Exception as e:
+                print(e)
+                continue
+
+    def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
+        try:
+            ncin = Dataset(fname, 'r')
+            print(ncin.variables.keys())
+
+        except:
+            raise UserWarning('File not supported: ' + fname)
+        # lon,lat = np.nan,np.nan
+        try:
+            lat = ncin.variables['lat'][:]
+            lon = ncin.variables['lon'][:]
+        except:
+            try:
+                lat = ncin.variables['latitude'][:]
+                lon = ncin.variables['longitude'][:]
+            except:
+                try:
+                    lat = ncin.variables['lat_FULL'][:]
+                    lon = ncin.variables['lon_FULL'][:]
+                except:
+                    raise UserWarning('lat or lon not found')
+        shape = np.shape(lat)
+        try:
+            time = ncin.variables['time_counter'][:]
+            basetime_str = ncin.variables['time_counter'].units
+        except:
+            time = ncin.variables['time'][:]
+            basetime_str = ncin.variables['time'].units
+
+        basetime_unit = basetime_str.split('since')[0]
+        basetime_unit = basetime_unit.strip()
+        print(basetime_unit)
+        print(basetime_str)
+        if basetime_unit == 'days':
+            timedelta_unit = 'days'
+        elif basetime_unit == 'years':
+            timedelta_unit = 'years'
+        elif basetime_unit == 'month':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'months':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'seconds':
+            timedelta_unit = 'seconds'
+        elif basetime_unit == 'hours':
+            timedelta_unit = 'hours'
+        else:
+            raise Exception('basetime unit not supported')
+        basetime = basetime_str.strip(f'{timedelta_unit} since ')
+        try:
+            basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d')
+        except:
+            try:
+                basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S')
+            except:
+                try:
+                    basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S.%f')
+                except:
+                    try:
+                        basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M')
+                    except:
+                        try:
+                            basetime = datetime.datetime.strptime(basetime, '%Y-%m')
+                        except:
+                            raise UserWarning('basetime format not supported')
+        data = ncin.variables[var_name]
+        if len(shape) == 2:
+            xx, yy = lon, lat
+        else:
+            xx, yy = np.meshgrid(lon, lat)
+        for time_i in tqdm(range(len(time))):
+            if basetime_unit == 'days':
+                date = basetime + datetime.timedelta(days=int(time[time_i]))
+            elif basetime_unit == 'years':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                date2 = f'{int(base_year + time[time_i])}-01-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'month' or basetime_unit == 'months':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                base_month = basetime.month
+                date2 = f'{int(base_year + time[time_i] // 12)}-{int(base_month + time[time_i] % 12)}-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'seconds':
+                date = basetime + datetime.timedelta(seconds=int(time[time_i]))
+            elif basetime_unit == 'hours':
+                date = basetime + datetime.timedelta(hours=int(time[time_i]))
+            else:
+                raise Exception('basetime unit not supported')
+            time_str = time[time_i]
+            mon = date.month
+            year = date.year
+            if year not in yearlist:
+                continue
+            day = date.day
+            outf_name = f'{year}{mon:02d}{day:02d}.tif'
+            outpath = join(outdir, outf_name)
+            if isfile(outpath):
+                continue
+            arr = data[time_i]
+            arr = np.array(arr)
+            lon_list = []
+            lat_list = []
+            value_list = []
+            for i in range(len(arr)):
+                for j in range(len(arr[i])):
+                    lon_i = xx[i][j]
+                    if lon_i > 180:
+                        lon_i -= 360
+                    lat_i = yy[i][j]
+                    value_i = arr[i][j]
+                    lon_list.append(lon_i)
+                    lat_list.append(lat_i)
+                    value_list.append(value_i)
+            DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
+    # def unify_tif(self):
+    #     testf=data_root+r'monthly_data\\Trendy_TIFF\CLASSIC_S2_lai\\19820801.tif'
+    #     outf=data_root+r'monthly_data\\Trendy_TIFF\CLASSIC_S2_lai\\19820801_unify.tif'
+    #     array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(testf)
+    #     array = np.array(array, dtype=float)
+    #     ToRaster().array2raster(outf, -180, 90, 1, -1, array, )
+
     def tif_to_dic(self):
 
         fdir = data_root+'monthly_data\SPEI3\\TIFF\\'
@@ -202,8 +360,66 @@ class data_processing():
                 np.save(outdir+'1982_2000.npy',dic_i)
                 np.save(outdir+'2001_2020.npy',dic_ii)
 
+    def resample_trendy(self):
+        fdir_all = data_root + '\Trendy_TIFF\\'
+        for fdir in tqdm(os.listdir(fdir_all)):
 
+            outdir = data_root + rf'\Trendy_resample\\{fdir}\\'
 
+            T.mk_dir(outdir, force=True)
+            year = list(range(1982, 2021))
+            # print(year)
+            # exit()
+            for f in tqdm(os.listdir(fdir_all + fdir + '\\'), ):
+                if not f.endswith('.tif'):
+                    continue
+
+                if f.startswith('._'):
+                    continue
+
+                # year_selection=f.split('.')[1].split('_')[1]
+                # print(year_selection)
+                # if not int(year_selection) in year:  ##一定注意格式
+                #     continue
+                # fcheck=f.split('.')[0]+f.split('.')[1]+f.split('.')[2]+'.'+f.split('.')[3]
+                # if os.path.isfile(outdir+'resample_'+fcheck):  # 文件已经存在的时候跳过
+                #     continue
+                # date = f[0:4] + f[5:7] + f[8:10] MODIS
+                print(f)
+                # exit()
+                date = f.split('.')[0]
+                date_2 = date.split('_')[-1]
+                print(date_2)
+
+                # print(date)
+                # exit()
+                dataset = gdal.Open(fdir_all + fdir + '\\' + f)
+                # print(dataset.GetGeoTransform())
+                original_x = dataset.GetGeoTransform()[1]
+                original_y = dataset.GetGeoTransform()[5]
+
+                # band = dataset.GetRasterBand(1)
+                # newRows = dataset.YSize * 2
+                # newCols = dataset.XSize * 2
+                try:
+                    gdal.Warp(outdir + '{}.tif'.format(date_2), dataset, xRes=0.25, yRes=0.25, dstSRS='EPSG:4326')
+                # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+                # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+                except Exception as e:
+                    pass
+    def unify_TIFF(self):
+        fdir_all=data_root + rf'\Trendy_resample\\'
+        for fdir in tqdm(os.listdir(fdir_all)):
+            outdir = data_root + rf'\Trendy_unify\\{fdir}\\'
+            T.mk_dir(outdir, force=True)
+            for f in tqdm(os.listdir(fdir_all+fdir+'\\')):
+                fpath=fdir_all+fdir+'\\'+f
+                outpath=outdir+f
+                if not f.endswith('.tif'):
+                    continue
+                if f.startswith('._'):
+                    continue
+                unify_tiff=DIC_and_TIF().unify_raster(fpath,outpath)
 class statistic_analysis():
     def __init__(self):
         pass
@@ -1069,12 +1285,11 @@ class pick_event():
         # self.extract_variables_after_droughts_GS() ##### extract variables after droughts mean
         # self.extract_variables_after_droughts_GS_in_nth_year()  ### extract variables after droughts in nth year
         # self.multiregression_based_on_during_droughts()  ###
-        # self.statistic_variables()
+
         # self.rename_variables()
-
-
         # self.plot_df()
-        self.plt_spatial_df()
+        self.statistic_variables()
+        # self.plt_spatial_df()
 
     def pick_drought_event(self):
 
@@ -1453,18 +1668,17 @@ class pick_event():
             self.__df_to_excel(df_new, outdir + f'{time_range}_{threshold}.df')
     def statistic_variables(self):
         time_range = ['1982_2000', '2001_2020']
+        SM_trend_list=['sig_wetting','sig_drying','non_sig_wetting','non_sig_drying']
         # threshold = '(-4,-3)'
         threshold = '(-3,-2)'
         threshold = '(-2,-1)'
-
-
         fdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS\\'
         variable_list=['GLEAM_SMroot','LAI4g','NDVI4g']
+
+
         for time_range in time_range:
             plt.figure(figsize=(10, 5))
             flag = 1
-
-
             f_path = fdir + f'{time_range}_{threshold}.df'
 
             df = T.load_df(f_path)
@@ -1473,7 +1687,9 @@ class pick_event():
 
             for variable in variable_list:
                 plt.subplot(1, 3, flag)
-                average_list = []
+                for SM_trend in SM_trend_list:
+
+                    average_list = []
                 for n in n_list:
                     vals=df[f'{variable}_{threshold}_{time_range}_post_{n}_GS'].tolist()
                     average=np.nanmean(vals)
@@ -1487,6 +1703,19 @@ class pick_event():
                 plt.xticks(rotation=45)
             plt.show()
 
+    # def statistic_variables_back(self):   #### trail
+    #     time_range = ['1982_2000', '2001_2020']
+    #     SM_trend_list = ['sig_wetting', 'sig_drying', 'non_sig_wetting', 'non_sig_drying']
+    #     # threshold = '(-4,-3)'
+    #     threshold = '(-3,-2)'
+    #     threshold = '(-2,-1)'
+    #     fdir = result_root + rf'pick_event_scheme2\\extract_variables_after_droughts_GS\\'
+    #     variable_list = ['LAI4g', 'NDVI4g']
+    #     for variable in variable_list:
+    #         for SM_trend in SM_trend_list:
+    #             for period in time_range:
+    #                 df=T.load_df(fdir+f'{period}_{threshold}.df')
+    #                 n_list = [0, 1, 2, 3, 4]
 
 
     def multiregression_based_on_during_droughts(self):   ## LAI/SM
@@ -2182,12 +2411,14 @@ class plot_dataframe():
 
 class check_data():
     def run (self):
-        self.plot_sptial()
+        # self.plot_sptial()
+        self.testrobinson()
         # self.plot_time_series()
+
         pass
     def plot_sptial(self):
 
-        f= result_root+ rf'detrend_zscore_Yang\GLEAM_SMroot\\1982_2000.npy'
+        f= result_root+ 'Trendy_TIFF\CLASSIC_S2_lai\\19820824.tif'
         # f = data_root + rf'split\NDVI4g\2001_2020.npy'
         dic=T.load_npy(f)
 
@@ -2202,6 +2433,15 @@ class check_data():
         plt.colorbar()
         plt.title('SPEI')
         plt.show()
+    def testrobinson(self):
+
+        f = data_root + 'Trendy_TIFF\CLASSIC_S2_lai\\19820824.tif'
+        # f = data_root + rf'split\NDVI4g\2001_2020.npy'
+        Plot().plot_Robinson(f)
+        plt.show()
+
+
+
     def plot_time_series(self):
         f=data_root+rf'split\LAI4g\1982_2000.npy'
         # f= result_root+ rf'detrend_zscore_Yang\LAI4g\\1982_2000.npy'
@@ -2222,36 +2462,52 @@ class check_data():
 
 class Dataframe_func:
 
-    def __init__(self,df,is_clean_df=True):
-        print('add lon lat')
-        df = self.add_lon_lat(df)
-
-        print('add NDVI mask')
-        # df = self.add_NDVI_mask(df)
-
-        # if is_clean_df == True:
-        #     df = self.clean_df(df)
-
-        # print('add landcover')
-        # df = self.add_GLC_landcover_data_to_df(df)
-
-        print('add Aridity Index')
-        df = self.add_AI_to_df(df)
-
-
-        print('add AI_reclass')
-        df = self.AI_reclass(df)
+    def run (self):
+        fdir = result_root + rf'pick_event_scheme2\extract_variables_after_droughts_GS\\'
+        for f in os.listdir(fdir):
+            if not f.endswith('.df'):
+                continue
+            df=T.load_df(fdir+f)
+            print('add AI')
+            df=self.add_AI_to_df(df)
+            print('add AI_reclass')
+            df=self.AI_reclass(df)
+            print('add SM_trend_label')
+            df=self.add_SM_trend_label(df)
+            T.save_df(df,fdir+f)
+            self.__df_to_excel(df,fdir+f)
+        pass
 
 
-        self.df = df
-
-    def clean_df(self,df):
-
-        df = df[df['lat']>=30]
-        # df = df[df['landcover_GLC'] != 'Crop']
-        df = df[df['NDVI_MASK'] == 1]
-        # df = df[df['ELI_significance'] == 1]
-        return df
+    # def __init__(self,df,is_clean_df=True):
+    #
+    #     # print('add lon lat')
+    #     # df = self.add_lon_lat(df)
+    #
+    #     # if is_clean_df == True:
+    #     #     df = self.clean_df(df)
+    #
+    #     # print('add landcover')
+    #     # df = self.add_GLC_landcover_data_to_df(df)
+    #
+    #     print('add Aridity Index')
+    #     df = self.add_AI_to_df(df)
+    #
+    #     print('add AI_reclass')
+    #     df = self.AI_reclass(df)
+    #     print('add SM_trend_label')
+    #     df = self.add_SM_trend_label(df)
+    #
+    #
+    #     self.df = df
+    #
+    # def clean_df(self,df):
+    #
+    #     df = df[df['lat']>=30]
+    #     # df = df[df['landcover_GLC'] != 'Crop']
+    #     df = df[df['NDVI_MASK'] == 1]
+    #     # df = df[df['ELI_significance'] == 1]
+    #     return df
 
     def add_GLC_landcover_data_to_df(self, df):
         f = join(data_root,'GLC2000/reclass_lc_dic.npy')
@@ -2294,7 +2550,7 @@ class Dataframe_func:
         return df
 
     def add_AI_to_df(self, df):
-        f = join(data_root, 'Base_data/Aridity_Index/aridity_index.tif')
+        f = join(data_root, 'Base_data/dryland_AI.tif/dryland.tif')
         spatial_dict = DIC_and_TIF().spatial_tif_to_dic(f)
         df = T.add_spatial_dic_to_df(df, spatial_dict, 'HI_class')
         return df
@@ -2320,14 +2576,54 @@ class Dataframe_func:
         df['HI_class'] = AI_class
         return df
 
+    def add_SM_trend_label(self, df):
+
+        f = data_root + rf'\\Base_data\GLEAM_SMroot_trend_label_mark.npy'
+
+
+        val_dic = T.load_npy(f)
+
+
+        f_name = f.split('.')[0]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+
+            val_list.append(val)
+
+        df['wetting_drying_trend'] = val_list
+        return df
+
+    def __df_to_excel(self, df, dff, n=1000, random=False):
+        dff = dff.split('.')[0]
+        if n == None:
+            df.to_excel('{}.xlsx'.format(dff))
+        else:
+            if random:
+                df = df.sample(n=n, random_state=1)
+                df.to_excel('{}.xlsx'.format(dff))
+            else:
+                df = df.head(n)
+                df.to_excel('{}.xlsx'.format(dff))
+
+        pass
+
 
 
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
+
     # statistic_analysis().run()
-    pick_event().run()
+    # pick_event().run()
     # selection().run()
     # multi_regression().run()
     # moving_window().run()
@@ -2335,6 +2631,7 @@ def main():
     # build_dataframe().run()
     # plot_dataframe().run()
     # check_data().run()
+    # Dataframe_func().run()
 
 
 
