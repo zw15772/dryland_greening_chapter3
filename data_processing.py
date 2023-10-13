@@ -79,28 +79,31 @@ class data_processing():
         pass
     def run(self):
         # self.nc_to_tif()
+        # self.check_tif_length()
         # self.resample_trendy()
-        self.unify_TIFF()
-        # self.tif_to_dic()
+        # self.unify_TIFF()
+        self.tif_to_dic()
         # self.split_data()
 
     def nc_to_tif(self):
 
-        fdir=data_root+'TRENDY\LAI\\'
-        outdir=data_root+'monthly_data\\Trendy\\'
-        T.mk_dir(outdir,force=True)
+        fdir=data_root+'TRENDY\\nc\\'
 
 
         for f in os.listdir(fdir):
 
+
             if f.startswith('.'):
                 continue
+            outdir = data_root + 'TRENDY\\Trendy_TIFF\\' + f.split('.')[0] + '\\'
+            T.mk_dir(outdir, force=True)
+
 
             outdir_name = f.split('.')[0]
             print(outdir_name)
 
-            outdir = data_root + rf'/Trendy_TIFF/{outdir_name}//'
-            Tools().mk_dir(outdir, force=True)
+
+
             yearlist = list(range(1982, 2021))
 
             # # check nc variables
@@ -240,80 +243,85 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir = data_root+'monthly_data\SPEI3\\TIFF\\'
-        outdir=data_root+'monthly_data\SPEI3\\DIC\\'
-        T.mk_dir(outdir, force=True)
+        fdir_all = data_root+'TRENDY\Trendy_unify\\'
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
 
         year_list = list(range(1982, 2021))
-        all_array=  []# 作为筛选条件
 
-        for f in tqdm(sorted(os.listdir(fdir)), desc='loading...'):
-            if f.startswith('.'):
+
+        # 作为筛选条件
+        for fdir in os.listdir(fdir_all):
+            print(fdir)
+
+            outdir = data_root + rf'TRENDY\Trendy_DIC\\{fdir}\\'
+            if os.path.isdir(outdir):
                 continue
-            if not f.endswith('.tif'):
-                continue
-            if isfile(outdir):
-                continue
-            print(f)
+            T.mk_dir(outdir, force=True)
+            all_array = []
+            for f in os.listdir(fdir_all+fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:  #
+                    continue
+                if f.startswith('._'):
+                    continue
+                outf=outdir+f.split('.')[0]+'.npy'
 
-            if int(f.split('.')[0][0:4]) not in year_list:  #
-                continue
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir_all+fdir+'\\'+f)
+                array = np.array(array, dtype=float)
 
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-                fdir + f)
-            array = np.array(array, dtype=float)
-            # extract 360 and 720
-            array_unify = array[:720][:720,
-                          :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
 
-            array_unify[array_unify < -999] = np.nan
-            # array[array ==0] = np.nan
-            # array_unify[array_unify < 0] = np.nan  # 当变量是LAI 的时候，<0!!
-            # plt.imshow(array)
-            # plt.show()
-            array_mask = np.array(array_mask, dtype=float)
-            # plt.imshow(array_mask)
-            # plt.show()
-            array_dryland = array_unify * array_mask
-            # plt.imshow(array_dryland)
-            # plt.show()
+                array_unify = array[:720][:720,
+                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
 
-            all_array.append(array_dryland)
+                array_unify[array_unify < -999] = np.nan
+                array_unify[array_unify > 7] = np.nan
+                # array[array ==0] = np.nan
+                array_unify[array_unify < 0] = np.nan  # 当变量是LAI 的时候，<0!!
+                # plt.imshow(array)
+                # plt.show()
+                array_mask = np.array(array_mask, dtype=float)
+                # plt.imshow(array_mask)
+                # plt.show()
+                array_dryland = array_unify * array_mask
+                # plt.imshow(array_dryland)
+                # plt.show()
 
-        row = len(all_array[0])
-        col = len(all_array[0][0])
-        key_list = []
-        dic = {}
+                all_array.append(array_dryland)
 
-        for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
-            for c in range(col):
-                dic[(r, c)] = []
-                key_list.append((r, c))
-        # print(dic_key_list)
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
 
-        for r in tqdm(range(row), desc='构造time series'):  # 构造time series
-            for c in range(col):
-                for arr in all_array:
-                    value = arr[r][c]
-                    dic[(r, c)].append(value)
-                # print(dic)
-        time_series = []
-        flag = 0
-        temp_dic = {}
-        for key in tqdm(key_list, desc='output...'):  # 存数据
-            flag = flag + 1
-            time_series = dic[key]
-            time_series = np.array(time_series)
-            temp_dic[key] = time_series
-            if flag % 10000 == 0:
-                # print(flag)
-                np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
-                temp_dic = {}
-        np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
+
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
     def split_data(self):
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
@@ -359,12 +367,33 @@ class data_processing():
                     dic_ii[pix]=time_series_ii
                 np.save(outdir+'1982_2000.npy',dic_i)
                 np.save(outdir+'2001_2020.npy',dic_ii)
+    def check_tif_length(self):  ## count the number of tif files in each year
+        fdir=data_root+'TRENDY\\Trendy_TIFF\\'
+        for fdir_i in os.listdir(fdir):
+            year_dic={}
+            flag=0
+            for f in os.listdir(fdir+fdir_i):
+
+
+                if not f.endswith('.tif'):
+                    continue
+                flag = flag + 1
+                year=f.split('.')[0][0:4]
+                if year not in year_dic:
+                    year_dic[year]=0
+                year_dic[year]+=1
+            print(f'{fdir_i}:',year_dic)
+            print(flag)
+
 
     def resample_trendy(self):
-        fdir_all = data_root + '\Trendy_TIFF\\'
+        fdir_all = data_root + '\\TRENDY\\Trendy_TIFF\\'
         for fdir in tqdm(os.listdir(fdir_all)):
 
-            outdir = data_root + rf'\Trendy_resample\\{fdir}\\'
+            outdir = data_root + rf'\TRENDY\\Trendy_resample\\{fdir}\\'
+            if os.path.isdir(outdir):
+                continue
+
 
             T.mk_dir(outdir, force=True)
             year = list(range(1982, 2021))
@@ -408,9 +437,9 @@ class data_processing():
                 except Exception as e:
                     pass
     def unify_TIFF(self):
-        fdir_all=data_root + rf'\Trendy_resample\\'
+        fdir_all=data_root + '\\TRENDY\\Trendy_resample\\'
         for fdir in tqdm(os.listdir(fdir_all)):
-            outdir = data_root + rf'\Trendy_unify\\{fdir}\\'
+            outdir = data_root + rf'\TRENDY\Trendy_unify\\{fdir}\\'
             T.mk_dir(outdir, force=True)
             for f in tqdm(os.listdir(fdir_all+fdir+'\\')):
                 fpath=fdir_all+fdir+'\\'+f
@@ -427,8 +456,9 @@ class statistic_analysis():
         # self.trend_analysis()
         # self.detrend_zscore()
         # self.detrend_zscore_monthly()
-        self.zscore()
-        self.detrend()
+        # self.zscore()
+        # self.detrend()
+        self.anomaly()
 
 
     def trend_analysis(self):
@@ -748,6 +778,78 @@ class statistic_analysis():
                     # plt.show()
 
                 np.save(outf, detrend_zscore_dic)
+
+    def anomaly(self): #  detrend based on each month
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir_all = data_root + 'TRENDY\Trendy_DIC\\'
+        for fdir in os.listdir(fdir_all):
+
+
+            outdir = result_root + rf'anomaly\\{fdir}\\'
+            # if os.path.isdir(outdir):
+            #     continue
+            Tools().mk_dir(outdir, force=True)
+            dic={}
+
+            for f in os.listdir(fdir_all+fdir):
+
+
+                outf=outdir+f.split('.')[0]
+                print(outf)
+
+
+                dic_i = dict(np.load(fdir_all+fdir+'\\'+f, allow_pickle=True, ).item())
+                dic.update(dic_i)
+
+                anomaly_dic={}
+
+                for pix in tqdm(dic):
+                    anomaly_time_series_list = []
+                    if pix not in dic_dryland_mask:
+                        continue
+
+                    print(len(dic[pix]))
+                    time_series = dic[pix]
+                    print(len(time_series))
+
+                    time_series=np.array(time_series)
+                    time_series[time_series < -999] = np.nan
+
+
+                    if np.isnan(np.nanmean(time_series)):
+                        continue
+                    if np.nanmean(time_series) <= 0.:
+                        continue
+                    time_series_reshape=time_series.reshape(-1,12)
+                    time_series_reshape_T=time_series_reshape.T
+                    for i in range(len(time_series_reshape_T)):
+                        time_series_i=time_series_reshape_T[i]
+
+                        mean = np.nanmean(time_series_i)
+                        std=np.nanstd(time_series_i)
+                        if std == 0:
+                            continue
+
+                        anomaly_time_series = (time_series_i - mean)
+                        anomaly_time_series_list.append(anomaly_time_series)
+
+                    anomaly_time_series_array=np.array(anomaly_time_series_list)
+                    anomaly_time_series_array=anomaly_time_series_array.T
+                    detrend_delta_time_series_result=anomaly_time_series_array.flatten()
+
+                    # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
+                    ##plot
+                    # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
+                    plt.plot(detrend_delta_time_series_result,'b' ,linewidth=1,linestyle='--')
+                    plt.show()
+
+                    anomaly_dic[pix] = detrend_delta_time_series_result
+
+                np.save(outf, anomaly_dic)
 class moving_window():
     def __init__(self):
         pass
@@ -2411,16 +2513,23 @@ class plot_dataframe():
 
 class check_data():
     def run (self):
-        # self.plot_sptial()
-        self.testrobinson()
+        self.plot_sptial()
+        # self.testrobinson()
         # self.plot_time_series()
 
         pass
     def plot_sptial(self):
 
-        f= result_root+ 'Trendy_TIFF\CLASSIC_S2_lai\\19820824.tif'
-        # f = data_root + rf'split\NDVI4g\2001_2020.npy'
-        dic=T.load_npy(f)
+
+        fdir = data_root + rf'TRENDY\Trendy_DIC\LPX-Bern_S2_lai\\'
+        # dic=T.load_npy(f)
+        dic = {}
+        for f in os.listdir(fdir):
+            if not f.endswith(('.npy')):
+                continue
+
+            dic_i=T.load_npy(fdir+f)
+            dic.update(dic_i)
 
         len_dic={}
         for pix in dic:
@@ -2429,9 +2538,9 @@ class check_data():
             # len_dic[pix]=np.nanmean(vals)
             len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
-        plt.imshow(arr)
+        plt.imshow(arr,vmin=0,vmax=2,cmap='RdBu',interpolation='nearest')
         plt.colorbar()
-        plt.title('SPEI')
+        plt.title('')
         plt.show()
     def testrobinson(self):
 
@@ -2621,7 +2730,6 @@ class Dataframe_func:
 
 def main():
     data_processing().run()
-
     # statistic_analysis().run()
     # pick_event().run()
     # selection().run()
