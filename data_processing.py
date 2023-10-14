@@ -2273,7 +2273,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 1982
+            y = 1981
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
