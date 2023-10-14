@@ -2881,13 +2881,13 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
+    # statistic_analysis().run()
     # pick_event().run()
     # selection().run()
     # multi_regression().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # plot_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()
