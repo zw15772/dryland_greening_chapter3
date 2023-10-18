@@ -656,6 +656,7 @@ class statistic_analysis():
         # self.detrend()
 
         # self.anomaly_GS()
+        # self.zscore_GS()
 
         self.trend_analysis()
 
@@ -988,14 +989,71 @@ class statistic_analysis():
 
             np.save(outf, anomaly_dic)
 
+    def zscore_GS(self):  ### anomaly GS
+        dryland_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(dryland_mask_f)
 
+
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir = result_root + 'split\\'
+        outdir = result_root + f'zscore\\1982_2000_2020\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+
+            outf = outdir + f.split('.')[0] + '.npy'
+            print(outf)
+
+            dic = np.load(fdir + f, allow_pickle=True, ).item()
+
+            anomaly_dic = {}
+
+            for pix in tqdm(dic):
+                if pix not in dic_dryland_mask:
+                    continue
+
+                classval=dic_dryland_mask[pix]
+                if np.isnan(classval):
+                    continue
+
+                r, c = pix
+                # if not 240 < r < 480:
+                #     continue
+
+                time_series = dic[pix]
+                print(len(time_series))
+
+                time_series = np.array(time_series)
+
+                time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # plt.plot(time_series)
+                # plt.show()
+
+                mean = np.nanmean(time_series)
+                std=np.nanstd(time_series)
+                if std==0:
+                    continue
+
+                delta_time_series = (time_series - mean)/std
+
+
+                # plt.plot(delta_time_series)
+                # plt.show()
+
+                anomaly_dic[pix] = delta_time_series
+
+            np.save(outf, anomaly_dic)
     def trend_analysis(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
 
 
-        fdir = result_root + f'\\extract_GS\\'
-        outdir = result_root + rf'trend_analysis\\original\\'
+        fdir = result_root + f'\\zscore\\1982_2000_2020\\'
+        outdir = result_root + rf'trend_analysis\\zscore\\1982_2000_2020\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -1012,7 +1070,6 @@ class statistic_analysis():
             for pix in tqdm(dic):
 
                 time_series = dic[pix]
-
 
                 time_series = np.array(time_series)
                 # print(len(time_series))
@@ -2257,10 +2314,10 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + 'Dataframe\\anomaly\\'
+        self.this_class_arr = result_root + 'Dataframe\\zscore_trend\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'anomaly.df'
+        self.dff = self.this_class_arr + 'zscore_trend.df'
 
         pass
 
@@ -2268,8 +2325,9 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.build_df(df)
-        df=self.append_value(df)
+        # df=self.foo2(df)
+        # df=self.build_df(df)
+        # df=self.append_value(df)
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_trend_to_df(df)
         df=self.add_AI_classfication(df)
@@ -2316,7 +2374,7 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-        fdir = result_root + rf'extract_GS\\'
+        fdir = result_root + rf'anomaly\\'
         all_dic= {}
         for f in os.listdir(fdir):
             fpath=fdir+f
@@ -2330,7 +2388,7 @@ class build_dataframe():
         T.print_head_n(df)
         return df
     def append_value(self, df):
-        fdir = result_root + rf'extract_GS\\'
+        fdir = result_root + rf'anomaly\\'
         col_list=[]
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
@@ -2387,7 +2445,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = 'zscore\daily_Y\peak/during_peak_LAI3g_zscore.npy'
+        f = rf'D:\Project3\Result\trend_analysis\zscore\1982_2000_2020\\GPP_baseline_1982_2000_trend.npy'
         val_array = np.load(f)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
 
@@ -2563,7 +2621,7 @@ class build_dataframe():
 
         pass
     def add_trend_to_df(self,df):
-        fdir=result_root+rf'\trend_analysis\\original\\LAI\\'
+        fdir=result_root+rf'\trend_analysis\\zscore\1982_2000_2020\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
@@ -2584,7 +2642,7 @@ class build_dataframe():
                     val_list.append(np.nan)
                     continue
                 val_list.append(val)
-            df[f'{f_name}_anomaly']=val_list
+            df[f'{f_name}_zscore']=val_list
 
         return df
 
@@ -2658,8 +2716,9 @@ class plot_dataframe():
 
         # self.plot_annual_zscore_based_region()
         # self.plot_annual_zscore_based_trend()
-        # self.plot_anomaly()
-        self.plot_climatic_factors()
+        # self.plot_anomaly_trendy()
+        self.plot_anomaly_vegetaton_indices()
+        # self.plot_climatic_factors()
         # self.plot_plant_fuctional_types()
         pass
 
@@ -2765,9 +2824,9 @@ class plot_dataframe():
 
         plt.show()
 
-    def plot_anomaly(self):
+    def plot_anomaly_trendy(self):
 
-        df= T.load_df(result_root + 'Dataframe\\anomaly\\anomaly.df')
+        df= T.load_df(result_root + 'Dataframe\\zscore\\zscore.df')
 
         #create color list with one green and another 14 are grey
 
@@ -2805,6 +2864,47 @@ class plot_dataframe():
             plt.ylabel('delta LAI (m3/m3/year)')
 
             plt.title(region)
+        plt.show()
+    def plot_anomaly_vegetaton_indices(self):
+        vegetation_list=['NDVI4g','LAI4g','GPP_CFE','GPP_baseline']
+
+        df= T.load_df(result_root + 'Dataframe\\zscore\\zscore.df')
+
+
+
+        color_list=['red','green','blue','orange']
+
+        fig = plt.figure()
+        i = 1
+
+        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
+            df_region = df[df['AI_classfication'] == region]
+            ax = fig.add_subplot(1, 3, i)
+            flag=0
+            for variable in vegetation_list:
+
+                print(variable)
+                vals=df_region[variable].tolist()
+                vals_nonnan=[]
+                for val in vals:
+                    if type(val)==float: ## only screening
+                        continue
+                    vals_nonnan.append(val)
+                vals_mean=np.nanmean(vals_nonnan,axis=0)  ## axis=0, mean of each row  竖着加
+                plt.plot(vals_mean,label=variable,color=color_list[flag],)
+                flag=flag+1
+
+            i=i+1
+
+            ax.set_xticks(range(0, 40, 4))
+            ax.set_xticklabels(range(1982, 2021, 4), rotation=45)
+
+            plt.xlabel('year')
+
+            plt.ylabel('zscore')
+
+            plt.title(region)
+        plt.legend()
         plt.show()
     def plot_climatic_factors(self):
         climatic_factors=['SPEI3',]
@@ -3014,10 +3114,10 @@ class check_data():
         plt.show()
     def testrobinson(self):
 
-        f = result_root + '\\trend_analysis\\original\LAI\\LAI4g_trend.tif'
+        f = result_root + '\\trend_analysis\\original\LAI\\GPP_baseline_trend.tif'
         # f = data_root + rf'split\NDVI4g\2001_2020.npy'
-        Plot().plot_Robinson(f, vmin=-0.01, vmax=0.01, )
-        plt.title('LAI4g (m3/m3/year)')
+        Plot().plot_Robinson(f, vmin=-15, vmax=15, )
+        plt.title('GPP_baseline(kg/m2/year)')
 
         plt.show()
 
@@ -3208,9 +3308,9 @@ def main():
     # multi_regression().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # plot_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
 
 
