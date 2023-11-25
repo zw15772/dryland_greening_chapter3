@@ -78,29 +78,36 @@ class data_processing():
     def __init__(self):
         pass
     def run(self):
-        self.nc_to_tif()
+        # self.nc_to_tif()
         # self.check_tif_length()
         # self.resample_trendy()
+        # self.resample_AVHRR_LAI()
+        # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
 
-        # self.trendy_ensemble_calculation()
+
+        # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
         # self.tif_to_dic()
+
         # self.extract_GS()
+
         # self.extend_GS() ## for SDGVM， it has 37 year GS, to align with other models, we add one more year
+        # self.extend_nan()  ##
+        self.scales_GPP_Trendy()
         # self.split_data()
 
     def nc_to_tif(self):
 
-        fdir=data_root+'TRENDY_LAI\S2\\nc\\'
+        fdir=data_root+rf'\GPP\S3\\nc\\'
 
         for f in os.listdir(fdir):
 
 
             if f.startswith('.'):
                 continue
-            outdir = data_root + 'TRENDY_LAI\\S2\\TIFF\\' + f.split('.')[0] + '\\'
+            outdir = data_root + 'GPP\\S3\\TIFF\\' + f.split('.')[0] + '\\'
             T.mk_dir(outdir, force=True)
 
             outdir_name = f.split('.')[0]
@@ -114,7 +121,7 @@ class data_processing():
 
             # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
             try:
-                self.nc_to_tif_template(fdir + f, var_name='lai', outdir=outdir, yearlist=yearlist)
+                self.nc_to_tif_template(fdir + f, var_name='gpp', outdir=outdir, yearlist=yearlist)
             except Exception as e:
                 print(e)
                 continue
@@ -243,8 +250,8 @@ class data_processing():
     #     array = np.array(array, dtype=float)
     #     ToRaster().array2raster(outf, -180, 90, 1, -1, array, )
     def trendy_ensemble_calculation(self):  # 将提取的original_dataset average
-        fdir_all = data_root + f'TRENDY_LAI\S0\\unify\\'
-        outdir = data_root + f'TRENDY_LAI\S0\\Trendy_ensemble\\'
+        fdir_all = data_root + rf'GPP\S3\unify\\'
+        outdir = data_root + rf'GPP\S3\monthly\\'
         Tools().mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
@@ -277,7 +284,7 @@ class data_processing():
                                     :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
                         arr_unify = np.array(arr_unify)
                         arr_unify[arr_unify <0] = np.nan
-                        arr_unify[arr_unify > 7] = np.nan
+                        # arr_unify[arr_unify > 7] = np.nan
                         data_list.append(arr_unify)
                 data_list = np.array(data_list)
                 print(data_list.shape)
@@ -308,7 +315,7 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = data_root+'TRENDY_LAI\S2\\unify\\'
+        fdir_all = data_root+rf'\GPP\S3\unify\\'
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -321,7 +328,7 @@ class data_processing():
             print(fdir)
 
 
-            outdir = data_root + rf'TRENDY_LAI\S2\\DIC\\{fdir}\\'
+            outdir = data_root + rf'\GPP\S3\monthly\\{fdir}\\'
             if os.path.isdir(outdir):
                 continue
             T.mk_dir(outdir, force=True)
@@ -345,7 +352,7 @@ class data_processing():
                               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
 
                 array_unify[array_unify < -999] = np.nan
-                array_unify[array_unify > 7] = np.nan
+                # array_unify[array_unify > 7] = np.nan
                 # array[array ==0] = np.nan
                 array_unify[array_unify < 0] = np.nan  # 当变量是LAI 的时候，<0!!
                 # plt.imshow(array)
@@ -392,8 +399,8 @@ class data_processing():
 
 
     def extract_GS(self):  ## here using new extraction method: 240<r<480 all year growing season
-        fdir_all = data_root + 'TRENDY_LAI\S2\\DIC\\'
-        outdir = result_root + f'extract_GS\TRENDY_LAI\S2\\'
+        fdir_all = data_root + rf'GPP\S3\monthly\\'
+        outdir = result_root + f'extract_GS\TRENDY_GPP\\S3\\'
         Tools().mk_dir(outdir, force=True)
         date_list=[]
 
@@ -403,6 +410,7 @@ class data_processing():
         for year in range(1982, 2021):
             for mon in range(1, 13):
                 date_list.append(datetime.datetime(year, mon, 1))
+
         for fdir in os.listdir(fdir_all):
 
 
@@ -413,9 +421,10 @@ class data_processing():
                 continue
             print(outf)
 
+
             for f in os.listdir(fdir_all + fdir):
 
-                spatial_dict_i =dict(np.load(fdir_all + fdir+'\\'+f, allow_pickle=True, ).item())
+                spatial_dict_i =dict(np.load(fdir_all + fdir + '\\' + f, allow_pickle=True, ).item())
                 spatial_dict.update(spatial_dict_i)
 
             annual_spatial_dict = {}
@@ -432,7 +441,7 @@ class data_processing():
                 # vals = np.array(vals)/100
 
                 vals[vals < -999] = np.nan
-                vals[vals > 7] = np.nan
+                # vals[vals > 7] = np.nan
 
                 vals[vals<0]=np.nan
 
@@ -479,7 +488,7 @@ class data_processing():
 
             np.save(outf, annual_spatial_dict)
 
-    pass
+        pass
 
 
     def group_consecutive_vals(self, in_list):
@@ -546,9 +555,34 @@ class data_processing():
 
             np.save(outf+'1982_2000.npy',dic_i)
             np.save(outf+'2001_2020.npy',dic_ii)
+
+    def extend_nan(self):
+        fdir= result_root + rf'extract_GS\TRENDY_GPP\S3\\'
+        outdir=result_root + rf'extract_GS\\TRENDY_GPP\\S3\\Extend\\'
+        T.mk_dir(outdir,force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            outf=outdir+f.split('.')[0]+'.npy'
+            dic = dict(np.load(fdir +f, allow_pickle=True, ).item())
+            dic_new={}
+
+            for pix in tqdm(dic):
+                time_series=dic[pix]
+
+                time_series=np.array(time_series)
+                time_series[time_series<-999]=np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if len(time_series)<39:
+                    time_series_new=np.append(time_series,np.nan)
+                    dic_new[pix]=time_series_new
+                else:
+                    dic_new[pix]=time_series
+            np.save(outf,dic_new)
     def extend_GS(self):
-        f= result_root + rf'extract_GS\TRENDY_LAI\S2\\SDGVM_S2_lai.npy'
-        outf=result_root + rf'extract_GS\\TRENDY_LAI\S2\\SDGVM_S2_lai_new.npy'
+        f= result_root + rf'extract_GS\TRENDY_GPP\S3\\SDGVM_S3_gpp.npy'
+        outf=result_root + rf'extract_GS\\TRENDY_GPP\S3\SDGVM_S3_gpp_new.npy'
         dic = dict(np.load(f, allow_pickle=True, ).item())
         dic_new={}
         for pix in tqdm(dic):
@@ -562,7 +596,7 @@ class data_processing():
         np.save(outf,dic_new)
 
     def check_tif_length(self):  ## count the number of tif files in each year
-        fdir=data_root+'TRENDY_LAI\S0\TIFF\\'
+        fdir=data_root+'GPP\S3\TIFF\\'
         for fdir_i in os.listdir(fdir):
             year_dic={}
             flag=0
@@ -581,10 +615,10 @@ class data_processing():
 
 
     def resample_trendy(self):
-        fdir_all = data_root + '\TRENDY_LAI\S2\TIFF\\'
+        fdir_all = data_root + 'GPP\S3\TIFF\\'
         for fdir in tqdm(os.listdir(fdir_all)):
 
-            outdir = data_root + rf'\TRENDY_LAI\S2\\resample\\{fdir}\\'
+            outdir = data_root + rf'\GPP\S3\\resample\\\\{fdir}\\'
             if os.path.isdir(outdir):
                 continue
 
@@ -630,10 +664,113 @@ class data_processing():
                 # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
                 except Exception as e:
                     pass
+    def resample_AVHRR_LAI(self):
+        fdir_all = data_root + '\AVHRR_LAI\\TIFF\\'
+
+        outdir = data_root + rf'\AVHRR_LAI\\resample\\\\'
+
+
+        T.mk_dir(outdir, force=True)
+        year = list(range(1982, 2021))
+        # print(year)
+        # exit()
+        for f in tqdm(os.listdir(fdir_all)):
+            if not f.endswith('.tif'):
+                continue
+
+            if f.startswith('._'):
+                continue
+
+            # year_selection=f.split('.')[1].split('_')[1]
+            # print(year_selection)
+            # if not int(year_selection) in year:  ##一定注意格式
+            #     continue
+            # fcheck=f.split('.')[0]+f.split('.')[1]+f.split('.')[2]+'.'+f.split('.')[3]
+            # if os.path.isfile(outdir+'resample_'+fcheck):  # 文件已经存在的时候跳过
+            #     continue
+            # date = f[0:4] + f[5:7] + f[8:10] MODIS
+            print(f)
+            # exit()
+            date = f.split('_')[3]
+            date_2 = date.split('.')[0]
+            print(date_2)
+
+            # print(date)
+            # exit()
+            dataset = gdal.Open(fdir_all  + f)
+            # print(dataset.GetGeoTransform())
+            original_x = dataset.GetGeoTransform()[1]
+            original_y = dataset.GetGeoTransform()[5]
+
+            # band = dataset.GetRasterBand(1)
+            # newRows = dataset.YSize * 2
+            # newCols = dataset.XSize * 2
+            try:
+                gdal.Warp(outdir + '{}.tif'.format(date_2), dataset, xRes=0.25, yRes=0.25, dstSRS='EPSG:4326')
+            # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+            # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+            except Exception as e:
+                pass
+
+    def aggreate_AVHRR_LAI(self):  # aggregate biweekly data to monthly
+        fdir_all = data_root + rf'AVHRR_LAI\resample\\'
+        outdir = data_root + f'AVHRR_LAI\monthly_aggragate\\'
+        Tools().mk_dir(outdir, force=True)
+
+        year_list = list(range(1982, 2021))
+        month_list = list(range(1, 13))
+
+        for year in tqdm(year_list):
+            for month in tqdm(month_list):
+
+                data_list = []
+                for f in tqdm(os.listdir(fdir_all)):
+                    if not f.endswith('.tif'):
+                        continue
+
+                    data_year = f.split('.')[0][0:4]
+                    data_month = f.split('.')[0][4:6]
+
+                    if not int(data_year) == year:
+                        continue
+                    if not int(data_month) == int(month):
+                        continue
+                    arr=ToRaster().raster2array(fdir_all +f)[0]
+                    arr=arr/1000 ###
+                    arr_unify = arr[:720][:720,
+                                :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                    arr_unify = np.array(arr_unify)
+                    arr_unify[arr_unify == 65535] = np.nan
+                    arr_unify[arr_unify <0] = np.nan
+                    arr_unify[arr_unify > 7] = np.nan
+                      # 当变量是LAI 的时候，<0!!
+                    data_list.append(arr_unify)
+                data_list = np.array(data_list)
+                print(data_list.shape)
+                # print(len(data_list))
+                # exit()
+
+                ##define arr_average and calculate arr_average
+
+                arr_average = np.nanmax(data_list, axis=0)
+                arr_average = np.array(arr_average)
+                arr_average[arr_average <=0] = np.nan
+                arr_average[arr_average > 7] = np.nan
+                if np.isnan(np.nanmean(arr_average)):
+                    continue
+                if np.nanmean(arr_average) < 0.:
+                    continue
+                # plt.imshow(arr_average)
+                # plt.title(f'{year}{month}')
+                # plt.show()
+
+                # save
+
+                DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_average, outdir + '{}{:02d}.tif'.format(year, month))
     def unify_TIFF(self):
-        fdir_all=data_root + '\\TRENDY_LAI\\S2\\resample\\'
+        fdir_all=data_root + rf'\\GPP\S3\resample\\'
         for fdir in tqdm(os.listdir(fdir_all)):
-            outdir = data_root + rf'\TRENDY_LAI\S2\\unify\\{fdir}\\'
+            outdir = data_root + rf'\GPP\S3\\unify\\{fdir}\\'
             T.mk_dir(outdir, force=True)
             for f in tqdm(os.listdir(fdir_all+fdir+'\\')):
                 fpath=fdir_all+fdir+'\\'+f
@@ -643,6 +780,35 @@ class data_processing():
                 if f.startswith('._'):
                     continue
                 unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.25)
+
+    def scales_GPP_Trendy(self):
+        fdir_all = result_root+rf'extract_GS\TRENDY_GPP\S3\Extend\\'
+
+
+
+        outdir = result_root + rf'extract_GS\TRENDY_GPP\S3\scales\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in tqdm(os.listdir(fdir_all)):
+            dic=np.load(fdir_all  +f, allow_pickle=True, ).item()
+            outf=outdir+'\\'+f.split('.')[0]+'.npy'
+            print(outf)
+            dic_new={}
+            for pix in tqdm(dic):
+                time_series=dic[pix]
+                time_series=np.array(time_series)
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.nanmean(time_series) < 0.:
+                    continue
+                time_series=time_series*60*60*24*365*1000
+                dic_new[pix]=time_series
+            np.save(outf,dic_new)
+
+
+
+    pass
 
 
 class statistic_analysis():
@@ -656,11 +822,11 @@ class statistic_analysis():
         # self.detrend()
 
         # self.anomaly_GS()
-        # self.anomaly_GS_ensemble()
+        self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
         # self.trend_analysis()
-        self.scerios_analysis() ## this method tried to calculate different scenarios
+        # self.scerios_analysis() ## this method tried to calculate different scenarios
 
 
 
@@ -915,8 +1081,8 @@ class statistic_analysis():
 
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir = result_root + 'extract_GS\\TRENDY_LAI\\S0\\'
-        outdir = result_root + f'anomaly\\S0\\'
+        fdir = result_root + 'extract_GS\TRENDY_GPP\S3\Extend\\'
+        outdir = result_root + f'anomaly\\TRENDY_GPP\S3\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -966,8 +1132,8 @@ class statistic_analysis():
             np.save(outf, anomaly_dic)
     def anomaly_GS_ensemble(self):  ### calculate the ensemble mean of anomaly GS
 
-        fdir = result_root + 'anomaly\\\\S3\\'
-        outdir = result_root + f'anomaly\\S3\\'
+        fdir = result_root + 'anomaly\TRENDY_GPP\S3\\'
+        outdir = result_root + f'anomaly\\TRENDY_GPP\S3\\'
         Tools().mk_dir(outdir, force=True)
 
 
@@ -1081,8 +1247,8 @@ class statistic_analysis():
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
 
 
-        fdir = result_root + f'anomaly\S3\\'
-        outdir = result_root + rf'trend_analysis\\anomaly\\S3\\'
+        fdir = result_root + f'extract_GS\OBS\\'
+        outdir = result_root + rf'trend_analysis\\original\\OBS\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -1179,6 +1345,78 @@ class statistic_analysis():
 
                 np.save(outf, array_new)
                 DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_new,outdir+fmodel+f'_{scenarios}.tif')
+
+
+class calculating_variables:  ###
+
+    def run(self):
+        # self.calculate_CV()
+        # self.convert_tiff_to_npy()
+        self.create_CO2_dic()
+
+        pass
+
+    def calculate_CV(self):
+        fdir = result_root + rf'extract_GS\OBS_extend\\'
+        outdir = result_root + rf'state_variables\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+            variable = f.split('.')[0]
+            if not f.endswith('.npy'):
+                continue
+            val_dic = T.load_npy(fdir + f)
+            for pix in tqdm(val_dic, desc=variable):
+                vals = val_dic[pix]
+                if T.is_all_nan(vals):
+                    continue
+                mean = np.nanmean(vals)
+                std = np.nanstd(vals)
+                CV = std / mean
+                val_dic[pix] = CV
+            outf = outdir + rf'\{variable}_CV.npy'
+            np.save(outf, val_dic)
+
+        pass
+
+    def convert_tiff_to_npy(self):
+        fdir = result_root + 'state_variables\\'
+        outdir = result_root + rf'\\state_variables\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            print(f)
+            arr = ToRaster().raster2array(fdir + f)[0]
+            dic=DIC_and_TIF().spatial_arr_to_dic(arr)
+            outf = outdir + f.split('.')[0] + '.npy'
+
+            np.save(outf, dic)
+        pass
+    def create_CO2_dic(self):
+        CO2_f=data_root+rf'\Base_data\\monthly_in_situ_co2_mlo.xlsx'
+        df=pd.read_excel(CO2_f,sheet_name='Sheet1')
+        print(df)
+        print(df.columns)
+
+        for col in df.columns:
+            new_col=col.replace(' ','')
+            df.rename(columns={col:new_col},inplace=True)
+            if new_col=='CO2filled[ppm]':
+                df[new_col]=df[new_col].astype(float)
+            else:
+                df[new_col]=df[new_col].astype(int)
+
+        df=df[['Yr','Mn','CO2filled[ppm]']]
+
+
+        df=df[df['Yr']>=1982]
+        df=df[df['Yr']<=2020]
+
+        print(df)
+        exit()
+
+
 
 class moving_window():
     def __init__(self):
@@ -2591,10 +2829,10 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + 'Dataframe\\anomaly_trends\\'
+        self.this_class_arr = result_root + rf'Dataframe\anomaly_GPP\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'anomaly_trends.df'
+        self.dff = self.this_class_arr + 'anomaly.df'
 
         pass
 
@@ -2602,17 +2840,17 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
-        # df=self.build_df(df)
+        #df=self.foo2(df)
+        df=self.build_df(df)
         #
         # df=self.append_value(df)
         # df = self.add_detrend_zscore_to_df(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_AI_classfication(df)
         # df=self.add_SM_trend_label(df)
 
-        # df = self.add_landcover_data_to_df(df)
-        # df=self.add_landcover_classfication_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
 
         # df=self.__rename_dataframe_columns(df)
         # df=self.show_field(df)
@@ -2652,9 +2890,10 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-        fdir = result_root + rf'extract_GS\TRENDY_LAI\S3\\'
+        fdir = result_root + rf'anomaly\TRENDY_GPP\S3\\\\'
         all_dic= {}
         for f in os.listdir(fdir):
+
             fpath=fdir+f
             if not fpath.endswith('.npy'):
                 continue
@@ -2668,11 +2907,13 @@ class build_dataframe():
 
 
     def append_value(self, df):  ##补齐
-        fdir = result_root + rf'extract_GS\TRENDY_LAI\S3\\'
+        fdir = result_root + rf'anomaly\LAI\\S3\\'
         col_list=[]
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
+
+
             col_name=f.split('.')[0]
             col_list.append(col_name)
 
@@ -2699,7 +2940,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = result_root + rf'anomaly\LAI4g.npy'
+        f = result_root + rf'anomaly\OBS\\LAI4g.npy'
 
         dic = T.load_npy(f)
 
@@ -2986,27 +3227,34 @@ class build_dataframe():
 class plot_dataframe():
     def __init__(self):
         scenario='S3'
-        self.product_list = [ f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
+        self.product_list = ['LAI4g', 'GIMMS_AVHRR_LAI','Ensemble', f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
              f'ISBA-CTRIP_{scenario}_lai', f'JSBACH_{scenario}_lai', f'JULES_{scenario}_lai',  f'LPJ-GUESS_{scenario}_lai', f'LPX-Bern_{scenario}_lai',
              f'ORCHIDEE_{scenario}_lai', f'SDGVM_{scenario}_lai', f'YIBs_{scenario}_Monthly_lai']
+
+        # self.product_list = ['LAI4g', 'GIMMS_AVHRR_LAI','Ensemble', ]
 
         pass
     def run(self):
 
+
         # self.plot_annual_zscore_based_region()
 
-        # self.plot_anomaly_trendy()
+        self.plot_anomaly_trendy()
         # self.plot_anomaly_vegetaton_indices()
         # self.plot_climatic_factors()
         # self.plot_plant_fuctional_types_trend()
         # self.plot_trend_spatial_all()
-        self.plot_trend_regional()
+        # self.plot_trend_regional()
         # self.plot_trend()
 
         # self.plot_trend_spatial()
-        self.plot_browning_greening()
+        # self.plot_browning_greening()
         # self.plot_original_data()
         pass
+    def clean_df(self,df):
+        df=df[df['landcover_classfication']!='Cropland']
+        return df
+
 
 
     def plot_annual_zscore_based_region(self):   #based on semi-arid, arid and sub-humid
@@ -3063,16 +3311,22 @@ class plot_dataframe():
 
     def plot_anomaly_trendy(self):
 
-        df= T.load_df(result_root + 'Dataframe\\growing_season_original\\growing_season_original.df')
+        df= T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly.df')
+        print(len(df))
+        df=self.clean_df(df)
+        print(len(df))
+        # exit()
 
         #create color list with one green and another 14 are grey
 
-        # color_list=['grey']*16
-        # # color_list[0]='green'
-        # # color_list[1]='black'
-        # linewidth_list=[1]*16
-        # # linewidth_list[0]=3
-        # # linewidth_list[1]=3
+        color_list=['grey']*16
+        color_list[0]='green'
+        color_list[1] = 'red'
+        color_list[2]='black'
+        linewidth_list=[1]*16
+        linewidth_list[0]=3
+        linewidth_list[1]=3
+        linewidth_list[2]=3
 
         fig = plt.figure()
         i = 1
@@ -3094,18 +3348,20 @@ class plot_dataframe():
                 vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
                 vals_mean=np.nanmean(vals_mean,axis=0)
 
-                # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
-                plt.plot(vals_mean,label=product)
-                plt.scatter(range(len(vals_mean)),vals_mean)
-                plt.text(0,vals_mean[0],product,fontsize=8)
+                plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+
+                # plt.scatter(range(len(vals_mean)),vals_mean)
+                # plt.text(0,vals_mean[0],product,fontsize=8)
             i=i+1
 
             ax.set_xticks(range(0, 40, 4))
             ax.set_xticklabels(range(1982, 2021, 4), rotation=45)
+            plt.ylim(-0.24, 0.24)
+
 
             plt.xlabel('year')
 
-            plt.ylabel('delta LAI (m3/m3/year)')
+            plt.ylabel('delta LAI (m2/m2/year)')
             # plt.legend()
 
             plt.title(region)
@@ -3657,14 +3913,15 @@ class plot_dataframe():
 
 class check_data():
     def run (self):
-        # self.plot_sptial()
-        self.testrobinson()
+        self.plot_sptial()
+        # self.testrobinson()
         # self.plot_time_series()
 
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project3\Result\anomaly\S0\\SDGVM_S0_lai.npy'
+        f =  rf'D:\Project3\Result\extract_GS\TRENDY_GPP\S3\\\SDGVM_S3_gpp_new.npy'
+        # fdir=rf'D:\Project3\Data\monthly_data\LAI4g\DIC\\'
         dic=T.load_npy(f)
         # dic = {}
         # for f in os.listdir(fdir):
@@ -3681,15 +3938,15 @@ class check_data():
             # len_dic[pix]=np.nanmean(vals)
             len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest')
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=38,vmax=39)
         plt.colorbar()
-        plt.title('GPP_CFE_1982')
+        plt.title('')
         plt.show()
     def testrobinson(self):
 
-        f = result_root + 'trend_analysis\\anomaly\ALL_ensemble\\Ensemble_S1-S0_trend.tif'
+        f = result_root + rf'D:\Project3\Result\trend_analysis\original\OBS\\LAI4g_trend.tif'
         # f = data_root + rf'split\NDVI4g\2001_2020.npy'
-        Plot().plot_Robinson(f, vmin=-0.01,vmax=0.01,is_discrete=True,colormap_n=7)
+        Plot().plot_Robinson(f, vmin=-0.1,vmax=0.1,is_discrete=True,colormap_n=7)
         plt.title('GPP_baseline(kg/m2/year)')
 
         plt.show()
@@ -3876,13 +4133,14 @@ class Dataframe_func:
 def main():
     data_processing().run()
     # statistic_analysis().run()
+    # calculating_variables().run()
     # pick_event().run()
     # selection().run()
     # multi_regression().run()
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # plot_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()
