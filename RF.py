@@ -14,6 +14,7 @@ from scipy import interpolate
 from scipy import signal
 import time
 import re
+import shap
 
 from osgeo import ogr
 from osgeo import osr
@@ -145,9 +146,12 @@ class Dataframe:
         df=self.__gen_df_init(self.dff)
         # df=self.foo1(df)
 
-        # df=self.add_detrend_zscore_to_df(df)
+        df=self.add_anomaly_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
+        # df=self.add_SOC_to_df(df)
+        # df=self.add_rooting_depth_to_df(df)
         # self.add_trend_to_df(df)
-        self.add_MAT_MAP(df)
+        # self.add_MAT_MAP(df)
         # df=self.add_AI_classfication(df)
 
         T.save_df(df, self.dff)
@@ -209,18 +213,18 @@ class Dataframe:
         df['year'] = year_list_all
 
 
-
-
         return df
 
 
-    def add_detrend_zscore_to_df(self, df):
+    def add_anomaly_to_df(self, df):
         fdir = result_root + rf'anomaly\OBS_extend\\'
+
 
         for f in os.listdir(fdir):
 
 
             variable= f.split('.')[0]
+            print(variable)
 
             if not f.endswith('.npy'):
                 continue
@@ -281,6 +285,80 @@ class Dataframe:
                     continue
                 val_list.append(val)
             df[f'{f_name}']=val_list
+
+    def add_soil_texture_to_df(self,df):
+
+        f = rf'D:\Project3\Data\Base_data\HWSD\tif_025\\S_SILT.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        f_name = f.split('.')[0].split('\\')[-1]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f'{f_name}'] = val_list
+        return df
+
+    def add_SOC_to_df(self,df):
+
+        f = rf'D:\Project3\Data\Base_data\SOC\tif_sum\\SOC_sum.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        f_name = f.split('.')[0].split('\\')[-1]
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f'{f_name}'] = val_list
+        return df
+
+
+
+    def add_rooting_depth_to_df(self,df):
+
+        f = rf'D:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\rooting_depth.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        f_name = f.split('.')[0].split('\\')[-1]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f'{f_name}'] = val_list
+        return df
+
 
     def add_MAT_MAP(self,df):
 
@@ -720,34 +798,37 @@ class Random_Forests:
     def __init__(self):
         self.this_class_arr, self.this_class_tif, self.this_class_png = \
             T.mk_class_dir('Random_Forests', result_root_this_script, mode=2)
-        self.dff = join(self.this_class_arr, 'dataframe/dataframe.df')
+        self.dff = join(self.this_class_arr, 'RF/RF.df')
         self.variables()
         self.variables_valid_range()
+
         pass
 
     def run(self):
         # self.copy_df()
-        # df = self.__gen_df_init()
-        # df = self.add_CV(df)
-        # df = self.add_trend(df)
-        # T.save_df(df, self.dff)
-        # T.df_to_excel(df, self.dff)
+        df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
+        self.run_important_for_each_pixel()
+        # self.plot_importance_result_for_each_pixel()
+        # self.run_permutation_importance()
+        # self.plot_importance_result()
+        # self.partial_SHAP(df,self.x_variable_list,self.y_variable_list[0])
         # self.run_partial_dependence_plots()
-        self.plot_run_partial_dependence_plots()
+
+        # self.plot_run_partial_dependence_plots()
 
 
         pass
 
     def copy_df(self):
-        outdir = join(self.this_class_arr,'dataframe')
+        outdir = join(self.this_class_arr,'RF')
         T.mk_dir(outdir,force=True)
         outf = self.dff
-        dff_origin = Dataframe().dff
-        dff_origin_xlsx = Dataframe().dff + '.xlsx'
+        dff_origin =  'D:\Project3\Result\Dataframe\RF\RF.df'
+        dff_origin_xlsx = 'D:\Project3\Result\Dataframe\RF\RF.xlsx'
         shutil.copy(dff_origin,outf)
-        shutil.copy(dff_origin_xlsx,join(outdir,'dataframe.df.xlsx'))
+        shutil.copy(dff_origin_xlsx,join(outdir,'RF.df.xlsx'))
         pass
 
     def add_CV(self,df):
@@ -820,6 +901,131 @@ class Random_Forests:
             df = df[df[x_var] <= x_var_range[1]]
 
         return df
+
+    def run_important_for_each_pixel(self):
+        dff = self.dff
+        df = T.load_df(dff)
+
+
+        group_dic = T.df_groupby(df,'pix')
+        outdir= join(self.this_class_arr,'important_for_each_pixel')
+        T.mk_dir(outdir,force=True)
+
+        for y_var in self.y_variable_list:
+            importance_spatial_dict = {}
+
+            for pix in tqdm(group_dic):
+                df_pix = group_dic[pix]
+
+                df_pix=df_pix.dropna(subset=[y_var]+self.x_variable_list,how='any')
+                # T.print_head_n(df_pix)
+                if len(df_pix)<20:
+                    continue
+
+                x_variable_list = self.x_variable_list
+                X=df_pix[x_variable_list]
+                Y=df_pix[y_var]
+
+                X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2,
+                                                                    random_state=1)  # split the data into training and testing
+                clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
+                clf.fit(X_train, Y_train)  # train the model
+                R2= clf.score(X_test, Y_test)  # calculate the R2
+                importance=clf.feature_importances_
+                # print(importance)
+                importance_dic=dict(zip(x_variable_list,importance))
+                importance_dic['R2']=R2
+
+                # print(importance_dic)
+                importance_spatial_dict[pix]=importance_dic
+            importance_dateframe = T.dic_to_df(importance_spatial_dict, 'pix')
+            T.print_head_n(importance_dateframe)
+            outf = join(outdir, f'{y_var}.df')
+            T.save_df(importance_dateframe, outf)
+            outf_xlsx = outf + '.xlsx'
+            T.df_to_excel(importance_dateframe, outf_xlsx)
+
+
+    def plot_importance_result_for_each_pixel(self):
+        keys=list(range(len(self.x_variable_list)))
+        x_variable_dict=dict(zip(self.x_variable_list, keys))
+        print(x_variable_dict)
+        # exit()
+
+        f=rf'D:\Project3\Result\statistic\Random_Forests\arr\important_for_each_pixel\\LAI4g.df'
+        df = T.load_df(f)
+        # T.print_head_n(df)
+        spatial_dic={}
+        for i, row in df.iterrows():
+            pix = row['pix']
+            importance_dic = row.to_dict()
+            # print(importance_dic)
+            x_variable_list = self.x_variable_list
+            importance_dici = {}
+            for x_var in x_variable_list:
+                importance_dici[x_var] = importance_dic[x_var]
+                # print(importance_dici)
+            max_var = max(importance_dici, key=importance_dici.get)
+            max_var_val=x_variable_dict[max_var]
+            spatial_dic[pix]=max_var_val
+
+            # print(max_var_val)
+            # print(max_var)
+            importance_dici['R2'] = importance_dic['R2']
+
+        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+
+        plt.imshow(arr,vmin=0,vmax=12,interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
+
+        pass
+
+
+
+
+
+
+
+
+    def run_permutation_importance(self):
+        outdir = join(self.this_class_arr, 'permutation_importance')
+        T.mk_dir(outdir, force=True)
+        y_variable_list = self.y_variable_list
+        x_variable_list = self.x_variable_list
+        dff = self.dff
+        df = T.load_df(dff)
+        T.print_head_n(df)
+
+
+        print(df.columns.tolist())
+        for y_variable in y_variable_list:
+            df=df.dropna(subset=[y_variable]+x_variable_list,how='any')
+            X = df[x_variable_list]
+            Y = df[y_variable]
+            variable_list = x_variable_list
+            clf, importances_dic, mse, r_model, score, Y_test, y_pred = self._random_forest_train(X, Y,
+                                                                                                     variable_list)
+            outf = join(outdir, f'{y_variable}.npy')
+            T.save_npy(importances_dic, outf)
+    def plot_importance_result(self):
+        f=rf'D:\Project3\Result\statistic\Random_Forests\arr\permutation_importance\\GPP_CFE.npy'
+        result_dic=T.load_npy(f)
+        df = pd.DataFrame(dict(result_dic), index=['imp']).T
+        df_sort = df.sort_values(by='imp', ascending=False)
+        print(df_sort)
+        df_sort.plot(kind='bar')
+        plt.title('GPP_CFE')
+
+        plt.tight_layout()
+
+        plt.show()
+
+
+        pass
+
+
 
     def run_partial_dependence_plots(self):
         # fdir = join(Random_Forests_delta().this_class_arr, 'seasonal_delta')
@@ -911,6 +1117,33 @@ class Random_Forests:
                                'r2':r2}
         return result_dic
 
+    def partial_SHAP(self,df,x_vars,y_var):
+        '''
+        :param df: a dataframe
+        :param x_vars: a list of x variables
+        :param y_var: a y variable
+        :return:
+        '''
+        ## randomly select 1000 samples
+        df = df.sample(n=1006, random_state=1)
+        print(len(df))
+        all_vars = copy.copy(x_vars) # copy the x variables
+        all_vars.append(y_var) # add the y variable to the list
+        all_vars_df = df[all_vars] # get the dataframe with the x variables and the y variable
+        all_vars_df = all_vars_df.dropna() # drop rows with missing values
+        X = all_vars_df[x_vars]
+        Y = all_vars_df[y_var]
+        model, r2 = self.__train_model(X, Y) # train a Random Forests model
+        explainer = shap.Explainer(model)
+        shap_values = explainer.shap_values(X)
+        print(shap_values)
+        print(np.shape(shap_values))
+
+        # shap.bar_plot(shap_values[0], X)
+        shap.dependence_plot("Precip_CV", shap_values, X, interaction_index="Precip_CV")
+        plt.tight_layout()
+        plt.show()
+
     def _random_forest_train(self, X, Y, variable_list):
         '''
         :param X: a dataframe of x variables
@@ -919,11 +1152,11 @@ class Random_Forests:
         :return: details of the random forest model and the importance of each variable
         '''
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=1) # split the data into training and testing
-        clf = RandomForestRegressor(n_estimators=100, n_jobs=7) # build a random forest model
+        clf = RandomForestRegressor(n_estimators=100, n_jobs=14) # build a random forest model
         clf.fit(X_train, Y_train) # train the model
         result = permutation_importance(clf, X_train, Y_train, scoring=None,
                                         n_repeats=50, random_state=1,
-                                        n_jobs=7) # calculate the importance of each variable using permutation importance
+                                        n_jobs=1) # calculate the importance of each variable using permutation importance
         importances = result.importances_mean # get the importance of each variable
         importances_dic = dict(zip(variable_list, importances)) # put the importance of each variable into a dictionary
         labels = []
@@ -936,6 +1169,27 @@ class Random_Forests:
         mse = sklearn.metrics.mean_squared_error(Y_test, y_pred) # calculate the mean squared error
         score = clf.score(X_test, Y_test) # calculate the R^2
         return clf, importances_dic, mse, r_model, score, Y_test, y_pred
+
+    def plot_rf_result(self):
+        fdir = join(self.this_class_arr, 'random_forest')
+        outdir = join(self.this_class_png, 'random_forest')
+        T.mk_dir(outdir, force=True)
+        for f in T.listdir(fdir):
+            fpath = join(fdir, f)
+            result_dict = T.load_npy(fpath)
+            importances_dic = result_dict['importances_dic']
+            r_model = result_dict['r_model']
+            score = result_dict['score']
+            title = f'{f}\nR^2={score}, r={r_model}'
+            x = importances_dic.keys()
+            y = [importances_dic[key] for key in x]
+            plt.figure(figsize=(10, 5))
+            plt.bar(x, y)
+            plt.title(title)
+            outf = join(outdir, f'{f}.pdf')
+            plt.savefig(outf, dpi=300)
+            plt.close()
+        T.open_path_and_file(outdir)
 
     def __gen_df_init(self):
         if not os.path.isfile(self.dff):
@@ -989,24 +1243,30 @@ class Random_Forests:
         self.x_variable_list = [
             'MAP',
             'MAT',
-            'CRU_tmp_origin_GS_CV',
-            'CRU_precip_origin_GS_CV',
-            'P_ET_diff_origin_GS_CV',
+            'ERA_SMroot',
+            'SPEI3',
+            'Tmax',
+            'GPCC_CV',
+            'CO2',
+            'Precip_CV',
+            'P-ET',
+            'VPD',
+            'SOC_sum',
+            'rooting_depth',
+            'S_SILT',
 
-            'CRU_tmp_anomaly_GS_trend',
-            'CRU_precip_anomaly_GS_trend',
-            'P_ET_diff_anomaly_GS_trend',
         ]
         self.y_variable_list = [
-            'max_lag_trend',
-            'r_trend',
+            'LAI4g',
+            'GPP_CFE',
+            'GPP_baseline'
         ]
         pass
 
     def variables_valid_range(self):
         self.x_variable_range_dict = {
             'MAP':[0,2000],
-            'MAT':[-10,20],
+            'MAT':[-10,35],
             'CRU_tmp_origin_GS_CV':[0,1],
             'CRU_precip_origin_GS_CV':[0,1],
             'P_ET_diff_origin_GS_CV':[0,5],
@@ -1018,11 +1278,11 @@ class Random_Forests:
         pass
 
 def main():
-    Dataframe().run()
+    # Dataframe().run()
     # Bivariate_statistic().run()
     # Correlation_Lag_statistic().run()
     # Trend_statistic().run()
-    # Random_Forests().run()
+    Random_Forests().run()
     pass
 
 
