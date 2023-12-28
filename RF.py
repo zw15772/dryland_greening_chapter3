@@ -146,13 +146,15 @@ class Dataframe:
         df=self.__gen_df_init(self.dff)
         # df=self.foo1(df)
 
-        df=self.add_anomaly_to_df(df)
+        # df=self.add_anomaly_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # df=self.add_SOC_to_df(df)
         # df=self.add_rooting_depth_to_df(df)
         # self.add_trend_to_df(df)
         # self.add_MAT_MAP(df)
-        # df=self.add_AI_classfication(df)
+        self.add_AI_classfication(df)
+        self.add_SM_trend_label(df)
+
 
         T.save_df(df, self.dff)
 
@@ -415,6 +417,33 @@ class Dataframe:
             val_list.append(label)
 
         df['AI_classfication'] = val_list
+        return df
+
+
+
+    def add_SM_trend_label(self, df):
+
+        f = data_root + rf'\\Base_data\GLEAM_SMroot_trend_label_mark.npy'
+
+
+        val_dic = T.load_npy(f)
+
+
+        f_name = f.split('.')[0]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+
+            val_list.append(val)
+
+        df['wetting_drying_trend'] = val_list
         return df
 
 class Bivariate_statistic:
@@ -809,7 +838,8 @@ class Random_Forests:
         df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
-        self.run_important_for_each_pixel()
+        # self.run_important_for_each_pixel()
+        self.run_important_for_each_pixel_for_two_period()
         # self.plot_importance_result_for_each_pixel()
         # self.run_permutation_importance()
         # self.plot_importance_result()
@@ -945,6 +975,61 @@ class Random_Forests:
             outf_xlsx = outf + '.xlsx'
             T.df_to_excel(importance_dateframe, outf_xlsx)
 
+    def run_important_for_each_pixel_for_two_period(self):  ### run for two_period
+        dff = self.dff
+        df = T.load_df(dff)
+        df_early = df[df['year']<2000]
+        df_late = df[df['year']>=2000]
+        df_early = df_early.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
+        df_late = df_late.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
+        df_list = [df_early,df_late]
+        period_list = ['early','late']
+        for df_i in df_list:
+            period=period_list[df_list.index(df_i)]
+            period='late'
+
+
+            group_dic = T.df_groupby(df_i,'pix')
+            outdir= join(self.this_class_arr,'important_for_each_pixel')
+            T.mk_dir(outdir,force=True)
+
+            for y_var in self.y_variable_list:
+                importance_spatial_dict = {}
+
+                for pix in tqdm(group_dic):
+                    df_pix = group_dic[pix]
+
+                    df_pix=df_pix.dropna(subset=[y_var]+self.x_variable_list,how='any')
+                    # T.print_head_n(df_pix)
+                    if len(df_pix)<10:
+                        continue
+
+                    x_variable_list = self.x_variable_list
+                    X=df_pix[x_variable_list]
+                    Y=df_pix[y_var]
+
+                    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2,
+                                                                        random_state=1)  # split the data into training and testing
+                    clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
+                    clf.fit(X_train, Y_train)  # train the model
+                    R2= clf.score(X_test, Y_test)  # calculate the R2
+                    importance=clf.feature_importances_
+                    # print(importance)
+                    importance_dic=dict(zip(x_variable_list,importance))
+                    importance_dic['R2']=R2
+
+                    # print(importance_dic)
+                    importance_spatial_dict[pix]=importance_dic
+                importance_dateframe = T.dic_to_df(importance_spatial_dict, 'pix')
+                T.print_head_n(importance_dateframe)
+
+                ## save to df with two period
+
+                outdf=join(outdir,f'{y_var}_{period}.df')
+                T.save_df(importance_dateframe,outdf)
+                outf_xlsx = outdf + '.xlsx'
+                T.df_to_excel(importance_dateframe, outf_xlsx)
+
 
     def plot_importance_result_for_each_pixel(self):
         keys=list(range(len(self.x_variable_list)))
@@ -952,44 +1037,46 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        f=rf'D:\Project3\Result\statistic\Random_Forests\arr\important_for_each_pixel\\LAI4g.df'
-        df = T.load_df(f)
-        # T.print_head_n(df)
-        spatial_dic={}
-        for i, row in df.iterrows():
-            pix = row['pix']
-            importance_dic = row.to_dict()
-            # print(importance_dic)
-            x_variable_list = self.x_variable_list
-            importance_dici = {}
-            for x_var in x_variable_list:
-                importance_dici[x_var] = importance_dic[x_var]
-                # print(importance_dici)
-            max_var = max(importance_dici, key=importance_dici.get)
-            max_var_val=x_variable_dict[max_var]
-            spatial_dic[pix]=max_var_val
-
-            # print(max_var_val)
-            # print(max_var)
-            importance_dici['R2'] = importance_dic['R2']
-
-        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
-
-        plt.imshow(arr,vmin=0,vmax=12,interpolation='nearest')
-        plt.colorbar()
-        plt.show()
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
-
-        pass
+        fdir = join(self.this_class_arr,'important_for_each_pixel')
+        for f in os.listdir(fdir):
+            fname=f.split('.')[0]
 
 
+            df = T.load_df(f)
+            # T.print_head_n(df)
+            spatial_dic={}
+            for i, row in df.iterrows():
+                pix = row['pix']
+                importance_dic = row.to_dict()
+                # print(importance_dic)
+                x_variable_list = self.x_variable_list
+                importance_dici = {}
+                for x_var in x_variable_list:
+                    importance_dici[x_var] = importance_dic[x_var]
+                    # print(importance_dici)
+                max_var = max(importance_dici, key=importance_dici.get)
+                max_var_val=x_variable_dict[max_var]
+                spatial_dic[pix]=max_var_val
+
+                # print(max_var_val)
+                # print(max_var)
+                importance_dici['R2'] = importance_dic['R2']
+
+            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+
+            plt.imshow(arr,vmin=0,vmax=12,interpolation='nearest')
+            plt.colorbar()
+            plt.title(fname)
+            plt.show()
+
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
+
+            pass
 
 
 
 
-
-
-    def run_permutation_importance(self):
+    def run_permutation_importance(self): ### run for whole region
         outdir = join(self.this_class_arr, 'permutation_importance')
         T.mk_dir(outdir, force=True)
         y_variable_list = self.y_variable_list
@@ -997,30 +1084,90 @@ class Random_Forests:
         dff = self.dff
         df = T.load_df(dff)
         T.print_head_n(df)
+        #extract region unique values
+        # region=df['AI_classfication'].unique().tolist()
+        # print(region)
+        # exit()
+
+        regions=['Arid','Semi-Arid','Sub-Humid']
+        # SM_trends = ['wetting','drying']
+        for region in regions:
+            df_region = df[df['AI_classfication']==region]
 
 
-        print(df.columns.tolist())
-        for y_variable in y_variable_list:
-            df=df.dropna(subset=[y_variable]+x_variable_list,how='any')
-            X = df[x_variable_list]
-            Y = df[y_variable]
-            variable_list = x_variable_list
-            clf, importances_dic, mse, r_model, score, Y_test, y_pred = self._random_forest_train(X, Y,
-                                                                                                     variable_list)
-            outf = join(outdir, f'{y_variable}.npy')
-            T.save_npy(importances_dic, outf)
+            for y_variable in y_variable_list:
+                df_region=df_region.dropna(subset=[y_variable]+x_variable_list,how='any')
+                X = df_region[x_variable_list]
+                Y = df_region[y_variable]
+                variable_list = x_variable_list
+                clf, importances_dic, mse, r_model, score, Y_test, y_pred = self._random_forest_train(X, Y,
+                                                                                                         variable_list)
+                outf = join(outdir, f'{y_variable}_{region}.npy')
+                T.save_npy(importances_dic, outf)
+
+    def run_permutation_importance_for_two_period(self): ### run for two_period
+        outdir = join(self.this_class_arr, 'permutation_importance')
+        T.mk_dir(outdir, force=True)
+        y_variable_list = self.y_variable_list
+        x_variable_list = self.x_variable_list
+        dff = self.dff
+        df = T.load_df(dff)
+        T.print_head_n(df)
+        ## split df into two periods
+        df_early = df[df['year']<2000]
+        df_late = df[df['year']>=2000]
+        df_early = df_early.dropna(subset=[y_variable_list[0]]+x_variable_list,how='any')
+        df_late = df_late.dropna(subset=[y_variable_list[0]]+x_variable_list,how='any')
+        X_early = df_early[x_variable_list]
+        Y_early = df_early[y_variable_list[0]]
+        X_late = df_late[x_variable_list]
+        Y_late = df_late[y_variable_list[0]]
+        variable_list = x_variable_list
+        clf_early, importances_dic_early, mse_early, r_model_early, score_early, Y_test_early, y_pred_early = self._random_forest_train(X_early, Y_early,
+                                                                                                        variable_list)
+        clf_late, importances_dic_late, mse_late, r_model_late, score_late, Y_test_late, y_pred_late = self._random_forest_train(X_late, Y_late,
+
+                                                                                                        variable_list)
+        outf_early = join(outdir, f'{y_variable_list[0]}_early.npy')
+        outf_late = join(outdir, f'{y_variable_list[0]}_late.npy')
+        T.save_npy(importances_dic_early, outf_early)
+        T.save_npy(importances_dic_late, outf_late)
+        pass
+
+
+
+        regions=['Arid','Semi-Arid','Sub-Humid']
+        # SM_trends = ['wetting','drying']
+        for region in regions:
+            df_region = df[df['AI_classfication']==region]
+
+
+            for y_variable in y_variable_list:
+                df_region=df_region.dropna(subset=[y_variable]+x_variable_list,how='any')
+                X = df_region[x_variable_list]
+                Y = df_region[y_variable]
+                variable_list = x_variable_list
+                clf, importances_dic, mse, r_model, score, Y_test, y_pred = self._random_forest_train(X, Y,
+                                                                                                         variable_list)
+                outf = join(outdir, f'{y_variable}_{region}.npy')
+                T.save_npy(importances_dic, outf)
+
     def plot_importance_result(self):
-        f=rf'D:\Project3\Result\statistic\Random_Forests\arr\permutation_importance\\GPP_CFE.npy'
-        result_dic=T.load_npy(f)
-        df = pd.DataFrame(dict(result_dic), index=['imp']).T
-        df_sort = df.sort_values(by='imp', ascending=False)
-        print(df_sort)
-        df_sort.plot(kind='bar')
-        plt.title('GPP_CFE')
+        fdir = join(self.this_class_arr,'permutation_importance')
+        for f in T.listdir(fdir):
+            fname = f.split('.')[0]
+            print(fname)
 
-        plt.tight_layout()
+            result_dic=T.load_npy(fdir+'/'+f)
+            df = pd.DataFrame(dict(result_dic), index=['imp']).T
+            df_sort = df.sort_values(by='imp', ascending=False)
+            print(df_sort)
+            df_sort.plot(kind='bar')
+            plt.title(fname)
 
-        plt.show()
+            plt.tight_layout()
+
+            plt.show()
 
 
         pass
