@@ -1495,15 +1495,23 @@ class moving_window():
     def __init__(self):
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
+        # self.moving_window_trend_anaysis()
+        # self.plot_moving_window_time_series()
+        self.plot_moving_window_time_series_area()
+        # self.calculate_browning_greening_average_trend()
+        # self.calculate_browning_greening_average_original()
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'anomaly\OBS_extend\\'
-        outdir = result_root + rf'\\extract_window\\extract_anomaly_window\\'
+        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
+        outdir = result_root + rf'\\extract_window\\extract_original_window\\10\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+
 
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -1511,7 +1519,7 @@ class moving_window():
                 continue
 
             dic = T.load_npy(fdir + f)
-            window = 15
+            window = 10
 
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
@@ -1534,7 +1542,6 @@ class moving_window():
 
     def moving_window_extraction_for_LAI(self):  ## for LAI, GPP only
         variable_list=['LAI4g','GPP_CFE','GPP_baseline']
-
 
         fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
         outdir = result_root + rf'\\extract_window\\extract_original_window\\'
@@ -1612,6 +1619,251 @@ class moving_window():
                 #     anomaly.append(x_anomaly)
                 new_x_extraction_by_window.append(x_vals)
         return new_x_extraction_by_window
+
+    def moving_window_trend_anaysis(self):
+        fdir = result_root + rf'extract_window\\extract_original_window\\10\\'
+        outdir = result_root + rf'\\extract_window\\extract_original_window_trend\\10\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+
+            dic = T.load_npy(fdir + f)
+            slides = 39 - 10
+            outf = outdir + f.split('.')[0] + f'.npy'
+            print(outf)
+            if os.path.isfile(outf):
+                continue
+
+            new_x_extraction_by_window = {}
+            trend_dic={}
+            p_value_dic={}
+
+            for pix in tqdm(dic):
+                trend_list = []
+                p_value_list = []
+
+                time_series_all = dic[pix]
+                time_series_all = np.array(time_series_all)
+                for ss in range(slides):
+                    if np.isnan(np.nanmean(time_series_all)):
+                        print('error')
+                        continue
+                    # print((len(time_series)))
+                    ### if all values are identical, then continue
+                    time_series=time_series_all[ss]
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
+                    print(len(time_series))
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_list.append(slope)
+                    p_value_list.append(p_value)
+                trend_dic[pix]=trend_list
+                p_value_dic[pix]=p_value_list
+                ## save
+            np.save(outf, trend_dic)
+            np.save(outf+'_p_value', p_value_dic)
+            exit()
+
+    def plot_moving_window_time_series(self): ## plot the time series
+        fdir = result_root + rf'extract_window\\extract_original_window_trend\\15\\'
+        dic=T.load_npy(fdir+'LAI4g.npy')
+
+        time_series_list=[]
+        for pix in dic:
+            time_series=dic[pix]
+            time_series=np.array(time_series)
+            time_series[time_series < -999] = np.nan
+            if np.isnan(np.nanmean(time_series)):
+                continue
+            time_series_list.append(time_series)
+            ## average
+        time_series_array=np.array(time_series_list)
+        time_series_average=np.nanmean(time_series_array,axis=0)
+        plt.plot(time_series_average)
+        plt.show()
+
+
+
+
+
+    def plot_moving_window_time_series_area(self): ## plot the time series of moving window and calculate the area of greening and browning
+
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+
+        fdir = result_root + rf'extract_window\\extract_original_window_trend\\15\\'
+
+        dic_trend=T.load_npy(fdir+'LAI4g.npy')
+        dic_p_value=T.load_npy(fdir+'LAI4g.npy_p_value.npy')
+
+        area_dic={}
+        for ss in range(39-15):
+            print(ss)
+
+            greening_area=0
+            browning_area=0
+            no_change_area=0
+
+            for pix in tqdm(dic_trend):
+                landcover=val_dic[pix]
+                if landcover==16:
+
+                    continue
+
+                # print(len(dic_trend[pix]))
+                if len(dic_trend[pix])<24:
+                    continue
+                trend=dic_trend[pix][ss]
+                p_value=dic_p_value[pix][ss]
+                if trend>0 and p_value<0.1:
+                    greening_area+=1
+                elif trend<0 and p_value<0.1:
+                    browning_area+=1
+                else:
+                    no_change_area+=1
+                greening_area_percent=greening_area/(greening_area+browning_area+no_change_area)
+                browning_area_percent=browning_area/(greening_area+browning_area+no_change_area)
+                no_change_area_percent=no_change_area/(greening_area+browning_area+no_change_area)
+
+
+            area_dic[ss]=[greening_area_percent,browning_area_percent,no_change_area_percent]
+        df=pd.DataFrame(area_dic)
+
+
+        df=df.T
+        ##plot
+        color_list=['green','red','grey']
+        df.plot(kind='bar',stacked=True,color=color_list,legend=False)
+        plt.legend(['Greening','Browning','No change'],loc='upper left',bbox_to_anchor=(1.0, 1.0))
+        plt.ylabel('percentage')
+        plt.xlabel('moving window')
+        plt.xticks(np.arange(0, 24, 1))
+        plt.title('Area of greening and browning')
+        plt.show()
+        exit()
+
+    def calculate_browning_greening_average_trend(self): ## each winwow, greening or browning pixels average trend
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        fdir = result_root + rf'extract_window\\extract_original_window_trend\\15\\'
+        outdir = result_root + rf'\\extract_window\\extract_original_window_trend\\15\\'
+        T.mk_dir(outdir, force=True)
+        dic_trend=T.load_npy(fdir+'LAI4g.npy')
+        dic_p_value=T.load_npy(fdir+'LAI4g.npy_p_value.npy')
+
+        area_dic = {}
+        for ss in range(39 - 15):
+            print(ss)
+
+            greening_value = []
+            browning_value = []
+            no_change_value = []
+            for pix in tqdm(dic_trend):
+                landcover = val_dic[pix]
+                if landcover == 16:
+                    continue
+                # print(len(dic_trend[pix]))
+                if len(dic_trend[pix]) < 24:
+                    continue
+                trend = dic_trend[pix][ss]
+                p_value = dic_p_value[pix][ss]
+                if trend > 0 and p_value < 0.1:
+                    value = trend
+                    greening_value.append(value)
+
+                elif trend < 0 and p_value < 0.1:
+                    value = trend
+                    browning_value.append(value)
+                else:
+                    value = trend
+                    no_change_value.append(value)
+
+            greening_value_average = np.nanmean(greening_value)
+            browning_value_average = np.nanmean(browning_value)
+            no_change_value_average = np.nanmean(no_change_value)
+            area_dic[ss] = [greening_value_average, browning_value_average, no_change_value_average]
+
+        df = pd.DataFrame(area_dic)
+        df = df.T
+        ##plot
+        color_list = ['green', 'red', 'grey']
+        df.plot(kind='bar', stacked=True, color=color_list, legend=False)
+        plt.legend(['Greening', 'Browning', 'No change'], loc='upper left', bbox_to_anchor=(1.0, 1.0))
+        plt.ylabel('LAI(m3/m3/year/year)')
+        plt.xlabel('moving window')
+        plt.xticks(np.arange(0, 24, 1))
+        #### set line
+        plt.axhline(y=-0.02, color='black', linestyle='--', linewidth=0.5)
+        plt.axhline(y=0.02, color='black', linestyle='--', linewidth=0.5)
+        plt.title('')
+        plt.show()
+        exit()
+
+    def calculate_browning_greening_average_original(self): ### each winwow, greening or browning pixels average original
+        fdir_trend = result_root + rf'extract_window\\extract_original_window_trend\\15\\'
+        fdir_original = result_root + rf'extract_window\\extract_original_window\\15\\'
+
+        dic_trend = T.load_npy(fdir_trend + 'LAI4g.npy')
+        dic_p_value = T.load_npy(fdir_trend + 'LAI4g.npy_p_value.npy')
+        dic_original = T.load_npy(fdir_original + 'LAI4g.npy')
+
+        area_dic = {}
+        for ss in range(39 - 15):
+            print(ss)
+
+            greening_original = []
+            browning_original = []
+            no_change_original = []
+
+            for pix in tqdm(dic_trend):
+                # print(len(dic_trend[pix]))
+                if len(dic_trend[pix]) < 24:
+                    continue
+                trend = dic_trend[pix][ss]
+                p_value = dic_p_value[pix][ss]
+                original_value=dic_original[pix][ss]
+                if trend > 0 and p_value < 0.1:
+
+                    greening_original.append(original_value)
+
+                elif trend < 0 and p_value < 0.1:
+
+                    browning_original.append(original_value)
+                else:
+
+                    no_change_original.append(original_value)
+
+            greening_value_average = np.nanmean(greening_original)
+            browning_value_average = np.nanmean(browning_original)
+            no_change_value_average = np.nanmean(no_change_original)
+
+            area_dic[ss] = [greening_value_average, browning_value_average, no_change_value_average]
+
+        df = pd.DataFrame(area_dic)
+        df = df.T
+        ##plot
+        color_list = ['green', 'red', 'grey']
+        df.plot( color=color_list, legend=False)
+        plt.legend(['Greening', 'Browning', 'No change'], loc='upper left', bbox_to_anchor=(1.0, 1.0))
+        plt.ylabel('LAI(m3/m3/year)')
+        plt.xlabel('moving window')
+        plt.xticks(np.arange(0, 24, 1))
+        plt.title('')
+        plt.show()
+        exit()
+
+        pass
+
+
 class multi_regression_window():
     def __init__(self):
         self.fdirX=result_root+rf'extract_window\extract_anomaly_window\\'
@@ -1942,6 +2194,9 @@ class multi_regression_window():
             plt.title(region)
         plt.show()
 
+    def plot_sensitivity_as_function_of_SM(self):  ## plot sensitivity for each drying bin
+
+        pass
 
 class multi_regression():
     def __init__(self):
@@ -3067,28 +3322,28 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + rf'Dataframe\split_multiregression\\'
+        self.this_class_arr = result_root + rf'Dataframe\\\extract_moving_window_trend\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'split_multiregression.df'
+        self.dff = self.this_class_arr + 'extract_moving_window_trend.df'
 
         pass
 
     def run(self):
 
         df = self.__gen_df_init(self.dff)
-        # df=self.foo1(df)
+        df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.build_df(df)
         #
         # df=self.append_value(df)
-        # df = self.add_detrend_zscore_to_df(df)
-        df=self.add_trend_to_df(df)
-        # df=self.add_AI_classfication(df)
-        # df=self.add_SM_trend_label(df)
+        df = self.add_detrend_zscore_to_df(df)
+        # df=self.add_trend_to_df(df)
+        df=self.add_AI_classfication(df)
+        df=self.add_SM_trend_label(df)
 
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
 
         # df=self.__rename_dataframe_columns(df)
         # df=self.show_field(df)
@@ -3128,13 +3383,12 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-        fdir = result_root + rf'multi_regression_moving_window\window15\npy_time_series\\'
+        fdir = result_root + rf'extract_window\extract_original_window_trend\15\\'
         all_dic= {}
         for f in os.listdir(fdir):
 
             fpath=fdir+f
-            if not fpath.endswith('.npy'):
-                continue
+
             dic = T.load_npy(fpath)
             key_name=f.split('.')[0]
             all_dic[key_name]=dic
@@ -3178,7 +3432,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = result_root + rf'anomaly\OBS\\LAI4g.npy'
+        f = result_root + rf'extract_window\extract_original_window_trend\15\\LAI4g.npy'
 
         dic = T.load_npy(f)
 
@@ -3189,7 +3443,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 1981
+            y = 0
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -3198,7 +3452,8 @@ class build_dataframe():
 
         df['pix'] = pix_list
 
-        df['year'] = year
+        # df['year'] = year
+        df['window'] = year
         df['LAI4g'] = change_rate_list
         return df
 
@@ -3221,9 +3476,11 @@ class build_dataframe():
         return df
 
     def add_detrend_zscore_to_df(self, df):
-        fdir = result_root + rf'extract_GS\TRENDY_LAI\S1\\'
+        fdir = result_root + rf'extract_window\extract_original_window_trend\15\\'
 
         for f in os.listdir(fdir):
+            if not 'p_value' in f:
+                continue
 
             variable= f.split('.')[0]
 
@@ -3235,12 +3492,11 @@ class build_dataframe():
             NDVI_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
 
-                year = row['year']
+                year = row['window']
                 # pix = row.pix
                 pix = row['pix']
                 r, c = pix
-                if r <480:
-                    continue
+
 
                 if not pix in val_dic:
                     NDVI_list.append(np.nan)
@@ -3256,13 +3512,13 @@ class build_dataframe():
                 #     v1 = vals[year - 1982]
                 #     NDVI_list.append(v1)
                 # if len(vals)==39:
-                v1 = vals[year - 1982]
-                print(v1,year,len(vals))
-                exit()
+                # v1 = vals[year - 1982]
+                v1 = vals[year - 1]
+                # print(v1,year,len(vals))
 
                 NDVI_list.append(v1)
             df[variable] = NDVI_list
-        exit()
+        # exit()
         return df
 
     def add_row(self, df):
@@ -3499,9 +3755,10 @@ class plot_dataframe():
         # self.plot_trend_regional()
         # self.plot_trend()
         # self.plot_anomaly_bar()
-        # self.plot_bin_sensitivity_for_each_bin()
+        self.plot_bin_sensitivity_for_each_bin()
         # self.plot_drying_greening()
-        self.plot_drying_wetting_areas()
+        # self.plot_drying_wetting_areas()
+        # self.plot_browning_greening_areas()
 
 
         # self.plot_trend_spatial()
@@ -3980,18 +4237,23 @@ class plot_dataframe():
 
             df_temp = df[df['AI_classfication'] == region]
             x_var_list = ['GLEAM_SMroot_1982_2001_trend', 'GLEAM_SMroot_2002_2020_trend',]
+            p_values_list = ['GLEAM_SMroot_1982_2001_p_value', 'GLEAM_SMroot_2002_2020_p_value',]
 
-            y_var_list = ['GLEAM_SMroot_1982_2001_LAI4g_1982_2001_1982_2001', 'GLEAM_SMroot_2002_2020_LAI4g_2002_2020_2002_2020',]
+            y_var_list = ['CO2_1982_2001_LAI4g_1982_2001_1982_2001', 'CO2_2002_2020_LAI4g_2002_2020_2002_2020',]
 
             x_bin_range = [-0.002, 0.002]
 
             for x_var in x_var_list:
+                p_values=p_values_list[x_var_list.index(x_var)]
+                df_temp=df_temp[df_temp[p_values]<0.1]
+
 
                 period = x_var.split('_')[2]
                 for y_var in y_var_list:
 
                     if not period in y_var:
                         continue
+
                     print(x_var, y_var)
                     matrix = []
                     for x_bin in np.arange(x_bin_range[0], x_bin_range[1], 0.0001):
@@ -4022,6 +4284,9 @@ class plot_dataframe():
             # plt.close()
 
         pass
+
+
+
     def plot_drying_greening(self):  # calculate the percentage of drying and greening pixels for each region
         df= T.load_df(result_root + 'Dataframe\\split_multiregression\\split_multiregression.df')
         # df=self.clean_df(df)
@@ -4070,7 +4335,7 @@ class plot_dataframe():
                                               ]
                 df_new = pd.DataFrame(dic, index=['sig_greening', 'non_sig_greening', 'non_sig_browning', 'sig_browning'])
                 df_new_T = df_new.T
-                df_new_T.plot.bar(color=color_list,legend=False)
+                df_new_T.plot.bar(stacked=True, color=color_list, legend=False)
                 plt.legend()
 
                 plt.title(f'{region}_{period}')
@@ -4098,8 +4363,8 @@ class plot_dataframe():
                 non_sig_wetting_area = 0
                 sig_drying_area = 0
                 non_sig_drying_area = 0
-                val_trend_list=df_temp[f'GLEAM_SMroot_{period}_trend'].tolist()
-                p_values = df_temp[f'GLEAM_SMroot_{period}_p_value'].tolist()
+                val_trend_list=df_temp[f'LAI4g_{period}_trend'].tolist()
+                p_values = df_temp[f'LAI4g_{period}_p_value'].tolist()
                 ## calculate each classficaiton area
                 for i in range(len(val_trend_list)):
                     if p_values[i]<0.05:
@@ -4113,10 +4378,10 @@ class plot_dataframe():
                         else:
                             non_sig_wetting_area=non_sig_wetting_area+1
 
-                dic['sig_wetting_area']=sig_wetting_area
-                dic['non_sig_wetting_area'] = non_sig_wetting_area
-                dic['sig_drying_area'] = sig_drying_area
-                dic['non_sig_drying_area'] = non_sig_drying_area
+                dic['sig_wetting_area']=sig_wetting_area/len(val_trend_list)
+                dic['non_sig_wetting_area'] = non_sig_wetting_area/len(val_trend_list)
+                dic['sig_drying_area'] = sig_drying_area/len(val_trend_list)
+                dic['non_sig_drying_area'] = non_sig_drying_area/len(val_trend_list)
                 dic_period[period]=dic
             region_dic[region]=dic_period
         print(region_dic)
@@ -4131,16 +4396,80 @@ class plot_dataframe():
             ax = fig.add_subplot(1, 3, flag)
             dic_period=region_dic[region]
             df_new_2=pd.DataFrame(dic_period)
-            df_new_2_T=df_new_2.T
+
             df_new_2.plot.bar(ax=ax,color=color_list,legend=False)
             plt.title(region)
-            plt.ylabel('area (km2)')
-            plt.xticks(rotation=45)
+            plt.ylabel('percentage')
+            plt.xticks(rotation=45,ha='right')
             plt.tight_layout()
+
             flag=flag+1
+        plt.legend()
         plt.show()
         # exit()
 
+    def plot_browning_greening_areas(self):  # calculate the percentage of drying and greening pixels for each region
+        df= T.load_df(result_root + 'Dataframe\\split_multiregression\\split_multiregression.df')
+        # df=self.clean_df(df)
+        # print(df)
+        period_list=['1982_2001','2002_2020']
+
+        ## calculate area
+        region_dic={}
+        for region in ['Arid','Semi-Arid','Sub-Humid']:
+            dic_period={}
+            df_temp = df[df['AI_classfication'] == region]
+            for period in period_list:
+                dic = {}
+                sig_greening_area = 0
+                non_sig_greening_area = 0
+                sig_browning_area = 0
+                non_sig_browning_area = 0
+                val_trend_list=df_temp[f'LAI4g_{period}_trend'].tolist()
+                p_values = df_temp[f'LAI4g_{period}_p_value'].tolist()
+                ## calculate each classficaiton area
+                for i in range(len(val_trend_list)):
+                    if p_values[i]<0.05:
+                        if val_trend_list[i]<0:
+                            sig_browning_area=sig_browning_area+1
+                        else:
+                            sig_greening_area=sig_greening_area+1
+                    else:
+                        if val_trend_list[i]<0:
+                            non_sig_browning_area=non_sig_browning_area+1
+                        else:
+                            non_sig_greening_area=non_sig_greening_area+1
+
+                dic['sig_greening_area']=sig_greening_area/len(val_trend_list)
+                dic['non_sig_greening_area'] = non_sig_greening_area/len(val_trend_list)
+                dic['sig_browning_area'] = sig_browning_area/len(val_trend_list)
+                dic['non_sig_browning_area'] = non_sig_browning_area/len(val_trend_list)
+
+                dic_period[period]=dic
+            region_dic[region]=dic_period
+        print(region_dic)
+        # exit()
+        color_list=['green','lime','orange','red']
+        regions=['Arid','Semi-Arid','Sub-Humid']
+        cm = 1 / 2.54
+        ## plot area and two periods are in one figure
+        fig = plt.figure()
+        flag=1
+        for region in regions:
+            ax = fig.add_subplot(1, 3, flag)
+            dic_period=region_dic[region]
+            df_new_2=pd.DataFrame(dic_period)
+
+            df_new_2.plot.bar(ax=ax,color=color_list,legend=False)
+            plt.title(region)
+            plt.ylabel('percentage')
+            plt.xticks(rotation=45,ha='right')
+            plt.tight_layout()
+
+            flag=flag+1
+        plt.legend()
+        plt.show()
+        # exit()
 
 
 
@@ -4211,13 +4540,13 @@ class plot_dataframe():
 
 
     def plot_browning_greening(self):
-        df= T.load_df(result_root + 'Dataframe\\original_trend\\original_trend.df')
+        df= T.load_df(result_root + 'Dataframe\\split_multiregression\\split_multiregression.df')
         # product_list = ['LAI4g', 'NDVI4g', 'GPP_CFE', 'GPP_baseline']
         color_list=['green','lime','orange','red']
 
-        product='GPP_CFE'
-        landcover_list=['Evergreen','Deciduous','Mixed','Shrub','Grass','Cropland']
-        period_list=['1982_2000','2001_2020']
+        product='LAI4g'
+        landcover_list=['Arid','Semi-Arid','Sub-Humid']
+        period_list=['1982_2001','2002_2020']
         # period_list=['1982_2020']
 
 
@@ -4284,6 +4613,7 @@ class plot_dataframe():
                 ax = fig.add_subplot(2, 3, flag)
                 df_new=region_dic[region]
                 T.print_head_n(df_new)
+                df_new_T=df_new.T
 
                 T.print_head_n(df_new_T)
                 df_new_T.plot.bar(ax=ax,stacked=True,color=color_list,legend=False)
@@ -4470,6 +4800,94 @@ class plot_dataframe():
 
         return mean_value_yearly, up_list, bottom_list, fit_value_yearly, k_value, p_value
         # exit()
+class plt_moving_dataframe():
+    def run(self):
+        self.plot_moving_window()
+        pass
+    def plot_moving_window(self):
+        df=result_root+rf'Dataframe\extract_moving_window_trend\\extract_moving_window_trend.df'
+        df=T.load_df(df)
+        df=df[df['landcover_classfication']!='Cropland']
+
+        color_list = ['green', 'red', '#D3D3D3']
+
+        fig = plt.figure()
+        ii = 1
+        for landcover in ['Evergreen', 'Deciduous', 'Mixed','Grass','Shrubs']:
+
+        # for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
+        #     df_region = df[df['AI_classfication'] == region]
+
+            df_region = df[df['landcover_classfication'] == landcover]
+            ax = fig.add_subplot(2, 3, ii)
+            flag = 0
+
+            window_list = []
+            dic={}
+
+            for i in range(1, 25):
+                window_list.append(i)
+            print(window_list)
+
+            for window in tqdm(window_list):  # 构造字典的键值，并且字典的键：值初始化
+                dic[window] = []
+
+            ## plt moving window bar based on trend and p_value
+            for window in window_list:
+                df_pick = df_region[df_region['window'] == window]
+                greening_area= 0
+                browning_area= 0
+                no_change_area= 0
+
+                for i, row in tqdm(df_pick.iterrows(), total=len(df_pick)):
+                    pix = row.pix
+                    trend = row['LAI4g']
+                    p_value = row['LAI4g_p_value']
+                    if trend > 0 and p_value < 0.1:
+                        greening_area += 1
+                    elif trend < 0 and p_value < 0.1:
+                        browning_area += 1
+                    else:
+                        no_change_area += 1
+
+                total_area = greening_area + browning_area + no_change_area
+                if total_area == 0:
+                    continue
+                greening_area = greening_area / total_area
+                browning_area = browning_area / total_area
+                no_change_area = no_change_area / total_area
+                dic[window] = [greening_area, browning_area, no_change_area]
+            df_new = pd.DataFrame(dic)
+            df_new_T = df_new.T
+            df_new_T.plot.bar(ax=ax, stacked=True, color=color_list, legend=False)
+            plt.title(landcover)
+            plt.xlabel('window size (year)')
+            xticks= []
+
+            ## set xticks with 1982-1997, 1998-2013,.. 2014-2020
+            # for i in range(1, 25):
+            #     if i % 2 == 0:
+            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
+            #     else:
+            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
+            # plt.xticks(range(len(xticks)), xticks, rotation=45, ha='right')
+
+            plt.ylabel('percentage')
+            plt.xticks(rotation=45, ha='right')
+            plt.tight_layout()
+            ii = ii + 1
+        plt.legend(['Greening', 'Browning', 'No change'], )
+        plt.tight_layout()
+        plt.show()
+
+    pass
+
+    def anomaly_greening_and_browning(self):
+        pass
+    # anomaly LAI4g and  LAI4g trend and  LAI4g p_value
+
+    pass
+
 
 class check_data():
     def run (self):
@@ -4740,7 +5158,8 @@ def main():
     # moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
-    plot_dataframe().run()
+    # plot_dataframe().run()
+    plt_moving_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()
 
