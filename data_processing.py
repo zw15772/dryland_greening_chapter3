@@ -97,7 +97,7 @@ class data_processing():
         # self.scales_Inversion()
 
 
-        self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
+        # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
         # self.tif_to_dic()
@@ -105,7 +105,7 @@ class data_processing():
         # self.extract_GS()
 
         # self.extend_GS() ## for SDGVM， it has 37 year GS, to align with other models, we add one more year
-        # self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
+        self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
         # self.scales_GPP_Trendy()
         # self.split_data()
 
@@ -1244,6 +1244,689 @@ class data_processing():
 
     pass
 
+class Phenology():
+
+    def __init__(self):
+
+        self.datadir_all = data_root
+
+    def run(self):
+        # self.hants()
+        self.hants_trendy()
+        # self.check_hants()
+        # self.per_pixel_annual()
+        # self.annual_phenology()
+        # self.compose_annual_phenology()
+        # self.data_clean()
+        # self.average_phenology()
+        # self.pick_daily_phenology()
+        # self.pick_monthly_phenology()
+        # self.plot_phenology()
+
+    def hants(self):
+
+        outdir=self.datadir_all+'LAI//Hants_annually_smooth/MCD//'
+        T.mkdir(outdir)
+        fdir=self.datadir_all+'LAI\MCD_15A3H_DIC\\'
+        spatial_dic=T.load_npy_dir(fdir)
+        tif_dir=self.datadir_all+'LAI/MCD_15A3H_TIFF/'
+        date_list=[]
+        for f in os.listdir(tif_dir):
+            if f.endswith('.tif'):
+                date=f.split('.')[0]
+                # y,m,d=date.split('_')
+                y=date[0:4]
+                m=date[4:6]
+                d=date[6:8]
+                y=int(y)
+                m=int(m)
+                d=int(d)
+                date_obj=datetime.datetime(y,m,d)
+                date_list.append(date_obj)
+
+        hants365={}
+
+        for pix in tqdm(spatial_dic,desc='hants'):
+            r,c=pix
+            if r>120:
+                continue
+            vals=spatial_dic[pix]
+
+            if T.is_all_nan(vals):
+                continue
+            try:
+                # plt.plot(vals)
+                # plt.show()
+
+                results=HANTS().hants_interpolate( values_list=vals, dates_list=date_list, valid_range=[0.001,10],nan_value=0)
+            except:
+                continue
+
+
+            hants365[pix]=results
+        np.save(outdir+'hants365.npy',hants365)
+
+            # for year in results:
+            #     result=results[year]
+            #     plt.plot(result)
+            #     plt.title(str(year))
+            #     plt.show()
+    def hants_trendy(self):
+
+
+        fdir_all=self.datadir_all+'LAI/DIC/'
+
+        tif_dir_all = self.datadir_all + rf'\LAI\Trendy_Yang\\'
+
+
+        for fdir in os.listdir(fdir_all):
+            if not 'Trendy' in fdir:
+                continue
+
+            date_list = []
+
+            print(fdir)
+            outdir = self.datadir_all + rf'LAI/Hants_annually_smooth/{fdir}/'
+            if isdir(outdir):
+                continue
+            T.mkdir(outdir, force=True)
+
+            tif_dir=tif_dir_all+fdir+'/'
+            for f_tiff in os.listdir(tif_dir):
+                if f_tiff.endswith('.tif'):
+                    date=f_tiff.split('.')[0]
+
+                    y=int(date[:4])
+                    m=int(date[4:6])
+                    d=int(date[6:8])
+                    # format = '%Y%m%d'
+                    if y<2003:
+                        continue
+                    date_obj = datetime.datetime.strptime(date, '%Y%m%d')
+                    # date_obj = datetime.datetime.strptime(date, '%Y%m')
+                    # date_obj=datetime.datetime(y,m,d)
+                    date_list.append(date_obj)
+            # print(len(date_list))
+
+            hants365={}
+
+            spatial_dic = T.load_npy_dir(fdir_all + fdir+ '/')
+
+            for pix in tqdm(spatial_dic,desc='hants'):
+                r,c=pix
+                if r>120:
+                    continue
+                vals=spatial_dic[pix]
+
+                if T.is_all_nan(vals):
+                    continue
+                try:
+                    # plt.plot(vals)
+                    # plt.show()
+                    results=HANTS().hants_interpolate( values_list=vals, dates_list=date_list, valid_range=[0.001,10],nan_value=0)
+                except:
+                    continue
+
+                hants365[pix]=results
+            np.save(outdir+'hants365.npy',hants365)
+
+                # for year in results:
+                #     result=results[year]
+                #     plt.plot(result)
+                #     plt.title(str(year))
+                #     plt.show()
+
+    def per_pixel_annual(self):
+        fdir_all=data_root+'\LAI\Hants_annually_smooth\\'
+
+        for fdir in os.listdir(fdir_all):
+            if isdir(fdir_all+fdir):
+                continue
+
+            outdir = data_root + '\LAI\\\per_pix_annual\\' + fdir + '\\'
+            Tools().mk_dir(outdir, force=True)
+
+            for f in tqdm (os.listdir(fdir_all+fdir)):
+                if f.endswith('.npy'):
+                    hants365_dic=np.load(fdir_all+fdir+'/'+f,allow_pickle=True).item()
+
+
+            for y in range(2003, 2023):
+                outf = outdir + '{}.npy'.format(y)
+                result_dic = {}
+                for pix in hants365_dic:
+                    r,c=pix
+                    if r>120:
+                        continue
+                    result = hants365_dic[pix]
+                    # plt.plot(result)
+                    # plt.show()
+                    for year in result:
+                        if year != y:
+                            continue
+                        result_i = result[year]
+
+                        if np.isnan(np.nanmean(result_i)):
+                            continue
+                        if np.nanmean(result_i) == 0:
+                            continue
+
+                        result_dic[pix] = result_i
+
+                np.save(outf, result_dic)
+
+    def check_hants(self):
+
+        hants365=np.load(rf'D:\Greening\Data\FLUXNET_2015\screening_sites_hants\\hants365_DE-Obe.npy',allow_pickle=True).item()
+        for pix in hants365:
+            result=hants365[pix]
+            print(len(result))
+            # exit()
+
+            for year in result:
+
+                result_i=result[year]
+                print(len(result_i))
+
+                plt.plot(result_i)
+                plt.title(pix)
+                plt.show()
+        # for pix in hants365:
+        #     result=hants365[pix]
+        #
+        #     print(len(result))
+        #
+        #     plt.plot(result)
+        #     plt.title(pix)
+        #     plt.show()
+
+
+    def annual_phenology(self, threshold_i=0.2, ):
+        fdir_all = data_root+'\LAI\\\per_pix_annual\\'
+        for fdir in os.listdir(fdir_all):
+            if not fdir=='MCD':
+                continue
+
+            out_dir =data_root+rf'\LAI\phenology\\annual_phenology\\{fdir}\\'
+            T.mkdir(out_dir, force=True)
+
+            for f in T.listdir(fdir_all + fdir):
+                year = int(f.split('.')[0])
+
+                outf_i = join(out_dir, f'{year}.df')
+                hants_smooth_f = join(fdir_all, fdir, f)
+                hants_dic = T.load_npy(hants_smooth_f)
+                result_dic = {}
+                for pix in tqdm(hants_dic, desc=str(year)):
+                    r,c=pix
+                    if r>120:
+                        continue
+
+                    vals = hants_dic[pix]
+                    # plt.plot(vals)
+                    # plt.show()
+                    result = self.pick_phenology(vals, threshold_i)
+                    result_dic[pix] = result
+                df = T.dic_to_df(result_dic, 'pix')
+                T.save_df(df, outf_i)
+                T.df_to_excel(df, outf_i)
+                np.save(outf_i, result_dic)
+
+
+    def pick_phenology(self, vals, threshold_i):
+
+        peak = np.nanargmax(vals)
+        # if peak == 0 or peak == (len(vals) - 1):
+        #     return {}
+        # plt.plot(vals)
+        # plt.show()
+        # print(peak)
+        # print(np.max(vals))
+        # test=vals[peak]
+        # print(test)
+
+        if peak == 0 or peak == (len(vals) - 1):
+            return {}
+        try:
+            early_start = self.__search_left(vals, peak, threshold_i)
+            late_end = self.__search_right(vals, peak, threshold_i)
+        except:
+            early_start = 60
+            late_end = 130
+            print(vals)
+            plt.plot(vals)
+            plt.show()
+        # method 1
+        # early_end, late_start = self.__slope_early_late(vals,early_start,late_end,peak)
+        # method 2
+        early_end, late_start = self.__median_early_late(vals, early_start, late_end, peak)
+
+        early_period = early_end - early_start
+        peak_period = late_start - early_end
+        late_period = late_end - late_start
+        dormant_period = 365 - (late_end - early_start)
+
+        result = {
+            'early_length': early_period,
+            'mid_length': peak_period,
+            'late_length': late_period,
+            'dormant_length': dormant_period,
+            'early_start': early_start,
+            'early_start_mon': self.__day_to_month(early_start),
+
+            'early_end': early_end,
+            'early_end_mon': self.__day_to_month(early_end),
+
+            'peak': peak,
+            'peak_mon': self.__day_to_month(peak),
+
+            'late_start': late_start,
+            'late_start_mon': self.__day_to_month(late_start),
+
+            'late_end': late_end,
+            'late_end_mon': self.__day_to_month(late_end),
+        }
+        return result
+        pass
+
+    def __search_left(self, vals, maxind, threshold_i):
+        left_vals = vals[:maxind]
+        left_min = np.nanmin(left_vals)
+        max_v = vals[maxind]
+        threshold = (max_v - left_min) * threshold_i + left_min
+
+        ind = 999999
+        for step in range(365):
+            ind = maxind - step
+            if ind >= 365:
+                break
+            val_s = vals[ind]
+            if val_s <= threshold:
+                break
+
+        return ind
+
+    def __search_right(self, vals, maxind, threshold_i):
+        right_vals = vals[maxind:]
+        right_min = np.nanmin(right_vals)
+        max_v = vals[maxind]
+        threshold = (max_v - right_min) * threshold_i + right_min
+
+        ind = 999999
+        for step in range(365):
+            ind = maxind + step
+            if ind >= 365:
+                break
+            val_s = vals[ind]
+            if val_s <= threshold:
+                break
+
+        return ind
+
+    def __median_early_late(self, vals, sos, eos, peak):
+        # 2 使用sos-peak peak-eos中位数作为sos和eos的结束和开始
+
+        median_left = int((peak - sos) / 2.)
+        median_right = int((eos - peak) / 2)
+        max_ind = median_left + sos
+        min_ind = median_right + peak
+        return max_ind, min_ind
+
+    def __day_to_month(self, doy):
+        base = datetime.datetime(2000, 1, 1)
+        time_delta = datetime.timedelta(int(doy))
+        date = base + time_delta
+        month = date.month
+        day = date.day
+        if day > 15:
+            month = month + 1
+        if month >= 12:
+            month = 12
+        return month
+
+    def compose_annual_phenology(self, ):
+        fdir_all = data_root+rf'LAI\phenology\annual_phenology\\'
+        for fdir in os.listdir(fdir_all):
+            if not fdir.startswith('MCD'):
+                continue
+
+            outdir = data_root + f'LAI/phenology/compose_annual_phenology/{fdir}/'
+            T.mkdir(outdir, force=True)
+            outf = join(outdir, 'phenology_dataframe.df')
+
+            all_result_dic = {}
+            pix_list_all = []
+            col_list = None
+            for f in os.listdir(fdir_all + fdir):
+                f = join(fdir_all, fdir, f)
+                if not f.endswith('.df'):
+                    continue
+                df = T.load_df(f)
+                pix_list = T.get_df_unique_val_list(df, 'pix')
+                pix_list_all.append(pix_list)
+                col_list = df.columns
+            all_pix = []
+            for pix_list in pix_list_all:
+                for pix in pix_list:
+                    all_pix.append(pix)
+            pix_list = T.drop_repeat_val_from_list(all_pix)
+
+            col_list = col_list.to_list()
+            col_list.remove('pix')
+            for pix in pix_list:
+                dic_i = {}
+                for col in col_list:
+                    dic_i[col] = {}
+                all_result_dic[pix] = dic_i
+            # print(len(T.listdir(f_dir)))
+            # exit()
+            for f in tqdm(T.listdir(fdir_all + fdir)):
+                if not f.endswith('.df'):
+                    continue
+                year = int(f.split('.')[0])
+                df = T.load_df(join(fdir_all, fdir, f))
+                dic = T.df_to_dic(df, 'pix')
+                for pix in dic:
+                    for col in dic[pix]:
+                        if col == 'pix':
+                            continue
+                        all_result_dic[pix][col][year] = dic[pix][col]
+            df_all = T.dic_to_df(all_result_dic, 'pix')
+            T.save_df(df_all, outf)
+            T.df_to_excel(df_all, outf)
+            np.save(outf, all_result_dic)
+
+    def data_clean(self,):  # 盖帽法
+
+        f_dir = data_root + rf'LAI/phenology/compose_annual_phenology/MODIS//'
+        outdir = data_root + rf'LAI/phenology/compose_annual_phenology_clean/MODIS//'
+        T.mkdir(outdir, force=True)
+        outf = join(outdir, 'phenology_dataframe.df')
+        all_result_dic = {}
+        pix_list_all = []
+
+        for f in T.listdir(f_dir):
+            if not f.endswith('.df'):
+                continue
+            df = T.load_df(join(f_dir, f))
+            columns = df.columns
+            column_list = []
+            for col in columns:
+                if col == 'pix':
+                    continue
+                column_list.append(col)
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                pix = row['pix']
+                lon, lat = DIC_and_TIF().pix_to_lon_lat(pix)
+                # if lat > 70:
+                #     continue
+                # address = Tools().lonlat_to_address(lon, lat)
+                # print(address)
+                for col in column_list:
+                    dic_i = row[col]
+
+                    dic_clean = {}
+                    # print(dic_i)
+                    # values_list=dic_i.values()
+                    # values_list=list(values_list)
+                    series = pd.Series(dic_i)
+                    cap_series = self.cap(series)
+                    # print(series)
+                    # plt.plot(series)
+                    # # plt.title(address)
+                    # plt.plot(cap_series)
+                    #
+                    # plt.show()
+                    for year in dic_i:
+                        dic_clean[year] = cap_series[year]
+                    if pix not in all_result_dic:
+                        all_result_dic[pix] = {}
+
+                    all_result_dic[pix][col] = dic_clean
+            # convert to df
+            df_all = T.dic_to_df(all_result_dic, 'pix')
+            #save
+            T.save_df(df_all, outf)
+            T.df_to_excel(df_all, outf)
+
+
+
+    def cap(self, x, quantile=(0.05, 0.95)):
+
+        """盖帽法处理异常值
+        Args：
+            x：pd.Series列，连续变量
+            quantile：指定盖帽法的上下分位数范围
+        """
+
+        # 生成分位数
+        Q01, Q99 = x.quantile(quantile).values.tolist()
+
+        # 替换异常值为指定的分位数
+        if Q01 > x.min():
+            x = x.copy()
+            x.loc[x < Q01] = Q01
+
+        if Q99 < x.max():
+            x = x.copy()
+            x.loc[x > Q99] = Q99
+
+        return (x)
+
+    def average_phenology(self, ):   #将多年物候期平均
+        fdir_all = data_root + f'LAI/phenology/compose_annual_phenology/'
+        for fdir in os.listdir(fdir_all):
+            if not 'MCD' in fdir:
+                continue
+
+            outdir = data_root + f'LAI/phenology/average_phenology/{fdir}/'
+            T.mkdir(outdir, force=True)
+            outf = join(outdir, 'phenology_dataframe.df')
+
+            all_result_dic = {}
+
+            for f in T.listdir(fdir_all + fdir):
+                if not f.endswith('.df'):
+                    continue
+                df = T.load_df(join(fdir_all,fdir, f))
+                columns = df.columns
+                column_list = []
+                for col in columns:
+                    if col == 'pix':
+                        continue
+                    column_list.append(col)
+
+                pix_list = T.get_df_unique_val_list(df, 'pix')
+
+                ########################################build dic##############################################################
+                for pix in pix_list:
+                    dic_i = {}
+                    for col in column_list:
+                        dic_i[col] = {}
+                    all_result_dic[pix] = dic_i
+
+                for i, row in tqdm(df.iterrows(), total=len(df)):
+                    pix = row['pix']
+                    lon, lat = DIC_and_TIF().pix_to_lon_lat(pix)
+                    # address=Tools().lonlat_to_address(lon,lat)
+                    # print(address)
+                    for col in column_list:
+                        dic_i = row[col]
+                        # print(dic_i)
+                        values = dic_i.values()
+                        values = list(values)
+                        value_mean = np.mean(values)
+                        value_ = round(value_mean, 0)
+                        value_std = np.std(values)
+                        all_result_dic[pix][col] = value_
+
+            df_all = T.dic_to_df(all_result_dic, 'pix')
+            T.save_df(df_all, outf)
+            T.df_to_excel(df_all, outf)
+            np.save(outf, all_result_dic)
+
+    def pick_daily_phenology(self):  # 转换格式 for example: early [100,150], peak [150,200], late [200,300]
+        fdir_all = data_root + f'LAI/phenology/average_phenology/'
+        for fdir in os.listdir(fdir_all):
+            if not fdir.endswith('MCD'):
+                continue
+            outdir = data_root + f'LAI/phenology/pick_daily_phenology/{fdir}/'
+            T.mkdir(outdir, force=True)
+            outf = join(outdir, 'pick_daily_phenology.df')
+
+            phenology_df = T.load_df(
+                f'{fdir_all}/{fdir}/phenology_dataframe.df')
+
+            early_dic = {}
+            peak_dic = {}
+            late_dic = {}
+            all_result_dic = {}
+
+            for i, row in tqdm(phenology_df.iterrows(), total=len(phenology_df)):
+                pix = row['pix']
+                all_result_dic[pix] = {}
+                early_start = row['early_start']
+                early_end = row['early_end']
+                peak_start = row['early_end']
+                peak_end = row['late_start']
+                late_start = row['late_start']
+                late_end = row['late_end']
+                early_period = np.arange(int(early_start), int(early_end), 1)
+                # print(early_period)
+                peak_period = np.arange(int(early_end), int(late_start), 1)
+                # print(peak_period)
+                late_period = np.arange(int(late_start), int(late_end), 1)
+                # print(late_period)
+                all_result_dic[pix]['early'] = early_period
+                all_result_dic[pix]['peak'] = peak_period
+                all_result_dic[pix]['late'] = late_period
+                all_result_dic[pix]['early_peak'] = np.concatenate((early_period, peak_period))
+                all_result_dic[pix]['early_peak_late'] = np.concatenate((early_period, peak_period, late_period))
+                # print(all_result_dic[pix])
+
+
+            df_all = T.dic_to_df(all_result_dic, 'pix')
+            T.save_df(df_all, outf)
+            T.df_to_excel(df_all, outf)
+            np.save(outf, all_result_dic)
+
+    def pick_monthly_phenology(self):  # 转换格式 for example: early [100,150], peak [150,200], late [200,300]
+        fdir_all = data_root + f'LAI/phenology/average_phenology/'
+        for fdir in os.listdir(fdir_all):
+            if not fdir.endswith('MCD'):
+                continue
+            outdir = data_root + f'LAI/phenology/pick_monthly_phenology/{fdir}/'
+            T.mkdir(outdir, force=True)
+            outf = join(outdir, 'pick_monthly_phenology.df')
+
+            phenology_df = T.load_df(
+                f'{fdir_all}/{fdir}/phenology_dataframe.df')
+
+            early_dic = {}
+            peak_dic = {}
+            late_dic = {}
+            all_result_dic = {}
+
+            for i, row in tqdm(phenology_df.iterrows(), total=len(phenology_df)):
+                pix = row['pix']
+                all_result_dic[pix] = {}
+
+                early_start = row['early_start_mon']
+                early_end = row['early_end_mon']
+
+                late_start = row['late_start_mon']
+                late_end = row['late_end_mon']
+                early_period= np.arange(int(early_start), int(early_end))
+                early_peak_period = list(range(int(early_start), int(late_start)))
+                peak_period=list(range(int(early_end), int(late_start)))
+                late_period = list(range(int(late_start), int(late_end)+1))
+                print(early_peak_period)
+                print(peak_period)
+                print(early_period)
+                print(late_period)
+                print('-------------------')
+                # exit()
+                all_result_dic[pix]['early_peak'] = early_peak_period
+                all_result_dic[pix]['early'] = early_period
+                all_result_dic[pix]['peak'] = peak_period
+                all_result_dic[pix]['late'] = late_period
+
+                # print(all_result_dic[pix])
+
+
+            df_all = T.dic_to_df(all_result_dic, 'pix')
+            T.save_df(df_all, outf)
+            T.df_to_excel(df_all, outf)
+            np.save(outf, all_result_dic)
+
+
+
+    def plot_phenology(self):
+        # df_f=data_root+r'MODIS_LAI_MOD15A2H\phenology\annual_phenology\\2015.df'
+        df_f=data_root+r'Trendy\phenology\annual_phenology\MODIS\\2021.df'
+
+        df=T.load_df(df_f)
+        colunms='early_start'
+        spatial_dic=T.df_to_spatial_dic(df,colunms)
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr,vmin=100,vmax=160,cmap='jet')
+        plt.colorbar()
+        plt.show()
+
+
+
+
+
+class Check_plot():
+
+    def run(self):
+        self.foo()
+
+    def foo(self):
+
+        # f='/Volumes/SSD_sumsang/project_greening/Result/detrend/extraction_during_late_growing_season_static/during_late_CSIF_par/per_pix_dic_008.npy'
+        f = rf'D:\Greening\Result\zscore\LAI\late\MCD.npy'
+        # f = rf'D:\Greening\Data\Trendy\DIC\\CABLE-POP_S2_lai\per_pix_dic_014.npy'
+        # f='/Volumes/SSD_sumsang/project_greening/Result/new_result/extraction_anomaly_window/1982-2015_during_early/during_early_CO2.npy'
+
+        dic = dict(np.load(f, allow_pickle=True, encoding='latin1').item())
+        # ///////check 字典是否不缺值////
+        for pix in tqdm(dic, desc='interpolate'):
+            r, c = pix
+            # china_r=list(range(150,150))
+            # china_c=list(range(550,620))
+
+            # china_r = list(range(140, 570))
+            # china_c = list(range(550, 620))
+            # if r not in china_r:
+            #     continue
+            # if c not in china_c:
+            #     continue
+            print(len(dic[pix]))
+            # exit()
+            if len(dic[pix]) == 0:
+                continue
+
+            time_series = dic[pix]
+            print(time_series)
+            if len(time_series) == 0:
+                continue
+            # print(time_series)
+            # time_series_reshape=time_series.reshape(12,-1)
+            # time_series=np.array(time_series)
+            plt.plot(time_series)
+            # plt.imshow(time_series,aspect='auto')
+            # plt.imshow(time_series)
+            # plt.title(str(pix))
+            plt.show()
+            # spatial_dic[pix]=len(time_series)
+        #     spatial_dic[pix] = time_series[0]
+        # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr)
+        # plt.title(str(pix))
+        # plt.show()
+
+    pass
 
 class statistic_analysis():
     def __init__(self):
@@ -1251,7 +1934,7 @@ class statistic_analysis():
     def run(self):
 
         # self.detrend()  ##original
-        # self.detrend_zscore_monthly()
+        self.detrend_zscore_monthly()
         # self.zscore()
         # self.detrend()
         # self.LAI_baseline()
@@ -1261,8 +1944,9 @@ class statistic_analysis():
         # self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
+
         # self.trend_analysis()
-        self.trend_analysis_landcover_composition()
+        # self.trend_analysis_landcover_composition()
         # self.LUCC_LAI_correlation()
 
 
@@ -1373,77 +2057,69 @@ class statistic_analysis():
 
     def detrend_zscore_monthly(self): #  detrend based on each month
 
-
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir_all = data_root + 'split\\'
+        fdir_all = data_root + 'monthly_data\\'
         for fdir in os.listdir(fdir_all):
 
-
-            outdir = result_root + rf'detrend_zscore\\{fdir}\\'
+            outdir = result_root + rf'detrend_anomaly_monthly\\'
             # if os.path.isdir(outdir):
             #     continue
             Tools().mk_dir(outdir, force=True)
+            outf=outdir+fdir.split('.')[0]
 
-            for f in os.listdir(fdir_all+fdir):
+            dic=T.load_npy_dir(fdir_all+fdir+'\\')
 
-                outf=outdir+f.split('.')[0]
-                print(outf)
+            detrend_zscore_dic={}
+
+            for pix in tqdm(dic):
+                detrend_delta_time_series_list = []
+                if pix not in dic_dryland_mask:
+                    continue
+
+                print(len(dic[pix]))
+                time_series = dic[pix]
+                print(len(time_series))
+
+                time_series=np.array(time_series)
+                time_series[time_series < -999] = np.nan
 
 
-                dic = dict(np.load(fdir_all+fdir+'\\'+f, allow_pickle=True, ).item())
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.nanmean(time_series) <= 0.:
+                    continue
+                time_series_reshape=time_series.reshape(-1,12)
+                time_series_reshape_T=time_series_reshape.T
+                for i in range(len(time_series_reshape_T)):
+                    time_series_i=time_series_reshape_T[i]
 
-                detrend_zscore_dic={}
-
-
-                for pix in tqdm(dic):
-                    detrend_delta_time_series_list = []
-                    if pix not in dic_dryland_mask:
+                    mean = np.nanmean(time_series_i)
+                    std=np.nanstd(time_series_i)
+                    if std == 0:
                         continue
 
-                    print(len(dic[pix]))
-                    time_series = dic[pix]
-                    print(len(time_series))
-
-                    time_series=np.array(time_series)
-                    time_series[time_series < -999] = np.nan
-
-
-                    if np.isnan(np.nanmean(time_series)):
+                    delta_time_series = (time_series_i - mean)
+                    if np.isnan(delta_time_series).any():
                         continue
-                    if np.nanmean(time_series) <= 0.:
-                        continue
-                    time_series_reshape=time_series.reshape(-1,12)
-                    time_series_reshape_T=time_series_reshape.T
-                    for i in range(len(time_series_reshape_T)):
-                        time_series_i=time_series_reshape_T[i]
 
-                        mean = np.nanmean(time_series_i)
-                        std=np.nanstd(time_series_i)
-                        if std == 0:
-                            continue
+                    detrend_delta_time_series = signal.detrend(delta_time_series)
+                    detrend_delta_time_series_list.append(detrend_delta_time_series)
+                detrend_delta_time_series_array=np.array(detrend_delta_time_series_list)
+                detrend_delta_time_series_array=detrend_delta_time_series_array.T
+                detrend_delta_time_series_result=detrend_delta_time_series_array.flatten()
 
-                        delta_time_series = (time_series_i - mean) / std
-                        if np.isnan(delta_time_series).any():
-                            continue
+                # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
+                ##plot
+                # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
+                # plt.plot(detrend_delta_time_series_result,'b' ,linewidth=1,linestyle='--')
+                # plt.show()
 
-                        detrend_delta_time_series = signal.detrend(delta_time_series)
-                        detrend_delta_time_series_list.append(detrend_delta_time_series)
-                    detrend_delta_time_series_array=np.array(detrend_delta_time_series_list)
-                    detrend_delta_time_series_array=detrend_delta_time_series_array.T
-                    detrend_delta_time_series_result=detrend_delta_time_series_array.flatten()
+                detrend_zscore_dic[pix] = detrend_delta_time_series_result
 
-                    # detrend_delta_time_series_result2=detrend_delta_time_series_array.reshape(-1)   ##flatten and reshape 是一个东西
-                    ##plot
-                    # plt.plot(detrend_delta_time_series_result1,'r' ,linewidth=0.5, marker='*', markerfacecolor='blue', markersize=1 )
-                    # plt.plot(detrend_delta_time_series_result,'b' ,linewidth=1,linestyle='--')
-                    # plt.show()
-
-                    detrend_zscore_dic[pix] = detrend_delta_time_series_result
-
-                np.save(outf, detrend_zscore_dic)
+            np.save(outf, detrend_zscore_dic)
 
 
     def zscore(self):
@@ -1764,6 +2440,8 @@ class statistic_analysis():
                 anomaly_dic[pix] = delta_time_series
 
             np.save(outf, anomaly_dic)
+
+
     def trend_analysis(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -1773,6 +2451,8 @@ class statistic_analysis():
         outdir = result_root + rf'trend_analysis\\original\\OBS\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if f.split('.')[0] not in ['tmin','tmax']:
+                continue
 
             outf=outdir+f.split('.')[0]
             if os.path.isfile(outf+'_trend.tif'):
@@ -2065,6 +2745,144 @@ class statistic_analysis():
 
                 np.save(outf, array_new)
                 DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_new,outdir+fmodel+f'_{scenarios}.tif')
+
+
+class ResponseFunction:  # figure 5 in paper
+    def __init__(self):
+
+        # This class is used to calculate the structural equation model
+        self.this_class_arr = result_root + rf'Dataframe\growing_season_original\\'
+        self.dff = self.this_class_arr + 'growing_season_original.df'
+        self.outdir = result_root + 'response_function/'
+        T.mkdir(self.outdir, force=True)
+        pass
+
+    def run(self):
+        # self.build_df()
+        df, dff = self.__load_df()
+
+        df_clean = self.clean_df(df)
+
+        # self.plot_response_func(df_clean)
+        self.plot_response_curve()
+        pass
+
+    def __load_df(self):
+        dff = self.dff
+        df = T.load_df(dff)
+
+        return df, dff
+        # return df_early,dff
+
+    def clean_df(self, df):
+        df = df[df['row'] > 120]
+
+        # df = df[df['HI_class'] == 'Humid']
+        # df = df[df['HI_class'] == 'Dryland']
+
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def plot_response_func(self, df):
+        T.print_head_n(df, 10)
+        z_val_name_list = ['MCD', 'Trendy_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai', 'CLM5',
+                           'IBIS_S2_lai',
+                           'ISAM_S2_LAI', 'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                           'LPX-Bern_S2_lai', 'DLEM_S2_lai',
+                           'VISIT_S2_lai', 'YIBs_S2_Monthly_lai', ]
+
+        z_val_name_list = ['LAI4g','Ensemble_S2','Ensemble_S1','Ensemble_S3' ]
+
+        cm = 1 / 2.54
+        plt.figure(figsize=(15 * cm, 7 * cm))
+
+        for z_val_name in z_val_name_list:
+            df_temp = df[df[f'{z_val_name}_p_value'] < 0.1]
+
+
+            x_var = 'SPEI3_trend'
+            y_var = 'VPD_trend'
+            z_var = f'{z_val_name}_trend'
+
+            x_bins = np.arange(-0.01, 0.01, 0.002)
+            y_bins = np.arange(-0.01, 0.01, 0.002)
+
+            matrix = []
+            for i in range(len(y_bins)):
+                if i == len(y_bins) - 1:
+                    continue
+
+                y_left = y_bins[i]
+                y_right = y_bins[i + 1]
+
+                matrix_i = []
+                for j in range(len(x_bins)):
+                    if j == len(x_bins) - 1:
+                        continue
+                    x_left = x_bins[j]
+                    x_right = x_bins[j + 1]
+
+                    df_temp_i = df_temp[df_temp[x_var] >= x_left]
+                    df_temp_i = df_temp_i[df_temp_i[x_var] < x_right]
+                    df_temp_i = df_temp_i[df_temp_i[y_var] >= y_left]
+                    df_temp_i = df_temp_i[df_temp_i[y_var] < y_right]
+                    mean = np.nanmean(df_temp_i[z_var].tolist())
+                    matrix_i.append(mean)
+                matrix.append(matrix_i)
+            matrix = np.array(matrix)
+            matrix = matrix[::-1, :]  # reverse
+
+            plt.imshow(matrix, cmap='RdBu', interpolation='nearest')
+            plt.colorbar()
+            x_bins=np.round(x_bins,3)
+            y_bins=np.round(y_bins,3)
+            plt.xticks(np.arange(len(x_bins) - 1), x_bins[0:-1], rotation=45)
+            plt.yticks(np.arange(len(y_bins) - 1), y_bins[0:-1])
+
+
+            plt.title(f'{z_val_name}')
+            plt.xlabel(x_var)
+            plt.ylabel(y_var)
+            plt.show()
+            # plt.savefig(self.outdir + f'{region}_{z_val_name}.pdf', dpi=300)
+            # plt.close()
+    def plot_response_curve(self):
+        df, dff = self.__load_df()
+        df = self.clean_df(df)
+        T.print_head_n(df, 10)
+
+        x_name='GLEAM_SMroot'
+        y_name='LAI4g'
+        xvals=df[x_name].tolist()
+        yvals=df[y_name].tolist()
+        xvals_Clean=[]
+        yvals_Clean=[]
+        for i in range(len(xvals)):
+            x=xvals[i]
+            y=yvals[i]
+            if type(x)==float:
+                continue
+            if type(y)==float:
+                continue
+            xvals_Clean.append(x)
+            yvals_Clean.append(y)
+        xvals=np.array(xvals_Clean)
+        yvals=np.array(yvals_Clean)
+        x_vals_flatten=xvals.flatten()
+        y_vals_flatten=yvals.flatten()
+        x_vals_flatten[x_vals_flatten>0.3]=np.nan
+        y_vals_flatten[y_vals_flatten>2]=np.nan
+        KDE_plot().plot_scatter(x_vals_flatten,y_vals_flatten,s=2)
+        plt.ylim(0,2)
+        plt.xlim(0,0.3)
+        plt.show()
+
+
+
+        pass
+
 
 class bivariate_analysis():
     def __init__(self):
@@ -3824,19 +4642,22 @@ class Contribution_Lixin():  ## earth future method
 
         #step 1 build detrended climatic dataframe model
         df_all = self.build_df(self.x_var_list_all,self.period)  ##climate 是detrend
-        # self.cal_multi_regression_beta(df_all, self.x_var_list_all)
+        self.cal_multi_regression_beta(df_all, self.x_var_list_all)
 
         # # step 2 put real data and calculate residual as well as sensitivity
+        fixed_var_list=['Tempmean','SPEI3','VPD','CO2']
+        fixed_var_list=['Tempmean']
+        for fixed_var in fixed_var_list:
+            df_fixed = self.build_df_fixed(self.x_var_list_all,self.period,fixed_var=fixed_var)
+            self.residual_calculate(df_all,df_fixed, fixed_var=fixed_var)
 
-        df_fixed = self.build_df_fixed(self.x_var_list_all,self.period,fixed_var='SPEI3')
-        self.residual_calculate(df_fixed,df_all, fixed_var='SPEI3')  # 修改参数
-        self.calculate_fix_factor_contribution(df_real=df_all,fixed_var='SPEI3')
+            self.calculate_fix_factor_contribution(df_real=df_all, df_fixed= df_fixed, fixed_var='Tempmean')
 
-        # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result,fixed_var='SPEI3')
+            # step 3 plot
+            self.plt_multi_regression_result(self.multi_regression_result,fixed_var='Tempmean')
 
-        ##check pixel
-        # self.check_pixel()
+            ##check pixel
+            # self.check_pixel()
 
 
     def build_df(self,x_var_list,period):
@@ -3982,6 +4803,18 @@ class Contribution_Lixin():  ## earth future method
                     # print(vals)
                     continue
                 xvals = dic_x[pix]
+                if len(xvals) == 0:
+                    x_val_list.append([])
+                    continue
+                if np.isnan(np.nanmean(xvals)):
+                    x_val_list.append([])
+                    continue
+                if np.nanmean(xvals)<=-99:
+                    x_val_list.append([])
+                    continue
+                if len(xvals) == 0:
+                    x_val_list.append([])
+                    continue
                 xvals= np.array(xvals)
                 xvals = np.array(xvals)
                 xvals= T.interp_nan(xvals)
@@ -3992,6 +4825,7 @@ class Contribution_Lixin():  ## earth future method
                     x_val_list.append([])
                     continue
                 x_val_list.append(xvals)
+
             # x_val_list = np.array(x_val_list)
             df[xvar] = x_val_list
         T.print_head_n(df)
@@ -4161,7 +4995,7 @@ class Contribution_Lixin():  ## earth future method
         T.df_to_excel(df, outf.replace('.npy','.xlsx'))
         # T.print_head_n(df)
 
-    def calculate_fix_factor_contribution(self,df_real,fixed_var):  ## calculate climatic contribution
+    def calculate_fix_factor_contribution(self,df_real,df_fixed, fixed_var):  ## calculate climatic contribution
         df=T.load_df(self.multi_regression_result+rf'\\{fixed_var}\\residual.npy')
 
         #####calculate partial derivative with multi-regression
@@ -4179,22 +5013,26 @@ class Contribution_Lixin():  ## earth future method
 
             ### extract x_vals from df_real
 
-            x_vals = df_real.loc[df_real['pix'] == pix, f'{fixed_var}'].values[0]
+            x_vals_real = df_real.loc[df_real['pix'] == pix, f'{fixed_var}'].values[0]
+            x_vals_fixed=df_fixed.loc[df_fixed['pix'] == pix, f'{fixed_var}'].values[0]
+            x_vals_real = np.array(x_vals_real)
+            x_vals_fixed = np.array(x_vals_fixed)
 
-            if len(x_vals) == 0:
+            x_vals_delta=x_vals_real-x_vals_fixed
+
+
+            if len(x_vals_delta) == 0:
                 continue
 
-            if np.isnan(np.nanmean(x_vals)):
+            if np.isnan(np.nanmean(x_vals_delta)):
 
                 continue
-            if len(x_vals) != len(y_vals):
+            if len(x_vals_delta) != len(y_vals):
                 continue
 
-            x_vals = np.array(x_vals)
+            x_vals_delta=x_vals_delta.T  ### 1d array
 
-            x_vals=x_vals.T  ### 1d array
-
-            df_new[fixed_var] = x_vals
+            df_new[fixed_var] = x_vals_delta
             df_new['y'] = y_vals
 
 
@@ -4206,10 +5044,19 @@ class Contribution_Lixin():  ## earth future method
             if len(df_new)==0:
                 continue
 
+            linear_model = LinearRegression()
+            xi=df_new[fixed_var].values.reshape(-1,1)
+            yi=df_new['y'].values.reshape(-1,1)
+            linear_model.fit(xi, yi)
+            ##coef
+            beta = linear_model.coef_
+            # print(beta)
+            # coef_dic = dict(zip(x_var_list_valid_new, coef_))
 
-            beta=df_new['y']/df_new[fixed_var]
+            ##coef
 
-            multi_derivative[pix] = beta.values[0]
+            multi_derivative[pix] = beta[0][0]
+
         outf=self.multi_regression_result+rf'\\{fixed_var}_contribution.npy'
 
         T.save_npy(multi_derivative, outf)
@@ -5411,10 +6258,10 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + rf'Dataframe\LUCC_change\\'
+        self.this_class_arr = result_root + rf'Dataframe\monthly_original\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'LUCC_change.df'
+        self.dff = self.this_class_arr + 'monthly_original.df'
 
         pass
 
@@ -5425,14 +6272,15 @@ class build_dataframe():
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
+        # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)
         # df=self.append_value(df)
         # df = self.add_detrend_zscore_to_df(df)
-        df=self.add_lc_composition_to_df(df)
-        df=self.add_trend_to_df(df)
-        df=self.add_AI_classfication(df)
-        # df=self.add_SM_trend_label(df)
-        #
+        # df=self.add_lc_composition_to_df(df)
+        # df=self.add_trend_to_df(df)
+        # df=self.add_AI_classfication(df)
+        # # df=self.add_SM_trend_label(df)
+        # #
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
         # df=self.add_row(df)
@@ -5476,12 +6324,11 @@ class build_dataframe():
     def build_df(self, df):
         product_list = ['NDVI4g', 'LAI4g', 'GIMMS_AVHRR_LAI','GPP_CFE','GPP_baseline','GPP_NIRv']
 
-        fdir = result_root + rf'growth_rate\OBS_extend\\'
+        fdir = rf'D:\Project3\Data\monthly_data\\'
         all_dic= {}
         for f in os.listdir(fdir):
             fname= f.split('.')[0]
-            if not fname in product_list:
-                continue
+
 
             fpath=fdir+f
 
@@ -5492,16 +6339,38 @@ class build_dataframe():
         df=T.spatial_dics_to_df(all_dic)
         T.print_head_n(df)
         return df
+
+    def build_df_monthly(self, df):
+
+
+        fdir_all = rf'D:\Project3\Data\monthly_data\\'
+        all_dic= {}
+        for fdir in os.listdir(fdir_all):
+            for fdir_ii in os.listdir(fdir_all+fdir):
+                if not 'DIC' in fdir_ii:
+                    continue
+                dic=T.load_npy_dir(fdir_all+fdir+'\\'+fdir_ii)
+
+                key_name=fdir
+                all_dic[key_name] = dic
+                    # print(all_dic.keys())
+            df = T.spatial_dics_to_df(all_dic)
+            T.print_head_n(df)
+        return df
+
+
+
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root + rf'trend_analysis\split_original\Y\\'
+        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
             if not 'LAI4g' in f:
                 continue
 
-            array=np.load(fdir+f)
-            dic = DIC_and_TIF().spatial_arr_to_dic(array)
+            # array=np.load(fdir+f)
+            # dic = DIC_and_TIF().spatial_arr_to_dic(array)
+            dic=T.load_npy(fdir+f)
             key_name = f.split('.')[0]
             df[key_name] = df['pix'].map(dic)
             T.print_head_n(df)
@@ -5808,12 +6677,13 @@ class build_dataframe():
     def add_trend_to_df(self,df):
         period='1982_2001'
         # period='2002_2020'
-        fdir=result_root+rf'trend_analysis\split_original\Y\\'
+        fdir=result_root+rf'trend_analysis\original\OBS\\'
 
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'LAI4g' in f:
+            variable=(f.split('.')[0].split('_')[0])
+            if not variable in ['tmin','tmax','SPEI3','GLEAM']:
                 continue
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
@@ -5918,7 +6788,7 @@ class plot_dataframe():
 
         # self.plot_annual_zscore_based_region()
 
-        # self.plot_anomaly_trendy_LAI()
+        self.plot_anomaly_trendy_LAI()
         # self.plot_anomaly_trendy_GPP()
         # self.plot_anomaly_vegetaton_indices()
         # self.plot_climatic_factors()
@@ -7319,7 +8189,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  result_root+rf'extract_GS\OBS_LAI_extend\tmax.npy'
+        f =  result_root+rf'\split_original\X\Tempmean_2002_2020.npy'
         # fdir=rf'D:\Project3\Data\monthly_data\LAI4g\DIC\\'
         dic=T.load_npy(f)
 
@@ -7336,7 +8206,7 @@ class check_data():
 
             len_dic[pix]=np.nanmean(vals)
 
-            len_dic[pix] = len(vals)
+            # len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=20,vmax=40)
         plt.colorbar()
@@ -7586,7 +8456,8 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    # statistic_analysis().run()
+    statistic_analysis().run()
+    # ResponseFunction().run()
     # bivariate_analysis().run()
     # CCI_LC_preprocess().run()
     # calculating_variables().run()
@@ -7599,7 +8470,7 @@ def main():
     # moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
-    plot_dataframe().run()
+    # plot_dataframe().run()
     # plt_moving_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()

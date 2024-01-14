@@ -147,13 +147,14 @@ class Dataframe:
         # df=self.foo1(df)
 
         # df=self.add_anomaly_to_df(df)
+        df=self.add_LUCC_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # df=self.add_SOC_to_df(df)
         # df=self.add_rooting_depth_to_df(df)
         # self.add_trend_to_df(df)
         # self.add_MAT_MAP(df)
-        self.add_AI_classfication(df)
-        self.add_SM_trend_label(df)
+        # self.add_AI_classfication(df)
+        # self.add_SM_trend_label(df)
 
 
         T.save_df(df, self.dff)
@@ -262,6 +263,41 @@ class Dataframe:
             df[variable] = NDVI_list
 
         return df
+
+    def add_LUCC_to_df(self, df):
+        fdir = rf'D:\Project3\Data\landcover_composition_DIC\urban\\'
+
+
+        val_dic = T.load_npy_dir(fdir)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row['year']
+            # pix = row.pix
+            pix = row['pix']
+            r, c = pix
+
+
+            if not pix in val_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+
+            vals = val_dic[pix]
+            # print(len(vals))
+            if year<1992:
+
+                NDVI_list.append(np.nan)
+                continue
+
+            v1 = vals[year - 1992]
+                # print(v1,year,len(vals))
+            NDVI_list.append(v1)
+        df['urban'] = NDVI_list
+
+        return df
+
 
     def add_trend_to_df(self,df):
         fdir=result_root+rf'trend_analysis\anomaly\ALL_ensemble\\'
@@ -839,10 +875,10 @@ class Random_Forests:
 
         # self.check_variables_valid_ranges()
         # self.run_important_for_each_pixel()
-        self.run_important_for_each_pixel_for_two_period()
+        # self.run_important_for_each_pixel_for_two_period()
         # self.plot_importance_result_for_each_pixel()
         # self.run_permutation_importance()
-        # self.plot_importance_result()
+        self.plot_importance_result()
         # self.partial_SHAP(df,self.x_variable_list,self.y_variable_list[0])
         # self.run_partial_dependence_plots()
 
@@ -1037,13 +1073,18 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = join(self.this_class_arr,'important_for_each_pixel')
+        fdir = join(self.this_class_arr,'important_for_each_pixel','new')
         for f in os.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+            if not f.endswith('.df'):
+                continue
+            fpath=join(fdir,f)
             fname=f.split('.')[0]
 
 
-            df = T.load_df(f)
-            # T.print_head_n(df)
+            df = T.load_df(fpath)
+            T.print_head_n(df)
             spatial_dic={}
             for i, row in df.iterrows():
                 pix = row['pix']
@@ -1069,7 +1110,7 @@ class Random_Forests:
             plt.title(fname)
             plt.show()
 
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
 
             pass
 
@@ -1387,26 +1428,45 @@ class Random_Forests:
         return pd.DataFrame({col_name: sequence, 'PDs': Y_pdp, 'PDs_std': Y_pdp_std})
 
     def variables(self):
+        # self.x_variable_list = [
+        #     'MAP',
+        #     'MAT',
+        #     'ERA_SMroot',
+        #     'SPEI3',
+        #     'Tmax',
+        #     'GPCC_CV',
+        #     'CO2',
+        #     'Precip_CV',
+        #     'P-ET',
+        #     'VPD',
+        #     'SOC_sum',
+        #     'rooting_depth',
+        #     'S_SILT',
+        #
+        # ]
+
         self.x_variable_list = [
-            'MAP',
-            'MAT',
-            'ERA_SMroot',
+
             'SPEI3',
             'Tmax',
-            'GPCC_CV',
             'CO2',
             'Precip_CV',
             'P-ET',
             'VPD',
-            'SOC_sum',
-            'rooting_depth',
-            'S_SILT',
+
 
         ]
+        # self.y_variable_list = [
+        #     'LAI4g',
+        #     'GPP_CFE',
+        #     'GPP_baseline'
+        # ]
+
         self.y_variable_list = [
             'LAI4g',
-            'GPP_CFE',
-            'GPP_baseline'
+            # 'GPP_CFE',
+            # 'GPP_baseline'
+
         ]
         pass
 
