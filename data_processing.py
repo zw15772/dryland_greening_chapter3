@@ -103,9 +103,10 @@ class data_processing():
         # self.tif_to_dic()
 
         # self.extract_GS()
+        self.extract_seasonality()
 
         # self.extend_GS() ## for SDGVM， it has 37 year GS, to align with other models, we add one more year
-        self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
+        # self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
         # self.scales_GPP_Trendy()
         # self.split_data()
 
@@ -704,8 +705,6 @@ class data_processing():
                 date_list.append(datetime.datetime(year, mon, 1))
 
         for fdir in os.listdir(fdir_all):
-            if not 'Tempmean' in fdir:
-                continue
 
 
             spatial_dict = {}
@@ -727,6 +726,7 @@ class data_processing():
 
 
                 gs_mon = global_get_gs(pix)
+
                 vals = spatial_dict[pix]
                 vals = np.array(vals)
                 # vals[vals == 65535] = np.nan
@@ -780,6 +780,110 @@ class data_processing():
                 annual_spatial_dict[pix] = annual_gs_list
 
             np.save(outf, annual_spatial_dict)
+
+        pass
+
+    def extract_seasonality(self):  ## here using new extraction method: 240<r<480 all year growing season
+
+        fdir_all = data_root + rf'monthly_data\\'
+        outdir=result_root + f'extract_GS\\OBS_LAI_seasonality\\'
+        Tools().mk_dir(outdir, force=True)
+        seasons_list=['spring','summer','autumn','winter']
+        date_list=[]
+
+        for year in range(1982, 2015):
+            for mon in range(1, 13):
+                date_list.append(datetime.datetime(year, mon, 1))
+
+
+        # print(date_list)
+        # exit()
+
+        for season in seasons_list:
+            outdir_season=outdir+season+'\\'
+            Tools().mk_dir(outdir_season,force=True)
+
+            for fdir in os.listdir(fdir_all):
+                if  'AVHRR' in fdir:
+                    continue
+
+
+                outf = outdir_season + fdir.split('.')[0] + '.npy'
+
+                if os.path.isfile(outf):
+                    continue
+                print(outf)
+
+                for fdir_ii in os.listdir(fdir_all + fdir):
+                    if not 'DIC' in fdir_ii:
+                        continue
+
+                    spatial_dict=T.load_npy_dir(fdir_all + fdir + '\\' + fdir_ii)
+
+                    annual_spatial_dict = {}
+                    for pix in tqdm(spatial_dict):
+                        r,c=pix
+
+                        picked_mon=global_get_seasonality(pix,season)
+
+
+                        vals = spatial_dict[pix]
+                        vals = np.array(vals)
+                        # vals[vals >20000] = np.nan
+                        # #
+                        # vals = np.array(vals)/100
+
+                        vals[vals < -999] = np.nan
+                        # vals[vals > 7] = np.nan
+                        #
+                        # vals[vals<0]=np.nan
+
+                        if T.is_all_nan(vals):
+                            continue
+
+                        vals_dict = dict(zip(date_list, vals))
+                        date_list_gs = []
+                        date_list_index = []
+                        for i, date in enumerate(date_list):
+                            mon = date.month
+                            if mon in picked_mon:
+                                date_list_gs.append(date)
+
+                                date_list_index.append(i)
+
+                        consecutive_ranges = self.group_consecutive_vals(date_list_index)
+                        date_dict = dict(zip(list(range(len(date_list))), date_list))
+
+                        # annual_vals_dict = {}
+                        annual_gs_list = []
+
+                        if len(consecutive_ranges[0]) > 12:
+                            consecutive_ranges = np.reshape(consecutive_ranges, (-1, 12))
+
+                        for idx in consecutive_ranges:
+                            date_gs = [date_dict[i] for i in idx]
+                            if not len(date_gs) == len(picked_mon):
+                                continue
+                            year = date_gs[0].year
+
+                            vals_gs = [vals_dict[date] for date in date_gs]
+                            vals_gs = np.array(vals_gs)
+                            vals_gs[vals_gs < -9999] = np.nan
+                            mean = np.nanmean(vals_gs)
+
+                            annual_gs_list.append(mean)
+
+                        annual_gs_list = np.array(annual_gs_list)
+
+                        if T.is_all_nan(annual_gs_list):
+                            continue
+                        annual_spatial_dict[pix] = annual_gs_list
+                    np.save(outf, annual_spatial_dict)
+
+
+
+
+
 
         pass
 
@@ -1251,8 +1355,8 @@ class Phenology():
         self.datadir_all = data_root
 
     def run(self):
-        # self.hants()
-        self.hants_trendy()
+        self.hants()
+        # self.hants_trendy()
         # self.check_hants()
         # self.per_pixel_annual()
         # self.annual_phenology()
@@ -1265,7 +1369,7 @@ class Phenology():
 
     def hants(self):
 
-        outdir=self.datadir_all+'LAI//Hants_annually_smooth/MCD//'
+        outdir=self.datadir_all+'LAI//Hants_annually_smooth//'
         T.mkdir(outdir)
         fdir=self.datadir_all+'LAI\MCD_15A3H_DIC\\'
         spatial_dic=T.load_npy_dir(fdir)
@@ -3283,9 +3387,11 @@ class moving_window():
     def moving_window_extraction(self):
 
         fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'\\extract_window\\extract_original_window\\15\\'
+        outdir = result_root + rf'\\extract_window\\extract_original_window\\10\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not f in ['SPEI.npy','ERA_SMroot.npy','GLEAM_SMroot.npy','VPD.npy','tmax.npy','tmin.npy','Tempmean.npy','GPCC.npy','LAI4g.npy']:
+                continue
 
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -3294,7 +3400,7 @@ class moving_window():
                 continue
 
             dic = T.load_npy(fdir + f)
-            window = 15
+            window = 10
 
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
@@ -3399,19 +3505,18 @@ class moving_window():
 
 
     def moving_window_trend_anaysis(self):
-        fdir = result_root + rf'extract_window\\extract_original_window\\15\\'
-        outdir = result_root + rf'\\extract_window\\extract_original_window_trend\\15\\'
+        window_size=15
+        fdir = result_root + rf'extract_window\\extract_original_window\\{window_size}\\'
+        outdir = result_root + rf'\\extract_window\\extract_original_window_trend\\{window_size}\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'Tmax' in f:
-                continue
 
             dic = T.load_npy(fdir + f)
-            slides = 39 - 15
+            slides = 39-window_size
             outf = outdir + f.split('.')[0] + f'.npy'
             print(outf)
-            # if os.path.isfile(outf):
-            #     continue
+            if os.path.isfile(outf):
+                continue
 
             new_x_extraction_by_window = {}
             trend_dic={}
@@ -3457,8 +3562,6 @@ class moving_window():
 
 
         for f in os.listdir(fdir):
-            if not 'GPCC' in f:
-                continue
 
             dic=T.load_npy(fdir+f)
             result_dic={}
@@ -3475,9 +3578,6 @@ class moving_window():
                         continue
                     result_dic[pix]=vals[slide-1]
                 DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(result_dic,fdir+f.split('.')[0]+f'_{slide}.tif')
-
-
-
 
 
         pass
@@ -3724,6 +3824,31 @@ class moving_window():
         plt.xlabel('moving window')
         plt.xticks(np.arange(0, 24, 1))
         plt.show()
+
+
+
+
+
+
+        ##
+
+
+        ####
+
+
+        df_new = pd.DataFrame(area_dic)
+        df_new = df_new.T
+        ##plot
+        color_list = ['black']
+        df_new.plot( color=color_list, legend=False)
+        plt.legend(['trend'], loc='upper left', bbox_to_anchor=(1.0, 1.0))
+        plt.ylabel('precipitaton(mm/year/year)')
+        plt.xlabel('moving window')
+        plt.xticks(np.arange(0, 24, 1))
+        plt.show()
+
+
+
 
 
 
@@ -6251,17 +6376,38 @@ def global_get_gs(pix):
     else:
         raise ValueError('r not in range')
 
+def global_get_seasonality(pix,season):
+    global_northern_hemi_spring = (3,4,5)
+    global_northern_hemi_summer = (6,7,8)
+    global_northern_hemi_autumn = (9,10,11)
+    global_northern_hemi_winter=(12,1,2)
+    global_southern_hemi_spring = (9,10,11)
+    global_southern_hemi_summer = (12,1,2)
+    global_southern_hemi_autumn = (3,4,5)
+    global_southern_hemi_winter = (6,7,8)
+    northern_season_month_dic={'spring':global_northern_hemi_spring,'summer':global_northern_hemi_summer,'autumn':global_northern_hemi_autumn,'winter':global_northern_hemi_winter}
+    southern_season_month_dic={'spring':global_southern_hemi_spring,'summer':global_southern_hemi_summer,'autumn':global_southern_hemi_autumn,'winter':global_southern_hemi_winter}
 
+    tropical_gs = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
+    r, c = pix
+    if r < 240:
+        return northern_season_month_dic[season]
+    elif 240 <= r < 480:
+        return tropical_gs
+    elif r >= 480:
+        return southern_season_month_dic[season]
+    else:
+        raise ValueError('r not in range')
 
 class build_dataframe():
 
 
     def __init__(self):
 
-        self.this_class_arr = result_root + rf'Dataframe\monthly_original\\'
+        self.this_class_arr = result_root + rf'Dataframe\extract_moving_window_trend\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'monthly_original.df'
+        self.dff = self.this_class_arr + 'extract_moving_window_trend.df'
 
         pass
 
@@ -6275,7 +6421,7 @@ class build_dataframe():
         # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)
         # df=self.append_value(df)
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
         # df=self.add_trend_to_df(df)
         # df=self.add_AI_classfication(df)
@@ -8169,13 +8315,42 @@ class plt_moving_dataframe():
 
     pass
 
+    def plot_moving_window_vs_wetting_drying_bin(self):  ### each winwow,plot pdf of NDVI as bin of wetting and drying
+        fdir_trend = result_root + rf'extract_window\\extract_original_window_trend\\15\\GPCC\\'
 
+        dic_trend = T.load_npy(fdir_trend + 'GPCC.npy')
 
-    def anomaly_greening_and_browning(self):
-        pass
-    # anomaly LAI4g and  LAI4g trend and  LAI4g p_value
+        area_dic = {}
+        for ss in range(39 - 15):
+            print(ss)
 
-    pass
+            trend_value_list = []
+
+            for pix in tqdm(dic_trend):
+                # print(len(dic_trend[pix]))
+                if len(dic_trend[pix]) < 24:
+                    continue
+                trend_value = dic_trend[pix][ss]
+
+                trend_value_list.append(trend_value)
+
+            area_dic[ss] = [trend_value_list]
+
+        #### load wetting and drying
+        fdir_wetting_drying = result_root + rf'extract_window\extract_original_window_trend\15\wetting_drying\\'
+        dic_wetting_drying = T.load_npy(fdir_wetting_drying + 'wetting_drying.npy')
+        wetting_drying_list = []
+        for pix in dic_wetting_drying:
+            trend = dic_wetting_drying[pix]
+            wetting_drying_list.append(trend)
+        wetting_drying_list = np.array(wetting_drying_list)
+        ##### creat df
+        df_new = pd.DataFrame(area_dic)
+        df_new = df_new.T
+        df_new['wetting_drying'] = wetting_drying_list
+        df_new = df_new.rename(columns={0: 'trend'})
+
+        ####
 
 
 class check_data():
@@ -8189,7 +8364,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  result_root+rf'\split_original\X\Tempmean_2002_2020.npy'
+        f =  result_root+rf'extract_GS\OBS_LAI_seasonality\spring\\ERA_SMroot.npy'
         # fdir=rf'D:\Project3\Data\monthly_data\LAI4g\DIC\\'
         dic=T.load_npy(f)
 
@@ -8456,7 +8631,7 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
+    # statistic_analysis().run()
     # ResponseFunction().run()
     # bivariate_analysis().run()
     # CCI_LC_preprocess().run()
@@ -8467,7 +8642,7 @@ def main():
     # residual_method().run()
     # Contribution_Lixin().run()
     # fingerprint().run()
-    # moving_window().run()
+    moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
     # plot_dataframe().run()
