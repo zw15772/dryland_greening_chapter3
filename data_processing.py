@@ -235,8 +235,8 @@ class data_processing():
     def nc_to_tif(self):
 
         # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
-        fdir=rf'D:\Project3\Data\TRMM\nc\\'
-        outdir=rf'D:\Project3\Data\TRMM\\TIFF\\'
+        fdir=rf'D:\Project3\Data\cru_ts4.07.1901.2022.pre.dat.nc\\'
+        outdir=rf'D:\Project3\Data\CRU\\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
 
@@ -249,7 +249,7 @@ class data_processing():
 
             # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
             try:
-                self.nc_to_tif_template(fdir+f, var_name='precipitation', outdir=outdir, yearlist=yearlist)
+                self.nc_to_tif_template(fdir+f, var_name='pre', outdir=outdir, yearlist=yearlist)
             except Exception as e:
                 print(e)
                 continue
@@ -863,7 +863,7 @@ class data_processing():
 
     def extract_GS(self):  ## here using new extraction method: 240<r<480 all year growing season
 
-        fdir_all = data_root + rf'GIMMS3g\\'
+        fdir_all = data_root + rf'CRU\\'
         outdir = result_root + f'extract_GS\\OBS_LAI\\'
         Tools().mk_dir(outdir, force=True)
         date_list=[]
@@ -876,7 +876,7 @@ class data_processing():
                 date_list.append(datetime.datetime(year, mon, 1))
 
         for fdir in os.listdir(fdir_all):
-            if not 'GIMMS3g_DIC' in fdir:
+            if not 'DIC' in fdir:
                 continue
 
 
@@ -943,8 +943,10 @@ class data_processing():
                     vals_gs = np.array(vals_gs)
                     vals_gs[vals_gs < -9999] = np.nan
                     mean = np.nanmean(vals_gs)
+                    # total_amount= np.nansum(vals_gs)  ### 降雨需要求和
 
                     annual_gs_list.append(mean)
+                    # annual_gs_list.append(total_amount)
 
                 annual_gs_list = np.array(annual_gs_list)
 
@@ -981,6 +983,7 @@ class data_processing():
             spatial_dict = T.load_npy_dir(fdir_all + fdir)
 
             annual_spatial_dict = {}
+            annual_spatial_dict_index = {}
             for pix in tqdm(spatial_dict):
                 r,c=pix
 
@@ -989,12 +992,16 @@ class data_processing():
 
                 vals = spatial_dict[pix]
                 vals = np.array(vals)
-                # vals[vals == 65535] = np.nan
-                #
+
+                vals[vals == 65535] = np.nan
+                if T.is_all_nan(vals):
+                    continue
+
+
                 # vals = np.array(vals)/100
 
                 vals[vals < -999] = np.nan
-                # vals[vals > 7] = np.nan
+                vals[vals > 7] = np.nan
 
                 # vals[vals<0]=np.nan
 
@@ -1016,6 +1023,7 @@ class data_processing():
 
                 # annual_vals_dict = {}
                 annual_gs_list = []
+                annual_gs_list_idx = []
 
                 if len(consecutive_ranges[0])>12:
                     consecutive_ranges=np.reshape(consecutive_ranges,(-1,12))
@@ -1031,15 +1039,18 @@ class data_processing():
                     vals_gs[vals_gs < -9999] = np.nan
                     ## return monthly data
                     annual_gs_list.append(vals_gs)
-
+                    ## return month_index
+                    annual_gs_list_idx.append(idx)
 
                 annual_gs_list = np.array(annual_gs_list)
 
                 # if T.is_all_nan(annual_gs_list):
                 #     continue
                 annual_spatial_dict[pix] = annual_gs_list
+                annual_spatial_dict_index[pix] = annual_gs_list_idx
 
             np.save(outf, annual_spatial_dict)
+            np.save(outf+'_index', annual_spatial_dict_index)
 
         pass
 
@@ -1223,7 +1234,7 @@ class data_processing():
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
-            if not 'GIMMS3g' in f:
+            if not 'CRU' in f:
                 continue
 
 
@@ -1240,7 +1251,7 @@ class data_processing():
                 time_series[time_series<-999]=np.nan
                 if np.isnan(np.nanmean(time_series)):
                     continue
-                if len(time_series)<37:
+                if len(time_series)<39:
                     time_series_new=np.append(time_series,np.nan)
                     dic_new[pix]=time_series_new
                 else:
@@ -1397,9 +1408,9 @@ class data_processing():
                 except Exception as e:
                     pass
     def resample_AVHRR_LAI(self):
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\Terra\TIFF\vpd\\'
+        fdir_all = rf'D:\Project3\Data\CRU\TIFF\\'
 
-        outdir = rf'C:\Users\wenzhang1\Desktop\Terra\resample\\vpd\\'
+        outdir = rf'D:\Project3\Data\CRU\\\resample\\'
 
 
         T.mk_dir(outdir, force=True)
@@ -2409,14 +2420,221 @@ class Check_plot():
         # plt.show()
 
     pass
+class maximum_trend():
+    def __init__(self):
+        pass
+
+
+
+    def run(self):
+        self.calculate_relative_change_monthly()
+        self.convert_monthly()
+        self.pieplot()
+    def calculate_relative_change_monthly(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+
+
+
+        f_monthly_data = result_root + rf'extract_GS_return_monthly_data\OBS_LAI\\LAI4g.npy'
+
+        outdir = result_root + rf'extract_GS_return_monthly_data\OBS_LAI_trend\\'
+        T.mk_dir(outdir, force=True)
+
+        dic_monthly_data = np.load(f_monthly_data, allow_pickle=True, encoding='latin1').item()
+
+        dic_max_trend= {}
+
+        max_month_dict = {}
+        for pix in tqdm(dic_monthly_data, desc='trend'):
+            time_series = dic_monthly_data[pix]
+            dryland=dic_dryland_mask[pix]
+            if np.isnan(dryland):
+                continue
+            landcover_value = crop_mask[pix]
+            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+
+
+            if len(time_series) == 0:
+                pass
+            if np.isnan(np.nanmean(time_series)):
+                continue
+            time_series = np.array(time_series).T
+
+
+            # plt.imshow(time_series)
+            # plt.show()
+            trend_dict = {}
+
+            for idx in range(len(time_series)):
+                time_series_month = time_series[idx]
+
+                if len(time_series_month) == 0:
+                    continue
+                if np.isnan(np.nanmean(time_series_month)):
+                    continue
+                average=np.nanmean(time_series_month)
+                relative_change= (time_series_month-average)/average *100
+                # print(relative_change)
+
+                ##### trend
+                a, b, r, p, std_err = stats.linregress(np.arange(len(time_series_month)), relative_change)
+                if np.isnan(a):
+                    continue
+                trend_dict[idx] = abs(a)
+            ###### calculate absolute maximum trend
+
+            # max_month = np.nanmax(list(trend_dict.keys()))
+            if len(trend_dict) == 0:
+                continue
+            max_month = T.get_max_key_from_dict(trend_dict)
+            if max_month == None:
+                print(trend_dict)
+
+
+            actual_value_trend = trend_dict[max_month]
+            # print(max_month)
+            # print(max_month_index)
+            # print(max_trend)
+            # print(actual_value_trend)
+            # exit()
+
+            dic_max_trend[pix] = actual_value_trend
+            max_month_dict[pix] = max_month
+            # print(max_month)
+
+
+        np.save(outdir + 'LAI4g_trend.npy', dic_max_trend)
+        np.save(outdir + 'LAI4g_max_month.npy', max_month_dict)
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_max_trend, outdir + 'LAI4g_trend.tif')
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(max_month_dict, outdir + 'LAI4g_max_month.tif')
+
+
+    def convert_monthly(self):
+        f_monthly_data = result_root + rf'extract_GS_return_monthly_data\\OBS_LAI_trend\\LAI4g_max_month.npy'
+        dic_monthly_data = np.load(f_monthly_data, allow_pickle=True, encoding='latin1').item()
+        dic_monthly_data_new = {}
+        for pix in dic_monthly_data:
+            r,c=pix
+            idx=dic_monthly_data[pix]
+            if r<240:
+                month_real=idx+5
+
+            elif r>480:
+                month_real=idx+11
+                if month_real>12:
+                    month_real=month_real-12
+            else: # 0-240
+                month_real=idx+1
+            dic_monthly_data_new[pix]=month_real
+        np.save(result_root + rf'extract_GS_return_monthly_data\OBS_LAI_trend\max_month_real.npy', dic_monthly_data_new)
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_monthly_data_new, result_root + rf'extract_GS_return_monthly_data\OBS_LAI_trend\max_month_real.tif')
+
+    def pieplot(self):
+        f_monthly_data = result_root + rf'extract_GS_return_monthly_data\\OBS_LAI_trend\\max_month_real.npy'
+        dic_monthly_data = np.load(f_monthly_data, allow_pickle=True, encoding='latin1').item()
+
+
+        ##generate list of month
+        month_list_northern = []
+        month_list_southern = []
+        month_list_tropical = []
+
+
+        for pix in dic_monthly_data:
+            r,c=pix
+            if r <120:
+                continue
+            month_real=dic_monthly_data[pix]
+            if r<240:
+                month_list_northern.append(month_real)
+            elif r>480:
+                month_list_southern.append(month_real)
+            else: # 0-240
+                month_list_tropical.append(month_real)
+                #### calculate the percentage of each month
+        month_list_northern = np.array(month_list_northern)
+        month_list_southern = np.array(month_list_southern)
+        month_list_tropical = np.array(month_list_tropical)
+        northern_hemisphere = {}
+        southern_hemisphere = {}
+        tropical = {}
+
+        ##northern hemisphere only data from 5-10
+        ## southern hemisphere only data from 11-4
+        ## tropical hemisphere only data from 1-12
+        for i in month_list_northern:
+            northern_hemisphere[i] = month_list_northern.tolist().count(i)
+        for i in month_list_southern:
+            southern_hemisphere[i] = month_list_southern.tolist().count(i)
+        for i in month_list_tropical:
+            tropical[i] = month_list_tropical.tolist().count(i)
+        ##plot pie for norther, southern, and tropical seperately
+
+        fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+        ax[0].pie(northern_hemisphere.values(), labels=northern_hemisphere.keys(), autopct='%1.1f%%')
+        ax[0].set_title('Northern Hemisphere')
+        ax[1].pie(southern_hemisphere.values(), labels=southern_hemisphere.keys(), autopct='%1.1f%%')
+        ax[1].set_title('Southern Hemisphere')
+        ax[2].pie(tropical.values(), labels=tropical.keys(), autopct='%1.1f%%')
+        ax[2].set_title('Tropical')
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def maximum_trend(self):
+        fdir = result_root + rf'extract_GS_return_monthly_data\OBS_LAI\\'
+        outdir = result_root + rf'extract_GS_return_monthly_data\OBS_LAI_maximum_trend\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            dic_maximum_trend = {}
+            for pix in tqdm(dic, desc=f):
+                time_series = dic[pix]
+                if len(time_series) == 0:
+                    pass
+
 
 class statistic_analysis():
     def __init__(self):
         pass
     def run(self):
 
-        # self.detrend()  ##original
-        self.detrend_zscore_monthly()
+        self.detrend()  ##original
+        # self.detrend_zscore_monthly()
+        # self.relative_change()
+        # self.calculate_CV()
         # self.zscore()
         # self.detrend()
         # self.LAI_baseline()
@@ -2432,7 +2650,6 @@ class statistic_analysis():
         # self.calculate_asymmetry_response()
 
         # self.scerios_analysis() ## this method tried to calculate different scenarios
-
 
 
 
@@ -2604,6 +2821,110 @@ class statistic_analysis():
                 detrend_zscore_dic[pix] = detrend_delta_time_series_result
 
             np.save(outf, detrend_zscore_dic)
+
+    def relative_change(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir = result_root+'extract_GS\OBS_LAI_extend\\'
+        outdir=result_root + rf'relative_change\\OBS_LAI_extend\\'
+        Tools().mk_dir(outdir, force=True)
+
+
+        for f in os.listdir(fdir):
+
+
+            outf=outdir+f.split('.')[0]
+            print(outf)
+
+            dic = dict(np.load(fdir+f, allow_pickle=True, ).item())
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+                delta_time_series_list = []
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]
+                # print(len(time_series))
+
+                time_series = np.array(time_series)
+                time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.nanmean(time_series) <= 0.:
+                    continue
+
+
+                mean=np.nanmean(time_series)
+
+                relative_change=(time_series-mean)/mean *100
+                zscore_dic[pix] = relative_change
+                ## plot
+                # plt.plot(time_series)
+                # plt.plot(relative_change)
+                # plt.legend(['original','relative_change'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
+
+        pass
+    def calculate_CV(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir = result_root + 'extract_GS\OBS_LAI_extend\\'
+        outdir=result_root + rf'CV\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not 'CRU' in f:
+                continue
+
+            outf = outdir + f.split('.')[0]
+            print(outf)
+
+            dic = dict(np.load(fdir + f, allow_pickle=True, ).item())
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+                delta_time_series_list = []
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]
+                # print(len(time_series))
+
+                time_series = np.array(time_series)
+                time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.nanmean(time_series) <= 0.:
+                    continue
+
+                mean = np.nanmean(time_series)
+
+                CV=np.nanstd(time_series)/mean
+                zscore_dic[pix] = CV
+                ## plot
+                # plt.plot(time_series)
+                # plt.plot(relative_change)
+                # plt.legend(['original','relative_change'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+            DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(zscore_dic, outf+'.tif')
 
 
     def zscore(self):
@@ -2933,13 +3254,12 @@ class statistic_analysis():
         # crop_mask[crop_mask == 17] = 0
         # crop_mask[crop_mask == 18] = 0
 
-
-
-        fdir = result_root + rf'asymmetry_response\\'
-        outdir = result_root + rf'trend_analysis\\asymmetry_response\\'
+        fdir = result_root + rf'relative_change\\OBS_LAI_extend\\'
+        outdir = result_root + rf'trend_analysis\\relative_change\\OBS_LAI_extend\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-
+            if not 'CRU' in f:
+                continue
 
             outf=outdir+f.split('.')[0]
             if os.path.isfile(outf+'_trend.tif'):
@@ -3130,13 +3450,13 @@ class statistic_analysis():
         pass
 
     def bivariate_analysis(self):
-        growthrate_trend=result_root+'growth_rate\OBS_extend\\LAI4g.npy'
-        growthrate_pvalue=result_root+'growth_rate\OBS_extend\\LAI4g_p_value.npy'
-        trend_trend=result_root+'trend_analysis\\original\\LAI4g_trend.npy'
-        trend_pvalue=result_root+'trend_analysis\\original\\LAI4g_p_value.npy'
+        growthrate_trend=result_root+'CV\\CV.npy'
+
+        trend_trend=result_root+rf'trend_analysis\relative_change\OBS_extend\\LAI4g_trend.npy'
+        trend_pvalue=result_root+rf'trend_analysis\relative_change\OBS_extend\\LAI4g_p_value.npy'
 
         growthrate_trend_dic=np.load(growthrate_trend,allow_pickle=True).item()
-        growthrate_pvalue_dic=np.load(growthrate_pvalue,allow_pickle=True).item()
+
 
         trend_dic=np.load(trend_trend,allow_pickle=True).item()
         trend_pvalue_dic=np.load(trend_pvalue,allow_pickle=True).item()
@@ -3148,47 +3468,9 @@ class statistic_analysis():
             trend_value=trend_dic[pix]
             trend_pvalue=trend_pvalue_dic[pix]
             growthrate_value=growthrate_trend_dic[pix]
-            growthrate_pvalue=growthrate_pvalue_dic[pix]
 
-            ###  trend siginificant positive and growthrate siginificant positive  accelerate greening
-            # trend siginificant positive but growthrate siginificant negative     slow down greening
-            # trend siginificant negative but growthrate siginificant positive     accelerate browning
-            # trend siginificant negative but growthrate siginificant negative     slow down browning
-            if trend_pvalue<0.05 and growthrate_pvalue<0.05:
-                if trend_value>0 and growthrate_value>0:
-                    result_dic[pix]='PP'
-                elif trend_value>0 and growthrate_value<0:
-                    result_dic[pix]='PN'
-                elif trend_value<0 and growthrate_value>0:
-                    result_dic[pix]='NP'
-                elif trend_value<0 and growthrate_value<0:
-                    result_dic[pix]='NN'
-                else:
-                    result_dic[pix]='NA'
-            else:
-                result_dic[pix]='NA'
-        ##calculte the percentage of each category
-        PP=0
-        PN=0
-        NP=0
-        NN=0
-        NA=0
-        for pix in result_dic:
-            if result_dic[pix]=='PP':
-                PP+=1
-            elif result_dic[pix]=='PN':
-                PN+=1
-            elif result_dic[pix]=='NP':
-                NP+=1
-            elif result_dic[pix]=='NN':
-                NN+=1
-            elif result_dic[pix]=='NA':
-                NA+=1
-        ##spatial plot
-        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(arr)
-        plt.colorbar()
-        plt.show()
+
+
 
 
 
@@ -3464,38 +3746,31 @@ class bivariate_analysis():
     def __init__(self):
         pass
     def run(self):
-        self.long_term_trend_moving_window_trend()
+        self.bivariate_plot()
 
         pass
-    def long_term_trend_moving_window_trend(self):
+    def bivariate_plot(self):
         import xymap
+        tif_CRU_CV= result_root + rf'CV\\CRU_CV.tif'
+        tif_CRU_trend=result_root + rf'trend_analysis\\relative_change\\OBS_extend\\LAI4g_trend.tif'
+        # print(isfile(tif_CRU_trend))
+        # print(isfile(tif_CRU_CV))
+        # exit()
+        outtif=result_root + rf'bivariate_analysis\\CRU_trend_CV.tif'
+        T.mk_dir(result_root + rf'bivariate_analysis\\')
+        tif1=tif_CRU_trend
+        tif2=tif_CRU_CV
+        tif1_label='CRU_trend'
+        tif2_label='CRU_CV'
+        min1=-0.1
+        max1=0.1
+        min2=0
+        max2=0.5
+        outf=outtif
 
-        tif_long_term_trend=result_root+'trend_analysis\\original\\OBS\\LAI4g_trend.tif'
-        tif_moving_window_trend=result_root+rf'\extract_window\extract_original_window_trend_trend\15\\LAI4g_trend.tif'
-
-        vmean_long_term=-0.01
-        vmax_long_term=0.01
-        vmean_moving_window=-0.001
-        vmax_moving_window=0.001
-        outdir=result_root+'bivariate_analysis\\'
-        Tools().mk_dir(outdir,force=True)
-        tif1=tif_long_term_trend
-        tif2=tif_moving_window_trend
-        x_label='Long-term trend'
-        y_label='Moving window trend'
-        min1=vmean_long_term
-        max1=vmax_long_term
-        min2=vmean_moving_window
-        max2=vmax_moving_window
-        outf=outdir+'LAI4g_trend.tif'
-
-        xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, x_label, y_label, min1, max1, min2, max2, outf,n=(5,5), legend_title='')
+        xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
 
 
-
-
-
-        pass
 
 class CCI_LC_preprocess():
 
@@ -6733,7 +7008,10 @@ class Seasonal_sensitivity:
         # self.cal_seasonal_sensitivity()
         # self.plot_seasonal_sensitivity()
         # self.cal_seasonal_trend()
-        self.plot_seasonal_trend()
+        # self.cal_monthly_trend()
+        # self.post_proprocessing()
+        # self.plot_seasonal_trend()
+        self.plot_monthly_trend()
         pass
 
     def cal_seasonal_sensitivity(self):
@@ -6862,24 +7140,31 @@ class Seasonal_sensitivity:
         T.df_to_excel(df_result, outf)
 
 
+
     def cal_monthly_trend(self):
         outdir = join(self.this_class_arr, 'monthly_trend')
         T.mk_dir(outdir, force=True)
         product = 'SM'
-        product='Precip'
-        # product = 'LAI'
+        # product='Precip'
+        product = 'LAI'
         # SM_dir = 'D:\Project3\Data\monthly_data\GLEAM_SMroot_anomaly\\'
-        # SM_dir = 'D:\Project3\Data\monthly_data\LAI4g_anomaly\\'
-        SM_dir = f'D:\Project3\Data\monthly_data\\\GPCC\\dic\\'
+        SM_dir = 'D:\Project3\Data\monthly_data\LAI4g\\'
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+        array_mask[array_mask > 0] = 1
+
+
 
         SM_dic = T.load_npy_dir(SM_dir)
         # LAI_dic = T.load_npy_dir(LAI_dir)
         result_dict = {}
         for pix in tqdm(SM_dic):
+
             SM = SM_dic[pix]
-            # if not pix in LAI_dic:
-            #     continue
-            # LAI = LAI_dic[pix]
+
+
+
             if np.nanstd(SM) == 0:
                 continue
             # if np.nanstd(LAI) == 0:
@@ -6891,12 +7176,18 @@ class Seasonal_sensitivity:
 
             # df = df.dropna()
 
-            try:
-                a,b,r,p = T.nan_line_fit(list(range(len(SM)),SM)
-            except:
-                a,b,r,p = np.nan,np.nan,np.nan,np.nan
-            result_dict_i[f'{season}_a'] = a
-            result_dict_i[f'{season}_p'] = p
+            result_dict_i = {}
+            for month in range(1,13):
+                df_month = df[df['month'] == month]
+                SM = df_month['SM'].to_list()
+                ## calculate the trend
+                if np.nanstd(SM) == 0:
+                    continue
+                SM = np.array(SM)
+                a,b,r,p = T.nan_line_fit(list(range(len(SM))),SM)
+                result_dict_i[f'{month}_a'] = a
+                result_dict_i[f'{month}_p'] = p
+
 
             result_dict[pix] = result_dict_i
         df_result = T.dic_to_df(result_dict,'pix')
@@ -6905,6 +7196,33 @@ class Seasonal_sensitivity:
         T.save_df(df_result, outf)
         T.df_to_excel(df_result, outf)
 
+    def post_proprocessing(self):
+        dff=join(self.this_class_arr,'monthly_trend','LAI.df')
+        df=T.load_df(dff)
+        # df['pix'] = df['__key__'].to_list()
+        df = df.dropna()
+        NDVI_mask= data_root + rf'/Base_data/dryland_AI.tif\\dryland.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask)
+        array_mask[array_mask < 0] = np.nan
+        array_mask[array_mask > 0] = 1
+        figure, axs = plt.subplots(3, 4, figsize=(20, 15))
+        for month in range(1,13):
+            col_name = f'{month}_a'
+            spatial_dict = T.df_to_spatial_dic(df, col_name)
+            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dict)
+            arr = arr*array_mask
+            ax = axs[int((month-1)/4), (month-1)%4]
+            ax.set_title(col_name)
+
+
+            ax.imshow(arr, vmin=-0.5, vmax=0.5, cmap='RdBu', interpolation='nearest')
+            cax = figure.add_axes([0.2, 0.05, 0.6, 0.02])
+            figure.colorbar(ax.imshow(arr, vmin=-0.1, vmax=0.1, cmap='RdBu', interpolation='nearest'), cax=cax,
+                            orientation='horizontal')
+
+        plt.show()
+
+        pass
     def plot_seasonal_trend(self):
         dff = join(self.this_class_arr, 'seasonal_trend', 'LAI.df')
         # dff = join(self.this_class_arr, 'seasonal_trend', 'SM.df')
@@ -6924,21 +7242,34 @@ class Seasonal_sensitivity:
         pass
 
     def plot_monthly_trend(self):
-        dff = join(self.this_class_arr, 'seasonal_trend', 'LAI.df')
-        # dff = join(self.this_class_arr, 'seasonal_trend', 'SM.df')
-        # dff = join(self.this_class_arr, 'seasonal_trend', 'Precip.df')
+        # dff = join(self.this_class_arr, 'monthly_trend', 'LAI.df')
+        # dff = join(self.this_class_arr, 'monthly_trend', 'SM.df')
+        dff = join(self.this_class_arr, 'monthly_trend', 'Precip.df')
         df = T.load_df(dff)
         # df['pix'] = df['__key__'].to_list()
-        season_list = ['MAM', 'JJA', 'SON', 'DJF']
-        for season in season_list:
-            col_name = f'{season}_a'
+        month_list = list(range(1,13))
+        figure, axs = plt.subplots(3, 4, figsize=(20, 15))
+        for month in month_list:
+            col_name = f'{month}_a'
             spatial_dict = T.df_to_spatial_dic(df, col_name)
             arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dict)
-            plt.figure()
-            plt.imshow(arr, vmin=-0.1, vmax=0.1, cmap='RdBu', interpolation='nearest')
-            plt.title(col_name)
-            plt.colorbar()
+            ax = axs[int((month-1)/4), (month-1)%4]
+            ax.imshow(arr, vmin=-0.5, vmax=0.5, cmap='RdBu', interpolation='nearest')
+
+            ax.set_title(col_name)
+            ## add colorbar
+            ## bottom
+            cax = figure.add_axes([0.2, 0.05, 0.6, 0.02])
+            figure.colorbar(ax.imshow(arr, vmin=-0.5, vmax=0.5, cmap='RdBu', interpolation='nearest'), cax=cax, orientation='horizontal')
         plt.show()
+
+
+
+
+
+
+
+
         pass
 
 class multi_regression():
@@ -8114,10 +8445,10 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + rf'Dataframe\anomaly_LAI\\'
+        self.this_class_arr = result_root + rf'Dataframe\relative_changes\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'anomaly_right.df'
+        self.dff = self.this_class_arr + 'relative_changes.df'
 
         pass
 
@@ -8183,9 +8514,11 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-        fdir = rf'D:\Project3\Result\extract_window\extract_original_window_average\15\\'
+        fdir =result_root+rf'relative_change\OBS_LAI_extend\\'
         all_dic= {}
         for f in os.listdir(fdir):
+            if not 'LAI' in f:
+                continue
             fname= f.split('.')[0]
 
             fpath=fdir+f
@@ -8219,9 +8552,9 @@ class build_dataframe():
 
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+rf'anomaly\OBS_extend\\'
+        fdir = result_root+rf'CV\\'
         for f in tqdm(os.listdir(fdir)):
-            if not 'GPCC' in f:
+            if not f.endswith('.npy'):
                 continue
 
             # array=np.load(fdir+f)
@@ -8229,8 +8562,6 @@ class build_dataframe():
             dic=T.load_npy(fdir+f)
             key_name = f.split('.')[0]
             print(key_name)
-
-
 
             # df[key_name] = df['pix'].map(dic)
             # T.print_head_n(df)
@@ -8636,13 +8967,13 @@ class build_dataframe():
         return df
     def add_trend_to_df(self,df):
 
-        fdir=result_root+ rf'quadratic_regression\1982_2020\\'
+        fdir=result_root+ rf'trend_analysis\original\OBS_LAI\\'
 
         for f in os.listdir(fdir):
 
             if not f.endswith('.tif'):
                 continue
-            if not 'label_LAI4g_1982_2020.tif' in f:
+            if not 'CRU' in f:
                 continue
             variable=(f.split('.')[0].split('_')[0])
 
@@ -8761,8 +9092,8 @@ class build_dataframe():
 
 class plot_dataframe():
     def __init__(self):
-        scenario='S2'
-        self.product_list = ['LAI4g', 'GIMMS3g', f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
+        scenario='S1'
+        self.product_list = ['LAI4g', 'GIMMS3g_LAI','GIMMS_AVHRR_LAI', f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
              f'ISBA-CTRIP_{scenario}_lai', f'JSBACH_{scenario}_lai', f'JULES_{scenario}_lai',  f'LPJ-GUESS_{scenario}_lai', f'LPX-Bern_{scenario}_lai',
              f'ORCHIDEE_{scenario}_lai', f'SDGVM_{scenario}_lai', f'YIBs_{scenario}_Monthly_lai']
 
@@ -8771,7 +9102,8 @@ class plot_dataframe():
         #      f'ORCHIDEE_{scenario}_gpp', f'SDGVM_{scenario}_gpp', f'YIBs_{scenario}_Monthly_gpp']
 
         # self.product_list = [ 'GPP_NIRv','GPP_baseline', 'GPP_CFE',]
-        self.product_list = ['GPCC','LAI4g', 'GIMMS_AVHRR_LAI', 'GIMMS3g'  ]
+        # self.product_list = ['LAI4g', 'GIMMS_AVHRR_LAI', 'GIMMS3g_LAI'  ]
+
 
 
         pass
@@ -8781,7 +9113,7 @@ class plot_dataframe():
         # self.plot_annual_zscore_based_region()
 
         # self.plot_anomaly_trendy_LAI()
-        self.plot_anomaly_LAI_based_on_cluster()
+        # self.plot_anomaly_LAI_based_on_cluster()
         # self.plot_asymetrical_response_based_on_cluster()
         # self.plot_anomaly_trendy_GPP()
         # self.plot_anomaly_vegetaton_indices()
@@ -8794,7 +9126,7 @@ class plot_dataframe():
         # self.plot_bin_sensitivity_for_each_bin()
         # self.plot_drying_greening()
         # self.plot_drying_greening_map()
-        self.plot_cluster_variables_trend()
+        # self.plot_cluster_variables_trend()
         # self.plot_cluster_LAI_response_to_variables()
         # self.plot_drying_wetting_areas()
         # self.plot_browning_greening_areas()
@@ -8807,7 +9139,7 @@ class plot_dataframe():
         # self.plot_landcover_classfication_yearly()  ##
         # self.plot_multiregression()
         # self.plot_multiregression_boxplot()
-        # self.plot_Yao_Zhang_method()
+        self.plot_Yao_Zhang_method()
         pass
     def clean_df(self,df):
         df=df[df['landcover_classfication']!='Cropland']
@@ -8938,11 +9270,12 @@ class plot_dataframe():
 
     def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
 
-        df= T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_right.df')
+        df= T.load_df(result_root + 'Dataframe\\relative_changes\\relative_changes.df')
         print(len(df))
         df=self.clean_df(df)
         print(len(df))
         T.print_head_n(df)
+        # exit()
 
         #create color list with one green and another 14 are grey
 
@@ -8963,18 +9296,24 @@ class plot_dataframe():
             df_region = df[df['AI_classfication'] == region]
             ax = fig.add_subplot(1,3, i)
             for product in self.product_list:
-                if not 'GPCC' in product:
-                    continue
 
                 print(product)
                 vals=df_region[product].tolist()
+
+                # print(vals)
 
                 vals_nonnan=[]
                 for val in vals:
                     if type(val)==float: ## only screening
                         continue
+                    vals_nonnan.append(list(val))
+                    # if not len(val) == 34:
+                    #     print(val)
+                    #     print(len(val))
+                    #     exit()
+                    # print(type(val))
                     # print(len(val))
-                    vals_nonnan.append(val)
+
                 ###### calculate mean
                 vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
                 vals_mean=np.nanmean(vals_mean,axis=0)
@@ -8996,7 +9335,7 @@ class plot_dataframe():
 
             plt.xlabel('year')
 
-            plt.ylabel('anomaly LAI (m2/m2/year)')
+            plt.ylabel('relative change LAI (%/year)')
             # plt.legend()
 
             plt.title(region)
@@ -10378,27 +10717,27 @@ class plot_dataframe():
 
 
     def plot_Yao_Zhang_method(self,):  ##replicateYao's NC paper aridity, SM trend,greening trend
-        df= T.load_df(result_root + 'Dataframe\multiregression\\multiregression.df')
-
+        df= T.load_df(result_root + rf'Dataframe\relative_changes\\relative_changes.df')
 
         z_values_list=self.product_list
         ### plot heatmap of aridity, SM trend, greening trend
         df=df[df['landcover_classfication']!='Cropland']
-        aridity_bin=np.arange(0,0.8,0.1)
-        SM_bin=np.arange(-0.006,0.006,0.001)
+        aridity_bin=np.arange(0.05,0.7,0.1)
+        CV_bin=np.arange(0.05,0.7,0.1)
+        SM_bin=np.arange(-2,2,0.4)
 
-
-        flag=1
+        flag=  1
         ##plt figure
         fig = plt.figure()
+        # ##figure size
+        fig.set_size_inches(8, 10)
         for z_value in tqdm(z_values_list):
-            # df=df[df[f'{z_value}_p_value']<0.1]
+            df=df[df[f'{z_value}_trend']>-999]
             matrix = []
             z_value=z_value+'_trend'
-            ax = fig.add_subplot(5, 4, flag)
-            flag=flag+1
+            ax = fig.add_subplot(4, 4, flag)
 
-
+            print(flag)
 
             for i in range(len(SM_bin)):
                 if i == len(SM_bin) - 1:
@@ -10414,8 +10753,8 @@ class plot_dataframe():
                     x_left = aridity_bin[j]
                     x_right = aridity_bin[j + 1]
 
-                    df_temp_i = df[df['GLEAM_SMroot_trend'] >= y_left]
-                    df_temp_i = df_temp_i[df_temp_i['GLEAM_SMroot_trend'] < y_right]
+                    df_temp_i = df[df['CRU_trend'] >= y_left]
+                    df_temp_i = df_temp_i[df_temp_i['CRU_trend'] < y_right]
                     df_temp_i = df_temp_i[df_temp_i['Aridity'] >= x_left]
                     df_temp_i = df_temp_i[df_temp_i['Aridity'] < x_right]
                     mean=np.nanmean(df_temp_i[z_value].tolist())
@@ -10425,14 +10764,16 @@ class plot_dataframe():
             matrix = np.array(matrix)
             matrix = matrix[::-1, :]  # reverse
             plt.imshow(matrix, cmap='RdBu', interpolation='nearest')
+
             ## add x labeland y label and keep round 2 and y_ticks need to be reversed because I want north is positive
             xticks = []
             for i in range(len(aridity_bin)):
                 if i % 2 == 0:
                     xticks.append(f'{aridity_bin[i]:.1f}')
                 else:
-                    xticks.append('')
-            plt.xticks(range(len(xticks)), xticks, rotation=45, ha='right')
+                    xticks.append(f'{aridity_bin[i]:.1f}')
+                    # xticks.append('')
+            # plt.xticks(range(len(xticks)), xticks, rotation=45, ha='right')
             yticks = []
             ## y_ticks need to be reversed negative to positive
             for i in range(len(SM_bin)):
@@ -10440,19 +10781,39 @@ class plot_dataframe():
                     yticks.append(f'{SM_bin[::-1][i]:.3f}')
                 else:
                     yticks.append('')
-            plt.yticks(range(len(yticks)), yticks)
-            # plt.xlabel('Aridity')
-            # plt.ylabel('SM trend')
-            plt.title(z_value)
+            # plt.yticks(range(len(yticks)), yticks)
+
+
+            fig.text(0.5, 0.05, 'Aridity', ha='center')
+            fig.text(0.05, 0.5, 'Precip trend (mm/year)', va='center', rotation='vertical')
+
+            ###add x_tick and y_tick only left and bottom
+            labels = [0.05,0.1,0.2,0.3,0.4,0.5,0.65]
+            labels_str = [f'{i:.2f}' for i in labels]
+            if flag in [13,14,15,16]:
+                plt.xticks(np.array(range(len(xticks)))-0.5, labels_str, rotation=90)
+            else: ##remove x_tick
+                plt.xticks([])
+            #####y tick
+            if flag in [1,5,9,13]:
+                plt.yticks(range(len(yticks)), yticks)
+            else:
+                plt.yticks([])
+            flag = flag + 1
+
+            ##z value name.split by _ and drop the last one join rest of them
+            z_val_name = '_'.join(z_value.split('_')[:-1])
+            plt.title(z_val_name)
             ## color bar scale from -0.1 to 0.1
-            plt.clim(-0.008, 0.008)
-
-
-
-        plt.colorbar()
-
+            plt.clim(-0.5, 0.5)
+            cax = fig.add_axes([0.2, 0.03, 0.6, 0.02])
+            fig.colorbar(ax.imshow(matrix, vmin=-0.5, vmax=0.5, cmap='RdBu', interpolation='nearest'), cax=cax,
+                             orientation='horizontal')
 
         plt.show()
+
+
+
         # plt.savefig(self.outdir + f'{region}_{z_val_name}.pdf', dpi=300)
         # plt.close()
 
@@ -10598,9 +10959,9 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  'D:\Project3\Data\monthly_data\Precip\\'
+        f =  'D:\Project3\Data\monthly_data\LAI4g\LAI4g.npy'
 
-        fdir=rf'D:\Project3\Data\monthly_data\Precip\\'
+        fdir=rf'D:\Project3\Data\monthly_data\LAI4g\\'
         # dic=T.load_npy(f)
         dic=T.load_npy_dir(fdir)
 
@@ -10615,9 +10976,9 @@ class check_data():
         for pix in dic:
             vals=dic[pix]
 
-            # len_dic[pix]=np.nanmean(vals)
+            len_dic[pix]=np.nanmean(vals)
 
-            len_dic[pix] = len(vals)
+            # len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=20,vmax=40)
         plt.colorbar()
@@ -10869,6 +11230,7 @@ class Dataframe_func:
 def main():
     # data_processing().run()
     # statistic_analysis().run()
+    maximum_trend().run()
     # ResponseFunction().run()
     # bivariate_analysis().run()
     # CCI_LC_preprocess().run()
@@ -10879,7 +11241,7 @@ def main():
 
     # quadratic_regression().run()
     # quadratic_regression1().run()
-    Seasonal_sensitivity().run()
+    # Seasonal_sensitivity().run()
     # residual_method().run()
     # Contribution_Lixin().run()
     # fingerprint().run()
