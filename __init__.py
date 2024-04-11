@@ -65,9 +65,9 @@ def sleep(t=1):
 # data_root = '/Volumes/SSD_sumsang/project_greening/Data/'
 # results_root = '/Volumes/SSD_sumsang/project_greening/Result/new_result/'
 
-this_root = 'D:/Greening/'
-data_root = r'C:\Users\pcadmin\Desktop\Data\\'
-results_root = 'D:/Greening/Result/'
+this_root = 'D:/Project3/Data/'
+data_root = 'D:/Project3/Data/'
+results_root = 'D:/Project3/Result/'
 # from HANTS import *
 
 # plt.rcParams['font.sans-serif'] = ['SimHei']

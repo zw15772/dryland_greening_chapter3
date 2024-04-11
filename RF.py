@@ -866,19 +866,19 @@ class Random_Forests:
         self.dff = join(self.this_class_arr, 'RF/RF.df')
         self.variables()
         self.variables_valid_range()
-
-        pass
+    #
+    #     pass
 
     def run(self):
         # self.copy_df()
         df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
-        # self.run_important_for_each_pixel()
+        self.run_important_for_each_pixel()
         # self.run_important_for_each_pixel_for_two_period()
         # self.plot_importance_result_for_each_pixel()
         # self.run_permutation_importance()
-        self.plot_importance_result()
+        # self.plot_importance_result()
         # self.partial_SHAP(df,self.x_variable_list,self.y_variable_list[0])
         # self.run_partial_dependence_plots()
 
@@ -969,7 +969,8 @@ class Random_Forests:
         return df
 
     def run_important_for_each_pixel(self):
-        dff = self.dff
+
+        dff = 'D:\Project3\Result\statistic\Random_Forests\dataframe\RF\\relative_changes_yearly_new.df'
         df = T.load_df(dff)
 
 
@@ -1428,22 +1429,32 @@ class Random_Forests:
         return pd.DataFrame({col_name: sequence, 'PDs': Y_pdp, 'PDs_std': Y_pdp_std})
 
     def variables(self):
-        # self.x_variable_list = [
-        #     'MAP',
-        #     'MAT',
-        #     'ERA_SMroot',
-        #     'SPEI3',
-        #     'Tmax',
-        #     'GPCC_CV',
-        #     'CO2',
-        #     'Precip_CV',
-        #     'P-ET',
-        #     'VPD',
-        #     'SOC_sum',
-        #     'rooting_depth',
-        #     'S_SILT',
-        #
-        # ]
+        self.x_variable_list = [
+            'GPCC',
+            'VPD',
+
+            ### long term trend
+
+            'MAP',
+            'MAT',
+            'tmax_trend',
+            'tmin_trend',
+            'VPD_trend'
+            'GPCC_trend',
+            'GPCC_CV_yearly',
+            'GPCC_CV_monthly',
+            'tmin_CV_yearly',
+            'tmax_CV_yearly',
+            'tmin_CV_monthly',
+            'tmax_CV_monthly',
+
+            ## soil traits
+
+            'SOC_sum',
+            'rooting_depth',
+            'S_SILT',
+
+        ]
 
         self.x_variable_list = [
 
