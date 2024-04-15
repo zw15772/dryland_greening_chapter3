@@ -10702,7 +10702,7 @@ class build_dataframe():
     def run(self):
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -10713,7 +10713,7 @@ class build_dataframe():
 
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_wetting_drying_transition_to_df(df)
         # df=self.add_AI_classfication(df)
         # df=self.add_SM_trend_label(df)
@@ -10731,7 +10731,7 @@ class build_dataframe():
         # df=self.add_events(df)
         # df=self.add_frequency(df)
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df=self.show_field(df)
         # df = self.drop_field_df(df)
 
@@ -11353,10 +11353,10 @@ class build_dataframe():
         return df
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'\state_variables\\'
+        fdir=result_root+rf'ENSO\ENSO_extraction_together\relative_change\\'
 
         for f in os.listdir(fdir):
-            if not 'FLUXCOM' in f:
+            if not 'LAI4g' in f:
                 continue
 
 
@@ -11559,6 +11559,7 @@ class plot_dataframe():
 
         # self.plot_anomaly_trendy_LAI()
         self.plot_anomaly_LAI_based_on_cluster() #### widely used
+        self.plot_anomaly_LAI_global()
 
         # self.plot_asymetrical_response_based_on_cluster()
         # self.plot_anomaly_trendy_GPP()
@@ -11569,7 +11570,7 @@ class plot_dataframe():
         # self.plot_trend_regional()
         # self.trend_bar()
         # self.trend_percentage_bar()
-        self.bin_trend()
+        # self.bin_trend()
 
         # self.plot_anomaly_bar()
         # self.plot_bin_sensitivity_for_each_bin()
@@ -12074,10 +12075,7 @@ class plot_dataframe():
         # exit()
         df=df[df['row']>120]
         # # western US  0–45° N, 105–125°W.
-        # df = df[df['lon'] > -125]
-        # df = df[df['lon'] < -105]
-        # df = df[df['lat'] > 0]
-        # df = df[df['lat'] < 45]
+
 
         ### Australia, 10–45° S, 110–155° E
 
@@ -12106,8 +12104,8 @@ class plot_dataframe():
         i = 1
         variable_list=['GLEAM_SMroot',]
         # variable_list=['VPD',]
-        variable_list=['CRU','GPCC']
-        # variable_list=['LAI4g','GIMMS_AVHRR_LAI','GIMMS3g_LAI']
+        # variable_list=['CRU','GPCC']
+        variable_list=['LAI4g','GIMMS_AVHRR_LAI','GIMMS3g_LAI']
         region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
         print(region_unique)
         region_val_dict = {
@@ -12129,17 +12127,22 @@ class plot_dataframe():
 
         # exit()
 
-        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
             ax = fig.add_subplot(2, 3, i)
-            df_region=df[df['AI_classfication']==region]
-            print(len(df_region))
+            if continent == 'North_America':
+                df_continent = df[df['lon'] > -125]
+                df_continent = df_continent[df_continent['lon'] < -105]
+                df_continent = df_continent[df_continent['lat'] > 0]
+                df_continent = df_continent[df_continent['lat'] < 45]
+            else:
+                df_continent = df[df['continent'] == continent]
 
 
             for product in variable_list:
 
 
                 print(product)
-                vals=df_region[product].tolist()
+                vals = df_continent[product].tolist()
 
 
 
@@ -12184,16 +12187,245 @@ class plot_dataframe():
 
             plt.xlabel('year')
 
-            plt.ylabel(f'relative change{product}(%/year)')
+            plt.ylabel(f'relative change(%/year)')
             # plt.legend()
 
-            plt.title(f'{region}_count_{len(df_region)}')
+            plt.title(f'{continent}')
             plt.grid(which='major', alpha=0.5)
+        plt.legend()
+        plt.show()
+
+    def plot_anomaly_LAI_global(self):  ##### plot for 4 clusters
+
+        df = T.load_df(result_root + rf'Dataframe\relative_changes\\relative_changes.df')
+        print(len(df))
+        df=self.clean_df(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        # # western US  0–45° N, 105–125°W.
+
+
+        ### Australia, 10–45° S, 110–155° E
+
+        df=df[df['landcover_classfication']!='Cropland']
+        # df=df[df['continent']=='Africa']
+        df=df[df['Aridity']<0.65]
+
+        # print(len(df))
+        # exit()
+        #
+
+
+        color_list=['blue','green','red','orange','aqua','brown','cyan', 'black']
+        linewidth_list=[1]*16
+        linewidth_list[0]=3
+        linewidth_list[1]=2
+        linewidth_list[2]=2
+
+        fig = plt.figure()
+        i = 1
+        variable_list=['GLEAM_SMroot',]
+        # variable_list=['VPD',]
+        # variable_list=['CRU','GPCC']
+        variable_list=['LAI4g','GIMMS_AVHRR_LAI','GIMMS3g_LAI']
+        region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
+        print(region_unique)
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+        # exit()
+
+
+        for product in variable_list:
+
+
+            print(product)
+            vals = df[product].tolist()
+
+
+
+            # print(vals)
+
+            vals_nonnan=[]
+            for val in vals:
+                if type(val)==float: ## only screening
+                    continue
+                if len(val) ==0:
+                    continue
+                val[val<-99]=np.nan
+
+                vals_nonnan.append(list(val))
+                # if not len(val) == 34:
+                #     print(val)
+                #     print(len(val))
+                #     exit()
+                # print(type(val))
+                # print(len(val))
+                # print(vals)
+
+            ###### calculate mean
+            vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+            vals_mean=np.nanmean(vals_mean,axis=0)
+            val_std=np.nanstd(vals_mean,axis=0)
+
+            # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+            plt.plot(vals_mean,label=product,color=color_list[variable_list.index(product)],linewidth=linewidth_list[variable_list.index(product)])
+            # plt.fill_between(range(len(vals_mean)),vals_mean-val_std,vals_mean+val_std,alpha=0.3,color=color_list[self.product_list.index(product)])
+
+
+            # plt.scatter(range(len(vals_mean)),vals_mean)
+            # plt.text(0,vals_mean[0],product,fontsize=8)
+        i=i+1
+
+        plt.xticks(range(0, 40, 4), range(1982, 2021, 4), rotation=45)
+
+        plt.ylim(-30,30)
+
+
+        plt.xlabel('year')
+
+        plt.ylabel(f'relative change(%/year)')
+        # plt.legend()
+
+        plt.title(f'global')
+        plt.grid(which='major', alpha=0.5)
         plt.legend()
         plt.show()
 
 
 
+    def plot_anomaly_LAI_one_figure(self):  ##### plot all_continent in one figure
+
+        df = T.load_df(result_root + rf'Dataframe\relative_changes\\relative_changes.df')
+        print(len(df))
+        df=self.clean_df(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+
+
+        df=df[df['landcover_classfication']!='Cropland']
+        # df=df[df['continent']=='Africa']
+        df=df[df['Aridity']<0.65]
+
+
+        color_list=['blue','green','red','orange','aqua','brown','cyan', 'black']
+        linewidth_list=[1]*16
+        linewidth_list[0]=3
+        linewidth_list[1]=2
+        linewidth_list[2]=2
+
+
+        i = 1
+        variable_list=['GLEAM_SMroot',]
+        # variable_list=['VPD',]
+        # variable_list=['CRU','GPCC']
+        variable_list=['LAI4g',]
+        region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
+        print(region_unique)
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+        # exit()
+        continent_dict = {}
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
+
+            if continent == 'North_America':
+                df_continent = df[df['lon'] > -125]
+                df_continent = df_continent[df_continent['lon'] < -105]
+                df_continent = df_continent[df_continent['lat'] > 0]
+                df_continent = df_continent[df_continent['lat'] < 45]
+            else:
+                df_continent = df[df['continent'] == continent]
+
+
+            for product in variable_list:
+
+
+                print(product)
+                vals = df_continent[product].tolist()
+
+
+                # print(vals)
+
+                vals_nonnan=[]
+                for val in vals:
+                    if type(val)==float: ## only screening
+                        continue
+                    if len(val) ==0:
+                        continue
+                    val[val<-99]=np.nan
+
+                    vals_nonnan.append(list(val))
+                    # if not len(val) == 34:
+                    #     print(val)
+                    #     print(len(val))
+                    #     exit()
+                    # print(type(val))
+                    # print(len(val))
+                    # print(vals)
+
+                ###### calculate mean
+                vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+                vals_mean=np.nanmean(vals_mean,axis=0)
+                val_std=np.nanstd(vals_mean,axis=0)
+                continent_dict[continent] = vals_mean
+
+
+
+        ## plot all continent in one figure
+        fig = plt.figure()
+        fig.set_size_inches(6, 6)
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
+
+            continent_vals=continent_dict[continent]
+            plt.plot(continent_vals,label=continent)
+            plt.xticks(range(0, 40, 4), range(1982, 2021, 4), rotation=45)
+            plt.ylim(-20, 20)
+            plt.xlabel('year')
+            plt.ylabel(f'relative change(%/year)')
+
+
+        plt.legend()
+        plt.grid(which='major', alpha=0.5)
+        plt.show()
+
+    #
     def plot_asymetrical_response_based_on_cluster(self):  ##### plot for 4 clusters
 
         df = T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_right.df')
@@ -13863,7 +14095,8 @@ class plt_moving_dataframe():
 
 
         # self.plot_moving_window_area_bar()
-        self.plot_moving_window_area_bar_trend_level()
+        # self.plot_moving_window_area_bar_trend_level()
+        self.plot_moving_window_area_bar_trend_level_all()
         # self.plot_moving_window_average()
         # self.plot_moving_window_sensitivity()
         # self.plot_anomaly_LAI_based_on_cluster_sensitivity()
@@ -14060,11 +14293,7 @@ class plt_moving_dataframe():
         T.print_head_n(df)
         print(len(df))
         ## define western US 0–45° N, 105–125°W
-        # df=df[df['lon']>-125]
-        # df=df[df['lon']<-105]
-        # df=df[df['lat']>0]
-        # df=df[df['lat']<45]
-        df=df[df['continent']=='Australia']
+
         df=df.dropna(subset=['LAI4g_trend_01'])
        # print(len(df))
        # exit()
@@ -14085,12 +14314,14 @@ class plt_moving_dataframe():
         fig = plt.figure()
         ii = 1
         # for landcover in ['Evergreen', 'Deciduous', 'Mixed','Grass','Shrub','Cropland']:
-        # for continent in [ 'North_America', ]:
-        #     df_continent = df[df['continent'] == continent]
-
-        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
-            df_region = df[df['AI_classfication'] == region]
-
+        for continent in [ 'North_America',  'Asia', 'Australia', 'Africa', 'South_America']:
+            if continent=='North_America':
+                df_continent=df[df['continent']=='North_America']
+                df_continent=df_continent[df_continent['lon']<-105]
+                df_continent=df_continent[df_continent['lat']>0]
+                df_continent=df_continent[df_continent['lat']<45]
+            else:
+                df_continent = df[df['continent'] == continent]
 
             ax = fig.add_subplot(2, 3, ii)
             flag = 0
@@ -14120,8 +14351,7 @@ class plt_moving_dataframe():
                 no_change_area = 0
 
 
-
-                for i, row in tqdm(df_region.iterrows(), total=len(df_region)):
+                for i, row in tqdm(df_continent.iterrows(), total=len(df_continent)):
                     pix = row.pix
                     trend = row[f'LAI4g_trend_{window:02d}']
                     p_value = row[f'LAI4g_p_value_{window:02d}']
@@ -14168,17 +14398,24 @@ class plt_moving_dataframe():
 
 
             df_new_T.plot.bar(ax=ax, stacked=True, color=color_list, legend=False)
-            plt.title(f'{region}_count_{len(df_region)}')
+            plt.title(f'{continent}_count_{len(df_continent)}')
             plt.xlabel('window size (year)')
             xticks= []
+            window_size=15
 
-            ## set xticks with 1982-1997, 1998-2013,.. 2014-2020
-            # for i in range(1, 25):
-            #     if i % 2 == 0:
-            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
-            #     else:
-            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
-            # plt.xticks(range(len(xticks)), xticks, rotation=45, ha='right')
+            # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+            year_range=range(1982,2021)
+            year_range_str=[]
+            for year in year_range:
+
+                start_year=year
+                end_year=year+window_size-1
+                if end_year>2020:
+                    break
+                year_range_str.append(f'{start_year}-{end_year}')
+            plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+
 
             plt.ylabel('percentage')
             plt.xticks(rotation=45, ha='right')
@@ -14194,135 +14431,134 @@ class plt_moving_dataframe():
     pass
 
 
-    def plot_moving_window_sensitivity(self):  ##plot moving window bar
-        df=result_root+rf'Dataframe\moving_window_sensitivity\\moving_window_sensitivity_yearly.df'
+
+
+    def plot_moving_window_area_bar_trend_level_all(self):  ##plot moving window bar
+        df=result_root+rf'Dataframe\extract_moving_window_trend_relative_change\\extract_moving_window_trend_relative_change.df'
         df=T.load_df(df)
-        df=df[df['row']>120]
-
-        df = df[df['Aridity'] < 0.65]
-
-        df=df[df['landcover_classfication']!='Cropland']
         T.print_head_n(df)
         print(len(df))
+        ## define western US 0–45° N, 105–125°W
 
-        # df=df.dropna(subset=['LAI4g'])
-        pixel_list=T.get_df_unique_val_list(df,'pix')
-
-        # df=df[df['landcover_classfication']!='Cropland']
-
-        color_list = ['green', 'red', '#D3D3D3']
-        #### read continent
-        # continent_unique_list = T.get_df_unique_val_list(df, 'continent')
-        # print(continent_unique_list)
-        # exit()
-        df=df.dropna(subset=['GLEAM_SMroot_LAI4g_00'])
-        print(len(df))
+        df=df.dropna(subset=['LAI4g_trend_01'])
+       # print(len(df))
+       # exit()
+       #  global_land_tif='D:\Project3\Data\Base_data\\MAP.tif'
+       #  ## df to spatial dic
+       #  DIC_and_TIF(pixelsize=0.25).plot_df_spatial_pix(df,global_land_tif)
+       #  plt.show()
 
 
+        df=df[df['landcover_classfication']!='Cropland']
 
-        # for landcover in ['Evergreen', 'Deciduous', 'Mixed','Grass','Shrub','Cropland']:
-        # df = df[df['lon'] > -125]
-        # df = df[df['lon'] < -105]
-        # df = df[df['lat'] > 0]
-        # df = df[df['lat'] < 45]
-        df_continent = df[df['continent'] == 'South_America']
-
-        region_val_dict = {
-            'Arid': 1,
-            'Semi-Arid': 2,
-            'Sub-Humid': 3,
-        }
-        region_val = []
-        # for i,row in df.iterrows():
-        #     region = row['AI_classfication']
-        #     val = region_val_dict[region]
-        #     region_val.append(val)
-        # df['region_val'] = region_val
-        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
-        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
-        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
-        # plt.colorbar()
-        # plt.show()
+        color_list = ['yellowgreen', 'lime', 'green','lightseagreen', 'yellow', 'orange', 'red', 'brown' ]
 
         fig = plt.figure()
-        ## size
-        fig.set_size_inches(12, 3)
         ii = 1
 
-        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
-            df_region = df_continent[df_continent['AI_classfication'] == region]
-            print(len(df_region))
+        ax = fig.add_subplot(2, 3, ii)
+        flag = 0
 
-            ax = fig.add_subplot(1, 3, ii)
+        window_list = []
+        dic={}
 
+        for i in range(1, 25):
+            window_list.append(i)
+        print(window_list)
 
+        for window in tqdm(window_list):  # 构造字典的键值，并且字典的键：值初始化
+            dic[window] = []
 
-            window_list = []
-            dic={}
+        ## plt moving window bar based on trend level and p_value
 
-            for i in range(0, 24):
-                window_list.append(f'{i:02d}')
-            # print(window_list)
+        for window in window_list:
 
-            for window in tqdm(window_list):  # 构造字典的键值，并且字典的键：值初始化
-                dic[window] = []
-
-            ## plt moving window bar based on trend and p_value
-            for window in window_list:
-
-                positive= 0
-                negative= 0
-                no_change_area= 0
-
-                for i, row in tqdm(df_region.iterrows(), total=len(df_region)):
-                    pix = row.pix
-                    sensitivity = row[f'GLEAM_SMroot_LAI4g_{window}']
-                    if sensitivity > 0:
-                        positive += 1
-                    elif sensitivity < 0:
-                        negative += 1
-                    else:
-                        no_change_area += 1
+            slight_greening_area = 0 ### 0-0.5
+            moderate_greening_area = 0 ## 0.5-1
+            severe_greening_area = 0 # >1-1.5
+            extreme_greening_area = 0 ## >1.5
+            slight_browning_area = 0
+            moderate_browning_area = 0
+            severe_browning_area = 0
+            extreme_browning_area = 0
+            no_change_area = 0
 
 
-                total_area = positive + negative+no_change_area
-                if total_area == 0:
-                    continue
-                positive_area = positive / len(df_region) * 100
-                negative_area = negative / len(df_region) * 100
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                pix = row.pix
+                trend = row[f'LAI4g_trend_{window:02d}']
+                p_value = row[f'LAI4g_p_value_{window:02d}']
+                ## significant greening, significant browning, non-significant greening, non-significant browning
+                if p_value < 0.1:
+                    if trend > 0 and trend < 0.5:
+                        slight_greening_area += 1
+                    elif trend >= 0.5 and trend < 1:
+                        moderate_greening_area += 1
+                    elif trend >= 1 and trend < 1.5:
+                        severe_greening_area += 1
+                    elif trend >= 1.5:
+                        extreme_greening_area += 1
+                    elif trend < 0 and trend > -0.5:
+                        slight_browning_area += 1
+                    elif trend <= -0.5 and trend > -1:
+                        moderate_browning_area += 1
+                    elif trend <= -1 and trend > -1.5:
+                        severe_browning_area += 1
+                    elif trend <= -1.5:
+                        extreme_browning_area += 1
+                else:
+                    no_change_area += 1
 
-                dic[window] = [positive_area, negative_area]
-            df_new = pd.DataFrame(dic)
-            df_new_T = df_new.T
-        ## if no number in the window, continue
 
-            df_new_T.plot.bar(ax=ax, stacked=True, color=color_list, legend=False)
+            total_area = slight_greening_area + moderate_greening_area + severe_greening_area + extreme_greening_area + slight_browning_area + moderate_browning_area + severe_browning_area + extreme_browning_area + no_change_area
+            if total_area == 0:
+                continue
 
-            plt.title(f'{region}_count_{len(df_region)}')
-            plt.xlabel('window')
-            xticks= []
+            slight_greening_area = slight_greening_area / total_area * 100
+            moderate_greening_area = moderate_greening_area / total_area * 100
+            significant_greening_area = severe_greening_area / total_area * 100
+            extreme_greening_area = extreme_greening_area / total_area * 100
+            slight_browning_area = slight_browning_area / total_area * 100
+            moderate_browning_area = moderate_browning_area / total_area * 100
+            significant_browning_area = severe_browning_area / total_area * 100
+            extreme_browning_area = extreme_browning_area / total_area * 100
+            no_change_area = no_change_area / total_area * 100
+            dic[window] = [slight_greening_area, moderate_greening_area, significant_greening_area, extreme_greening_area, slight_browning_area, moderate_browning_area, significant_browning_area, extreme_browning_area]
 
-            ## set xticks with 1982-1997, 1998-2013,.. 2014-2020
-            # for i in range(1, 25):
-            #     if i % 2 == 0:
-            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
-            #     else:
-            #         xticks.append(f'{1982 + 16 * (i - 1)}-{1982 + 16 * i - 1}')
-            # plt.xticks(range(len(xticks)), xticks, rotation=45, ha='right')
+        df_new = pd.DataFrame(dic)
+        df_new_T = df_new.T
+    ## if no number in the window, continu
 
-            plt.ylabel('percentage')
-            plt.xticks(rotation=45, ha='right')
-            plt.ylim(0,100)
-            plt.tight_layout()
 
-            ii = ii + 1
-        plt.legend(['positive', 'negative'])
+        df_new_T.plot.bar(ax=ax, stacked=True, color=color_list, legend=False)
+        plt.title(f'Global_count_{len(df)}')
+        plt.xlabel('window size (year)')
+        xticks= []
+        window_size=15
 
-        # plt.tight_layout()
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range=range(1982,2021)
+        year_range_str=[]
+        for year in year_range:
+
+            start_year=year
+            end_year=year+window_size-1
+            if end_year>2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+
+        plt.ylabel('percentage')
+        plt.xticks(rotation=45, ha='right')
+        plt.ylim(0,90)
+        plt.tight_layout()
+
+        ii = ii + 1
+        plt.legend(['slight_greening', 'moderate_greening', 'significant_greening', 'extreme_greening', 'slight_browning', 'moderate_browning', 'significant_browning', 'extreme_browning', ])
+
+        plt.tight_layout()
         plt.show()
-
-    pass
-
 
     def plot_moving_window_vs_wetting_drying_bin(self):  ### each winwow,plot pdf of NDVI as bin of wetting and drying
         fdir_trend = result_root + rf'extract_window\\extract_original_window_trend\\15\\GPCC\\'
@@ -14509,13 +14745,13 @@ class check_data():
         plt.title(f)
         plt.show()
     def testrobinson(self):
-        fdir=result_root+rf'\ENSO\ENSO_extraction_together\relative_change\\'
+        fdir=result_root+rf'ENSO\ENSO_extraction_together\relative_change\\'
 
         # f =  rf'D:\Project3\Data\Base_data\dryland_AI.tif\dryland.tif'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'LAI4g' in f:
+            if not 'relative_strong_El_Nino_add_La_Nina_LAI4g' in f:
                 continue
 
             if 'p_value' in f:
@@ -14780,11 +15016,10 @@ def main():
     # multi_regression().run()
     # data_preprocess_for_random_forest().run()
 
-    # quadratic_regression().run()
-    # quadratic_regression1().run()
+
     # Seasonal_sensitivity().run()
-    # residual_method().run()
-    # Contribution_Lixin().run()
+
+
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()

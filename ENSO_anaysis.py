@@ -86,9 +86,9 @@ class ENSO_anaysis():
         self.moderate_La_Nina_list = [1995,1996,2011,2012,2020,]
 
         self.strong_El_Nino_list = [1982,1983, 1987,1988, 1991,1992,1997,1998,2015,2016]
-        self.next_strong_El_Nino_list = [1983,1984, 1988,1989,1992,1993,1998,1999,2016,2017]
+
         self.strong_La_Nina_list = [1988, 1989,1998,1999, 2000,2007,2008,2010,2011]
-        self.next_strong_El_Nino_list = [1989,1990,1999,2000,2001,2008,2009,2011,2012]
+
 
         ### netural year = all years - ENSO years
         self.netural_list = [i for i in range(1982,2021) if i not in self.strong_El_Nino_list+self.strong_La_Nina_list+self.moderate_El_Nino_list+self.moderate_La_Nina_list]
@@ -96,7 +96,7 @@ class ENSO_anaysis():
         pass
     def run(self):
         # self.extract_data_based_on_ENSO()
-        #self.calculate_relatve_change_based_on_ENSO()
+        # self.calculate_relatve_change_based_on_ENSO()
 
         # self.extract_first_year_and_second_year_ENSO()
         # self.calculate_relatve_change_based_on_ENSO_first_second_year()
@@ -106,7 +106,7 @@ class ENSO_anaysis():
         pass
 
     def extract_data_based_on_ENSO(self):
-        variable='tmax'
+        variable='tmin'
         f=result_root+rf'\Detrend\detrend_original\\{variable}.npy'
         outdir=result_root+'ENSO\\ENSO_original\\'
         T.mk_dir(outdir,force=True)
@@ -158,7 +158,7 @@ class ENSO_anaysis():
         fdir=result_root+'ENSO\\ENSO_original\\'
         outdir=result_root+'ENSO\\\\ENSO_relative_change\\'
         T.mk_dir(outdir,force=True)
-        variable='tmax'
+        variable='tmin'
         f1=fdir+f'strong_El_Nino_{variable}.npy'
         f2=fdir+f'strong_La_Nina_{variable}.npy'
 
@@ -250,43 +250,7 @@ class ENSO_anaysis():
         np.save(outdir + f'relative_strong_La_Nina_second_{variable}.npy', dic_strong_La_Nina_second)
 
 
-    def plot_spatial_average_ENSO_LAI(self):
 
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-
-
-        fdir=result_root+rf'\ENSO\ENSO_first_year_second_year\relative_change\\'
-        result_dic={}
-        for f in os.listdir(fdir):
-            if not 'LAI4g' in f:
-                continue
-            if not '.npy' in f:
-                continue
-
-            dic=T.load_npy(fdir+f)
-            for pix in dic.keys():
-                r,c=pix
-                if r<120:
-                    continue
-                landcover_value = crop_mask[pix]
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                vals=dic[pix]
-
-                result_dic[pix]=np.nanmean(vals)
-            array=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
-            array=array*array_mask
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(array,fdir+f.replace('.npy','.tif'))
-
-            plt.imshow(array,vmin=0,vmax=0.5,cmap='jet',interpolation='nearest')
-            plt.title(f)
-            plt.colorbar()
-            plt.show()
-            plt.close()
-        pass
 
     def extract_first_year_and_second_year_ENSO(self):
 
@@ -361,9 +325,127 @@ class ENSO_anaysis():
 
     pass
 
+    def plot_spatial_average_ENSO_LAI(self):
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+
+
+        fdir=result_root+rf'\ENSO\ENSO_extraction_together\relative_change\\'
+        result_dic={}
+        for f in os.listdir(fdir):
+            if not 'tmin' in f:
+                continue
+            if not '.npy' in f:
+                continue
+
+            dic=T.load_npy(fdir+f)
+            for pix in dic.keys():
+                r,c=pix
+                if r<120:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                vals=dic[pix]
+
+                result_dic[pix]=np.nanmean(vals)
+            array=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
+            array=array*array_mask
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(array,fdir+f.replace('.npy','.tif'))
+
+            plt.imshow(array,vmin=0,vmax=0.5,cmap='jet',interpolation='nearest')
+            plt.title(f)
+            plt.colorbar()
+            plt.show()
+            plt.close()
+        pass
+
+class ENSO_vs_trend():
+    def __init__(self):
+        self.weak_El_Nino_list = [2004,2005,2006,2007,2014,2015,2018,2019]
+
+        self.weak_La_Nina_list = [1983,1984,1985, 2000,2001,2005, 2006,2008,2009,2016,2017,2018,]
+
+        self.moderate_El_Nino_list = [1986,1987,1994,1995,2002,2003,2009,2010]
+        self.moderate_La_Nina_list = [1995,1996,2011,2012,2020,]
+
+        self.strong_El_Nino_list = [1982,1983, 1987,1988, 1991,1992,1997,1998,2015,2016]
+
+        self.strong_La_Nina_list = [1988, 1989,1998,1999, 2000,2007,2008,2010,2011]
+
+        self.very_strong_El_Nino_list = [1982,1983, 1997,1998,2015,2016]
+
+        ### netural year = all years - ENSO years
+        self.netural_list = [i for i in range(1982,2021) if i not in self.strong_El_Nino_list+self.strong_La_Nina_list+self.moderate_El_Nino_list+self.moderate_La_Nina_list]
+        # print('netural_list',self.netural_list)
+
+    def run (self):
+        # self.relationship_between_ENSO_and_trend()
+        self.la_nina_vs_el_nino()
+
+    def relationship_between_ENSO_and_trend(self):
+
+        df=T.load_df(result_root+rf'Dataframe\relative_changes\\relative_changes_yearly_new.df')
+        df=df[df['landcover_classfication']!='Cropland']
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        # df = df[df['LAI4g_p_value'] < 0.05]
+        continent_list=['Africa','Australia','Asia','North_America','South_America']
+        for continent in continent_list:
+            df_continent=df[df['continent']==continent]
+
+            vals_greening=df_continent['LAI4g_trend'].tolist()
+            vals_greening=np.array(vals_greening)
+
+            vals_EL_relative_change=df_continent['relative_strong_La_Nina_LAI4g'].tolist()
+            vals_LA_relative_change=df_continent['relative_strong_El_Nino_LAI4g'].tolist()
+        ### EL+LA = ENSO
+            vals_EL_relative_change=np.array(vals_EL_relative_change)
+            vals_LA_relative_change=np.array(vals_LA_relative_change)
+            vals_EL_relative_change_flatten=vals_EL_relative_change.flatten()
+            vals_LA_relative_change_flatten=vals_LA_relative_change.flatten()
+            ## sum
+            vals_ENSO_all=vals_EL_relative_change_flatten+vals_LA_relative_change_flatten
+
+
+       ##plot bin
+
+            ## plot scatter
+            KDE_plot().plot_scatter(vals_ENSO_all,vals_greening,continent)
+            # plt.scatter(vals_ENSO_all,vals_greening)
+            plt.xlim(-20,20)
+
+            plt.xlabel('EL+La relative change')
+            plt.ylabel('LAI trend')
+
+            plt.title(continent)
+
+            plt.show()
 
 
 
+        ### get the relationship between ENSO and trend
+
+    def la_nina_vs_el_nino(self):
+        tiff_el= result_root+rf'\ENSO\ENSO_extraction_together\relative_change\\relative_strong_El_Nino_LAI4g.tif'
+        tiff_la= result_root+rf'\ENSO\ENSO_extraction_together\relative_change\\relative_strong_La_Nina_LAI4g.tif'
+        array_el,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(tiff_el)
+        array_la,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(tiff_la)
+        array=array_el+array_la
+        array[array<-999]=np.nan
+        array[array==0]=np.nan
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array,result_root+rf'\ENSO\ENSO_extraction_together\relative_change\\relative_strong_El_Nino_add_La_Nina_LAI4g.tif')
+        plt.imshow(array,vmin=-10,vmax=10,cmap='jet',interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+
+        pass
+
+
+    pass
 
 class plot_ENSO():
     def __init__(self):
@@ -736,8 +818,9 @@ class plot_ENSO():
 
 
 def main():
-    ENSO_anaysis().run()
+    # ENSO_anaysis().run()
     # plot_ENSO().run()
+    ENSO_vs_trend().run()
 
 
     pass
