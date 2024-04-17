@@ -1253,12 +1253,13 @@ class data_processing():
             np.save(outf+'2002_2020.npy',dic_ii)
 
     def extend_nan(self):
-        fdir= result_root + rf'extract_GS\OBS_LAI\\'
-        outdir=result_root + rf'extract_GS\OBS_LAI_extend\\\\'
+        fdir= result_root + rf'Detrend\detrend_original\\'
+        outdir=result_root + rf'Detrend\detrend_original2\\'
         T.mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
-            if not 'GIMMS3g' in f:
+            if not 'LAI4g' in f:
                 continue
+
             if not f.endswith('.npy'):
                 continue
 
@@ -1278,7 +1279,8 @@ class data_processing():
                 time_series[time_series<-999]=np.nan
                 if np.isnan(np.nanmean(time_series)):
                     continue
-                if len(time_series)<37:
+                if len(time_series)<39:
+
                     time_series_new=np.append(time_series,np.nan)
                     dic_new[pix]=time_series_new
                 else:
@@ -5863,17 +5865,17 @@ class bivariate_analysis():
         pass
     def bivariate_plot(self):
         import xymap
-        tif_long_term= result_root + rf'multi_regression\1982_2020\\VPD_LAI4g_1982_2020.tif'
-        tif_window=result_root + rf'multi_regression_moving_window\window15_relative_change_trend\\VPD_LAI4g.tif'
+        tif_long_term= result_root + rf'extract_window\extract_detrend_original_window_CV\\LAI4g_CV_trend.tif'
+        tif_window=result_root + rf'trend_analysis\relative_change\OBS_LAI_extend\\LAI4g_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
-        outtif=result_root + rf'bivariate_analysis\\VPD.tif'
+        outtif=result_root + rf'bivariate_analysis\\CV_vs_trend.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
         tif1=tif_long_term
         tif2=   tif_window
-        tif1_label='Long_term_average'
-        tif2_label='Window_15'
+        tif1_label='CV_trend'
+        tif2_label='trend'
         min1=-0.1
         max1=0.1
         min2=-0.1
@@ -6300,8 +6302,10 @@ class moving_window():
         # self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
         # self.moving_window_trend_anaysis()
+        # self.moving_window_CV_extraction_anaysis()
+        self.moving_window_CV_trends()
         # self.moving_window_average_anaysis()
-        self.produce_trend_for_each_slides()
+        # self.produce_trend_for_each_slides()
         # self.calculate_trend_spatial()
         # self.calculate_trend_trend()
         # self.convert_trend_trend_to_tif()
@@ -6312,10 +6316,12 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'\Detrend\detrend_relative_change\\extend\\'
-        outdir = result_root + rf'\\extract_window\\extract_detrend_relative_change_window\\15\\'
+        fdir = result_root + rf'Detrend\detrend_original\\'
+        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window\\15\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
 
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -6340,16 +6346,16 @@ class moving_window():
                 if np.nanmax(time_series) == np.nanmin(time_series):
                     continue
 
-                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
-                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
+                new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
+                # new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
 
             T.save_npy(new_x_extraction_by_window, outf)
 
     def moving_window_extraction_for_LAI(self):  ## for LAI, GPP only
-        variable_list=['LAI4g','CRU','GLEAM_SMroot','VPD']
+        variable_list=['LAI4g',]
 
-        fdir = result_root + rf'relative_change\OBS_LAI_extend\\'
-        outdir = result_root + rf'\\extract_window\\extract_relative_change_window\\'
+        fdir = result_root + rf'Detrend\detrend_original\\'
+        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             fname=f.split('.')[0]
@@ -6458,24 +6464,25 @@ class moving_window():
 
                 x_mean=np.nanmean(x_vals)
 
-                for i in range(len(x_vals)):
-                    if x_vals[0]==None:
-                        continue
-                    x_anomaly=x_vals[i]-x_mean
+                # for i in range(len(x_vals)):
+                #     if x_vals[0]==None:
+                #         continue
+                #     x_anomaly=x_vals[i]-x_mean
+                #
+                #     anomaly.append(x_anomaly)
+                # if np.isnan(anomaly).any():
+                #     continue
+                # detrend_anomaly=signal.detrend(anomaly)+x_mean
+                detrend_original=signal.detrend(x_vals)+x_mean
 
-                    anomaly.append(x_anomaly)
-                if np.isnan(anomaly).any():
-                    continue
-                detrend_anomaly=signal.detrend(anomaly)
 
-
-                new_x_extraction_by_window.append(detrend_anomaly)
+                new_x_extraction_by_window.append(detrend_original)
         return new_x_extraction_by_window
 
     def moving_window_trend_anaysis(self):
         window_size=15
-        fdir = result_root + rf'extract_window\extract_relative_change_window\\'
-        outdir = result_root + rf'\\extract_window\\extract_relative_change_window_trend\\'
+        fdir = result_root + rf'extract_window\extract_relative_change_window_CV\\'
+        outdir = result_root + rf'\\extract_window\\extract_relative_change_window_CV_trend\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -6523,8 +6530,92 @@ class moving_window():
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
+    def moving_window_CV_extraction_anaysis(self):
+        window_size=15
+        fdir = result_root + rf'extract_window\extract_detrend_original_window\\15\\'
+        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+
+            dic = T.load_npy(fdir + f)
+            slides = 39-window_size
+            outf = outdir + f.split('.')[0] + f'.npy'
+            print(outf)
+            # if os.path.isfile(outf):
+            #     continue
+
+            new_x_extraction_by_window = {}
+            trend_dic={}
+            p_value_dic={}
+
+            for pix in tqdm(dic):
+                trend_list = []
 
 
+                time_series_all = dic[pix]
+                if len(time_series_all)<24:
+                    continue
+                time_series_all = np.array(time_series_all)
+                for ss in range(slides):
+                    if np.isnan(np.nanmean(time_series_all)):
+                        print('error')
+                        continue
+                    # print((len(time_series)))
+                    ### if all values are identical, then continue
+                    time_series=time_series_all[ss]
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
+                    print(len(time_series))
+
+                    if np.nanmean(time_series)==0:
+                        continue
+                    cv=np.nanstd(time_series)/np.nanmean(time_series)
+                    trend_list.append(cv)
+
+                trend_dic[pix]=trend_list
+
+            np.save(outf, trend_dic)
+
+            ##tiff
+            # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
+            #
+            # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+    def moving_window_CV_trends(self):
+
+        f = result_root + rf'extract_window\extract_detrend_original_window_CV\\LAI4g.npy'
+        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
+        T.mk_dir(outdir, force=True)
+        dic=T.load_npy(f)
+        result_dic_trend={}
+        result_dic_p_value={}
+        for pix in dic:
+            vals=dic[pix]
+            if np.isnan(np.nanmean(vals)):
+                continue
+            slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
+            result_dic_trend[pix]=slope
+            result_dic_p_value[pix]=p_value
+        array_slope=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic_trend)
+        array_p_value=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic_p_value)
+
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_slope,outdir+'LAI4g_CV_trend.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_p_value,outdir+'LAI4g_CV_p_value.tif')
+
+        outf=outdir+'LAI4g_CV_trend.npy'
+        np.save(outf,result_dic_trend)
+
+
+
+
+
+
+
+        pass
 
     def moving_window_average_anaysis(self):
         window_size = 15
@@ -10689,11 +10780,11 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = (result_root + rf'Dataframe\relative_changes\\')
-
+        self.this_class_arr = (result_root + rf'Dataframe\moving_window_CV\\')
+        # self.this_class_arr = (data_root + rf'ERA5\ERA5_daily\dict\RF_df_La_nina\\')
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'relative_changes_yearly_new.df'
+        self.dff = self.this_class_arr + 'moving_window_CV.df'
 
 
 
@@ -10713,18 +10804,18 @@ class build_dataframe():
 
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_wetting_drying_transition_to_df(df)
-        # df=self.add_AI_classfication(df)
+        df=self.add_AI_classfication(df)
         # df=self.add_SM_trend_label(df)
-        # df=self.add_aridity_to_df(df)
+        df=self.add_aridity_to_df(df)
         # df=self.classfy_greening_browning()
         # #
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
 
         # df=self.add_precipitation_CV_to_df(df)
@@ -10860,9 +10951,10 @@ class build_dataframe():
 
 
     def append_value(self, df):  ##补齐
-        fdir = result_root + rf'Dataframe\moving_window_sensitivity\\'
+        fdir = result_root + rf'Dataframe\moving_window_CV\\'
         col_list=[]
         for f in os.listdir(fdir):
+
             if not f.endswith('.npy'):
                 continue
 
@@ -11530,6 +11622,114 @@ class build_dataframe():
         df['wetting_drying_trend'] = val_list
         return df
 
+class build_moving_window_dataframe():
+    def __init__(self):
+        self.this_class_arr = (result_root + rf'Dataframe\moving_window_CV\\')
+        Tools().mk_dir(self.this_class_arr, force=True)
+        self.dff = self.this_class_arr + 'moving_window_CV.df'
+    def run(self):
+        df = self.__gen_df_init(self.dff)
+        # df=self.build_df(df)
+        self.append_value(df)
+        T.save_df(df, self.dff)
+        self.__df_to_excel(df, self.dff)
+
+
+    def __gen_df_init(self, file):
+        df = pd.DataFrame()
+        if not os.path.isfile(file):
+            T.save_df(df, file)
+            return df
+        else:
+            df = self.__load_df(file)
+            return df
+            # raise Warning('{} is already existed'.format(self.dff))
+
+    def __load_df(self, file):
+        df = T.load_df(file)
+        return df
+        # return df_early,dff
+
+    def __df_to_excel(self, df, dff, n=1000, random=False):
+        dff = dff.split('.')[0]
+        if n == None:
+            df.to_excel('{}.xlsx'.format(dff))
+        else:
+            if random:
+                df = df.sample(n=n, random_state=1)
+                df.to_excel('{}.xlsx'.format(dff))
+            else:
+                df = df.head(n)
+                df.to_excel('{}.xlsx'.format(dff))
+
+        pass
+
+    def build_df(self, df):
+
+        fdir = result_root + rf'extract_window\extract_detrend_original_window_CV\\'
+        all_dic = {}
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            fname = f.split('.')[0]
+
+            fpath = fdir + f
+
+            dic = T.load_npy(fpath)
+            key_name = fname
+            all_dic[key_name] = dic
+        # print(all_dic.keys())
+        df = T.spatial_dics_to_df(all_dic)
+        T.print_head_n(df)
+        return df
+
+    def append_value(self, df):  ##补齐
+
+        ## extract LAI4g
+
+        for col in df.columns:
+            if not 'LAI4g' in col:
+                continue
+            if 'CV' in col:
+                continue
+
+            vals_new = []
+
+
+            for i, row in tqdm(df.iterrows(), total=len(df), desc=f'append {col}'):
+                pix = row['pix']
+                r, c = pix
+                if r<480:
+                    continue
+                vals = row[col]
+                print(vals)
+                if type(vals) == float:
+                    vals_new.append(np.nan)
+                    continue
+                vals = np.array(vals)
+                print(len(vals))
+                # if len(vals)==23:
+                #     for i in range(1):
+                #         vals=np.append(vals,np.nan)
+                #     # print(len(vals))
+                # elif len(vals)==38:
+                #     for i in range(1):
+                #         vals=np.append(vals,np.nan)
+                #     print(len(vals))
+                if len(vals) == 23:
+
+                    vals = np.append(vals, np.nan)
+                    vals_new.append(vals)
+
+                vals_new.append(vals)
+
+                # exit()
+            df[col] = vals_new
+
+        return df
+
+        pass
+
 
 class plot_dataframe():
     def __init__(self):
@@ -11559,7 +11759,7 @@ class plot_dataframe():
 
         # self.plot_anomaly_trendy_LAI()
         self.plot_anomaly_LAI_based_on_cluster() #### widely used
-        self.plot_anomaly_LAI_global()
+        # self.plot_anomaly_LAI_global()
 
         # self.plot_asymetrical_response_based_on_cluster()
         # self.plot_anomaly_trendy_GPP()
@@ -12066,7 +12266,7 @@ class plot_dataframe():
 
     def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
 
-        df = T.load_df(result_root + rf'Dataframe\relative_changes\\relative_changes.df')
+        df = T.load_df(result_root + rf'Dataframe\moving_window_CV\\moving_window_CV.df')
         print(len(df))
         df=self.clean_df(df)
 
@@ -12105,7 +12305,7 @@ class plot_dataframe():
         variable_list=['GLEAM_SMroot',]
         # variable_list=['VPD',]
         # variable_list=['CRU','GPCC']
-        variable_list=['LAI4g','GIMMS_AVHRR_LAI','GIMMS3g_LAI']
+        variable_list=['LAI4g',]
         region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
         print(region_unique)
         region_val_dict = {
@@ -14095,14 +14295,19 @@ class plt_moving_dataframe():
 
 
         # self.plot_moving_window_area_bar()
+        # self.plot_CV_LAI()
+        self.plot_CV_LAI_all_together()
         # self.plot_moving_window_area_bar_trend_level()
-        self.plot_moving_window_area_bar_trend_level_all()
+        # self.plot_moving_window_area_bar_trend_level_all()
         # self.plot_moving_window_average()
         # self.plot_moving_window_sensitivity()
         # self.plot_anomaly_LAI_based_on_cluster_sensitivity()
         pass
-    def plot_moving_window_average(self):
-        df=result_root+rf'Dataframe\extract_moving_window_trend_relative_change\\extract_moving_window_trend_relative_change.df'
+
+
+
+    def plot_moving_window_average(self): ## based on yearly data
+        df=result_root+rf'Dataframe\moving_window_CV\\moving_window_CV.df'
         df=T.load_df(df)
         T.print_head_n(df)
         print(len(df))
@@ -14122,13 +14327,10 @@ class plt_moving_dataframe():
 
 
 
-        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
-            ax = fig.add_subplot(1, 3, flag)
-            df_region = df[df['AI_classfication'] == region]
+        for region in ['North_America','South_America','Australia','Africa','Asia']:
+            ax = fig.add_subplot(2, 3, flag)
+            df_region = df[df['continent'] == region]
 
-
-            # exit()
-            color_list = ['green', 'red', '#D3D3D3']
 
             average_list=[]
             for i in range(1, 25):
@@ -14160,6 +14362,286 @@ class plt_moving_dataframe():
             plt.xticks(rotation=45, ha='right')
             flag=flag+1
         plt.legend()
+        plt.show()
+
+
+    def plot_CV_LAI(self):  ##### plot based on all years together
+
+        df = T.load_df(result_root + rf'Dataframe\moving_window_CV\\moving_window_CV.df')
+        print(len(df))
+        df=df[df['landcover_classfication']!='Cropland']
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+
+        df=df[df['Aridity']<0.65]
+
+
+
+        #create color list with one green and another 14 are grey
+
+        # color_list=['grey']*16
+        # color_list[0]='green'
+        # color_list[1] = 'red'
+        # color_list[2]='blue'
+        color_list=['blue','green','red','orange','aqua','brown','cyan', 'black']
+        linewidth_list=[1]*16
+        linewidth_list[0]=3
+        linewidth_list[1]=2
+        linewidth_list[2]=2
+
+        fig = plt.figure()
+        i = 1
+        variable_list=['GLEAM_SMroot',]
+        # variable_list=['VPD',]
+        # variable_list=['CRU','GPCC']
+        variable_list=['LAI4g',]
+
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+        # exit()
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
+            ax = fig.add_subplot(2, 3, i)
+            if continent == 'North_America':
+                df_continent = df[df['lon'] > -125]
+                df_continent = df_continent[df_continent['lon'] < -105]
+                df_continent = df_continent[df_continent['lat'] > 0]
+                df_continent = df_continent[df_continent['lat'] < 45]
+            else:
+                df_continent = df[df['continent'] == continent]
+
+
+            for product in variable_list:
+
+
+                print(product)
+                vals = df_continent[product].tolist()
+
+
+                vals_nonnan=[]
+                for val in vals:
+
+                    val=np.array(val)
+
+                    if type(val)==float: ## only screening
+                        continue
+                    val[val<-99]=np.nan
+                    # print(len(val))
+                    if not len(val) == 24:
+                        continue
+
+                    vals_nonnan.append(list(val))
+                    # if not len(val) == 34:
+                    #     print(val)
+                    #     print(len(val))
+                    #     exit()
+                    # print(type(val))
+                    # print(len(val))
+                    # print(vals)
+
+                ###### calculate mean
+                vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+                vals_mean=np.nanmean(vals_mean,axis=0)
+                val_std=np.nanstd(vals_mean,axis=0)
+
+                # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+                plt.plot(vals_mean,label=product,color=color_list[variable_list.index(product)],linewidth=linewidth_list[variable_list.index(product)])
+                # plt.fill_between(range(len(vals_mean)),vals_mean-val_std,vals_mean+val_std,alpha=0.3,color=color_list[self.product_list.index(product)])
+
+
+                # plt.scatter(range(len(vals_mean)),vals_mean)
+                # plt.text(0,vals_mean[0],product,fontsize=8)
+            i=i+1
+
+            ax.set_xticks(range(0, 24, 4))
+            window_size = 15
+
+            # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+            year_range = range(1982, 2021)
+            year_range_str = []
+            for year in year_range:
+
+                start_year = year
+                end_year = year + window_size - 1
+                if end_year > 2020:
+                    break
+                year_range_str.append(f'{start_year}-{end_year}')
+            plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+            # plt.ylim(-0.2, 0.2)
+
+
+
+            plt.xlabel('year')
+
+            plt.ylabel(f'relative change(%/year)')
+            # plt.legend()
+
+            plt.title(f'{continent}')
+            plt.grid(which='major', alpha=0.5)
+        plt.legend()
+        plt.show()
+
+    def plot_CV_LAI_all_together(self):  ##### plot based on all years together
+
+        df = T.load_df(result_root + rf'Dataframe\moving_window_CV\\moving_window_CV.df')
+        print(len(df))
+        df=df[df['landcover_classfication']!='Cropland']
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+
+        df=df[df['Aridity']<0.65]
+
+
+
+        #create color list with one green and another 14 are grey
+
+        # color_list=['grey']*16
+        # color_list[0]='green'
+        # color_list[1] = 'red'
+        # color_list[2]='blue'
+        color_list=['blue','green','red','orange','aqua','brown','cyan', 'black']
+        linewidth_list=[1]*16
+        linewidth_list[0]=3
+        linewidth_list[1]=2
+        linewidth_list[2]=2
+
+        fig = plt.figure()
+        i = 1
+
+        variable_list=['LAI4g',]
+
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+        # exit()
+        dic_CV = {}
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
+
+            if continent == 'North_America':
+                df_continent = df[df['lon'] > -125]
+                df_continent = df_continent[df_continent['lon'] < -105]
+                df_continent = df_continent[df_continent['lat'] > 0]
+                df_continent = df_continent[df_continent['lat'] < 45]
+            else:
+                df_continent = df[df['continent'] == continent]
+
+
+            for product in variable_list:
+
+
+                print(product)
+                vals = df_continent[product].tolist()
+
+
+                vals_nonnan=[]
+                for val in vals:
+
+                    val=np.array(val)
+
+                    if type(val)==float: ## only screening
+                        continue
+                    val[val<-99]=np.nan
+                    # print(len(val))
+                    if not len(val) == 24:
+                        continue
+
+                    vals_nonnan.append(list(val))
+                    # if not len(val) == 34:
+                    #     print(val)
+                    #     print(len(val))
+                    #     exit()
+                    # print(type(val))
+                    # print(len(val))
+                    # print(vals)
+
+                ###### calculate mean
+                vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+                vals_mean=np.nanmean(vals_mean,axis=0)
+                val_std=np.nanstd(vals_mean,axis=0)
+
+                dic_CV[continent] = vals_mean
+        ##### global
+        vals=df[variable_list[0]].tolist()
+        vals_nonnan=[]
+        for val in vals:
+            val=np.array(val)
+            if type(val)==float: ## only screening
+                continue
+            val[val<-99]=np.nan
+            if not len(val) == 24:
+                continue
+            vals_nonnan.append(list(val))
+        vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+        vals_mean=np.nanmean(vals_mean,axis=0)
+        dic_CV['Global'] = vals_mean
+
+        ##plot
+        color_list=['green', 'lime', 'orange', 'red', 'blue', 'black', 'grey', 'yellow', 'pink', 'purple']
+        ##set line width
+
+
+
+        df_new = pd.DataFrame(dic_CV)
+        df_new.plot(color=color_list,linewidth=1.5)
+
+        plt.xticks(range(0, 24, 4), )
+        ## set x_tick
+        year_range= range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+            start_year = year
+            end_year = year + 15 - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.xlabel('year')
+        plt.ylabel('CV')
+        plt.grid(which='major', alpha=0.5)
+        plt.tight_layout()
+
+        ### plt continent on the line
+
+
+
         plt.show()
 
 
@@ -14560,140 +15042,8 @@ class plt_moving_dataframe():
         plt.tight_layout()
         plt.show()
 
-    def plot_moving_window_vs_wetting_drying_bin(self):  ### each winwow,plot pdf of NDVI as bin of wetting and drying
-        fdir_trend = result_root + rf'extract_window\\extract_original_window_trend\\15\\GPCC\\'
-
-        dic_trend = T.load_npy(fdir_trend + 'GPCC.npy')
-
-        area_dic = {}
-        for ss in range(39 - 15):
-            print(ss)
-
-            trend_value_list = []
-
-            for pix in tqdm(dic_trend):
-                # print(len(dic_trend[pix]))
-                if len(dic_trend[pix]) < 24:
-                    continue
-                trend_value = dic_trend[pix][ss]
-
-                trend_value_list.append(trend_value)
-
-            area_dic[ss] = [trend_value_list]
-
-        #### load wetting and drying
-        fdir_wetting_drying = result_root + rf'extract_window\extract_original_window_trend\15\wetting_drying\\'
-        dic_wetting_drying = T.load_npy(fdir_wetting_drying + 'wetting_drying.npy')
-        wetting_drying_list = []
-        for pix in dic_wetting_drying:
-            trend = dic_wetting_drying[pix]
-            wetting_drying_list.append(trend)
-        wetting_drying_list = np.array(wetting_drying_list)
-        ##### creat df
-        df_new = pd.DataFrame(area_dic)
-        df_new = df_new.T
-        df_new['wetting_drying'] = wetting_drying_list
-        df_new = df_new.rename(columns={0: 'trend'})
-
-        ####
-
-    def plot_anomaly_LAI_based_on_cluster_sensitivity(self):  ##### plot for 4 clusters
-
-        df = T.load_df(result_root + rf'Dataframe\moving_window_sensitivity\\moving_window_sensitivity_yearly.df')
-        print(len(df))
-        df=df[df['landcover_classfication']!='Cropland']
-        df=df[df['row']>120]
-        df = df.dropna(subset=['GLEAM_SMroot_LAI4g_00'])
-        # df = df[df['lon'] > -125]
-        # df = df[df['lon'] < -105]
-        # df = df[df['lat'] > 0]
-        # df = df[df['lat'] < 45]
-        # print(len(df))
-
-        df = df[df['landcover_classfication'] != 'Cropland']
 
 
-        print(len(df))
-
-        T.print_head_n(df)
-        # exit()
-
-        #create color list with one green and another 14 are grey
-
-        # color_list=['grey']*16
-        # color_list[0]='green'
-        # color_list[1] = 'red'
-        # color_list[2]='blue'
-        color_list=['blue','green','red','orange','aqua','brown','cyan', 'black']
-        linewidth_list=[1]*16
-        linewidth_list[0]=3
-        linewidth_list[1]=2
-        linewidth_list[2]=2
-
-
-
-        variable_list=['GLEAM_SMroot_LAI4g','VPD_LAI4g',]
-
-        for continent in ['Australia', 'North_America', 'South_America', 'Africa', 'Asia', ]:
-
-            df_continent = df[df['continent'] == continent]
-
-            fig = plt.figure()
-            fig.set_size_inches(12, 3)
-            flag = 1
-
-            for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
-                ax = fig.add_subplot(1,3, flag)
-
-                color_flag = 0
-
-                for product in variable_list:
-
-
-                    print(product)
-                    # vals=df_region[product].tolist()
-                    df_region=df_continent[df_continent['AI_classfication']==region]
-
-
-                    # print(vals)
-
-                    window_list = []
-                    dic = {}
-
-                    for i in range(0, 24):
-                        window_list.append(f'{i:02d}')
-                    # print(window_list)
-
-                    for window in tqdm(window_list):  # 构造字典的键值，并且字典的键：值初始化
-                        dic[window] = []
-
-                    ## plt moving window bar based on trend and p_value
-                    for window in window_list:
-
-
-                        sensitivity = df_region[f'{product}_{window}'].tolist()
-                        sensitivity = np.array(sensitivity)
-                        average_sensitivity = np.nanmean(sensitivity)
-
-                        dic[window] = average_sensitivity
-
-
-                    df_new = pd.DataFrame(dic,index=[0])
-                    df_new_T = df_new.T
-
-
-                    df_new_T.plot(ax=ax, color=color_list[color_flag],linewidth=linewidth_list[color_flag],legend=False)
-                    plt.title(f'{continent}_{region}_count_{len(df_region)}')
-                    plt.xlabel('window')
-                    plt.ylabel('sensitivity (%/%)')
-                    plt.ylim(-2,2)
-                    plt.xticks(rotation=45, ha='right')
-                    plt.tight_layout()
-                    plt.grid()
-                    color_flag += 1
-                flag=flag+1
-            plt.legend(variable_list)
-            plt.show()
 
 
 class check_data():
@@ -14707,7 +15057,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project3\Data\ERA5\ERA5_daily\dict\precip_transform\\per_pix_dic_001.npy'
+        f =  rf'D:\Project3\Result\Detrend\detrend_original2\\LAI4g.npy'
 
         # fdir=rf'D:\Project3\Result\extract_GS_return_monthly_data\individal_month\\X\\'
         # for f in os.listdir(fdir):
@@ -14727,7 +15077,7 @@ class check_data():
             r,c=pix
             # if r<480:
             #     continue
-            vals=dic[pix][37]
+            vals=dic[pix]
 
 
             # plt.plot(vals)
@@ -14745,14 +15095,13 @@ class check_data():
         plt.title(f)
         plt.show()
     def testrobinson(self):
-        fdir=result_root+rf'ENSO\ENSO_extraction_together\relative_change\\'
+        fdir=result_root+rf'extract_window\extract_detrend_original_window_CV\\'
 
         # f =  rf'D:\Project3\Data\Base_data\dryland_AI.tif\dryland.tif'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'relative_strong_El_Nino_add_La_Nina_LAI4g' in f:
-                continue
+
 
             if 'p_value' in f:
                 continue
@@ -14761,10 +15110,10 @@ class check_data():
 
         # plt.title('GPCC_trend(mm/mm/year)')
         # f = data_root + rf'split\NDVI4g\2001_2020.npy'
-            Plot().plot_Robinson(fdir+f, vmin=-10,vmax=10,is_discrete=True,colormap_n=5,)
+            Plot().plot_Robinson(fdir+f, vmin=-0.01,vmax=0.01,is_discrete=True,colormap_n=5,)
             # plt.title(f'{fname}')
             fname=f.split('.')[0]
-            plt.title(f'{fname}_(%)')
+            plt.title(f'{fname}')
 
             plt.show()
 
@@ -15008,7 +15357,7 @@ def main():
     # partial_correlation().run()
     # single_correlation().run()
     # ResponseFunction().run()
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
     # CCI_LC_preprocess().run()
     # calculating_variables().run()
     # pick_event().run()
@@ -15024,6 +15373,7 @@ def main():
     # moving_window().run()
     # multi_regression_window().run()
     # build_dataframe().run()
+    # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # plt_moving_dataframe().run()
     check_data().run()

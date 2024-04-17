@@ -368,7 +368,7 @@ class ERA5_daily:
         pix_anomaly = np.array(pix_anomaly)
         return pix_anomaly
 
-class extraction_extreme_event_rainfall:
+class extraction_extreme_event_rainfall_ENSO:
     def __init__(self):
         self.strong_El_Nino_list = [1982, 1983, 1987, 1988, 1991, 1992, 1997, 1998, 2015, 2016]
 
@@ -376,10 +376,10 @@ class extraction_extreme_event_rainfall:
 
     def  run(self):
         # self.define_quantile_extreme()
-        self.extract_extreme_ENSO_year()
+        # self.extract_extreme_ENSO_year()
         # self.extract_extreme_rainfall_event()
         # self.extract_rainfall_event_total()
-        # self.wet_spell_dry_spell()
+        self.wet_spell_dry_spell()
         # self.LAI_ENSO_extraction()
 
         # self.check()
@@ -537,23 +537,22 @@ class extraction_extreme_event_rainfall:
                     for val in EI_nino_dic[year_range]:
                         if val > val_90th:
                             extreme_wet_event.append(val)
-                        if val < val_10th:
-                            extreme_dry_event.append(val)
+
                     ## calculate the frequency and average intensity of extreme wet event and extreme dry event
                     ## intensity
                     average_intensity_extreme_wet_event = np.nanmean(extreme_wet_event)
-                    average_intensity_extreme_dry_event = np.nanmean(extreme_dry_event)
+
                     ## frequency
                     frequency_extreme_wet_event = len(extreme_wet_event)
-                    frequency_extreme_dry_event = len(extreme_dry_event)
+
 
 
 
                     result_dic_i[year_range] = {
                         f'{ENSO_type}_average_intensity_extreme_wet_event':average_intensity_extreme_wet_event,
-                        f'{ENSO_type}_average_intensity_extreme_dry_event':average_intensity_extreme_dry_event,
+
                         f'{ENSO_type}_frequency_extreme_wet_event':frequency_extreme_wet_event,
-                        f'{ENSO_type}_frequency_extreme_dry_event':frequency_extreme_dry_event
+
 
 
                     }
@@ -597,8 +596,8 @@ class extraction_extreme_event_rainfall:
             np.save(outf, result_dic)
 
     def wet_spell_dry_spell(self):
-        # ENSO_type = 'El_nino'
-        ENSO_type = 'La_nina'
+        ENSO_type = 'El_nino'
+        # ENSO_type = 'La_nina'
 
         fdir_yearly_all=rf'D:\Project3\Data\ERA5\ERA5_daily\dict\ENSO_year_extraction\\{ENSO_type}\\'
         outdir = data_root+rf'\ERA5\ERA5_daily\dict\\dry_spell\\{ENSO_type}\\'
@@ -734,7 +733,7 @@ class extraction_extreme_event_rainfall:
         plt.show()
 
         pass
-class extration_extreme_event_temperature:
+class extration_extreme_event_temperature_ENSO:
     def __init__(self):
         self.strong_El_Nino_list = [1982, 1983, 1987, 1988, 1991, 1992, 1997, 1998, 2015, 2016]
 
@@ -745,9 +744,10 @@ class extration_extreme_event_temperature:
     def run(self):
         # self.define_quantile_threshold()
         # self.extract_extreme_ENSO_year()
-        self.extract_extreme_temperature_event()
+        # self.extract_extreme_heat_event()
+        # self.extract_extreme_cold_event()
         # self.heat_spell()
-        # self.cold_spell()
+        self.cold_spell()
 
         # self.extract_temperature_event_total()
         # self.wet_spell_dry_spell()
@@ -760,8 +760,8 @@ class extration_extreme_event_temperature:
         # 3) extract wet event intensity
         ## 4) extract dry event intensity
         ## extract VPD and calculate the frequency of VPD>2kpa
-        fdir=rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\define_quantile_threshold\\'
+        fdir=rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\deseasonal_detrend\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\define_quantile_threshold\\'
         T.mk_dir(outdir,force=True)
 
         for f in T.listdir(fdir):
@@ -777,8 +777,8 @@ class extration_extreme_event_temperature:
 
                 if T.is_all_nan(vals):
                     continue
-                plt.bar(range(len(vals)),vals)
-                plt.show()
+                # plt.bar(range(len(vals)),vals)
+                # plt.show()
 
                 val_90th= np.percentile(vals,90)
                 val_10th = np.percentile(vals, 10)
@@ -805,9 +805,9 @@ class extration_extreme_event_temperature:
         strong_La_nina_year=[[1988,1989],[1998,1999],[2000,2001],[2007,2008],[2010,2011]]
 
 
-        fdir_yearly_all=rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\deseasonal_detrend\\'
-        outdir_LA_nina = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\ENSO_year_extraction\\LA_nina\\'
-        outdir_El_nino = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\ENSO_year_extraction\\El_nino\\'
+        fdir_yearly_all=rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\deseasonal_detrend\\'
+        outdir_LA_nina = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\ENSO_year_extraction\\LA_nina\\'
+        outdir_El_nino = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\ENSO_year_extraction\\El_nino\\'
 
 
         T.mk_dir(outdir_LA_nina,force=True)
@@ -876,13 +876,13 @@ class extration_extreme_event_temperature:
             np.save(outf_La_nina, result_dic_La_nina)
             np.save(outf_El_nino, result_dic_El_nino)
 
-    def extract_extreme_temperature_event(self):
+    def extract_extreme_heat_event(self):
 
-        ENSO_type = 'El_nino'
-        # ENSO_type = 'La_nina'
+        # ENSO_type = 'El_nino'
+        ENSO_type = 'La_nina'
         fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\define_quantile_threshold\\'
         fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\ENSO_year_extraction\\{ENSO_type}\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\extreme_event_extraction\\{ENSO_type}\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\extreme_heat_event_extraction\\{ENSO_type}\\'
         T.mk_dir(outdir, force=True)
         spatial_threshold_dic = T.load_npy_dir(fdir_threshold)
         result_dic = {}
@@ -895,8 +895,7 @@ class extration_extreme_event_temperature:
 
                 val_90th = threshold_dic['90th']
                 print(val_90th)
-                val_10th = threshold_dic['10th']
-                print(val_10th)
+
                 EI_nino_dic = spatial_dic[pix]
                 result_dic_i = {}
                 for year_range in EI_nino_dic:
@@ -906,29 +905,74 @@ class extration_extreme_event_temperature:
                     for val in EI_nino_dic[year_range]:
                         if val > val_90th:
                             extreme_wet_event.append(val)
-                        if val < val_10th:
-                            extreme_dry_event.append(val)
+
                     ## calculate the frequency and average intensity of extreme wet event and extreme dry event
                     ## intensity
                     average_intensity_extreme_wet_event = np.nanmean(extreme_wet_event)
-                    average_intensity_extreme_dry_event = np.nanmean(extreme_dry_event)
+
                     ## frequency
                     frequency_extreme_wet_event = len(extreme_wet_event)
-                    frequency_extreme_dry_event = len(extreme_dry_event)
+
 
                     result_dic_i[year_range] = {
                         f'{ENSO_type}_average_intensity_extreme_heat_event': average_intensity_extreme_wet_event,
-                        f'{ENSO_type}_average_intensity_extreme_cold_event': average_intensity_extreme_dry_event,
+
                         f'{ENSO_type}_frequency_extreme_heat_event': frequency_extreme_wet_event,
-                        f'{ENSO_type}_frequency_extreme_cold_event': frequency_extreme_dry_event
+
 
                     }
                 result_dic[pix] = result_dic_i
             outf = outdir + f
             np.save(outf, result_dic)
+
+    def extract_extreme_cold_event(self):
+
+        # ENSO_type = 'El_nino'
+        ENSO_type = 'La_nina'
+        fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\define_quantile_threshold\\'
+        fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\ENSO_year_extraction\\{ENSO_type}\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\extreme_cold_event_extraction\\{ENSO_type}\\'
+        T.mk_dir(outdir, force=True)
+        spatial_threshold_dic = T.load_npy_dir(fdir_threshold)
+        result_dic = {}
+        for f in T.listdir(fdir_yearly_all):
+            spatial_dic = T.load_npy(fdir_yearly_all + f)
+            for pix in tqdm(spatial_dic):
+                if not pix in spatial_threshold_dic:
+                    continue
+                threshold_dic = spatial_threshold_dic[pix]
+
+                val_10th = threshold_dic['10th']
+                print(val_10th)
+
+                EI_nino_dic = spatial_dic[pix]
+                result_dic_i = {}
+                for year_range in EI_nino_dic:
+
+                    extreme_wet_event = []
+                    extreme_dry_event = []
+                    for val in EI_nino_dic[year_range]:
+                        if val < val_10th:
+                            extreme_dry_event.append(val)
+
+                    ## calculate the frequency and average intensity of extreme wet event and extreme dry event
+                    ## intensity
+                    average_intensity_extreme_dry_event = np.nanmean(extreme_dry_event)
+
+                    ## frequency
+                    frequency_extreme_dry_event = len(extreme_dry_event)
+
+                    result_dic_i[year_range] = {
+                        f'{ENSO_type}_average_intensity_extreme_cold_event': average_intensity_extreme_dry_event,
+
+                        f'{ENSO_type}_frequency_extreme_cold_event': frequency_extreme_dry_event,
+                    }
+                result_dic[pix] = result_dic_i
+            outf = outdir + f
+            np.save(outf, result_dic)
     def heat_spell(self):
-        ENSO_type = 'El_nino'
-        # ENSO_type = 'La_nina'
+        # ENSO_type = 'El_nino'
+        ENSO_type = 'La_nina'
         fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(fdir_threshold)
 
@@ -944,9 +988,6 @@ class extration_extreme_event_temperature:
             for pix in tqdm(spatial_dic):
                 threshold= dic_threshold[pix]
                 val_90th = threshold['90th']
-                print(val_90th)
-                val_10th =  threshold['10th']
-                print(val_10th)
 
 
                 vals = spatial_dic[pix]
@@ -985,13 +1026,13 @@ class extration_extreme_event_temperature:
             np.save(outf, result_dic)
 
     def cold_spell(self):
-        ENSO_type = 'El_nino'
-        # ENSO_type = 'La_nina'
-        fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\define_quantile_threshold\\'
+        # ENSO_type = 'El_nino'
+        ENSO_type = 'La_nina'
+        fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(fdir_threshold)
 
-        fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\ENSO_year_extraction\\{ENSO_type}\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\cold_spell\\{ENSO_type}\\'
+        fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\ENSO_year_extraction\\{ENSO_type}\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\cold_spell\\{ENSO_type}\\'
         T.mk_dir(outdir, force=True)
         for f in T.listdir(fdir_yearly_all):
 
@@ -1001,8 +1042,7 @@ class extration_extreme_event_temperature:
             result_dic = {}
             for pix in tqdm(spatial_dic):
                 threshold = dic_threshold[pix]
-                val_90th = threshold['90th']
-                print(val_90th)
+
                 val_10th = threshold['10th']
                 print(val_10th)
 
@@ -1045,113 +1085,241 @@ class extration_extreme_event_temperature:
 class build_df:
     def run (self):
         # self.build_df()
-        # self.add_EL_nino_attribution()
+        # self.add_EL_nino_attribution_rainfall()
         # self.add_EL_nino_attribution_temperature()
+        # self.add_LAI_relative_change()
+        # self.add_total_rainfall_relative_change()
+        # self.add_tmax_temperature_relative_change()
         self.rename_columns()
+        # self.delete_columns()
 
 
         pass
-    def build_df(self):
-        fdir = data_root+rf'\ERA5\ERA5_daily\dict\\dry_spell\\La\\'
-        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\RF_df\\'
-        T.mk_dir(outdir,force=True)
-        flag= 0
-        result_dic= {}
+class extract_rainfall:
+    ## 1) extract rainfall CV
+    ## 2) extract rainfall total
+    ## 3) extract rainfall frequency
+    ## extract dry frequency
+    ## 4) extract rainfall intensity
+    ## 5) extract rainfall wet spell
+    ## 6) extract rainfall dry spell
+    def run(self):
+        # self.extract_growing_season()
+        self.extract_rainfall_CV_total()
+        # self.rainfall_frequency()
+        self.dry_spell()
+
+        pass
+    def extract_rainfall_CV_total(self):  ## extract total and CV of rainfall
+        fdir = data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir_CV = data_root+rf'\ERA5\ERA5_daily\dict\\rainfall_CV_total\\'
+
+        T.mk_dir(outdir_CV,force=True)
+
         for f in T.listdir(fdir):
+
             spatial_dic = np.load(fdir+f,allow_pickle=True).item()
-            for pix in spatial_dic:
-                dict_i = spatial_dic[pix]
-                if len(dict_i)==0:
+            result_dic = {}
+
+            for pix in tqdm(spatial_dic):
+                ### ui==if northern hemisphere
+                r,c = pix
+                vals = spatial_dic[pix]
+                vals_flatten = np.array(vals).flatten()
+
+
+                result_dic_i = {}
+
+                for i in range(38):
+
+                    if 120<r<=240:  # Northern hemisphere
+                        ### April to October is growing season
+
+                        vals_growing_season = vals_flatten[i*365+120:(i+1)*365+304]
+
+                    elif 240<r<480:### whole year is growing season
+
+                        vals_growing_season = vals_flatten[i*365:(i+1)*365]
+
+
+                    else: ## october to April is growing season  Southern hemisphere
+                        if i > 37:
+                            break
+
+
+                        vals_growing_season = vals_flatten[i*365+304:(i+1)*365+120]
+
+                    vals_growing_season = np.array(vals_growing_season)
+                    if T.is_all_nan(vals_growing_season):
+                        continue
+                    CV = np.std(vals_growing_season)/np.mean(vals_growing_season)
+                    total = np.nansum(vals_growing_season)
+                    result_dic_i[i] = {f'CV':CV,
+                                       f'total':total}
+                result_dic[pix] = result_dic_i
+
+            outf = outdir_CV+f
+
+            np.save(outf,result_dic)
+
+    def extract_growing_season(self):
+        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir = data_root + rf'\ERA5\ERA5_daily\dict\\growing_season_extraction\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in T.listdir(fdir):
+            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+            result_dic = {}
+            for pix in tqdm(spatial_dic):
+
+                spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+
+                r, c = pix
+                vals = spatial_dic[pix]
+                vals_flatten = np.array(vals).flatten()
+
+                for i in range(38):
+
+                    if 120 < r <= 240:  # Northern hemisphere
+                        ### April to October is growing season
+
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
+
+                    elif 240 < r < 480:  ### whole year is growing season
+
+                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+
+
+                    else:  ## october to April is growing season  Southern hemisphere
+                        if i > 37:
+                            break
+
+                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+
+                    vals_growing_season = np.array(vals_growing_season)
+                    result_dic[pix] = vals_growing_season
+
+
+            outf = outdir + f
+            np.save(outf, result_dic)
+
+    def rainfall_frequency(self):
+        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir= data_root + rf'\ERA5\ERA5_daily\dict\\rainfall_frequency\\'
+        threshold_f= data_root + rf'\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
+        dic_threshold = T.load_npy_dir(threshold_f)
+        T.mk_dir(outdir,force=True)
+        for f in T.listdir(fdir):
+
+            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+            result_dic = {}
+            for pix in tqdm(spatial_dic):
+                r,c=pix
+                if not pix in dic_threshold:
                     continue
-                for year_range in dict_i:
-                    dict_result_i = dict_i[year_range]
-                    dict_result_i['pix'] = pix
-                    dict_result_i['year_range'] = year_range
-                    flag+=1
-                    result_dic[flag] = dict_result_i
-        df = T.dic_to_df(result_dic,'flag')
-        T.print_head_n(df)
-        outf = outdir+'RF_df'
-        T.save_df(df,outf)
-        T.df_to_excel(df,outf)
-    def add_EL_nino_attribution_rainfall(self): ## add dry spell, frequency, total rainfall, average intensity, wet spell, maxmum wet spell
-        ENSO_type = 'El_nino'
-        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\dict\\RF_df_EL_nino\\RF_df_{ENSO_type}.df')
+                vals = spatial_dic[pix]
+                vals_flatten = np.array(vals).flatten()
+                threshold = dic_threshold[pix]
+                threshold_wet = threshold['90th']
+                threshold_dry = threshold['10th']
 
-        fdir_all = data_root+rf'\ERA5\ERA5_daily\dict\\total_rainfall\\{ENSO_type}\\'
+                result_dic_i = {}
+                for i in range(38):
+                    if 120<r<=240:  # Northern hemisphere
 
-        spatial_dic = T.load_npy_dir(fdir_all)
-        for i, row in tqdm(df.iterrows(),total=len(df)):
-            pix = row['pix']
-            year_range = row['year_range']
-            if pix in spatial_dic:
-                dict_i = spatial_dic[pix]
-                for year_range_i in dict_i:
-                    if year_range_i == year_range:
-                        dict_i_i = dict_i[year_range_i]
-                        for key in dict_i_i:
-                            df.loc[i,key] = dict_i_i[key]
-        outf = data_root+rf'\ERA5\ERA5_daily\dict\\RF_df_EL_nino\\RF_df_El_nino.df'
-        T.save_df(df,outf)
-        T.df_to_excel(df,outf)
-
-    def add_EL_nino_attribution_temperature(self): ## add dry spell, frequency, total rainfall, average intensity, wet spell, maxmum wet spell
-        ENSO_type = 'El_nino'
-        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\dict\\RF_df_EL_nino\\RF_df_{ENSO_type}.df')
-
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\extreme_event_extraction\\{ENSO_type}\\'
-
-        spatial_dic = T.load_npy_dir(fdir_all)
-        for i, row in tqdm(df.iterrows(),total=len(df)):
-            pix = row['pix']
-            year_range = row['year_range']
-            if pix in spatial_dic:
-                dict_i = spatial_dic[pix]
-                for year_range_i in dict_i:
-                    if year_range_i == year_range:
-                        dict_i_i = dict_i[year_range_i]
-                        for key in dict_i_i:
-                            print(key)
-                            df.loc[i,key] = dict_i_i[key]
-        outf = data_root+rf'\ERA5\ERA5_daily\dict\\RF_df_EL_nino\\RF_df_El_nino.df'
-        T.save_df(df,outf)
-        T.df_to_excel(df,outf)
-
-    def add_LAI_relative_change(self):
-        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\dict\\RF_df\\RF_df.df')
-        fdir = data_root+rf'\ERA5\ERA5_daily\dict\\GPCC_ENSO_extraction\\'
-
-
-        spatial_dic = T.load_npy_dir(fdir)
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            pix = row['pix']
-            year_range = row['year_range']
-            if pix in spatial_dic:
-                dict_i = spatial_dic[pix]
-                for year_range_i in dict_i:
-                    if year_range_i == year_range:
-                        dict_i_i = dict_i[year_range_i]
-                        for key in dict_i_i:
-                            df.loc[i, key] = dict_i_i[key]
-        outf = data_root + rf'\ERA5\ERA5_daily\dict\\RF_df\\RF_df.df'
-        T.save_df(df, outf)
-        T.df_to_excel(df, outf)
-        pass
-    def rename_columns(self):
-        df= T.load_df(data_root+rf'ERA5\ERA5_daily\dict\RF_df_EL_nino\\RF_df_EL_nino.df')
-        df = df.rename(columns={'El_nino_average_wet_spell':'El_nino_average_dry_spell',
-
-                                'El_nino_maxmum_wet_spell':'El_nino_maxmum_dry_spell',
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
+                        ## calculate days >threshold
 
 
 
-                            }
+                    elif 240 < r < 480:  ### whole year is growing season
 
-                               )
+                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+
+
+                    else:  ## october to April is growing season  Southern hemisphere
+                        if i > 37:
+                            break
+
+                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+                    vals_growing_season = np.array(vals_growing_season)
+                    if T.is_all_nan(vals_growing_season):
+                        continue
+                    frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
+                    frequency_dry = len(np.where(vals_growing_season < threshold_dry)[0])
+                    result_dic_i[i] = {f'frequency_wet':frequency_wet,
+                                        f'frequency_dry':frequency_dry}
+                result_dic[pix] = result_dic_i
+            outf = outdir + f
+            np.save(outf, result_dic)
+
+    def dry_spell(self):
+
+        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir = data_root + rf'\ERA5\ERA5_daily\dict\\dry_spell\\'
+        T.mk_dir(outdir, force=True)
+        for f in T.listdir(fdir):
+
+            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+
+            result_dic = {}
+            for pix in tqdm(spatial_dic):
+                r,c=pix
+
+                vals = spatial_dic[pix]
+                vals_flatten = np.array(vals).flatten()
+
+                result_dic_i = {}
+
+                for i in range(38):
+                    if 120<r<=240:  # Northern hemisphere
+
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
+                    if 240 < r < 480:  ### whole year is growing season
+
+                            vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+                    else:  ## october to April is growing season  Southern hemisphere
+                        if i > 37:
+                            break
+                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+                    vals_growing_season = np.array(vals_growing_season)
+                    vals_wet = vals_growing_season.copy()
+
+                    vals_wet[vals_wet >= 1] = np.nan
+
+                    dry_index = np.where(~np.isnan(vals_wet))
+                    if len(dry_index[0]) == 0:
+                        continue
+                    dry_index = np.array(dry_index)
+                    dry_index = dry_index.flatten()
+                    dry_index_groups = T.group_consecutive_vals(dry_index)
+
+                    # plt.bar(range(len(vals_growing_season)), vals_growing_season)
+                    # plt.bar(range(len(vals_growing_season)), vals_wet)
+                    # print(dry_index_groups)
+                    # plt.show()
+                    ## calcuate average wet spell
+                    dry_spell = []
+                    for group in dry_index_groups:
+                        dry_spell.append(len(group))
+                    dry_spell = np.array(dry_spell)
+
+                    average_wet_spell = np.nanmean(dry_spell)
+                    maxmum_wet_spell = np.nanmax(dry_spell)
+                    result_dic_i[i] = {
+                        f'average_dry_spell': average_wet_spell,
+                        f'maximun_dry_spell': maxmum_wet_spell
+                    }
+                result_dic[pix] = result_dic_i
+            outf = outdir + f
+            np.save(outf, result_dic)
+
+
+pass
 
 
 
-        return df
+
 class ERA5_hourly:
 
     # def __init__(self):
@@ -1348,7 +1516,8 @@ def main():
     # ERA5_daily().run()
     # extraction_extreme_event_rainfall().run()
     # extration_extreme_event_temperature().run()
-    build_df().run()
+    extract_rainfall().run()
+    # build_df().run()
     # ERA5_hourly().run()
     pass
 
