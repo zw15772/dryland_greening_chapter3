@@ -1081,6 +1081,10 @@ class extration_extreme_event_temperature_ENSO:
             outf = outdir + f
             np.save(outf, result_dic)
 
+    def run(self):
+        self.extract_lagged_precipitation()
+
+        pass
 
 class build_df:
     def run (self):
@@ -1092,9 +1096,13 @@ class build_df:
         # self.add_attribution_extreme_tmin_average_CV()
         # self.add_extreme_cold_frequency()
         # self.add_extreme_heat_frequency()
-        self.add_LAI_relative_change()
+        self.add_attribution_heat_spell()
+        # self.add_LAI_relative_change()
+        # self.add_GPCP_lagged()
+
 
         # self.rename_columns()
+        # self.delete_field()
 
 
 
@@ -1186,6 +1194,29 @@ class build_df:
         T.save_df(df,outf)
         T.df_to_excel(df,outf)
 
+    def add_attribution_heat_spell(self):
+
+        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\cold_spell\\'
+
+        spatial_dic = T.load_npy_dir(fdir_all)
+        for i, row in tqdm(df.iterrows(),total=len(df)):
+            pix = row['pix']
+            r,c=pix
+            if r<120:
+                continue
+            year_range = row['year_range']
+            if pix in spatial_dic:
+                dict_i = spatial_dic[pix]
+                for year_range_i in dict_i:
+                    if year_range_i == year_range:
+                        dict_i_i = dict_i[year_range_i]
+                        for key in dict_i_i:
+                            df.loc[i,key] = dict_i_i[key]
+        outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df,outf)
+        T.df_to_excel(df,outf)
+
 
     def add_attribution_extreme_tmax_average_CV(self):
         df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
@@ -1256,6 +1287,9 @@ class build_df:
         spatial_dic = T.load_npy_dir(fdir_all)
         for i, row in tqdm(df.iterrows(), total=len(df)):
             pix = row['pix']
+            r,c=pix
+            if r<120:
+                continue
             year_range = row['year_range']
             if pix in spatial_dic:
                 dict_i = spatial_dic[pix]
@@ -1270,35 +1304,66 @@ class build_df:
 
     def add_LAI_relative_change(self):
         df= T.load_df(data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'D:\Project3\Result\relative_change\OBS_LAI_extend\\LAI4g.npy'
+        f = results_root + rf'relative_change\OBS_LAI_extend\GPCC.npy'
 
 
-        spatial_dic = T.load_npy_dir(f)
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
         for i, row in tqdm(df.iterrows(), total=len(df)):
 
+            year = row.year_range
 
-            NDVI_list = []
-            for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            r, c = pix
 
-                year = row.flag
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
 
-                pix = row['pix']
-                r, c = pix
-
-                if not pix in spatial_dic:
-                    NDVI_list.append(np.nan)
-                    continue
-
-                vals = spatial_dic[pix]
+            vals = spatial_dic[pix][0:38]
 
 
-                v1 = vals[year - 1982]
-                # print(v1,year,len(vals))
+            v1 = vals[year]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
 
-                NDVI_list.append(v1)
-            df['LAI4g'] = NDVI_list
-            # exit()
+            NDVI_list.append(v1)
+        df['GPCP_precip'] = NDVI_list
 
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_GPCP_lagged(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'relative_change\OBS_LAI_extend\GPCC.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+            if year - 1 < 0:
+                NDVI_list.append(np.nan)
+                continue
+            v1 = vals[year-1]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['GPCP_precip_pre'] = NDVI_list
 
         outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
@@ -1322,6 +1387,14 @@ class build_df:
         outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df,outf)
         T.df_to_excel(df,outf)
+        pass
+    def delete_field(self):
+        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        df = df.drop(columns=['total_rainfall',])
+        outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df,outf)
+        T.df_to_excel(df,outf)
+
         pass
 class extract_rainfall:
     ## 1) extract rainfall CV
@@ -1474,9 +1547,9 @@ class extract_rainfall:
                     if T.is_all_nan(vals_growing_season):
                         continue
                     frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
-                    frequency_dry = len(np.where(vals_growing_season < threshold_dry)[0])
+
                     result_dic_i[i] = {f'frequency_wet':frequency_wet,
-                                        f'frequency_dry':frequency_dry}
+                                        }
                 result_dic[pix] = result_dic_i
             outf = outdir + f
             np.save(outf, result_dic)
@@ -1549,12 +1622,12 @@ pass
 class extract_temperature:
     def run(self):
 
-        # self.extract_extreme_heat_frequency()
-        # self.extract_extreme_cold_frequency()
+        self.extract_extreme_heat_frequency()
+        self.extract_extreme_cold_frequency()
         # self.extract_tmax_average_CV()
         # self.extract_tmin_average_CV()
-        self.cold_spell()
-        self.heat_spell()
+        # self.cold_spell()
+        # self.heat_spell()
 
 
         pass
@@ -1568,6 +1641,7 @@ class extract_temperature:
         spatial_threshold_dic = T.load_npy_dir(threshold_f)
         result_dic = {}
         for f in T.listdir(fdir):
+
 
             spatial_dic = T.load_npy(fdir + f)
             for pix in tqdm(spatial_dic):
@@ -1602,8 +1676,19 @@ class extract_temperature:
                     vals_growing_season = np.array(vals_growing_season)
                     if T.is_all_nan(vals_growing_season):
                         continue
+                    array_abovethrehold=np.where(vals_growing_season>val_90th,vals_growing_season,0)
+                    ### calculate average anomaly of days >threshold
+                    array_abovethrehold[array_abovethrehold==0]=np.nan
+                    average_anomaly_heat = np.nanmean(array_abovethrehold)
+
+
+
                     frequency_heat = len(np.where(vals_growing_season > val_90th)[0])
-                    average_anomaly_heat = np.nanmean(vals_growing_season)
+                    ### average anomaly heat event = average anomaly of all days >threshold
+
+
+
+
 
                     result_dic_i[i] = {f'frequency_heat_event': frequency_heat,
                                         f'average_anomaly_heat_event': average_anomaly_heat}
@@ -1654,7 +1739,10 @@ class extract_temperature:
                     if T.is_all_nan(vals_growing_season):
                         continue
                     frequency_heat = len(np.where(vals_growing_season < val_10th)[0])
-                    average_anomaly_heat = np.nanmean(vals_growing_season)
+                    ### calculate average anomaly of days >threshold
+                    array_abovethrehold = np.where(vals_growing_season < val_10th, vals_growing_season, 0)
+                    array_abovethrehold[array_abovethrehold == 0] = np.nan
+                    average_anomaly_heat = np.nanmean(array_abovethrehold)
 
                     result_dic_i[i] = {f'frequency_cold_event': frequency_heat,
                                        f'average_anomaly_cold_event': average_anomaly_heat}
@@ -1756,6 +1844,7 @@ class extract_temperature:
                         continue
 
                     CV = np.std(vals_growing_season) / np.mean(vals_growing_season)
+
                     result_dic_i[i] = {
                                        f'tmax_CV': CV}
                 result_dic[pix] = result_dic_i

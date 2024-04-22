@@ -5882,7 +5882,9 @@ class bivariate_analysis():
         max2=0.1
         outf=outtif
 
-        xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
+        # xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
+        xymap.Bivariate_plot_1().plot_bivariate(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
+        plt.show()
 
 
 
@@ -6138,8 +6140,8 @@ class CCI_LC_preprocess():
 class calculating_variables:  ###
 
     def run(self):
-        self.calculate_average_GPP()
-        # self.calculate_CV()
+        # self.calculate_average_GPP()
+        self.calculate_CV()
         # self.calculate_monthly_CV()
         # self.convert_tiff_to_npy()
         # self.create_CO2_dic()
@@ -6147,13 +6149,19 @@ class calculating_variables:  ###
         pass
 
     def calculate_CV(self):
-        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'state_variables\\'
-        T.mk_dir(outdir, force=True)
-        for f in os.listdir(fdir):
-            if not f.split('.')[0]  in ['CRU', 'GPCC', 'tmax','tmin' ]:
-                continue
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
 
+        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
+        outdir = result_root + rf'state_variables\\CV_yearly\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.split('.')[0]  in ['GPCC' ,'LAI4g','CRU']:
+                continue
+            CV_dic = {}
 
 
             variable = f.split('.')[0]
@@ -6161,15 +6169,28 @@ class calculating_variables:  ###
                 continue
             val_dic = T.load_npy(fdir + f)
             for pix in tqdm(val_dic, desc=variable):
+                r,c=pix
+                if r<120:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+
                 vals = val_dic[pix]
                 if T.is_all_nan(vals):
                     continue
                 mean = np.nanmean(vals)
                 std = np.nanstd(vals)
                 CV = std / mean
-                val_dic[pix] = CV
+                CV_dic[pix] = CV
             outf = outdir + rf'\{variable}_CV.npy'
-            np.save(outf, val_dic)
+            np.save(outf, CV_dic)
+            array=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(CV_dic)
+            arr_CV_dryland = array * array_mask
+
+
+            ##save
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_CV_dryland,outdir+rf'\{variable}_CV.tif')
 
         pass
     def calculate_average_GPP(self):
@@ -6316,11 +6337,11 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'Detrend\detrend_original\\'
+        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
         outdir = result_root + rf'\\extract_window\\extract_detrend_original_window\\15\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'LAI4g' in f:
+            if not 'GPCC' in f:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -6351,45 +6372,7 @@ class moving_window():
 
             T.save_npy(new_x_extraction_by_window, outf)
 
-    def moving_window_extraction_for_LAI(self):  ## for LAI, GPP only
-        variable_list=['LAI4g',]
 
-        fdir = result_root + rf'Detrend\detrend_original\\'
-        outdir = result_root + rf'\\extract_window\\extract_detrend_original_window\\'
-        T.mk_dir(outdir, force=True)
-        for f in os.listdir(fdir):
-            fname=f.split('.')[0]
-            print(fname)
-
-            if not fname in variable_list:
-                continue
-
-            outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
-            if os.path.isfile(outf):
-                continue
-
-            dic = T.load_npy(fdir + f)
-            window = 15
-
-            new_x_extraction_by_window = {}
-            for pix in tqdm(dic):
-
-                time_series = dic[pix]
-                time_series = np.array(time_series)
-
-                time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    print('error')
-                    continue
-                # print((len(time_series)))
-                ### if all values are identical, then continue
-                if np.nanmax(time_series) == np.nanmin(time_series):
-                    continue
-
-                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
-
-            T.save_npy(new_x_extraction_by_window, outf)
     def forward_window_extraction(self, x, window):
         # 前窗滤波
         # window = window-1
@@ -6536,7 +6519,7 @@ class moving_window():
         outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'LAI4g' in f:
+            if not 'GPCC' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
@@ -6586,27 +6569,40 @@ class moving_window():
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
     def moving_window_CV_trends(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
 
-        f = result_root + rf'extract_window\extract_detrend_original_window_CV\\LAI4g.npy'
+
+        f = result_root + rf'extract_window\extract_detrend_original_window_CV\\GPCC.npy'
         outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
         T.mk_dir(outdir, force=True)
         dic=T.load_npy(f)
         result_dic_trend={}
         result_dic_p_value={}
         for pix in dic:
+            r,c=pix
+            if r<120:
+                continue
             vals=dic[pix]
+            land_cover_val=crop_mask[pix]
+            if land_cover_val==16 or land_cover_val==17 or land_cover_val==18:
+                continue
             if np.isnan(np.nanmean(vals)):
                 continue
             slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
             result_dic_trend[pix]=slope
             result_dic_p_value[pix]=p_value
         array_slope=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic_trend)
+        array_slope_mask=array_slope*array_mask
         array_p_value=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic_p_value)
+        array_p_value_mask=array_p_value*array_mask
 
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_slope,outdir+'LAI4g_CV_trend.tif')
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_p_value,outdir+'LAI4g_CV_p_value.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_slope_mask,outdir+'GPCC_CV_trend.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_p_value_mask,outdir+'GPCC_CV_p_value.tif')
 
-        outf=outdir+'LAI4g_CV_trend.npy'
+        outf=outdir+'GPCC_CV_trend.npy'
         np.save(outf,result_dic_trend)
 
 
@@ -10780,11 +10776,11 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = (result_root + rf'Dataframe\moving_window_CV\\')
+        self.this_class_arr = (data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\')
         # self.this_class_arr = (data_root + rf'ERA5\ERA5_daily\dict\RF_df_La_nina\\')
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_CV.df'
+        self.dff = self.this_class_arr + 'RF_df'
 
 
 
@@ -10802,22 +10798,21 @@ class build_dataframe():
         # df=self.append_cluster(df)  ## 加属性
         # df=self.append_value(df)
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
         # df=self.add_trend_to_df(df)
         # df=self.add_wetting_drying_transition_to_df(df)
-        df=self.add_AI_classfication(df)
-        # df=self.add_SM_trend_label(df)
-        df=self.add_aridity_to_df(df)
-        # df=self.classfy_greening_browning()
-        # #
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        # df=self.add_AI_classfication(df)
 
+        # df=self.add_aridity_to_df(df)
+
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
+        #
         # df=self.add_precipitation_CV_to_df(df)
         # df=self.add_events(df)
         # df=self.add_frequency(df)
@@ -11083,9 +11078,9 @@ class build_dataframe():
         pass
 
     def add_detrend_zscore_to_df(self, df):
-        fdir = result_root + rf'\Detrend\detrend_relative_change\extend\\'
+        fdir = result_root + rf'relative_change\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['LAI4g', 'VOD', 'GLEAM_SMroot', 'CRU','GPCC']:
+            if f.split('.')[0] not in ['VPD']:
                 continue
 
 
@@ -11101,7 +11096,7 @@ class build_dataframe():
             NDVI_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
 
-                year = row.year
+                year = row
                 # pix = row.pix
                 pix = row['pix']
                 r, c = pix
@@ -11234,6 +11229,28 @@ class build_dataframe():
 
 
     def add_soil_texture_to_df(self, df):
+        tiff=rf'D:\Project3\Data\Base_data\HWSD\tif_025\\S_SILT.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+        f_name = 'silt'
+        print(f_name)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f_name] = val_list
+        return df
+
+        pass
+    def add_root_depth_to_df(self, df):
         tiff=rf'D:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
@@ -11255,7 +11272,6 @@ class build_dataframe():
         return df
 
         pass
-
     def add_precipitation_CV_to_df(self, df):
         fdir='D:\Project3\Result\state_variables\\CV_monthly\\'
         for f in os.listdir(fdir):
@@ -11445,7 +11461,7 @@ class build_dataframe():
         return df
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'ENSO\ENSO_extraction_together\relative_change\\'
+        fdir=result_root+rf'trend_analysis\relative_change\OBS_LAI_extend\\'
 
         for f in os.listdir(fdir):
             if not 'LAI4g' in f:
@@ -11758,7 +11774,7 @@ class plot_dataframe():
         # self.plot_greening_trend_moisture_relative_change_heatmap()
 
         # self.plot_anomaly_trendy_LAI()
-        self.plot_anomaly_LAI_based_on_cluster() #### widely used
+        # self.plot_anomaly_LAI_based_on_cluster() #### widely used
         # self.plot_anomaly_LAI_global()
 
         # self.plot_asymetrical_response_based_on_cluster()
@@ -11768,7 +11784,7 @@ class plot_dataframe():
         # self.plot_plant_fuctional_types_trend()
         # self.plot_trend_spatial_all()
         # self.plot_trend_regional()
-        # self.trend_bar()
+        self.trend_bar()
         # self.trend_percentage_bar()
         # self.bin_trend()
 
@@ -12988,39 +13004,48 @@ class plot_dataframe():
         # for col in df.columns:
         #     print(col)
         # exit()
-        variable_list=['LAI4g','GPCC','GLEAM_SMroot',]
-        color_list=['red','green','blue','orange']
-        period_list=['1982_2020']
+        variable='GLEAM_SMroot'
+        color_list=['black','red','green','blue','orange','aqua','brown','cyan', ]
+
         fig = plt.figure()
         flag = 1
+        trend_list=[]
+
+        global_trend_mean = df[f'{variable}_trend'].tolist()
+        global_trend_mean = np.nanmean(global_trend_mean)
+        trend_list.append(global_trend_mean)
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America']:
+            if continent == 'North_America':
+                df_region = df[df['lon'] > -125]
+                df_region = df_region[df_region['lon'] < -105]
+                df_region = df_region[df_region['lat'] > 0]
+                df_region = df_region[df_region['lat'] < 45]
+            else:
 
 
-        for region in ['Arid', 'Semi-Arid', 'Sub-Humid']:
-            df_region = df[df['AI_classfication'] == region]
-            ax = fig.add_subplot(1, 3, flag)
-            average_dic = {}
-            average_list=[]
+                df_region = df[df['continent'] == continent]
+
 
             ##calculate trend
-            for variable in variable_list:
-                for period in period_list:
+            vals=df_region[f'{variable}_trend'].tolist()
+            average_val=np.nanmean(vals)
+            trend_list.append(average_val)
 
-                    vals = df_region[f'{variable}_trend_{period}'].tolist()
-                    average_val = np.nanmean(vals)
-                    average_list.append(average_val)
-                average_dic[variable]=average_list
-                average_list=[]
-            df_new = pd.DataFrame(average_dic, index=period_list)
-            T.print_head_n(df_new)
-            df_new = df_new.T
-            T.print_head_n(df_new)
-            df_new.plot.bar(ax=ax)
-            plt.title(region)
-            plt.ylabel('trend (unitless)')
-            plt.ylim(-1,1)
-            flag = flag + 1
-            plt.tight_layout()
+
+
+        df_new=pd.DataFrame(trend_list,index=['global','Africa', 'Asia', 'Australia', 'South_America', 'North_America'])
+
+        # df_new.plot.bar()
+
+        ## bar color
+        plt.bar(df_new.index,df_new[0],color=color_list)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+
+        plt.ylabel('trend (%/year)')
         plt.show()
+
 
     def trend_percentage_bar(self): ## calculate average
         df = T.load_df(result_root + rf'Dataframe\relative_changes_trend\relative_changes_trend.df')
@@ -15049,6 +15074,7 @@ class plt_moving_dataframe():
 class check_data():
     def run (self):
         # self.plot_sptial()
+
         self.testrobinson()
         # self.plot_time_series()
         # self.plot_bar()
@@ -15057,7 +15083,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project3\Result\Detrend\detrend_original2\\LAI4g.npy'
+        f =  rf'D:\Project3\Result\state_variables\CV_yearly\\GPCC_yearly.npy'
 
         # fdir=rf'D:\Project3\Result\extract_GS_return_monthly_data\individal_month\\X\\'
         # for f in os.listdir(fdir):
@@ -15084,13 +15110,14 @@ class check_data():
             # plt.show()
 
 
-            # len_dic[pix]=np.nanmean(vals)
+            len_dic[pix]=np.nanmean(vals)
             # len_dic[pix]=np.nanstd(vals)
 
-            len_dic[pix] = len(vals)
+            # len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=1.5)
+
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=0.5)
         plt.colorbar()
         plt.title(f)
         plt.show()
@@ -15101,6 +15128,8 @@ class check_data():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
+            if not 'LAI4g' in f:
+                continue
 
 
             if 'p_value' in f:
@@ -15110,7 +15139,10 @@ class check_data():
 
         # plt.title('GPCC_trend(mm/mm/year)')
         # f = data_root + rf'split\NDVI4g\2001_2020.npy'
-            Plot().plot_Robinson(fdir+f, vmin=-0.01,vmax=0.01,is_discrete=True,colormap_n=5,)
+            Plot().plot_Robinson(fdir+f, vmin=-0.01,vmax=0.01,is_discrete=False,colormap_n=7,)
+        #     cmap = T.gen_colors(7,'RdGy_r')
+        #   cmap = T.cmap_blend(cmap)
+        #     Plot().plot_Robinson(fdir + f, vmin=-0.01, vmax=0.01, is_discrete=True, colormap_n=7, cmap=cmap)
             # plt.title(f'{fname}')
             fname=f.split('.')[0]
             plt.title(f'{fname}')
@@ -15357,7 +15389,7 @@ def main():
     # partial_correlation().run()
     # single_correlation().run()
     # ResponseFunction().run()
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
     # CCI_LC_preprocess().run()
     # calculating_variables().run()
     # pick_event().run()
@@ -15372,11 +15404,11 @@ def main():
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # plt_moving_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
 
 
