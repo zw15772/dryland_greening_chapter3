@@ -861,17 +861,26 @@ class Trend_statistic:
 class Random_Forests:
 
     def __init__(self):
-        self.this_class_arr, self.this_class_tif, self.this_class_png = \
-            T.mk_class_dir('Random_Forests', result_root_this_script, mode=2)
-        self.dff = join(self.this_class_arr, 'RF/RF.df')
-        self.variables()
-        self.variables_valid_range()
+        self.this_class_arr = data_root + 'RF_pix\\'
+        self.this_class_png = data_root + 'SHAP\\png\\'
+
+
+        self.dff = rf'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        self.variables_list()
+
+        ##----------------------------------
+
+        self.y_variable = 'LAI4g_raw'
+        ####################
+
+        self.x_variable_list = self.x_variable_list
+        # self.x_variable_range_dict = self.x_variable_range_dict_AUS
     #
     #     pass
 
     def run(self):
         # self.copy_df()
-        df = self.__gen_df_init()
+        # df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
         self.run_important_for_each_pixel()
@@ -970,11 +979,41 @@ class Random_Forests:
 
     def run_important_for_each_pixel(self):
 
-        dff = 'D:\Project3\Result\statistic\Random_Forests\dataframe\RF\\relative_changes_yearly_new.df'
+        dff = 'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         df = T.load_df(dff)
+        # df=self.df_clean(df)
+        pix_list = T.get_df_unique_val_list(df,'pix')
+        spatial_dict = {}
+        for pix in pix_list:
+            spatial_dict[pix] = 1
+        arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
+        plt.imshow(arr,interpolation='nearest')
+        plt.show()
+        ## plot spatial df
+        T.print_head_n(df)
 
 
         group_dic = T.df_groupby(df,'pix')
+        spatial_dict = {}
+        for pix in group_dic:
+            df_pix = group_dic[pix]
+            spatial_dict[pix] = len(df_pix)
+        arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
+        plt.imshow(arr,interpolation='nearest')
+        plt.show()
+        ## plot spatial df
+        # spatial_dic = T.df_to_spatial_dic(df,'pix')
+        # array= DIC_and_TIF().spatial_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(array)
+        # plt.colorbar()
+        # plt.show()
+
+
+
+
+
+
+
         outdir= join(self.this_class_arr,'important_for_each_pixel')
         T.mk_dir(outdir,force=True)
 
@@ -1074,10 +1113,9 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = join(self.this_class_arr,'important_for_each_pixel','new')
+        fdir = join(self.this_class_arr,'important_for_each_pixel')
         for f in os.listdir(fdir):
-            if not 'LAI4g' in f:
-                continue
+
             if not f.endswith('.df'):
                 continue
             fpath=join(fdir,f)
@@ -1111,7 +1149,7 @@ class Random_Forests:
             plt.title(fname)
             plt.show()
 
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
 
             pass
 
@@ -1428,72 +1466,322 @@ class Random_Forests:
             Y_pdp_std.append(np.std(Y_temp))
         return pd.DataFrame({col_name: sequence, 'PDs': Y_pdp, 'PDs_std': Y_pdp_std})
 
-    def variables(self):
+    def variables_list(self):
         self.x_variable_list = [
-            'GPCC',
-            'VPD',
-
-            ### long term trend
-
-            'MAP',
-            'MAT',
-            'tmax_trend',
-            'tmin_trend',
-            'VPD_trend'
-            'GPCC_trend',
-            'GPCC_CV_yearly',
-            'GPCC_CV_monthly',
-            'tmin_CV_yearly',
-            'tmax_CV_yearly',
-            'tmin_CV_monthly',
-            'tmax_CV_monthly',
-
-            ## soil traits
-
-            'SOC_sum',
-            'rooting_depth',
-            'S_SILT',
-
-        ]
-
-        self.x_variable_list = [
-
-            'SPEI3',
-            'Tmax',
             'CO2',
-            'Precip_CV',
-            'P-ET',
+            'ENSO_index_average',
+            # 'GMST',
+            # 'Nhx',
+            'Noy',
+
+            'rooting_depth',
+            # 'SOC_sum',
+              'silt',
+
             'VPD',
+
+            'GPCC',
+            # 'GPCP_precip_pre',
+
+            'average_dry_spell',
+                                 # 'maximum_dry_spell',
+
+                                'CV_rainfall',
+
+                                'frequency_wet',
+
+                             'frequency_heat_event',
+                                'average_anomaly_heat_event',
+
+
+                                # 'Aridity',
+
+
+                                   # 'GPCC_trend',
 
 
         ]
-        # self.y_variable_list = [
-        #     'LAI4g',
-        #     'GPP_CFE',
-        #     'GPP_baseline'
-        # ]
+
 
         self.y_variable_list = [
-            'LAI4g',
-            # 'GPP_CFE',
-            # 'GPP_baseline'
+            'LAI4g_raw',
+
 
         ]
         pass
 
-    def variables_valid_range(self):
-        self.x_variable_range_dict = {
-            'MAP':[0,2000],
-            'MAT':[-10,35],
-            'CRU_tmp_origin_GS_CV':[0,1],
-            'CRU_precip_origin_GS_CV':[0,1],
-            'P_ET_diff_origin_GS_CV':[0,5],
 
-            'CRU_tmp_anomaly_GS_trend':[0,0.01],
-            'CRU_precip_anomaly_GS_trend':[-0.003,0.003],
-            'P_ET_diff_anomaly_GS_trend':[-0.002,0.002],
+        self.x_variable_range_dict_Africa = {
+
+            'Noy': [100, 500],
+
+            'Nhx': [50, 400],
+            'GMST': [0, 1],
+
+            'VPD': [0.5, 3],
+            'GPCC': [0, 125],
+            'GPCP_precip_pre': [0, 100],
+
+            'CO2': [350., 450.],
+
+            'average_dry_spell': [0, 20],
+            'maximum_dry_spell': [0, 60],
+            'CV_rainfall': [0, 6],
+            'total_rainfall': [0, 2000],
+
+            'frequency_wet': [0, 50],
+            'frequency_dry': [0, 50],
+            # 'tmax_CV': [0, 10],
+            # 'tmin_CV': [0, 10],
+
+            'frequency_heat_event': [1, 50],
+            'average_anomaly_heat_event': [2, 10],
+
+            'silt': [0, 50],
+            'rooting_depth': [0, 10],
+            'SOC_sum': [0, 1500],
+            'ENSO_index_average': [-2, 1],
+            'ENSO_index_average_lagged': [-2, 2],
+            'ENSO_index_distance': [0.5, 2],
+            'ENSO_index_distance_lagged': [0.5, 2],
+            'ENSO_index_DFJ': [-2, 2],
+
+            'ENSO_index_binary': [-2, 2],
+            'GPCC_trend': [-2, 2],
+            'Aridity': [0.2, 0.65],
+            'ENSO_index_average_lagged_whole_year': [-1, 1],
+            'maximun_heat_spell': [0, 150],
+            'average_heat_spell': [0, 30],
+            'maximun_cold_spell': [0, 150],
+            'average_cold_spell': [0, 30],
         }
+
+        self.x_variable_range_dict_north_america = {
+
+            'ozone': [280, 320],
+            'GMST': [0, 1],
+            'CO2': [350, 450],
+            'Noy': [100, 300],
+            'Nhx': [25, 250],
+
+            'VPD': [0, 3],
+
+            'average_dry_spell': [0, 20],
+            'maximum_dry_spell': [0, 60],
+            'CV_rainfall': [0, 6],
+            'total_rainfall': [0, 2000],
+
+            'frequency_wet': [0, 50],
+            'frequency_dry': [0, 50],
+            'tmax_CV': [0, 10],
+            'tmin_CV': [0, 10],
+
+            'frequency_heat_event': [1, 50],
+            'average_anomaly_heat_event': [2, 10],
+
+            'GPCC': [0, 100],
+            'GPCP_precip_pre': [0, 100],
+            'GLEAM_SMroot': [-50, 50],
+            # 'tmin': [-10, 10],
+            # 'tmax': [-7.5, 4],
+
+            'silt': [0, 60],
+            'rooting_depth': [0, 20],
+            'SOC_sum': [0, 2000],
+            'ENSO_index_average': [-1.5, 1.5],
+            'ENSO_index_average_lagged': [-2, 2],
+            'ENSO_index_distance': [0.5, 2],
+            'ENSO_index_distance_lagged': [0.5, 2],
+            'ENSO_index_DFJ': [-2, 2],
+
+            'ENSO_index_binary': [-2, 2],
+            'GPCC_trend': [-2, 2],
+            'Aridity': [0.2, 0.65],
+            'ENSO_index_average_lagged_whole_year': [-1, 1],
+            'maximun_heat_spell': [0, 150],
+            'average_heat_spell': [0, 30],
+            'maximun_cold_spell': [0, 150],
+            'average_cold_spell': [0, 30],
+        }
+
+        self.x_variable_range_dict_Asia = {
+
+            'Noy': [10, 500],
+
+            'GMST': [0, 1],
+
+            'Nhx': [0, 1000],
+
+            'CO2': [340, 450],
+
+            'VPD': [0.5, 3],
+            'average_dry_spell': [0, 25],
+            'maximum_dry_spell': [0, 150],
+            'CV_rainfall': [0, 6],
+            'total_rainfall': [0, 2000],
+
+            'frequency_wet': [0, 50],
+            'frequency_dry': [0, 50],
+
+            'frequency_heat_event': [1, 40],
+            'average_anomaly_heat_event': [2, 10],
+            'average_anomaly_cold_event': [-12, -2],
+
+            'GPCC': [0, 200],
+            'GPCP_precip_pre': [0, 100],
+            'GLEAM_SMroot': [-50, 50],
+            'tmin': [-10, 10],
+            'tmax': [-7.5, 4],
+
+            'silt': [0, 50],
+            'rooting_depth': [0, 10],
+            'ENSO_index_average': [-2, 2],
+            'ENSO_index_average_lagged': [-2, 2],
+            'ENSO_index_distance': [0.5, 2],
+            'ENSO_index_distance_lagged': [0.5, 2],
+            'ENSO_index_DFJ': [-2, 2],
+
+            'ENSO_index_binary': [-2, 2],
+            'GPCC_trend': [-2, 2],
+            'Aridity': [0.2, 0.65],
+            'ENSO_index_average_lagged_whole_year': [-1, 1],
+            'maximun_heat_spell': [0, 150],
+            'average_heat_spell': [0, 30],
+            'maximun_cold_spell': [0, 150],
+            'average_cold_spell': [0, 40],
+        }
+
+        self.x_variable_range_dict_South_America = {
+
+            'Noy': [0, 200],
+            'Nhx': [0, 600],
+            'GMST': [0, 1],
+
+            'CO2': [340, 450],
+
+            'VPD': [0.5, 3],
+            'average_dry_spell': [0, 25],
+            'maximum_dry_spell': [0, 75],
+            'CV_rainfall': [0, 6],
+            'total_rainfall': [0, 2000],
+
+            'frequency_wet': [0, 50],
+            'frequency_dry': [0, 50],
+
+            'frequency_heat_event': [1, 40],
+            'average_anomaly_heat_event': [2, 10],
+            'average_anomaly_cold_event': [-12, -2],
+
+            'GPCC': [0, 200],
+            'GPCP_precip_pre': [0, 100],
+
+            'silt': [0, 50],
+            'rooting_depth': [0, 20],
+            'ENSO_index_average': [-2, 2],
+            'ENSO_index_average_lagged': [-2, 2],
+            'ENSO_index_distance': [0.5, 2],
+            'ENSO_index_distance_lagged': [0.5, 2],
+            'ENSO_index_DFJ': [-2, 2],
+
+            'ENSO_index_binary': [-2, 2],
+            'GPCC_trend': [-2, 2],
+            'Aridity': [0.2, 0.65],
+            'ENSO_index_average_lagged_whole_year': [-1, 1],
+            'maximun_heat_spell': [0, 150],
+            'average_heat_spell': [0, 30],
+            'maximun_cold_spell': [0, 150],
+            'average_cold_spell': [0, 40],
+
+        }
+
+        self.x_variable_range_dict_AUS = {
+            'CO2': [350, 450],
+            'GMST': [0, 1],
+
+            'Noy': [20, 150],
+            'Nhx': [0, 200],
+
+            'VPD': [0.5, 3],
+            'average_dry_spell': [0, 20],
+            'maximum_dry_spell': [0, 100],
+            'CV_rainfall': [0, 6],
+            'total_rainfall': [0, 2000],
+
+            'frequency_wet': [0, 40],
+            'frequency_dry': [0, 50],
+            'tmax_CV': [0, 10],
+            'tmin_CV': [0, 10],
+            'frequency_cold_event': [1, 40],
+            'average_anomaly_cold_event': [-7, -3],
+            'frequency_heat_event': [1, 50],
+            'average_anomaly_heat_event': [4, 12],
+
+            'GPCC': [0, 200],
+            'GPCP_precip_pre': [0, 100],
+            'GLEAM_SMroot': [-50, 50],
+
+            'silt': [0, 50],
+
+            'rooting_depth': [0, 20],
+            'SOC_sum': [0, 4000],
+            'ENSO_index_average': [-2, 2],
+
+            'GPCC_trend': [-1, 1],
+            'Aridity': [0.2, 0.65],
+
+            'maximun_heat_spell': [0, 100],
+            'average_heat_spell': [0, 25],
+            'maximun_cold_spell': [25, 75],
+            'average_cold_spell': [0, 25],
+
+        }
+
         pass
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        # df=df[df['LAI4g_p_value']<0.05]
+        # df=df[df['LAI4g_trend']>0]
+        # df=df[df['continent']=='Australia']
+
+
+        # df = df[df['continent'] == 'Africa']
+        # df=df[df['continent']=='Asia']
+
+        # df=df[df['continent']=='South_America']
+
+
+        # #
+        # df = df[df['lon'] > -125]
+        # df = df[df['lon'] < -105]
+        # df = df[df['lat'] > 0]
+        # df = df[df['lat'] < 45]
+        # print(len(df))
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+
+
+        return df
+
+    def valid_range_df(self,df):
+
+        print('original len(df):',len(df))
+        for var in self.x_variable_list:
+
+
+            if not var in df.columns:
+                print(var,'not in df')
+                continue
+            min,max = self.x_variable_range_dict[var]
+            df = df[(df[var]>=min)&(df[var]<=max)]
+        print('filtered len(df):',len(df))
+        return df
+
 
 def main():
     # Dataframe().run()

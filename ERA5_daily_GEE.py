@@ -742,12 +742,12 @@ class extration_extreme_event_temperature_ENSO:
     pass
 
     def run(self):
-        # self.define_quantile_threshold()
+        self.define_quantile_threshold()
         # self.extract_extreme_ENSO_year()
         # self.extract_extreme_heat_event()
         # self.extract_extreme_cold_event()
         # self.heat_spell()
-        self.cold_spell()
+        # self.cold_spell()
 
         # self.extract_temperature_event_total()
         # self.wet_spell_dry_spell()
@@ -796,7 +796,7 @@ class extration_extreme_event_temperature_ENSO:
                 }
                 result_dic[pix]=dic_i
             outf=outdir+f
-            np.save(outf,result_dic)
+            # np.save(outf,result_dic)
     def extract_extreme_ENSO_year(self):
 
 
@@ -1081,28 +1081,28 @@ class extration_extreme_event_temperature_ENSO:
             outf = outdir + f
             np.save(outf, result_dic)
 
-    def run(self):
-        self.extract_lagged_precipitation()
 
         pass
 
-class build_df:
+class Build_df:
     def run (self):
         # self.build_df()
         # self.add_attribution_rainfall()
         # self.add_attribution_rainfall_frequency()
         # self.add_attribution_dry_spell()
-        # self.add_attribution_extreme_tmax_average_CV()
-        # self.add_attribution_extreme_tmin_average_CV()
+
         # self.add_extreme_cold_frequency()
         # self.add_extreme_heat_frequency()
-        self.add_attribution_heat_spell()
-        # self.add_LAI_relative_change()
+        # self.add_attribution_heat_spell()
+        # self.add_attribution_cold_spell()
+        # self.add_GPCP()
         # self.add_GPCP_lagged()
+        # self.add_VPD()
+        # self.add_CO2()
+        self.add_LAI4g()
 
 
-        # self.rename_columns()
-        # self.delete_field()
+
 
 
 
@@ -1113,12 +1113,15 @@ class build_df:
         T.mk_dir(outdir, force=True)
         flag = 1981
         result_dic = {}
-        for f in T.listdir(fdir):
+        for f in tqdm(T.listdir(fdir)):
             spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+
             for pix in spatial_dic:
+
                 dict_i = spatial_dic[pix]
                 if len(dict_i) == 0:
                     continue
+
                 for year_range in dict_i:
                     dict_result_i = dict_i[year_range]
                     dict_result_i['pix'] = pix
@@ -1126,9 +1129,24 @@ class build_df:
                     dict_result_i['year_range'] = year_range
 
                     result_dic[flag] = dict_result_i
+
         df = T.dic_to_df(result_dic, 'flag')
-        T.print_head_n(df)
+
+
+        # pix_list = T.get_df_unique_val_list(df, 'pix')
+        # spatial_dict = {}
+        # for pix in pix_list:
+        #     spatial_dict[pix] = 1
+        # arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
+        # plt.imshow(arr)
+        # plt.show()
+        # T.print_head_n(df)
+        # exit()
         outf = outdir + 'RF_df'
+        # dff = 'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        # df = T.load_df(dff)
+        # print(outf)
+        # exit()
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
     def add_attribution_rainfall(self): ## add dry spell, frequency, total rainfall, average intensity, wet spell, maxmum wet spell
@@ -1194,7 +1212,7 @@ class build_df:
         T.save_df(df,outf)
         T.df_to_excel(df,outf)
 
-    def add_attribution_heat_spell(self):
+    def add_attribution_cold_spell(self):
 
         df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
         fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\cold_spell\\'
@@ -1216,16 +1234,17 @@ class build_df:
         outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df,outf)
         T.df_to_excel(df,outf)
+    def add_attribution_heat_spell(self):
 
-
-    def add_attribution_extreme_tmax_average_CV(self):
-        df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-
-        fdir_all =rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\extreme_tmax_average_CV\\'
+        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        fdir_all = rf'E:\Data\ERA5\max_temp\heat_spell\\'
 
         spatial_dic = T.load_npy_dir(fdir_all)
-        for i, row in tqdm(df.iterrows(), total=len(df)):
+        for i, row in tqdm(df.iterrows(),total=len(df)):
             pix = row['pix']
+            r,c=pix
+            if r<120:
+                continue
             year_range = row['year_range']
             if pix in spatial_dic:
                 dict_i = spatial_dic[pix]
@@ -1233,21 +1252,23 @@ class build_df:
                     if year_range_i == year_range:
                         dict_i_i = dict_i[year_range_i]
                         for key in dict_i_i:
-                            df.loc[i, key] = dict_i_i[key]
-        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
-        T.save_df(df, outf)
-        T.df_to_excel(df, outf)
+                            df.loc[i,key] = dict_i_i[key]
+        outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df,outf)
+        T.df_to_excel(df,outf)
 
-        pass
 
-    def add_attribution_extreme_tmin_average_CV(self):
-        df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+    def add_attribution_cold_spell(self):
 
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\extreme_tmin_average_CV\\'
+        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        fdir_all = rf'E:\Data\ERA5\min_temp\cold_spell\\'
 
         spatial_dic = T.load_npy_dir(fdir_all)
-        for i, row in tqdm(df.iterrows(), total=len(df)):
+        for i, row in tqdm(df.iterrows(),total=len(df)):
             pix = row['pix']
+            r,c=pix
+            if r<120:
+                continue
             year_range = row['year_range']
             if pix in spatial_dic:
                 dict_i = spatial_dic[pix]
@@ -1255,14 +1276,21 @@ class build_df:
                     if year_range_i == year_range:
                         dict_i_i = dict_i[year_range_i]
                         for key in dict_i_i:
-                            df.loc[i, key] = dict_i_i[key]
-        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
-        T.save_df(df, outf)
-        T.df_to_excel(df, outf)
+                            df.loc[i,key] = dict_i_i[key]
+        outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df,outf)
+        T.df_to_excel(df,outf)
+
+
+
+
+
+
+
     def add_extreme_cold_frequency(self):
         df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
 
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\extreme_cold_frequency\\'
+        fdir_all = rf'E:\Data\ERA5\min_temp\extreme_cold_frequency\\'
 
         spatial_dic = T.load_npy_dir(fdir_all)
         for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -1282,7 +1310,7 @@ class build_df:
     def add_extreme_heat_frequency(self):
         df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
 
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\extreme_heat_frequency\\'
+        fdir_all = rf'E:\Data\ERA5\max_temp\extreme_heat_frequency\\'
 
         spatial_dic = T.load_npy_dir(fdir_all)
         for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -1302,43 +1330,11 @@ class build_df:
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
 
-    def add_LAI_relative_change(self):
-        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'relative_change\OBS_LAI_extend\GPCC.npy'
 
-
-        spatial_dic = T.load_npy(f)
-
-        NDVI_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-
-            year = row.year_range
-
-            pix = row['pix']
-            r, c = pix
-
-            if not pix in spatial_dic:
-                NDVI_list.append(np.nan)
-                continue
-
-            vals = spatial_dic[pix][0:38]
-
-
-            v1 = vals[year]
-            # v1=vals[year-1982]
-            # print(v1,year,len(vals))
-
-            NDVI_list.append(v1)
-        df['GPCP_precip'] = NDVI_list
-
-        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
-        T.save_df(df, outf)
-        T.df_to_excel(df, outf)
-        pass
 
     def add_GPCP_lagged(self): ##
         df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'relative_change\OBS_LAI_extend\GPCC.npy'
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\\GPCC.npy'
 
         spatial_dic = T.load_npy(f)
 
@@ -1363,7 +1359,135 @@ class build_df:
             # print(v1,year,len(vals))
 
             NDVI_list.append(v1)
-        df['GPCP_precip_pre'] = NDVI_list
+        df['GPCC_precip_pre'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_GPCP(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\GPCC.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['GPCP_precip'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_VPD(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\VPD.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['VPD'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_CO2(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\CO2.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['CO2'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_LAI4g(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\LAI4g.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['LAI4g'] = NDVI_list
 
         outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
@@ -1406,10 +1530,11 @@ class extract_rainfall:
     ## 6) extract rainfall dry spell
     def run(self):
         # self.extract_growing_season()
-        self.extract_rainfall_CV_total()
-        # self.rainfall_frequency()
+        # self.extract_rainfall_CV_total()
+        self.rainfall_frequency()
         # self.dry_spell()
 
+        # self.check_spatial_map()
         pass
     def extract_rainfall_CV_total(self):  ## extract total and CV of rainfall
         fdir = data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
@@ -1444,7 +1569,7 @@ class extract_rainfall:
 
 
                     else: ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >=37:
                             break
 
 
@@ -1456,7 +1581,7 @@ class extract_rainfall:
                     CV = np.std(vals_growing_season)/np.mean(vals_growing_season)
                     total = np.nansum(vals_growing_season)
                     result_dic_i[i] = {f'CV_rainfall':CV,
-                                       f'total_rainfall':total}
+                                       }
                 result_dic[pix] = result_dic_i
 
             outf = outdir_CV+f
@@ -1484,7 +1609,7 @@ class extract_rainfall:
                     if 120 < r <= 240:  # Northern hemisphere
                         ### April to October is growing season
 
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
 
                     elif 240 < r < 480:  ### whole year is growing season
 
@@ -1528,7 +1653,7 @@ class extract_rainfall:
                 for i in range(38):
                     if 120<r<=240:  # Northern hemisphere
 
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
                         ## calculate days >threshold
 
 
@@ -1539,7 +1664,7 @@ class extract_rainfall:
 
 
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
 
                         vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
@@ -1575,12 +1700,12 @@ class extract_rainfall:
                 for i in range(38):
                     if 120<r<=240:  # Northern hemisphere
 
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i + 1) * 365 + 304]
-                    if 240 < r < 480:  ### whole year is growing season
+                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
+                    elif 240 < r < 480:  ### whole year is growing season
 
-                            vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
                         vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
                     vals_growing_season = np.array(vals_growing_season)
@@ -1609,21 +1734,68 @@ class extract_rainfall:
                     maxmum_wet_spell = np.nanmax(dry_spell)
                     result_dic_i[i] = {
                         f'average_dry_spell': average_wet_spell,
-                        f'maximun_dry_spell': maxmum_wet_spell
+                        f'maximum_dry_spell': maxmum_wet_spell
                     }
                 result_dic[pix] = result_dic_i
             outf = outdir + f
             np.save(outf, result_dic)
 
 
-pass
+    pass
+    def check_spatial_map(self):
+        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\dry_spell\\'
+        spatial_dic= T.load_npy_dir(fdir)
+        key_list = ['average_dry_spell','maximum_dry_spell']
 
+        for key in key_list:
+            spatial_dict_num = {}
+            spatial_dict_mean = {}
+
+            for pix in spatial_dic:
+
+                annual_dict = spatial_dic[pix]
+                if len(annual_dict)==0:
+                    continue
+
+                valid_year = 0
+                vals_list = []
+                for year in annual_dict:
+                    dict_i = annual_dict[year]
+                    if not key in dict_i:
+                        continue
+                    val = dict_i[key]
+                    vals_list.append(val)
+
+                    valid_year+=1
+                vals_mean = np.nanmean(vals_list)
+                spatial_dict_num[pix] = valid_year
+                spatial_dict_mean[pix] = vals_mean
+
+            arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_mean)
+            plt.figure()
+            plt.imshow(arr,interpolation='nearest')
+            plt.title(key)
+            plt.colorbar()
+        plt.show()
+
+
+
+        #     spatial_dict_test[pix] = np.nanmean(vals['average_dry_spell'])
+        # arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_test)
+        # plt.imshow(arr,interpolation='nearest')
+        # # plt.title(key)
+        # plt.show()
+
+
+
+
+        pass
 
 class extract_temperature:
     def run(self):
 
         self.extract_extreme_heat_frequency()
-        self.extract_extreme_cold_frequency()
+        # self.extract_extreme_cold_frequency()
         # self.extract_tmax_average_CV()
         # self.extract_tmin_average_CV()
         # self.cold_spell()
@@ -1632,9 +1804,9 @@ class extract_temperature:
 
         pass
     def extract_extreme_heat_frequency(self):
-        threshold_f = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\define_quantile_threshold\\'
-        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\extreme_heat_frequency\\'
+        threshold_f = rf'E:\Data\\ERA5\\max_temp\define_quantile_threshold\\'
+        fdir = rf'E:\Data\\ERA5\\max_temp\\deseasonal_detrend\\'
+        outdir = rf'E:\Data\\ERA5\\max_temp\\extreme_heat_frequency\\'
 
 
         T.mk_dir(outdir, force=True)
@@ -1660,7 +1832,7 @@ class extract_temperature:
                 for i in range(38):
                     if 120 < r <= 240:  # Northern hemisphere
 
-                        vals_growing_season = vals[i * 365 + 120:(i + 1) * 365 + 304]
+                        vals_growing_season = vals[i * 365 + 120:i * 365 + 304]
                         ## calculate days >threshold
 
                     elif 240 < r < 480:  ### whole year is growing season
@@ -1669,16 +1841,16 @@ class extract_temperature:
 
 
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
 
                         vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
                     vals_growing_season = np.array(vals_growing_season)
                     if T.is_all_nan(vals_growing_season):
                         continue
-                    array_abovethrehold=np.where(vals_growing_season>val_90th,vals_growing_season,0)
+                    array_abovethrehold=np.where(vals_growing_season>val_90th,vals_growing_season,-999)
                     ### calculate average anomaly of days >threshold
-                    array_abovethrehold[array_abovethrehold==0]=np.nan
+                    array_abovethrehold[array_abovethrehold<-99]=np.nan
                     average_anomaly_heat = np.nanmean(array_abovethrehold)
 
 
@@ -1697,9 +1869,9 @@ class extract_temperature:
             np.save(outf, result_dic)
 
     def extract_extreme_cold_frequency(self):
-        threshold_f = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\define_quantile_threshold\\'
-        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\extreme_cold_frequency\\'
+        threshold_f = rf'E:\Data\\ERA5\\min_temp\define_quantile_threshold\\'
+        fdir = rf'E:\Data\\ERA5\\min_temp\\deseasonal_detrend\\'
+        outdir = rf'E:\Data\\ERA5\\min_temp\\\extreme_cold_frequency\\'
 
         T.mk_dir(outdir, force=True)
         spatial_threshold_dic = T.load_npy_dir(threshold_f)
@@ -1722,7 +1894,7 @@ class extract_temperature:
                 for i in range(38):
                     if 120 < r <= 240:  # Northern hemisphere
 
-                        vals_growing_season = vals[i * 365 + 120:(i + 1) * 365 + 304]
+                        vals_growing_season = vals[i * 365 + 120:(i) * 365 + 304]
                         ## calculate days >threshold
 
                     elif 240 < r < 480:  ### whole year is growing season
@@ -1731,7 +1903,7 @@ class extract_temperature:
 
 
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
 
                         vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
@@ -1740,8 +1912,8 @@ class extract_temperature:
                         continue
                     frequency_heat = len(np.where(vals_growing_season < val_10th)[0])
                     ### calculate average anomaly of days >threshold
-                    array_abovethrehold = np.where(vals_growing_season < val_10th, vals_growing_season, 0)
-                    array_abovethrehold[array_abovethrehold == 0] = np.nan
+                    array_abovethrehold = np.where(vals_growing_season < val_10th, vals_growing_season, -999)
+                    array_abovethrehold[array_abovethrehold <-99] = np.nan
                     average_anomaly_heat = np.nanmean(array_abovethrehold)
 
                     result_dic_i[i] = {f'frequency_cold_event': frequency_heat,
@@ -1776,7 +1948,7 @@ class extract_temperature:
                     if 120<r<=240:  # Northern hemisphere
                         ### April to October is growing season
 
-                        vals_growing_season = vals[i*365+120:(i+1)*365+304]
+                        vals_growing_season = vals[i*365+120:(i)*365+304]
 
                     elif 240<r<480:### whole year is growing season
 
@@ -1826,7 +1998,7 @@ class extract_temperature:
                     if 120 < r <= 240:  # Northern hemisphere
                         ### April to October is growing season
 
-                        vals_growing_season = vals[i * 365 + 120:(i + 1) * 365 + 304]
+                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
 
                     elif 240 < r < 480:  ### whole year is growing season
 
@@ -1854,11 +2026,11 @@ class extract_temperature:
             np.save(outf, result_dic)
 
     def heat_spell(self):
-        fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\define_quantile_threshold\\'
+        fdir_threshold = rf'E:\Data\\ERA5\max_temp\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(fdir_threshold)
 
-        fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\heat_spell\\'
+        fdir_yearly_all = rf'E:\Data\\ERA5\max_temp\\deseasonal_detrend\\'
+        outdir = rf'E:\Data\\ERA5\max_temp\heat_spell\\'
         T.mk_dir(outdir, force=True)
         for f in T.listdir(fdir_yearly_all):
 
@@ -1879,12 +2051,12 @@ class extract_temperature:
                 for i in range(38):
                     if 120 < r <= 240:  # Northern hemisphere
 
-                        vals_growing_season = vals[i * 365 + 120:(i + 1) * 365 + 304]
-                    if 240 < r < 480:  ### whole year is growing season
+                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
+                    elif 240 < r < 480:  ### whole year is growing season
 
                         vals_growing_season = vals[i * 365:(i + 1) * 365]
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
                         vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
                     vals_growing_season = np.array(vals_growing_season)
@@ -1920,11 +2092,11 @@ class extract_temperature:
             np.save(outf, result_dic)
 
     def cold_spell(self):
-        fdir_threshold = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\define_quantile_threshold\\'
+        fdir_threshold = rf'E:\Data\\ERA5\min_temp\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(fdir_threshold)
 
-        fdir_yearly_all = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\cold_spell\\'
+        fdir_yearly_all = rf'E:\Data\\ERA5\min_temp\\deseasonal_detrend\\'
+        outdir = rf'E:\Data\\ERA5\min_temp\cold_spell\\'
         T.mk_dir(outdir, force=True)
         for f in T.listdir(fdir_yearly_all):
 
@@ -1944,12 +2116,12 @@ class extract_temperature:
                 for i in range(38):
                     if 120 < r <= 240:  # Northern hemisphere
 
-                        vals_growing_season = vals[i * 365 + 120:(i + 1) * 365 + 304]
-                    if 240 < r < 480:  ### whole year is growing season
+                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
+                    elif 240 < r < 480:  ### whole year is growing season
 
                         vals_growing_season = vals[i * 365:(i + 1) * 365]
                     else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
+                        if i >= 37:
                             break
                         vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
                     vals_growing_season = np.array(vals_growing_season)
@@ -2289,11 +2461,12 @@ class ERA5_hourly:
 
 def main():
     # ERA5_daily().run()
-    # extraction_extreme_event_rainfall().run()
-    # extration_extreme_event_temperature().run()
+
+
     # extract_rainfall().run()
     # extract_temperature().run()
-    build_df().run()
+    # extration_extreme_event_temperature_ENSO().run()
+    Build_df().run()
     # ERA5_hourly().run()
     pass
 

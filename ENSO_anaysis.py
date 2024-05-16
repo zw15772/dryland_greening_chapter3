@@ -96,9 +96,10 @@ class ENSO_anaysis():
         # print('netural_list',self.netural_list)
         pass
     def run(self):
-        # self.ENSO_index_average_retrieval()
-        self.ENSO_index_average_retrieval_method2()
-        # self.ENSO_index_distance_retrieval()
+        self.ENSO_index_average_retrieval()
+        # self.ENSO_index_average_retrieval_method2()
+        self.ENSO_index_average_retrieval_DJF()
+        self.ENSO_index_distance_retrieval()
         # self.ENSO_index_distance_retrieval_lagged()
 
         # self.ENSO_index_binary_retrieval()
@@ -251,6 +252,138 @@ class ENSO_anaysis():
         T.df_to_excel(df, outf)
 
         pass
+
+    def ENSO_index_average_retrieval_DJF(self): ### define the DJF as the ENSO index
+            indx = '''
+            1979     2024
+    1979     0.47     0.29    -0.05     0.21     0.27    -0.11    -0.11     0.47     0.38     0.23     0.53     0.63
+    1980     0.33     0.20     0.39     0.51     0.45     0.55     0.47     0.03     0.12     0.02    -0.07    -0.12
+    1981    -0.36    -0.23     0.33     0.43    -0.24    -0.70    -0.61    -0.34    -0.07    -0.16    -0.27    -0.19
+    1982    -0.43    -0.49    -0.27    -0.36    -0.12     0.62     1.65     1.91     1.69     1.78     2.14     2.37
+    1983     2.48     2.68     2.61     2.76     2.86     1.98     0.63    -0.17    -0.49    -0.53    -0.47    -0.50
+    1984    -0.54    -0.56    -0.16     0.07    -0.45    -0.66    -0.34    -0.20    -0.14    -0.19    -0.58    -0.28
+    1985    -0.25    -0.58    -0.60    -0.76    -1.23    -0.67    -0.10    -0.49    -0.56    -0.08    -0.06    -0.42
+    1986    -0.40    -0.34    -0.40    -0.53    -0.26     0.01     0.41     0.97     1.29     0.56     0.64     1.06
+    1987     1.03     1.16     1.57     1.74     1.96     2.07     1.88     1.46     1.26     1.18     0.90     0.79
+    1988     0.63     0.33     0.17    -0.01    -0.39    -1.17    -1.78    -1.81    -1.80    -1.59    -1.70    -1.55
+    1989    -1.12    -1.10    -1.24    -1.09    -1.03    -0.99    -1.08    -0.66    -0.53    -0.49    -0.36    -0.07
+    1990     0.13     0.45     0.61     0.17     0.08     0.05     0.13     0.02     0.22    -0.07     0.12     0.31
+    1991     0.19     0.08     0.20     0.20     0.35     0.97     0.91     0.37     0.54     0.97     1.04     1.23
+    1992     1.68     1.58     1.71     1.97     1.68     1.51     0.62    -0.02     0.40     0.67     0.62     0.73
+    1993     0.79     0.89     0.77     0.98     1.47     1.51     0.90     0.60     0.61     0.96     0.70     0.27
+    1994    -0.01    -0.21    -0.23     0.01    -0.03     0.25     0.96     0.87     1.10     1.52     1.01     0.91
+    1995     0.82     0.54     0.17     0.13     0.14     0.01    -0.29    -0.70    -0.94    -0.74    -0.77    -0.90
+    1996    -0.85    -0.80    -0.66    -0.76    -0.85    -0.91    -0.83    -0.64    -0.31    -0.37    -0.34    -0.47
+    1997    -0.65    -0.72    -0.30     0.15     0.71     2.34     2.26     2.26     2.20     2.06     2.14     2.11
+    1998     2.30     2.45     2.27     2.61     2.33     0.42    -1.53    -1.82    -1.40    -1.29    -1.34    -1.29
+    1999    -1.28    -1.20    -1.15    -1.16    -1.33    -1.26    -1.18    -1.03    -1.16    -1.33    -1.33    -1.43
+    2000    -1.25    -1.26    -1.37    -0.90    -0.93    -1.18    -0.61    -0.08    -0.35    -0.52    -0.86    -0.79
+    2001    -0.83    -0.86    -0.78    -0.55    -0.51    -0.73     0.04     0.38    -0.06    -0.22    -0.28     0.06
+    2002     0.09    -0.26    -0.20    -0.36    -0.14     0.34     0.44     1.01     0.88     0.84     0.84     0.91
+    2003     0.82     0.63     0.53    -0.11    -0.61    -0.10     0.01     0.05     0.18     0.28     0.30     0.14
+    2004     0.19    -0.05    -0.43    -0.23    -0.46    -0.39     0.46     0.77     0.59     0.40     0.56     0.48
+    2005     0.09     0.61     0.83     0.14     0.19     0.20    -0.00     0.01    -0.02    -0.66    -0.70    -0.70
+    2006    -0.64    -0.48    -0.62    -0.84    -0.42    -0.18     0.21     0.59     0.65     0.77     1.00     0.64
+    2007     0.64     0.39    -0.19    -0.32    -0.41    -0.83    -0.75    -0.90    -1.06    -1.13    -1.12    -1.19
+    2008    -1.06    -1.27    -1.52    -1.11    -0.99    -0.80    -0.78    -1.01    -1.02    -1.08    -0.98    -1.01
+    2009    -1.01    -0.85    -0.95    -0.81    -0.72    -0.05     0.56     0.56     0.42     0.56     1.04     0.95
+    2010     0.93     1.28     1.33     0.49    -0.12    -1.29    -2.43    -2.38    -2.26    -2.16    -2.01    -1.86
+    2011    -1.77    -1.59    -1.75    -1.69    -1.23    -1.02    -0.75    -0.81    -1.08    -1.30    -1.14    -1.18
+    2012    -1.07    -0.68    -0.58    -0.38    -0.32    -0.28     0.34    -0.02    -0.29    -0.19    -0.03    -0.03
+    2013    -0.06    -0.08    -0.12    -0.35    -0.68    -1.14    -0.79    -0.45    -0.33    -0.13    -0.16    -0.34
+    2014    -0.50    -0.42    -0.05    -0.16    -0.17     0.00     0.42     0.23    -0.09     0.12     0.37     0.35
+    2015     0.23     0.06     0.15     0.31     0.95     1.90     1.79     1.95     2.24     2.15     1.94     1.93
+    2016     1.94     1.81     1.32     1.33     1.24     0.36    -0.53    -0.27    -0.29    -0.54    -0.48    -0.37
+    2017    -0.43    -0.42    -0.58    -0.19     0.19    -0.24    -0.63    -0.73    -0.74    -0.59    -0.62    -0.74
+    2018    -0.79    -0.71    -0.80    -1.32    -0.94    -0.52    -0.05     0.46     0.62     0.52     0.33     0.18
+    2019     0.09     0.50     0.76     0.30     0.23     0.35     0.30     0.32     0.16     0.31     0.47     0.36
+    2020     0.25     0.26     0.13    -0.15    -0.23    -0.68    -0.94    -0.96    -1.15    -1.17    -1.13    -1.14
+    2021    -1.20    -0.96    -0.79    -0.95    -1.07    -1.05    -1.44    -1.29    -1.38    -1.46    -1.39    -1.20
+    2022    -1.01    -0.98    -1.31    -1.61    -1.63    -1.90    -2.17    -1.75    -1.73    -1.73    -1.53    -1.28
+    2023    -1.11    -0.91    -0.76    -0.37    -0.05     0.43     0.50     0.51     0.69     0.48     0.91     1.13
+    2024     0.71     0.70  -999.00  -999.00  -999.00  -999.00  -999.00  -999.00  -999.00  -999.00  -999.00  -999.00
+            '''
+            format_indx = indx.split('\n')
+            format_indx = format_indx[1:-1]
+            result_dic = {}
+            for line in format_indx:
+                line = line.split()
+                # print(line)
+                year = int(line[0])
+                vals = line[1:]
+                vals = [float(i) for i in vals]
+                result_dic[year] = vals
+            # print(result_dic)
+            year_list = [i for i in range(1981, 2021)]
+            # print(year_list)
+            #### append all years month data to a list
+            vals_list = []
+
+            for year in year_list:
+                vals = result_dic[year]
+                vals_list.append(vals)
+            vals_list = np.array(vals_list)
+            vals_list_flatten = vals_list.flatten()
+
+            growing_season_Northern_dic_average = {}
+            growing_season_Southern_dic_average = {}
+            growing_season_tropical_dic_average = {}
+
+            for year in year_list:
+                ## northern hemisphere April to October
+
+
+                growing_season_Northern = vals_list_flatten[(year - 1981) * 12+11:(year - 1981+1) * 12 + 2]
+                average_Northern = np.nanmean(growing_season_Northern)
+
+                growing_season_Northern_dic_average[year] = average_Northern
+
+            for year in year_list:
+                if year <1982:
+                    continue
+
+                growing_season_Southern = vals_list_flatten[(year - 1982) * 12 + 11:(year - 1982 + 1) * 12 + 2]
+                average_Southern = np.nanmean(growing_season_Southern)
+                growing_season_Southern_dic_average[year] = average_Southern
+
+            for year in year_list:
+                growing_season_tropical = vals_list_flatten[(year - 1981) * 12+11:(year - 1982 + 1) * 12+2]
+                average_tropical = np.nanmean(growing_season_tropical)
+                growing_season_tropical_dic_average[year] = average_tropical
+
+            #### add into df
+            df = T.load_df(data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+
+            NDVI_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+
+                index = row.year_range
+
+                pix = row['pix']
+                r, c = pix
+                if r < 120:
+                    NDVI_list.append(np.nan)
+                    continue
+                elif 120 <= r < 240:
+                    ## index type to string
+                    val = growing_season_Northern_dic_average[index + 1982]
+                elif 240 <= r < 480:
+                    val = growing_season_tropical_dic_average[index + 1982]
+                elif r >= 480:
+                    val = growing_season_Southern_dic_average[index + 1982]
+                else:
+                    raise
+                NDVI_list.append(val)
+
+            df['ENSO_index_DFJ'] = NDVI_list
+            df = df.dropna(subset=['ENSO_index_DFJ'])
+            outf = data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+            T.save_df(df, outf)
+            # ## xlxs
+            T.df_to_excel(df, outf)
+
+            pass
+
 
     def ENSO_index_average_retrieval_method2(self):  #### whole year
         indx = '''
@@ -800,9 +933,18 @@ class ENSO_anaysis():
         ENSO_index_binary_dic={}
         for year in yearlist:
             if year in self.strong_El_Nino_list:
+                ENSO_index_binary_dic[year]=2
+            elif year in self.very_strong_El_Nino_list:
+                ENSO_index_binary_dic[year]=2
+            elif year in self.moderate_El_Nino_list:
                 ENSO_index_binary_dic[year]=1
+
+
             elif year in self.strong_La_Nina_list:
+                ENSO_index_binary_dic[year]=-2
+            elif year in self.moderate_La_Nina_list:
                 ENSO_index_binary_dic[year]=-1
+
             else:
                 ENSO_index_binary_dic[year]=0
 
@@ -824,7 +966,7 @@ class ENSO_anaysis():
 
         df['ENSO_index_binary'] = NDVI_list
         # df = df.dropna(subset=['ENSO_index_average'])
-        outf = data_root + rf'E RA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        outf = data_root + rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
         # ## xlxs
         T.df_to_excel(df, outf)
