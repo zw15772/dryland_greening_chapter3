@@ -1,5 +1,6 @@
 # coding='utf-8'
 import sys
+import xgboost as xgb
 
 import lytools
 import pingouin
@@ -870,7 +871,7 @@ class Random_Forests:
 
         ##----------------------------------
 
-        self.y_variable = 'LAI4g_raw'
+        self.y_variable = 'LAI4g_detrended_anomaly'
         ####################
 
         self.x_variable_list = self.x_variable_list
@@ -880,14 +881,15 @@ class Random_Forests:
 
     def run(self):
         # self.copy_df()
-        # df = self.__gen_df_init()
+        df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
-        self.run_important_for_each_pixel()
+        # self.run_important_for_each_pixel()
         # self.run_important_for_each_pixel_for_two_period()
-        # self.plot_importance_result_for_each_pixel()
+        self.plot_importance_result_for_each_pixel()
         # self.run_permutation_importance()
         # self.plot_importance_result()
+        # self.plot_importance_result_R2()
         # self.partial_SHAP(df,self.x_variable_list,self.y_variable_list[0])
         # self.run_partial_dependence_plots()
 
@@ -981,7 +983,7 @@ class Random_Forests:
 
         dff = 'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         df = T.load_df(dff)
-        # df=self.df_clean(df)
+        df=self.df_clean(df)
         pix_list = T.get_df_unique_val_list(df,'pix')
         spatial_dict = {}
         for pix in pix_list:
@@ -989,18 +991,18 @@ class Random_Forests:
         arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
         plt.imshow(arr,interpolation='nearest')
         plt.show()
-        ## plot spatial df
-        T.print_head_n(df)
+        # ## plot spatial df
+        # T.print_head_n(df)
 
 
         group_dic = T.df_groupby(df,'pix')
-        spatial_dict = {}
-        for pix in group_dic:
-            df_pix = group_dic[pix]
-            spatial_dict[pix] = len(df_pix)
-        arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
-        plt.imshow(arr,interpolation='nearest')
-        plt.show()
+        # spatial_dict = {}
+        # for pix in group_dic:
+        #     df_pix = group_dic[pix]
+        #     spatial_dict[pix] = len(df_pix)
+        # arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict)
+        # plt.imshow(arr,interpolation='nearest')
+        # plt.show()
         ## plot spatial df
         # spatial_dic = T.df_to_spatial_dic(df,'pix')
         # array= DIC_and_TIF().spatial_dic_to_spatial_arr(spatial_dic)
@@ -1014,7 +1016,7 @@ class Random_Forests:
 
 
 
-        outdir= join(self.this_class_arr,'important_for_each_pixel')
+        outdir= join(self.this_class_arr,'detrended_anomaly_RF')
         T.mk_dir(outdir,force=True)
 
         for y_var in self.y_variable_list:
@@ -1034,6 +1036,8 @@ class Random_Forests:
 
                 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2,
                                                                     random_state=1)  # split the data into training and testing
+                # clf=xgb.XGBRegressor(objective="reg:squarederror",booster='gbtree',n_estimators=100,
+                #                  max_depth=11,eta=0.05,random_state=42,n_jobs=12)
                 clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
                 clf.fit(X_train, Y_train)  # train the model
                 R2= clf.score(X_test, Y_test)  # calculate the R2
@@ -1054,8 +1058,8 @@ class Random_Forests:
     def run_important_for_each_pixel_for_two_period(self):  ### run for two_period
         dff = self.dff
         df = T.load_df(dff)
-        df_early = df[df['year']<2000]
-        df_late = df[df['year']>=2000]
+        df_early = df[df['year_range']<17]
+        df_late = df[df['year_range']>=17]
         df_early = df_early.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
         df_late = df_late.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
         df_list = [df_early,df_late]
@@ -1113,7 +1117,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = join(self.this_class_arr,'important_for_each_pixel')
+        fdir = join(self.this_class_arr,'detrended_anomaly_RF')
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1123,8 +1127,10 @@ class Random_Forests:
 
 
             df = T.load_df(fpath)
+
             T.print_head_n(df)
             spatial_dic={}
+            sptial_R2_dic={}
             for i, row in df.iterrows():
                 pix = row['pix']
                 importance_dic = row.to_dict()
@@ -1141,15 +1147,28 @@ class Random_Forests:
                 # print(max_var_val)
                 # print(max_var)
                 importance_dici['R2'] = importance_dic['R2']
+                R2 = importance_dic['R2']
+                sptial_R2_dic[pix]=R2
 
+                ### plot R2
+            arrR2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(sptial_R2_dic)
+            arrR2[arrR2<0]=np.nan
+            plt.imshow(arrR2,vmin=0,vmax=0.5,interpolation='nearest',cmap='RdYlGn')
+            plt.colorbar()
+            plt.title(f'{fname}_R2')
+            plt.show()
+
+
+            ### plot importance
             arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
 
             plt.imshow(arr,vmin=0,vmax=12,interpolation='nearest')
             plt.colorbar()
             plt.title(fname)
             plt.show()
+            outtif=join(fdir,f'{fname}.tif')
 
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(self.this_class_tif,'LAI4g.tif'))
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,outtif)
 
             pass
 
@@ -1163,16 +1182,24 @@ class Random_Forests:
         x_variable_list = self.x_variable_list
         dff = self.dff
         df = T.load_df(dff)
+        df=self.df_clean(df)
         T.print_head_n(df)
         #extract region unique values
         # region=df['AI_classfication'].unique().tolist()
         # print(region)
         # exit()
 
-        regions=['Arid','Semi-Arid','Sub-Humid']
-        # SM_trends = ['wetting','drying']
+        regions=['Africa','Asia','Australia','Europe','North_America','South_America']
+        R2_dic={}
         for region in regions:
-            df_region = df[df['AI_classfication']==region]
+            if region=='North_America':
+
+                df_region = df[df['lon'] > -125]
+                df_region = df_region[df_region['lon'] < -105]
+                df_region = df_region[df_region['lat'] > 0]
+                df_region = df_region[df_region['lat'] < 45]
+            else:
+                df_region = df[df['continent'] == region]
 
 
             for y_variable in y_variable_list:
@@ -1184,6 +1211,10 @@ class Random_Forests:
                                                                                                          variable_list)
                 outf = join(outdir, f'{y_variable}_{region}.npy')
                 T.save_npy(importances_dic, outf)
+
+                R2_dic[region]=score
+                outf_R2 = join(outdir, f'R2_{y_variable}_{region}.npy')
+                T.save_npy(R2_dic, outf_R2)
 
     def run_permutation_importance_for_two_period(self): ### run for two_period
         outdir = join(self.this_class_arr, 'permutation_importance')
@@ -1216,21 +1247,6 @@ class Random_Forests:
 
 
 
-        regions=['Arid','Semi-Arid','Sub-Humid']
-        # SM_trends = ['wetting','drying']
-        for region in regions:
-            df_region = df[df['AI_classfication']==region]
-
-
-            for y_variable in y_variable_list:
-                df_region=df_region.dropna(subset=[y_variable]+x_variable_list,how='any')
-                X = df_region[x_variable_list]
-                Y = df_region[y_variable]
-                variable_list = x_variable_list
-                clf, importances_dic, mse, r_model, score, Y_test, y_pred = self._random_forest_train(X, Y,
-                                                                                                         variable_list)
-                outf = join(outdir, f'{y_variable}_{region}.npy')
-                T.save_npy(importances_dic, outf)
 
     def plot_importance_result(self):
         fdir = join(self.this_class_arr,'permutation_importance')
@@ -1252,6 +1268,19 @@ class Random_Forests:
 
         pass
 
+    def plot_importance_result_R2(self):
+        fdir = join(self.this_class_arr,'permutation_importance','R2')
+        for f in T.listdir(fdir):
+            fname = f.split('.')[0]
+            print(fname)
+
+            result_dic=T.load_npy(fdir+'/'+f)
+            for key in result_dic:
+                print(key,result_dic[key])
+
+
+
+
 
 
     def run_partial_dependence_plots(self):
@@ -1262,7 +1291,7 @@ class Random_Forests:
         x_variable_list = self.x_variable_list
         for y_variable in self.y_variable_list:
             df = T.load_df(dff)
-            df = self.clean_dataframe(df)
+            df = self.df_clean(df)
 
             print(df.columns.tolist())
             # exit()
@@ -1298,7 +1327,7 @@ class Random_Forests:
                 x = result_dict_i['x']
                 y = result_dict_i['y']
                 y_std = result_dict_i['y_std']
-                plt.subplot(3,3,flag)
+                plt.subplot(2,5,flag)
                 flag += 1
                 y = SMOOTH().smooth_convolve(y,window_len=5)
                 plt.plot(x,y)
@@ -1311,10 +1340,10 @@ class Random_Forests:
             plt.suptitle(f)
             # plt.tight_layout()
             outpath = join(outdir,f.replace('.npy','.pdf'))
-            plt.savefig(outpath)
-            plt.close()
-        # plt.show()
-        T.open_path_and_file(outdir)
+            # plt.savefig(outpath)
+            # plt.close()
+        plt.show()
+        # T.open_path_and_file(outdir)
 
     def partial_dependence_plots(self,df,x_vars,y_var):
         '''
@@ -1468,43 +1497,26 @@ class Random_Forests:
 
     def variables_list(self):
         self.x_variable_list = [
-            'CO2',
+
+
+
+            'VPD_relative_change_detrended',
+            'GPCC_relative_change_detrended',
             'ENSO_index_average',
-            # 'GMST',
-            # 'Nhx',
-            'Noy',
-
             'rooting_depth',
-            # 'SOC_sum',
-              'silt',
-
-            'VPD',
-
-            'GPCC',
-            # 'GPCP_precip_pre',
+            'silt',
 
             'average_dry_spell',
-                                 # 'maximum_dry_spell',
+            # 'maximum_dry_spell',
+            'frequency_wet',
 
-                                'CV_rainfall',
-
-                                'frequency_wet',
-
-                             'frequency_heat_event',
-                                'average_anomaly_heat_event',
-
-
-                                # 'Aridity',
-
-
-                                   # 'GPCC_trend',
-
+            'average_anomaly_heat_event',
 
         ]
 
 
         self.y_variable_list = [
-            'LAI4g_raw',
+            'LAI4g_detrended_anomaly',
 
 
         ]

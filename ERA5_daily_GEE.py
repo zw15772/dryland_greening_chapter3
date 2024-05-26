@@ -1096,10 +1096,14 @@ class Build_df:
         # self.add_attribution_heat_spell()
         # self.add_attribution_cold_spell()
         # self.add_GPCP()
+        self.add_fire()
         # self.add_GPCP_lagged()
         # self.add_VPD()
         # self.add_CO2()
-        self.add_LAI4g()
+        # self.add_LAI4g()
+        # self.add_GMST()
+        # self.add_tmax()
+
 
 
 
@@ -1258,30 +1262,6 @@ class Build_df:
         T.df_to_excel(df,outf)
 
 
-    def add_attribution_cold_spell(self):
-
-        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        fdir_all = rf'E:\Data\ERA5\min_temp\cold_spell\\'
-
-        spatial_dic = T.load_npy_dir(fdir_all)
-        for i, row in tqdm(df.iterrows(),total=len(df)):
-            pix = row['pix']
-            r,c=pix
-            if r<120:
-                continue
-            year_range = row['year_range']
-            if pix in spatial_dic:
-                dict_i = spatial_dic[pix]
-                for year_range_i in dict_i:
-                    if year_range_i == year_range:
-                        dict_i_i = dict_i[year_range_i]
-                        for key in dict_i_i:
-                            df.loc[i,key] = dict_i_i[key]
-        outf = data_root+rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
-        T.save_df(df,outf)
-        T.df_to_excel(df,outf)
-
-
 
 
 
@@ -1368,7 +1348,7 @@ class Build_df:
 
     def add_GPCP(self): ##
         df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'\extract_GS\OBS_LAI_extend\GPCC.npy'
+        f = results_root + rf'\\Detrend\detrend_anomaly\\1982_2020\\LAI4g.npy'
 
         spatial_dic = T.load_npy(f)
 
@@ -1384,19 +1364,90 @@ class Build_df:
                 NDVI_list.append(np.nan)
                 continue
 
+
             vals = spatial_dic[pix][0:38]
+            # if len(vals) < 38:
+            #     NDVI_list.append(np.nan)
+            #     continue
 
             v1 = vals[year-0]
             # v1=vals[year-1982]
             # print(v1,year,len(vals))
 
             NDVI_list.append(v1)
-        df['GPCP_precip'] = NDVI_list
+
+        df['LAI4g_detrended_anomaly'] = NDVI_list
 
         outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
         pass
+
+    def add_fire(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\fire\\fire_burning_area.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+
+            vals = spatial_dic[pix]
+            vals= np.array(vals)
+
+
+
+            if len(vals)==36:
+                for i in range(2):
+                    vals=np.append(vals,np.nan)
+            # print(len(vals))
+
+
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+
+
+
+        df['fire_burned_area'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_lc_composition_to_df(self, df):  ##add landcover composition to df
+
+        fdir_all = data_root + rf'landcover_composition_DIC\\'
+
+        all_dic = {}
+        for fdir in os.listdir(fdir_all):
+            fname = fdir.split('.')[0]
+
+            dic = {}
+            for f in os.listdir(fdir_all + fdir):
+                dicii = T.load_npy(fdir_all + fdir + '\\' + f)
+                dic.update(dicii)
+
+            all_dic[fname] = dic
+        # print(all_dic.keys())
+        df = T.spatial_dics_to_df(all_dic)
+        T.print_head_n(df)
+        return df
+        # exit()
 
     def add_VPD(self): ##
         df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
@@ -1488,6 +1539,71 @@ class Build_df:
 
             NDVI_list.append(v1)
         df['LAI4g'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+    def add_tmax(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\tmax.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['tmax'] = NDVI_list
+
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
+
+
+    def add_GMST(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\extract_GS\OBS_LAI_extend\GMST.npy'
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix][0:38]
+
+            v1 = vals[year-0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['GMST'] = NDVI_list
 
         outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
@@ -1661,7 +1777,6 @@ class extract_rainfall:
                     elif 240 < r < 480:  ### whole year is growing season
 
                         vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-
 
                     else:  ## october to April is growing season  Southern hemisphere
                         if i >= 37:
@@ -2156,6 +2271,71 @@ class extract_temperature:
             outf = outdir + f
             np.save(outf, result_dic)
 
+
+class fire_extraction():  ## extract_fire_burning_area
+    def __init__(self):
+
+        pass
+    def run(self):
+        self.extract_fire_burning_area()
+        pass
+    def extract_fire_burning_area(self): ## Northern hemisphere fire is from previous year Octorber to current year october
+        ## Southern hemisphere fire is from current year April to next year April
+
+        fdir = data_root+rf'monthly_data\\fire\\'
+        outdir = results_root+rf'extract_GS\\'
+        T.mk_dir(outdir,force=True)
+        spatial_dic= T.load_npy_dir(fdir)
+        result_dic = {}
+        for pix in spatial_dic:
+            r,c = pix
+            vals = spatial_dic[pix]
+            vals_reshape= np.array(vals).reshape(-1,12)
+            # print(len(vals_reshape))
+            burning_area_list = []
+
+
+            for i in tqdm(range(len(vals_reshape))):
+                if 120<r<=240:
+                    if i - 1 < 0:
+                        vals_growing_season_1 = []
+                    else:
+                        vals_growing_season_1 = vals_reshape[i-1][-3:]
+                    vals_growing_season_2 = vals_reshape[i][:10]
+                    vals_growing_season_1 = list(vals_growing_season_1)
+                    vals_growing_season_2 = list(vals_growing_season_2)
+                    vals_growing_season = vals_growing_season_1+vals_growing_season_2
+
+                elif 240<r<480:
+                    vals_growing_season = vals_reshape[i]
+
+                else:
+                    if i>=len(vals_reshape)-1:
+                        break
+                    # print(len(vals_reshape))
+                    vals_growing_season_1 = vals_reshape[i][4:]
+                    vals_growing_season_2 = vals_reshape[i+1][:4]
+                    vals_growing_season_1 = list(vals_growing_season_1)
+                    vals_growing_season_2 = list(vals_growing_season_2)
+                    vals_growing_season = vals_growing_season_1+vals_growing_season_2
+                vals_growing_season = np.array(vals_growing_season)
+                if T.is_all_nan(vals_growing_season):
+                    continue
+                average_burned_area = np.nanmean(vals_growing_season)
+                burning_area_list.append(average_burned_area)
+            result_dic[pix] = burning_area_list
+
+
+        outf = outdir+'fire_burning_area'
+        np.save(outf,result_dic)
+
+
+
+
+
+        pass
+
+    pass
 class build_df_ENSO:
     def run (self):
         self.build_df()
@@ -2466,6 +2646,7 @@ def main():
     # extract_rainfall().run()
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
+    # fire_extraction().run()
     Build_df().run()
     # ERA5_hourly().run()
     pass

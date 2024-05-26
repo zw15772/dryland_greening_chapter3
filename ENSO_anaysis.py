@@ -98,8 +98,8 @@ class ENSO_anaysis():
     def run(self):
         self.ENSO_index_average_retrieval()
         # self.ENSO_index_average_retrieval_method2()
-        self.ENSO_index_average_retrieval_DJF()
-        self.ENSO_index_distance_retrieval()
+        # self.ENSO_index_average_retrieval_DJF()
+        # self.ENSO_index_distance_retrieval()
         # self.ENSO_index_distance_retrieval_lagged()
 
         # self.ENSO_index_binary_retrieval()
