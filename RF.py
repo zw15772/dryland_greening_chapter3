@@ -886,7 +886,9 @@ class Random_Forests:
         # self.check_variables_valid_ranges()
         # self.run_important_for_each_pixel()
         # self.run_important_for_each_pixel_for_two_period()
-        self.plot_importance_result_for_each_pixel()
+        # self.plot_importance_result_for_each_pixel()
+        self.plot_most_important_factor_for_each_pixel()
+        # self.summarized_important_factor_for_each_continent()
         # self.run_permutation_importance()
         # self.plot_importance_result()
         # self.plot_importance_result_R2()
@@ -1131,6 +1133,49 @@ class Random_Forests:
             T.print_head_n(df)
             spatial_dic={}
             sptial_R2_dic={}
+            x_variable_list = self.x_variable_list
+            for x_var in x_variable_list:
+
+
+            ## plot individual importance
+                for i, row in df.iterrows():
+                    pix = row['pix']
+                    importance_dic = row.to_dict()
+                    # print(importance_dic)
+
+                    spatial_dic[pix] = importance_dic[x_var]
+                arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+
+                plt.imshow(arr,vmin=0,vmax=0.5,interpolation='nearest',cmap='RdYlGn')
+
+                plt.colorbar()
+                plt.title(f'{fname}_{x_var}')
+                plt.show()
+                # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(fdir,f'{fname}_{x_var}.tif'))
+
+
+
+
+    def plot_most_important_factor_for_each_pixel(self):  ## second important factor/ third important factor
+        keys=list(range(len(self.x_variable_list)))
+        x_variable_dict=dict(zip(self.x_variable_list, keys))
+        print(x_variable_dict)
+        # exit()
+
+        fdir = join(self.this_class_arr,'detrended_anomaly_RF')
+        for f in os.listdir(fdir):
+
+            if not f.endswith('.df'):
+                continue
+            fpath=join(fdir,f)
+            fname=f.split('.')[0]
+
+
+            df = T.load_df(fpath)
+
+            T.print_head_n(df)
+            spatial_dic={}
+            sptial_R2_dic={}
             for i, row in df.iterrows():
                 pix = row['pix']
                 importance_dic = row.to_dict()
@@ -1140,7 +1185,11 @@ class Random_Forests:
                 for x_var in x_variable_list:
                     importance_dici[x_var] = importance_dic[x_var]
                     # print(importance_dici)
-                max_var = max(importance_dici, key=importance_dici.get)
+                # max_var = max(importance_dici, key=importance_dici.get)
+                ## second important factor
+                # max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[1]
+                ## third important factor
+                max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[2]
                 max_var_val=x_variable_dict[max_var]
                 spatial_dic[pix]=max_var_val
 
@@ -1166,11 +1215,97 @@ class Random_Forests:
             plt.colorbar()
             plt.title(fname)
             plt.show()
-            outtif=join(fdir,f'{fname}.tif')
+            outtif=join(fdir,f'{fname}_third.tif')
 
             DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,outtif)
 
             pass
+
+    def summarized_important_factor_for_each_continent(self):
+        dff=rf'D:\Project3\Data\RF_pix\detrended_anomaly_RF\\LAI4g_detrended_anomaly.df'
+        df = T.load_df(dff)
+        continent_list=['Global','Asia','Australia','North_America','South_America',]
+        color_list=['grey','red','blue','green','yellow']
+        result_continent_dic={}
+
+        for continent in continent_list:
+            if continent == 'Global':
+                df_continent = df
+            else:
+
+                df_continent = df[df['continent']==continent]
+
+
+            x_variable_list = self.x_variable_list
+            ### count the number of each variable
+
+            VPD_relative_change_detrended_num=0
+            GPCC_relative_change_detrended_num=0
+            fire_burned_area_num=0
+            CV_rainfall_num=0
+            average_anomaly_heat_event_num=0
+
+            for i, row in df_continent.iterrows():
+                pix = row['pix']
+                importance_dic = row.to_dict()
+                importance_dici = {}
+                for x_var in x_variable_list:
+
+
+                    importance_dici[x_var] = importance_dic[x_var]
+
+                # max_var = max(importance_dici, key=importance_dici.get)
+                ##second
+                max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[2]
+                if max_var == 'VPD_relative_change_detrended':
+                    VPD_relative_change_detrended_num+=1
+                if max_var == 'CV_rainfall':
+                    CV_rainfall_num+=1
+                if max_var == 'GPCC_relative_change_detrended':
+
+                    GPCC_relative_change_detrended_num+=1
+                if max_var == 'fire_burned_area':
+                    fire_burned_area_num+=1
+                if max_var == 'average_anomaly_heat_event':
+                    average_anomaly_heat_event_num+=1
+            percentage_VPD_relative_change_detrended = VPD_relative_change_detrended_num/len(df_continent)*100
+            percentage_GPCC_relative_change_detrended = GPCC_relative_change_detrended_num/len(df_continent)*100
+            percentage_fire_burned_area = fire_burned_area_num/len(df_continent)*100
+            percentage_CV_rainfall = CV_rainfall_num/len(df_continent)*100
+            percentage_average_anomaly_heat_event = average_anomaly_heat_event_num/len(df_continent)*100
+            result_continent_dic[continent] = [percentage_VPD_relative_change_detrended,percentage_GPCC_relative_change_detrended,
+            percentage_fire_burned_area,percentage_CV_rainfall,percentage_average_anomaly_heat_event]
+        result_continent_df = pd.DataFrame(result_continent_dic,index=['VPD_relative_change_detrended','GPCC_relative_change_detrended',
+        'fire_burned_area','CV_rainfall','average_anomaly_heat_event'])
+        print(result_continent_df)
+        ## plot
+        result_continent_df.plot(kind='bar',color=color_list)
+        x_label=['VPD_IAV','Precip_IAV', 'fire_burned_area','Rainfall_seasonality','extreme_heat_event_anomaly']
+        plt.xticks(np.arange(5),x_label,rotation=0)
+        plt.ylabel('Percentage (%)')
+
+        plt.show()
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1502,13 +1637,15 @@ class Random_Forests:
 
             'VPD_relative_change_detrended',
             'GPCC_relative_change_detrended',
-            'ENSO_index_average',
-            'rooting_depth',
-            'silt',
+            'fire_burned_area',
+            # 'ENSO_index_average',
+            # 'rooting_depth',
+            # 'silt',
 
-            'average_dry_spell',
+            # 'average_dry_spell',
             # 'maximum_dry_spell',
-            'frequency_wet',
+            # 'frequency_wet',
+            'CV_rainfall',
 
             'average_anomaly_heat_event',
 
@@ -1756,6 +1893,7 @@ class Random_Forests:
         # exit()
         df=df[df['row']>120]
         df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<20]
         # df=df[df['LAI4g_p_value']<0.05]
         # df=df[df['LAI4g_trend']>0]
         # df=df[df['continent']=='Australia']

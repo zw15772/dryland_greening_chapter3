@@ -1096,7 +1096,8 @@ class Build_df:
         # self.add_attribution_heat_spell()
         # self.add_attribution_cold_spell()
         # self.add_GPCP()
-        self.add_fire()
+        # self.add_fire()
+        self.add_maxmium_LC_change()
         # self.add_GPCP_lagged()
         # self.add_VPD()
         # self.add_CO2()
@@ -1429,25 +1430,23 @@ class Build_df:
         T.df_to_excel(df, outf)
         pass
 
-    def add_lc_composition_to_df(self, df):  ##add landcover composition to df
+    def add_maxmium_LC_change(self): ##
+        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = rf'E:\CCI_landcover\trend_analysis_LC\\LC_max.tif'
 
-        fdir_all = data_root + rf'landcover_composition_DIC\\'
+        array, origin, pixelWidth, pixelHeight, extent = ToRaster().raster2array(f)
+        LC_dic =DIC_and_TIF().spatial_arr_to_dic(array)
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            r, c = pix
 
-        all_dic = {}
-        for fdir in os.listdir(fdir_all):
-            fname = fdir.split('.')[0]
+            val= LC_dic[pix]
+            df.loc[i,'LC_max'] = val
+        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
 
-            dic = {}
-            for f in os.listdir(fdir_all + fdir):
-                dicii = T.load_npy(fdir_all + fdir + '\\' + f)
-                dic.update(dicii)
 
-            all_dic[fname] = dic
-        # print(all_dic.keys())
-        df = T.spatial_dics_to_df(all_dic)
-        T.print_head_n(df)
-        return df
-        # exit()
 
     def add_VPD(self): ##
         df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
@@ -1647,6 +1646,7 @@ class extract_rainfall:
     def run(self):
         # self.extract_growing_season()
         # self.extract_rainfall_CV_total()
+        # self.extract_rainfall_CV()
         self.rainfall_frequency()
         # self.dry_spell()
 
@@ -1704,6 +1704,56 @@ class extract_rainfall:
 
             np.save(outf,result_dic)
 
+    def extract_rainfall_CV(self):  ## extract CV of rainfall ready for multiregression
+        fdir = rf'E:\Data\ERA5\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\\ERA5\ERA5_daily\dict\\rainfall_CV\\'
+
+        T.mk_dir(outdir_CV,force=True)
+
+
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r,c = pix
+            vals = spatial_dic[pix]
+            vals_flatten = np.array(vals).flatten()
+
+
+            CV_list = []
+
+            for i in range(38):
+
+                if 120<r<=240:  # Northern hemisphere
+                    ### April to October is growing season
+
+                    vals_growing_season = vals_flatten[i*365+120:(i+1)*365+304]
+
+                elif 240<r<480:### whole year is growing season
+
+                    vals_growing_season = vals_flatten[i*365:(i+1)*365]
+
+
+                else: ## october to April is growing season  Southern hemisphere
+                    if i >=37:
+                        break
+
+
+                    vals_growing_season = vals_flatten[i*365+304:(i+1)*365+120]
+
+                vals_growing_season = np.array(vals_growing_season)
+                if T.is_all_nan(vals_growing_season):
+                    continue
+                CV = np.std(vals_growing_season)/np.mean(vals_growing_season)
+                CV_list.append(CV)
+            result_dic[pix] = CV_list
+
+        outf = outdir_CV+'CV_rainfall.npy'
+
+        np.save(outf,result_dic)
+
     def extract_growing_season(self):
         fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
         outdir = data_root + rf'\ERA5\ERA5_daily\dict\\growing_season_extraction\\'
@@ -1746,52 +1796,56 @@ class extract_rainfall:
             np.save(outf, result_dic)
 
     def rainfall_frequency(self):
-        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir= data_root + rf'\ERA5\ERA5_daily\dict\\rainfall_frequency\\'
-        threshold_f= data_root + rf'\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
+
+        fdir =rf'E:\Data\\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir= rf'D:\Project3\Result\anomaly\OBS\\'
+        threshold_f=rf'E:\Data\\\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(threshold_f)
         T.mk_dir(outdir,force=True)
-        for f in T.listdir(fdir):
 
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r,c=pix
-                if not pix in dic_threshold:
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+        for pix in tqdm(spatial_dic):
+            r,c=pix
+            if not pix in dic_threshold:
+                continue
+            vals = spatial_dic[pix]
+            vals_flatten = np.array(vals).flatten()
+            threshold = dic_threshold[pix]
+            threshold_wet = threshold['90th']
+
+
+
+
+            result_dic_i = {}
+            frequency_wet_list = []
+            for i in range(38):
+                if 120<r<=240:  # Northern hemisphere
+
+                    vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
+                    ## calculate days >threshold
+
+
+
+                elif 240 < r < 480:  ### whole year is growing season
+
+                    vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+
+                else:  ## october to April is growing season  Southern hemisphere
+                    if i >= 37:
+                        break
+
+                    vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+                vals_growing_season = np.array(vals_growing_season)
+                if T.is_all_nan(vals_growing_season):
                     continue
-                vals = spatial_dic[pix]
-                vals_flatten = np.array(vals).flatten()
-                threshold = dic_threshold[pix]
-                threshold_wet = threshold['90th']
-                threshold_dry = threshold['10th']
-
-                result_dic_i = {}
-                for i in range(38):
-                    if 120<r<=240:  # Northern hemisphere
-
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-                        ## calculate days >threshold
+                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
+                frequency_wet_list.append(frequency_wet)
 
 
-
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-
-                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-                    frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
-
-                    result_dic_i[i] = {f'frequency_wet':frequency_wet,
-                                        }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
+            result_dic[pix] = frequency_wet_list
+            outf = outdir + 'wet_frequency_90th.npy'
             np.save(outf, result_dic)
 
     def dry_spell(self):
@@ -2271,7 +2325,8 @@ class extract_temperature:
             outf = outdir + f
             np.save(outf, result_dic)
 
-
+class detrend():
+    pass ## detrend the data
 class fire_extraction():  ## extract_fire_burning_area
     def __init__(self):
 
@@ -2620,6 +2675,71 @@ class ERA5_hourly:
 
         pass
 
+class plot_all_variables:  ## this figure plot all variables
+    def __init__(self):
+        pass
+
+
+    def run(self):
+
+        self.plot_all_variables()
+        pass
+    def clean_df(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 120]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 20]
+        return df
+    def plot_all_variables(self):
+        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\\SHAP\RF_df\\RF_df')
+        df= self.clean_df(df)
+        color_list=['black','green', 'lime', 'orange', 'red', 'blue',  'grey', 'yellow', 'pink', 'purple']
+        continents = ['Global','Africa','Asia','Australia','North_America','South_America']
+        continents = ['Global',]
+        variable_list= ['VPD_anomaly','CO2_anomaly','tmax_anomaly','GPCC_anomaly','fire_burned_area','CV_rainfall','frequency_wet','average_dry_spell','frequency_heat_event','average_anomaly_heat_event','average_anomaly_cold_event','frequency_cold_event']
+        year_list=list(range(0,38))
+        for variable in variable_list:
+            continent_dic={}
+            for continent in continents:
+
+                if continent == 'Global':
+                    df_i = df
+                else:
+                    df_i = df[df['continent']==continent]
+
+                val_list = []
+                # T.print_head_n(df_i)
+                # exit()
+
+                for year in year_list:
+                    year=int(year)
+                    df_year = df_i[df_i['year_range']==year]
+                    if len(df_year)==0:
+                        continue
+                    vals= df_year[variable]
+                    vals = np.array(vals)
+                    if np.isnan(np.nanmean(vals)):
+                        continue
+                    val_list.append(np.nanmean(vals))
+
+                continent_dic[continent] = val_list
+
+            fig, ax = plt.subplots()
+            for continent in continents:
+                val_list = continent_dic[continent]
+                ax.plot(range(len(val_list)),val_list,label=continent,color=color_list[continents.index(continent)])
+            ax.legend()
+            ax.set_title(variable)
+            plt.show()
+
+
+
+
+
+
 
 
 
@@ -2643,11 +2763,13 @@ def main():
     # ERA5_daily().run()
 
 
-    # extract_rainfall().run()
+    extract_rainfall().run()
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
     # fire_extraction().run()
-    Build_df().run()
+    # Build_df().run()
+    # plot_all_variables().run()
+
     # ERA5_hourly().run()
     pass
 
