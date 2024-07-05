@@ -80,11 +80,11 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = result_root + '\\Dataframe\\multi_regression\\'
+        self.this_class_arr = result_root + 'Dataframe\moving_window_multiregression_anomaly\\'
 
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'multi_regression.df'
+        self.dff = self.this_class_arr + 'moving_window_multiregression_anomaly.df'
 
 
 
@@ -96,6 +96,7 @@ class build_dataframe():
 
 
         # df=self.foo2(df)
+        df=self.append_attribute(df)
 
         # df=self.add_multiregression_tiff_to_df(df)
         # df=self.add_multiregression_npy_to_df(df)
@@ -183,6 +184,25 @@ class build_dataframe():
 
 
         return df
+    def append_attribute(self, df):
+
+        fdir = result_root + rf'\multi_regression_moving_window\window15_anomaly\npy_time_series\\'
+        for f in tqdm(os.listdir(fdir)):
+            if not f.endswith('.npy'):
+                continue
+
+
+            # array=np.load(fdir+f)
+            # dic = DIC_and_TIF().spatial_arr_to_dic(array)
+            dic = T.load_npy(fdir + f)
+            key_name = f.split('.')[0]
+            print(key_name)
+
+            # df[key_name] = df['pix'].map(dic)
+            # T.print_head_n(df)
+            df = T.add_spatial_dic_to_df(df, dic, key_name)
+        return df
+        pass
 
     def add_multiregression_tiff_to_df(self, df):
         fdir = result_root + rf'multi_regression_moving_window\window15_anomaly\trend\\'
@@ -785,6 +805,7 @@ class summary_multiregression_model_result():
     def run (self):
 
         df = self.clean_df(self.df)
+        # self.plot_multiregression_moving_window()
         # self.plt_histgram_CO2_sensitivity(df)
         # self.plt_histgram_precipitation_sensitivity(df)
         # self.calculate_diff_between_periods_sensitivity()
@@ -792,6 +813,7 @@ class summary_multiregression_model_result():
         # self.heatmap_WUE()
 
         self.heatmap_VPD_SM_CO2()
+        # self.plot_contribution_bar_plot()
 
 
 
@@ -808,7 +830,7 @@ class summary_multiregression_model_result():
         df = df[df['row'] > 120]
 
         df=df[df['LC_max']<20]
-        df=df[df['LAI4g_p_value']<0.05]
+        df=df[df['landcover_classfication']!='Cropland']
 
 
         # df=df[df['LAI4g_p_value']<0.05]
@@ -875,6 +897,99 @@ class summary_multiregression_model_result():
             plt.title(continent)
             plt.legend(self.period_list)
         plt.show()
+
+    def plot_multiregression_moving_window(self): #### plt average
+        ## here I would like to plot average
+
+        df = T.load_df(
+            result_root + rf'Dataframe\moving_window_multiregression_anomaly\\moving_window_multiregression_anomaly.df')
+        T.print_head_n(df)
+        print(len(df))
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 20]
+        df = df.dropna(subset=['window00_CO2_LAI4g'])
+        # continent_list = ['Global', 'Africa', 'Asia', 'Australia', 'South_America', 'North_America']
+        continent_list = ['Global']
+        all_continent_dict = {}
+        fig=plt.figure()
+        i=1
+        for continent in continent_list:
+            ax = fig.add_subplot(1, 1, i)
+            if continent == 'North_America':
+                df_continent = df[df['lon'] > -125]
+                df_continent = df_continent[df_continent['lon'] < -105]
+                df_continent = df_continent[df_continent['lat'] > 0]
+                df_continent = df_continent[df_continent['lat'] < 45]
+            elif continent == 'Global':
+                df_continent = df
+            else:
+                df_continent = df[df['continent'] == continent]
+
+            vals = df_continent['CO2_LAI4g'].tolist()
+            vals = np.array(vals)
+            vals=vals*100
+
+            # print(vals)
+
+            vals_nonnan = []
+            for val in vals:
+                if type(val) == float:  ## only screening
+                    continue
+                if len(val) == 0:
+                    continue
+                val[val < -99] = np.nan
+
+                if not len(val) == 39:
+                    ## add nan to the end of the list
+                    for j in range(1):
+                        val = np.append(val, np.nan)
+                    # print(val)
+                    # print(len(val))
+
+                vals_nonnan.append(list(val))
+
+                # exit()
+                # print(type(val))
+                # print(len(val))
+                # print(vals)
+
+            ###### calculate mean
+            vals_mean = np.array(vals_nonnan) ## axis=0, mean of each row  竖着加
+            vals_mean = np.nanmean(vals_mean, axis=0)
+            val_std = np.nanstd(vals_mean, axis=0)
+
+
+
+            # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+            plt.plot(vals_mean, label=continent,color='g')
+            plt.fill_between(range(len(vals_mean)), vals_mean - val_std, vals_mean + val_std, alpha=0.3, color='g')
+
+            ax.set_xticks(range(0, 24, 4))
+            window_size = 15
+
+            # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+            year_range = range(1982, 2021)
+            year_range_str = []
+            for year in year_range:
+
+                start_year = year
+                end_year = year + window_size - 1
+                if end_year > 2020:
+                    break
+                year_range_str.append(f'{start_year}-{end_year}')
+            plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right', fontsize=12)
+            plt.xlabel('year', fontsize=12)
+            plt.yticks(fontsize=12)
+
+            plt.ylabel('LAI sensitivity to CO2 (%/100ppm)', fontsize=12)
+            i=i+1
+
+        # plt.legend()
+
+        plt.show()
+
 
     def plt_histgram_precipitation_sensitivity(self,df):
         self.period_list = ['1982_2001', '2002_2020']
@@ -1088,6 +1203,8 @@ class summary_multiregression_model_result():
         df=df[df['landcover_classfication']!='Cropland']
         df=df[df['LC_max']<20]
         df=df[df['MODIS_LUCC']!=12]
+        # df=df[df['CRU_p_value']<0.05]
+
 
         print(len(df))
         ## get the unique landcover_classfications
@@ -1098,18 +1215,21 @@ class summary_multiregression_model_result():
         # df=df[df['landcover_classfication']=='Shrub']
         # print(len(df))
         ###################3
-        # plt.hist(df[rf'GLEAM_SMroot_trend'], bins=100)
-        # plt.show()
+        plt.hist(df[rf'CRU_trend'], bins=100)
+        plt.show()
         # # plt.hist(df['GLEAM_SMroot_LAI4g_diff_detrended_diff'], bins=100)
         # # plt.show()
         # plt.hist(df[rf'VPD_trend'], bins=100)
         # plt.show()
         # exit()
 
-        SM_p1_bin_list = np.linspace(-0.002,0.002, 11)
-        # SM_p1_bin_list = np.linspace(-5, 5, 11)
+        SM_p1_bin_list = np.linspace(-5, 5, 11)
         VPD_p1_bin_list = np.linspace(-0.002, 0.013, 11)
-        df_group1, bins_list_str1 = T.df_bin(df, rf'GLEAM_SMroot_trend', SM_p1_bin_list)
+
+        # SM_p1_bin_list = np.linspace(-5,7, 9)
+        # # SM_p1_bin_list = np.linspace(-5, 5, 11)
+        # VPD_p1_bin_list = np.linspace(-0.0018, 0.012, 9)
+        df_group1, bins_list_str1 = T.df_bin(df, rf'CRU_trend', SM_p1_bin_list)
         # df_group1, bins_list_str1 = T.df_bin(df, rf'CRU_trend', SM_p1_bin_list)
         matrix = []
         matrix_count=[]
@@ -1187,6 +1307,55 @@ class summary_multiregression_model_result():
         cbar.set_label(r'$\Delta$ LAI/ $\Delta$ CO2 (%/100ppm/yr)')
 
         plt.show()
+
+    def plot_contribution_bar_plot(self):
+        df = self.clean_df(self.df)
+        dic_result= {}
+        val_CRU_contribution=df['CRU_trend_contribution'].to_list()
+        val_CRU_contribution=np.array(val_CRU_contribution,dtype=float)
+        val_CRU_contribution[val_CRU_contribution<-99]=np.nan
+        val_CRU_contribution[val_CRU_contribution>99]=np.nan
+        val_VPD_contribution=df['VPD_trend_contribution'].to_list()
+        val_VPD_contribution=np.array(val_VPD_contribution,dtype=float)
+        val_VPD_contribution[val_VPD_contribution<-99]=np.nan
+        val_VPD_contribution[val_VPD_contribution>99]=np.nan
+        val_CO2_contribution=df['CO2_trend_contribution'].to_list()
+        val_CO2_contribution=np.array(val_CO2_contribution,dtype=float)
+        val_CO2_contribution[val_CO2_contribution<-99]=np.nan
+        val_CO2_contribution[val_CO2_contribution>99]=np.nan
+
+        dic_result['Precip'] = val_CRU_contribution
+        dic_result['CO2'] = val_CO2_contribution
+        dic_result['VPD'] = val_VPD_contribution
+        print(dic_result)
+        ## plot boxplot
+        df = pd.DataFrame(dic_result)
+
+
+        df = df.dropna()
+
+        fig = plt.figure(figsize=(5, 5))
+        ax = fig.add_subplot(1, 1, 1)
+        sns.boxplot(data=df, ax=ax,showfliers=False)
+        plt.xticks(fontsize=12)
+        plt.grid()
+        plt.tight_layout()
+        plt.ylabel('Trend in LAI (m2/m2/yr)', fontsize=12)
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+        pass
 class summary_CV_result():
     def run (self):
         df=self.clean_df(self.df)
@@ -1244,8 +1413,8 @@ class summary_CV_result():
 class summary_time_series_analysis_result():
     def run(self):
 
-        self.plot_time_series_GPCC()
-        # self.plot_time_series_LAI()
+        # self.plot_time_series_GPCC()
+        self.plot_time_series_LAI()
         # self.plot_time_series_VPD()
         pass
     def __init__(self):
@@ -1269,7 +1438,7 @@ class summary_time_series_analysis_result():
 
 
 
-        climate_variable_list = ['GPCC']
+        climate_variable_list = ['LAI4g']
 
 
         color_list = ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'pink', 'grey', 'brown',
@@ -1278,7 +1447,7 @@ class summary_time_series_analysis_result():
         fig = plt.figure()
         flag = 1
 
-        for continent in ['global','Australia', 'Asia', 'Africa', 'South_America', 'North_America']:
+        for continent in ['global',]:
             ax = fig.add_subplot(2, 3, flag)
             if continent == 'North_America':
 
@@ -1582,17 +1751,17 @@ class summary_trend_analysis_result():
         # plt.show()
         # exit()
 
-        # SM_p1_bin_list = np.linspace(-5,5, 11)
-        SM_p1_bin_list = np.linspace(-0.002, 0.002, 15)
-        VPD_p1_bin_list = np.linspace(-0.002, 0.013, 15)
-        df_group1, bins_list_str1 = T.df_bin(df, rf'GLEAM_SMroot_trend', SM_p1_bin_list)
+        SM_p1_bin_list = np.linspace(-5,5, 7)
+        # SM_p1_bin_list = np.linspace(-0.002, 0.002, 15)
+        VPD_p1_bin_list = np.linspace(-0.002, 0.013, 7)
+        df_group1, bins_list_str1 = T.df_bin(df, rf'CRU_trend', SM_p1_bin_list)
         matrix = []
         matrix_count=[]
         y_labels = []
         for name1, df_group_i1 in df_group1:
             df_group2, bins_list_str2 = T.df_bin(df_group_i1, rf'VPD_trend', VPD_p1_bin_list)
             name1_ = name1[0].left
-            name1_=name1_*100
+            name1_=name1_
 
             matrix_i = []
             x_labels = []
@@ -1642,15 +1811,15 @@ class summary_trend_analysis_result():
         # SM_p1_bin_list=SM_p1_bin_list*10
         # VPD_p1_bin_list=VPD_p1_bin_list*100
 
-        SM_p1_bin_list = SM_p1_bin_list*100
+        SM_p1_bin_list = SM_p1_bin_list
         VPD_p1_bin_list = VPD_p1_bin_list * 100
 
         plt.xticks(np.arange(len(SM_p1_bin_list) - 1), x_labels, rotation=45)
         plt.yticks(np.arange(len(VPD_p1_bin_list) - 1), y_labels[::-1])
 
         plt.xlabel('$\Delta$ VPD *100 (Kpa/yr)')
-        # plt.ylabel('$\Delta$ Precip (mm/yr)')
-        plt.ylabel('$\Delta$ GLEAM_SMroot *100 (m3/m3/yr)')
+        plt.ylabel('$\Delta$ Precip (mm/yr)')
+        # plt.ylabel('$\Delta$ GLEAM_SMroot *100 (m3/m3/yr)')
         ## draw 1:1 line
         # plt.plot([20, 0], [0, 20], 'k-', lw=2)
         ## add colorbar unit
@@ -1671,26 +1840,39 @@ class plot_spatial_map():
         pass
 
     def testrobinson(self):
-        f = result_root + rf'\trend_analysis\event\\CV_rainfall_trend.tif'
-        fpath_p_value = result_root + rf'\trend_analysis\event\\CV_rainfall_p_value.tif'
-        temp_root = r'trend_analysis\event\\temp_root\\'
-        T.mk_dir(temp_root, force=True)
+        f = rf'D:\Project3\Result\trend_analysis\event\\rainfall_frequency_trend.tif'
+        fpath_p_value = rf'D:\Project3\Result\trend_analysis\event\\\\rainfall_frequency_p_value.tif'
+        temp_root = result_root + rf'extract_window\extract_detrend_original_window_CV\trend\\'
+        # T.mk_dir(temp_root, force=True)
 
 
 
-        m, ret = Plot().plot_Robinson(f, vmin=-0.05, vmax=0.05, is_discrete=False, colormap_n=11, )
+        m, ret = Plot().plot_Robinson(f, vmin=-1, vmax=1, is_discrete=False, colormap_n=11,)
+        # m, ret = Plot().plot_Robinson(f, vmin=0, vmax=4, is_discrete=True, colormap_n=6,  )
+
         Plot().plot_Robinson_significance_scatter(m,fpath_p_value,temp_root,0.05,s=10)
 
         # fname = 'Precip (mm/yr)'
         # fname='LAI trend (m2/m2/yr)'
         # fname='VPD trend (Kpa/yr)'
         # fname='SM trend (m3/m3/yr)'
-        fname='seasonality precipitation (CV) trend/yr'
+        # fname='seasonality precipitation (CV) trend/yr'
+        # fname='LAI change by precipitation (m2/m2/yr)'
+        # fname='LAI sensitivity to CO2 (%/100ppm/yr)'
+        fname='intra Precip CV (%/yr)'
         plt.title(f'{fname}')
 
         plt.show()
 
-class summary_greening_drying():  ## add wetting_Drying and extract drying greening pixesl
+class summary_greening_drying():
+    ## add wetting_Drying and extract drying greening pixesl
+    def __init__(self):
+
+
+
+
+        pass
+
 
     def run(self):
         ## 1. calculate the drying and wetting trend
@@ -1700,9 +1882,16 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
         ## 5. plot the map which contains drying-greening, drying-browning, wetting-0greening and wetting browning and add to df
 
 
-
-        self.calculate_drying_wetting_trend()
-        # self.plot_drying_greening_map()
+        ## step 1
+        # self.calculate_drying_wetting_trend()
+        # step 2
+        # self.add_Precip_trend_label_to_df()
+        # step 3
+        # self.add_drying_greening_attribute_to_df()
+        # step 4
+        # self.plot_moisture_greening()  ## bar plot for each continent
+        ## step 5
+        self.plot_moisture_greening_map()
         pass
 
     def calculate_drying_wetting_trend(self):
@@ -1732,7 +1921,7 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
             else:
                 result_dic[pix] = 'non_sig_drying'
                 result_tif_dic[pix] = -1
-        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(result_tif_dic, result_root + '\\Precip_trend_label.tif')
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(result_tif_dic, data_root + '\\Precip_trend_label_mark.tif')
         T.save_npy(result_dic, data_root + 'Base_data\\Precip_trend_label_mark.npy')
 
         pass
@@ -1741,10 +1930,11 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
 
 
 
+    def add_Precip_trend_label_to_df(self):
+        df=T.load_df(result_root + rf'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
 
-    def add_Precip_trend_label(self, df):  ##
 
-        f = data_root + rf'\\Base_data\GLEAM_SMroot_trend_label_mark.npy'
+        f = data_root + rf'\\Base_data\Precip_trend_label_mark.npy'
 
 
         val_dic = T.load_npy(f)
@@ -1765,21 +1955,71 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
             val_list.append(val)
 
         df['wetting_drying_trend'] = val_list
-        return df
-    def plot_drying_greening(self):  # calculate the percentage of drying and greening pixels for each region
-        df= T.load_df(result_root + 'Dataframe\\anomaly_trends\\anomaly_trends.df')
+        T.save_df(df, result_root + rf'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
+        T.df_to_excel(df, result_root + rf'Dataframe\\anomaly_LAI\\anomaly_LAI_new')
+
+    def add_drying_greening_attribute_to_df(
+            self):  # generate map which contains drying-greening, drying-browning, wetting-0greening and wetting browning
+        df = T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
+        df = self.clean_df(df)
+
+        cm = 1 / 2.54
+        label_list = []
+        for i, row in df.iterrows():
+            pix = row['pix']
+            wetting_drying = row['wetting_drying_trend']
+            val = row['LAI4g_trend']
+            p_value = row['LAI4g_p_value']
+            if wetting_drying == 'sig_wetting':
+                if p_value < 0.05:
+                    if val > 0:
+                        label_list.append('sig_greening_sig_wetting')
+                    else:
+                        label_list.append('sig_browning_sig_wetting')
+                else:
+                    if val > 0:
+                        label_list.append('non_sig_greening_sig_wetting')
+                    else:
+                        label_list.append('non_sig_browning_sig_wetting')
+            elif wetting_drying == 'sig_drying':
+                if p_value < 0.05:
+                    if val > 0:
+                        label_list.append('sig_greening_sig_drying')
+                    else:
+                        label_list.append('sig_browning_sig_drying')
+                else:
+                    if val > 0:
+                        label_list.append('non_sig_greening_sig_drying')
+                    else:
+                        label_list.append('non_sig_browning_sig_drying')
+            else:
+                label_list.append(np.nan)
+
+            pass
+        df['mositure_greening'] = label_list
+        T.print_head_n(df)
+
+        ## save df
+        T.save_df(df, result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
+        ## save xlsx
+        T.df_to_excel(df, result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new')
+        exit()
+
+
+    def plot_moisture_greening(self):  # calculate the percentage of drying and greening pixels for each region
+        df= T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
         df=self.clean_df(df)
 
         wetting_drying_list=['non_sig_wetting','sig_wetting','non_sig_drying','sig_drying']
 
         color_list=['green','lime','orange','red']
-        regions=['Arid','Semi-Arid','Sub-Humid']
+        continent_list=['global','Australia', 'Asia', 'Africa', 'South_America', 'North_America']
         cm = 1 / 2.54
 
-        for region in regions:
+        for continent in continent_list:
 
 
-            df_temp = df[df['AI_classfication'] == region]
+            df_temp = df[df['continent'] == continent]
             dic={}
             for wetting_drying in wetting_drying_list:
                 df_temp2=df_temp[df_temp['wetting_drying_trend']==wetting_drying]
@@ -1805,10 +2045,10 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
                         ##percentage
                 if len(vals) == 0:
                     continue
-                sig_browning = sig_browning / len(vals)
-                sig_greening = sig_greening / len(vals)
-                non_sig_browning = non_sig_browning / len(vals)
-                non_sig_greening = non_sig_greening / len(vals)
+                sig_browning = sig_browning / len(vals) *100
+                sig_greening = sig_greening / len(vals)*100
+                non_sig_browning = non_sig_browning / len(vals) *100
+                non_sig_greening = non_sig_greening / len(vals)*100
                 dic[wetting_drying] = [sig_greening, non_sig_greening, non_sig_browning, sig_browning
                                           ]
             df_new = pd.DataFrame(dic, index=['sig_greening', 'non_sig_greening', 'non_sig_browning', 'sig_browning'])
@@ -1816,7 +2056,7 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
             df_new_T.plot.bar(stacked=True, color=color_list, legend=False)
             plt.legend()
 
-            plt.title(f'{region}')
+            plt.title(f'{continent}')
             plt.ylabel('percentage')
             plt.xticks(rotation=45)
             plt.tight_layout()
@@ -1825,53 +2065,11 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
 
         pass
 
-    def plot_drying_greening_map(self):  # generate map which contains drying-greening, drying-browning, wetting-0greening and wetting browning
-        df= T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_right.df')
-        df=self.clean_df(df)
 
 
-        cm = 1 / 2.54
-        label_list=[]
-        for i , row in df.iterrows():
-            pix=row['pix']
-            wetting_drying=row['wetting_drying_trend']
-            val=row['LAI4g_trend']
-            p_value=row['LAI4g_p_value']
-            if wetting_drying=='sig_wetting':
-                if p_value<0.05:
-                    if val>0:
-                        label_list.append('sig_greening_sig_wetting')
-                    else:
-                        label_list.append('sig_browning_sig_wetting')
-                else:
-                    if val>0:
-                        label_list.append('non_sig_greening_sig_wetting')
-                    else:
-                        label_list.append('non_sig_browning_sig_wetting')
-            elif wetting_drying=='sig_drying':
-                if p_value<0.05:
-                    if val>0:
-                        label_list.append('sig_greening_sig_drying')
-                    else:
-                        label_list.append('sig_browning_sig_drying')
-                else:
-                    if val>0:
-                        label_list.append('non_sig_greening_sig_drying')
-                    else:
-                        label_list.append('non_sig_browning_sig_drying')
-            else:
-                label_list.append(np.nan)
-
-
-            pass
-        df['label']=label_list
-        T.print_head_n(df)
-
-        ## save df
-        T.save_df(df,result_root + 'Dataframe\\anomaly_LAI\\anomaly_right.df')
-        ## save xlsx
-        T.df_to_excel(df, result_root + 'Dataframe\\anomaly_LAI\\anomaly_right.xlsx')
-        exit()
+        ## plot
+    def plot_moisture_greening_map(self):
+        df = T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
 
         ### calculate every cluster
         df=df.dropna()
@@ -1887,16 +2085,18 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
          ]
 
         for label in cluster:
-            df_temp=df[df['label']==label]
-            dic[label]=len(df_temp)/len(df)
+            df_temp=df[df['mositure_greening']==label]
+            dic[label]=len(df_temp)/len(df)*100
         print(dic)
-        ##plt.bar
-        # plt.bar(dic.keys(),dic.values())
-        # plt.xticks(rotation=45)
-        # plt.tight_layout()
-        # plt.show()
-        # exit()
+        #plt.bar
+        plt.bar(dic.keys(),dic.values(),color='grey',alpha=0.75)
+        ## xticks size and rotation
 
+        plt.xticks(rotation=45,fontsize=12)
+        plt.ylabel('percentage (%)',fontsize=12)
+        plt.tight_layout()
+        plt.show()
+        # exit()
 
 
 
@@ -1910,7 +2110,7 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
                         'non_sig_greening_sig_drying': 7, 'non_sig_browning_sig_drying': 8, np.nan: 0}
         for i, row in df.iterrows():
             pix = row['pix']
-            label = row['label']
+            label = row['mositure_greening']
             spatica_dic[pix] = dic_label[label]
 
         arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatica_dic)
@@ -1918,10 +2118,44 @@ class summary_greening_drying():  ## add wetting_Drying and extract drying green
         plt.colorbar()
         plt.show()
         ## save
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, result_root + 'Dataframe\\anomaly_trends\\anomaly_trends_map.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, result_root + 'Dataframe\\anomaly_LAI\\anomaly_trends_map.tif')
 
 
         pass
+
+    def plot_climate_variables_based_moisture_greening(self):
+        df = T.load_df(result_root + 'Dataframe\\anomaly_LAI\\anomaly_LAI_new.df')
+        df = self.clean_df(df)
+        climate_variable_list = ['CRU', 'VPD', 'GLEAM_SMroot']
+        color_list = ['green', 'green', 'green', 'green', 'green', 'green', 'green', 'pink', 'grey', 'brown',
+
+                        'cyan', 'magenta', 'olive', 'lime', 'teal', 'aqua']
+        fig = plt.figure()
+        flag = 1
+
+
+        pass
+
+    def save_df(self, df, outf):
+        df.to_pickle(outf)
+
+    def clean_df(self,df):
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df=df[df['LC_max']<20]
+        df= df[df['MODIS_LUCC'] != 12]
+        return df
+
+    def df_to_excel(self, df, dff, n=1000, random=False):
+        if n == None:
+            df.to_excel('{}.xlsx'.format(dff))
+        else:
+            if random:
+                df = df.sample(n=n, random_state=1)
+                df.to_excel('{}.xlsx'.format(dff))
+            else:
+                df = df.head(n)
+                df.to_excel('{}.xlsx'.format(dff))
 
 
 
@@ -1930,10 +2164,10 @@ def main():
     # build_dataframe().run()
     # summary_multiregression_model_result().run()
     # summary_time_series_analysis_result().run()
-    # plot_spatial_map().run()
+    plot_spatial_map().run()
     # summary_trend_analysis_result().run()
     # summary_CV_result().run()
-    summary_greening_drying().run()
+    # summary_greening_drying().run()
 
 
     pass

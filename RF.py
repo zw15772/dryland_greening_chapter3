@@ -866,7 +866,7 @@ class Random_Forests:
         self.this_class_png = data_root + 'SHAP\\png\\'
 
 
-        self.dff = rf'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        self.dff = rf'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         self.variables_list()
 
         ##----------------------------------
@@ -983,7 +983,7 @@ class Random_Forests:
 
     def run_important_for_each_pixel(self):
 
-        dff = 'D:\Project3\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        dff = 'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         df = T.load_df(dff)
         df=self.df_clean(df)
         pix_list = T.get_df_unique_val_list(df,'pix')
@@ -1018,7 +1018,7 @@ class Random_Forests:
 
 
 
-        outdir= join(self.this_class_arr,'detrended_anomaly_RF')
+        outdir= join(self.this_class_arr,'detrended_anomaly_RF_three')
         T.mk_dir(outdir,force=True)
 
         for y_var in self.y_variable_list:
@@ -1042,7 +1042,10 @@ class Random_Forests:
                 #                  max_depth=11,eta=0.05,random_state=42,n_jobs=12)
                 clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
                 clf.fit(X_train, Y_train)  # train the model
-                R2= clf.score(X_test, Y_test)  # calculate the R2
+                # R2= clf.score(X_test, Y_test)  # calculate the R2
+                R = stats.pearsonr(clf.predict(X_test),Y_test)[0]
+                R2 = R**2
+
                 importance=clf.feature_importances_
                 # print(importance)
                 importance_dic=dict(zip(x_variable_list,importance))
@@ -1119,7 +1122,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = join(self.this_class_arr,'detrended_anomaly_RF')
+        fdir = join(self.this_class_arr,'detrended_anomaly_RF_three')
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1151,7 +1154,7 @@ class Random_Forests:
                 plt.colorbar()
                 plt.title(f'{fname}_{x_var}')
                 plt.show()
-                # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(fdir,f'{fname}_{x_var}.tif'))
+                DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(fdir,f'{fname}_{x_var}.tif'))
 
 
 
@@ -1162,7 +1165,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = join(self.this_class_arr,'detrended_anomaly_RF')
+        fdir = join(self.this_class_arr,'detrended_anomaly_RF_three')
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1185,11 +1188,11 @@ class Random_Forests:
                 for x_var in x_variable_list:
                     importance_dici[x_var] = importance_dic[x_var]
                     # print(importance_dici)
-                # max_var = max(importance_dici, key=importance_dici.get)
+                max_var = max(importance_dici, key=importance_dici.get)
                 ## second important factor
                 # max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[1]
                 ## third important factor
-                max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[2]
+                # max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[2]
                 max_var_val=x_variable_dict[max_var]
                 spatial_dic[pix]=max_var_val
 
@@ -1198,6 +1201,11 @@ class Random_Forests:
                 importance_dici['R2'] = importance_dic['R2']
                 R2 = importance_dic['R2']
                 sptial_R2_dic[pix]=R2
+            #### print average R2
+            # R2_list = list(sptial_R2_dic.values())
+            # R2_mean = np.nanmean(R2_list)
+            # print(f'{fname} R2 mean: {R2_mean}')
+            # exit()
 
                 ### plot R2
             arrR2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(sptial_R2_dic)
@@ -1206,7 +1214,9 @@ class Random_Forests:
             plt.colorbar()
             plt.title(f'{fname}_R2')
             plt.show()
+            outtif_R2 = join(fdir, f'{fname}_R2.tif')
 
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arrR2, outtif_R2)
 
             ### plot importance
             arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
@@ -1215,7 +1225,7 @@ class Random_Forests:
             plt.colorbar()
             plt.title(fname)
             plt.show()
-            outtif=join(fdir,f'{fname}_third.tif')
+            outtif=join(fdir,f'{fname}_most.tif')
 
             DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,outtif)
 
@@ -1635,19 +1645,19 @@ class Random_Forests:
 
 
 
-            'VPD_relative_change_detrended',
-            'GPCC_relative_change_detrended',
+            'VPD_detrended_anomaly',
+            'CRU_detrended_anomaly',
             'fire_burned_area',
-            # 'ENSO_index_average',
+            'ENSO_index_average',
             # 'rooting_depth',
             # 'silt',
 
             # 'average_dry_spell',
             # 'maximum_dry_spell',
             # 'frequency_wet',
-            'CV_rainfall',
-
-            'average_anomaly_heat_event',
+            # 'rainfall_CV_intra',
+            #
+            # 'average_anomaly_heat_event',
 
         ]
 

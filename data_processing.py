@@ -63,7 +63,7 @@ from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 from pprint import pprint
 T=Tools()
-
+D = DIC_and_TIF(pixelsize=0.25)
 
 
 
@@ -1321,11 +1321,11 @@ class data_processing():
             np.save(outf+'2002_2020.npy',dic_ii)
 
     def extend_nan(self):
-        fdir= result_root + rf'\anomaly\OBS\\'
-        outdir=result_root + rf'\anomaly\OBS_LAI_extend\\'
+        fdir= result_root + rf'Detrend\detrend_original\\'
+        outdir=result_root + rf'Detrend\detrend_original_extend\\'
         T.mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
-            if not 'wet_frequency_90th' in f:
+            if not 'VPD' in f:
                 continue
 
             if not f.endswith('.npy'):
@@ -1347,7 +1347,7 @@ class data_processing():
                 time_series[time_series<-999]=np.nan
                 if np.isnan(np.nanmean(time_series)):
                     continue
-                if len(time_series)<38:
+                if len(time_series)<39:
 
                     time_series_new=np.append(time_series,np.nan)
                     dic_new[pix]=time_series_new
@@ -3509,8 +3509,8 @@ class statistic_analysis():
         # self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
-        # self.trend_analysis()
-        self.trend_analysis_for_event()
+        self.trend_analysis()
+        # self.trend_analysis_for_event()
         # self.trend_differences()
         # self.trend_average_TRENDY()
         # self.trend_analysis_landcover_composition()
@@ -4297,8 +4297,8 @@ class statistic_analysis():
 
 
 
-        fdir = result_root+rf'\multi_regression_moving_window\window15_detrended_anomaly\npy_time_series\\'
-        outdir = result_root + rf'\multi_regression_moving_window\window15_detrended_anomaly\\trend\\'
+        fdir = result_root+rf'\multi_regression_moving_window\window15_anomaly\npy_time_series\\'
+        outdir = result_root + rf'\multi_regression_moving_window\window15_anomaly\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -6598,7 +6598,7 @@ class calculating_variables:  ###
 
         pass
     def calculate_average_GPP(self):
-        fdir = result_root + rf'\\split_original\Y\\'
+        fdir = result_root + rf'Result\extract_GS\OBS_LAI\\'
         outdir = result_root + rf'state_variables\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
@@ -6759,11 +6759,11 @@ class moving_window():
     def __init__(self):
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
         # self.moving_window_trend_anaysis()
         # self.moving_window_CV_extraction_anaysis()
-        # self.moving_window_CV_trends()
+        self.moving_window_CV_trends()
         # self.moving_window_average_anaysis()
         # self.produce_trend_for_each_slides()
         # self.calculate_trend_spatial()
@@ -6776,17 +6776,17 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'Detrend\detrend_anomaly\1982_2020\\'
-        outdir = result_root + rf'extract_window\extract_detrend_anomaly_window\\'
+        fdir = result_root + rf'\Detrend\detrend_original\\'
+        outdir = result_root + rf'extract_window\extract_detrend_original_window\\15\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['LAI4g','GPCC','VPD','tmax','CO2','GLEAM_SMroot','CRU']:
+            if f.split('.')[0] not in ['VPD','CRU']:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
-            if os.path.isfile(outf):
-                continue
+            # if os.path.isfile(outf):
+            #     continue
 
             dic = T.load_npy(fdir + f)
             window = 15
@@ -6960,7 +6960,7 @@ class moving_window():
         outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'GPCC' in f:
+            if f.split('.')[0] not in ['VPD', 'CRU','LAI4g']:
                 continue
 
             dic = T.load_npy(fdir + f)
@@ -6979,7 +6979,7 @@ class moving_window():
 
 
                 time_series_all = dic[pix]
-                if len(time_series_all)<24:
+                if len(time_series_all)<23:
                     continue
                 time_series_all = np.array(time_series_all)
                 for ss in range(slides):
@@ -6995,7 +6995,7 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    cv=np.nanstd(time_series)/np.nanmean(time_series)
+                    cv=np.nanstd(time_series)/np.nanmean(time_series)*100
                     trend_list.append(cv)
 
                 trend_dic[pix]=trend_list
@@ -7014,9 +7014,12 @@ class moving_window():
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+        variable='VPD'
 
-
-        f = result_root + rf'extract_window\extract_detrend_original_window_CV\\GPCC.npy'
+        f = result_root + rf'extract_window\extract_detrend_original_window_CV\\{variable}.npy'
         outdir = result_root + rf'\\extract_window\\extract_detrend_original_window_CV\\'
         T.mk_dir(outdir, force=True)
         dic=T.load_npy(f)
@@ -7030,6 +7033,9 @@ class moving_window():
             land_cover_val=crop_mask[pix]
             if land_cover_val==16 or land_cover_val==17 or land_cover_val==18:
                 continue
+            modis_val=dic_modis_mask[pix]
+            if modis_val==12:
+                continue
             if np.isnan(np.nanmean(vals)):
                 continue
             slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
@@ -7040,10 +7046,10 @@ class moving_window():
         array_p_value=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic_p_value)
         array_p_value_mask=array_p_value*array_mask
 
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_slope_mask,outdir+'GPCC_CV_trend.tif')
-        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_p_value_mask,outdir+'GPCC_CV_p_value.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_slope_mask,outdir+f'{variable}_CV_trend.tif')
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(array_p_value_mask,outdir+f'{variable}_CV_p_value.tif')
 
-        outf=outdir+'GPCC_CV_trend.npy'
+        outf=outdir+f'{variable}_CV_trend.npy'
         np.save(outf,result_dic_trend)
 
 
@@ -9788,6 +9794,873 @@ class quadratic_regression1:
 
         return a, b, c
 
+class aysmetry_response:
+    def __init__(self):
+        pass
+    def run(self):
+        # self.pick_wet_year()
+        # self.pick_dry_year()
+        self.cal_multi_regression_beta()
+
+
+        # self.calculate_extreme_year_frequency()
+        # self.plot_bar_extreme_year_frequency()
+        self.calculate_frequency_wet_dry()
+        pass
+
+    def pick_wet_year(self):
+        ## 1) build df for the extreme wet year and dry year for four period (1982-1990, 1991-2000, 2001-2010, 2011-2020)
+        outdir = join(result_root,'asymmetry_response','wet_relative_change')
+
+        T.mk_dir(outdir)
+        wet_threshold_list=[10,20,30,40,50,100]
+        # dry_threshold_list=[-10,-20,-30,-40,-50]
+        for wet_threshold in range(len(wet_threshold_list)):
+            if wet_threshold+1>=len(wet_threshold_list):
+                continue
+            wet_threshold_upper = wet_threshold_list[wet_threshold+1]
+            wet_threshold_lower = wet_threshold_list[wet_threshold]
+            outf=join(outdir,f'asymmetry_response_precip_{wet_threshold_lower}_{wet_threshold_upper}.df')
+        # for dry_threshold in range(len(dry_threshold_list)):
+        #     if dry_threshold + 1 >= len(dry_threshold_list):
+        #         continue
+        #     dry_threshold_upper = dry_threshold_list[dry_threshold + 1]
+        #     dry_threshold_lower = dry_threshold_list[dry_threshold]
+        #     outf = join(outdir, f'asymmetry_response_precip_{dry_threshold_lower}_{dry_threshold_upper}.df')
+
+            f_precipitation_relative_change = result_root+rf'\relative_change\OBS_LAI_extend\\GPCC.npy' ##to define the wet and dry year
+            dic_precip_relative_change = T.load_npy(f_precipitation_relative_change)
+            # # plot the distribution of the relative change
+            # value_list = []
+            # for year in range(1982,2021):
+            #     for pix in dic_precip_relative_change:
+            #         value=dic_precip_relative_change[pix][year-1982]
+            #         value_list.append(value)
+            # value_list=np.array(value_list)
+            #
+            #
+
+            # plt.hist(value_list,bins=100)
+            # plt.show()
+            # exit()
+
+            f_precip=rf'D:\Project3\Result\anomaly\OBS_extend\\GPCC.npy'
+            f_lai = rf'D:\Project3\Result\anomaly\OBS_extend\\LAI4g.npy'
+            f_vpd=rf'D:\Project3\Result\anomaly\OBS_extend\\VPD.npy'
+            dic_precip = T.load_npy(f_precip)
+            dic_lai = T.load_npy(f_lai)
+            dic_vpd=T.load_npy(f_vpd)
+            year_list = range(1982,2021)
+            year_list = np.array(year_list)
+
+            ### find the extreme wet year and dry year
+
+            result_dict={}
+            flag = 0
+
+            for pix in tqdm(dic_precip):
+                if not pix in dic_vpd:
+                    continue
+                if not pix in dic_lai:
+                    continue
+                precip_relative_change=dic_precip_relative_change[pix]
+
+                precip = dic_precip[pix]
+                vpd = dic_vpd[pix]
+                lai = dic_lai[pix]
+
+
+                ## based on threshold to find the wet year
+
+
+                picked_wet_index = (precip_relative_change > wet_threshold_lower) & (precip_relative_change < wet_threshold_upper)
+                wet_year = year_list[picked_wet_index]  ## extract the year index based on the wet_index
+                precip_wet = precip[picked_wet_index]
+                vpd_wet = vpd[picked_wet_index]
+                lai_wet = lai[picked_wet_index]
+                mode_list_wet = ['wet'] * len(wet_year)
+
+            ## based on threshold to find the dry year
+
+                # picked_dry_index = (precip > dry_threshold_lower) & (precip < dry_threshold_upper)
+                # dry_year = year_list[picked_dry_index]  ## extract the year index based on the wet_index
+                # precip_dry = precip[picked_dry_index]
+                # vpd_dry = vpd[picked_dry_index]
+                # lai_dry = lai[picked_dry_index]
+                # mode_list_dry = ['dry'] * len(dry_year)
+
+
+
+                # for dr in range(len(dry_year)):
+                #     year = dry_year[dr]
+                #     mode = mode_list_dry[dr]
+                #     precip_val = precip_dry[dr]
+                #     result_dict[flag] = {'year':year,'mode':mode,'precip':precip_val,'pix':pix,'vpd':vpd_dry[dr],'lai':lai_dry[dr]}
+                #     # result_dict[flag] = {'year': year, 'mode': mode, 'SM': precip_val, 'pix': pix, 'vpd': vpd_dry[dr],'lai':lai_dry[dr]}
+                #     flag += 1
+
+                for wet in range(len(wet_year)):
+                    year = wet_year[wet]
+                    mode = mode_list_wet[wet]
+                    precip_val = precip_wet[wet]
+                    result_dict[flag] = {'year':year,'mode':mode,'precip':precip_val,'pix':pix,'vpd':vpd_wet[wet],'lai':lai_wet[wet]}
+                    # result_dict[flag] = {'year': year, 'mode': mode, 'SM': precip_val, 'pix': pix, 'vpd': vpd_wet[wet], 'lai': lai_wet[wet]}
+                    flag += 1
+                # pprint(result_dict)
+            df = T.dic_to_df(result_dict,'index')
+            T.save_df(df,outf)
+            T.df_to_excel(df,outf)
+    def pick_dry_year(self):
+        ## 1) build df for the extreme wet year and dry year for four period (1982-1990, 1991-2000, 2001-2010, 2011-2020)
+        outdir = join(result_root,'asymmetry_response','dry_relative_change')
+
+        T.mk_dir(outdir)
+
+        dry_threshold_list=[-100,-50,-40,-30,-20,-10]
+
+        for dry_threshold in range(len(dry_threshold_list)):
+            if dry_threshold + 1 >= len(dry_threshold_list):
+                continue
+            dry_threshold_upper = dry_threshold_list[dry_threshold + 1]
+            dry_threshold_lower = dry_threshold_list[dry_threshold]
+            outf = join(outdir, f'asymmetry_response_precip_{dry_threshold_lower}_{dry_threshold_upper}.df')
+
+            f_precipitation_relative_change = result_root+rf'\relative_change\OBS_LAI_extend\\GPCC.npy' ##to define the wet and dry year
+            dic_precip_relative_change = T.load_npy(f_precipitation_relative_change)
+            # # plot the distribution of the relative change
+            # value_list = []
+            # for year in range(1982,2021):
+            #     for pix in dic_precip_relative_change:
+            #         value=dic_precip_relative_change[pix][year-1982]
+            #         value_list.append(value)
+            # value_list=np.array(value_list)
+            #
+            #
+
+            # plt.hist(value_list,bins=100)
+            # plt.show()
+            # exit()
+
+            f_precip=rf'D:\Project3\Result\anomaly\OBS_extend\\GPCC.npy'
+            f_lai = rf'D:\Project3\Result\anomaly\OBS_extend\\LAI4g.npy'
+            f_vpd=rf'D:\Project3\Result\anomaly\OBS_extend\\VPD.npy'
+            dic_precip = T.load_npy(f_precip)
+            dic_lai = T.load_npy(f_lai)
+            dic_vpd=T.load_npy(f_vpd)
+            year_list = range(1982,2021)
+            year_list = np.array(year_list)
+
+            ### find the extreme wet year and dry year
+
+            result_dict={}
+            flag = 0
+
+            for pix in tqdm(dic_precip):
+                if not pix in dic_vpd:
+                    continue
+                if not pix in dic_lai:
+                    continue
+                precip_relative_change=dic_precip_relative_change[pix]
+
+                precip = dic_precip[pix]
+                vpd = dic_vpd[pix]
+                lai = dic_lai[pix]
+
+
+                ## based on threshold to find the wet year
+
+
+            ## based on threshold to find the dry year
+
+                picked_dry_index = (precip_relative_change > dry_threshold_lower) & (precip_relative_change < dry_threshold_upper)
+                dry_year = year_list[picked_dry_index]  ## extract the year index based on the wet_index
+                precip_dry = precip[picked_dry_index]
+                vpd_dry = vpd[picked_dry_index]
+                lai_dry = lai[picked_dry_index]
+                mode_list_dry = ['dry'] * len(dry_year)
+
+
+                for dr in range(len(dry_year)):
+                    year = dry_year[dr]
+                    mode = mode_list_dry[dr]
+                    precip_val = precip_dry[dr]
+                    result_dict[flag] = {'year':year,'mode':mode,'precip':precip_val,'pix':pix,'vpd':vpd_dry[dr],'lai':lai_dry[dr]}
+                    # result_dict[flag] = {'year': year, 'mode': mode, 'SM': precip_val, 'pix': pix, 'vpd': vpd_dry[dr],'lai':lai_dry[dr]}
+                    flag += 1
+
+                # for wet in range(len(wet_year)):
+                #     year = wet_year[wet]
+                #     mode = mode_list_wet[wet]
+                #     precip_val = precip_wet[wet]
+                #     result_dict[flag] = {'year':year,'mode':mode,'precip':precip_val,'pix':pix,'vpd':vpd_wet[wet],'lai':lai_wet[wet]}
+                #     # result_dict[flag] = {'year': year, 'mode': mode, 'SM': precip_val, 'pix': pix, 'vpd': vpd_wet[wet], 'lai': lai_wet[wet]}
+                #     flag += 1
+                # pprint(result_dict)
+            df = T.dic_to_df(result_dict,'index')
+            T.save_df(df,outf)
+            T.df_to_excel(df,outf)
+
+    def clean_df(self, df):
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+
+        df = df[df['MODIS_LUCC'] != 12]
+        df=df.dropna()
+        # df=df[df['continent']=='Australia']
+        # df = df[df['continent'] == 'North_America']
+        # df = df[df['continent'] == 'South_America']
+        # df = df[df['continent'] == 'Africa']
+
+
+
+        return df
+
+    def cal_multi_regression_beta(self, ):
+        fdir=rf'D:\Project3\Result\\asymmetry_response\\wet_relative_change\\'
+        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+        wet_threhold_list = ['50_100', '40_50', '30_40', '20_30', '10_20']
+        # dry_threhold_list=['-20_-10','-30_-20','-40_-30','-50_-40','-100_-50']
+
+        import joblib
+        multi_derivative_period_threshold = {}
+
+        for threshold in wet_threhold_list:
+
+
+
+            f = join(fdir, f'asymmetry_response_precip_{threshold}.df')
+
+
+            df = T.load_df(join(fdir,f))
+            df=self.clean_df(df)
+
+            x_var_list = ['precip', 'vpd',]
+
+            ### loop wet and dry
+            multi_derivative_period = {}
+            # mode_list=['wet','dry']
+            mode_list = ['wet']
+            period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+            for period in period_list:
+                df_period = df[df['year']>=int(period.split('-')[0])]
+                df_period = df_period[df_period['year']<=int(period.split('-')[1])]
+                multi_derivative_mode = {}
+
+
+                for mode in mode_list:
+                    df_mode = df_period[df_period['mode']==mode]
+                    y_values=df_mode['lai'].to_list()
+                    y_mean = df_mode['growing_season_LAI_mean'].mean()
+
+                    ## interpolate the nan value
+                    if len(y_values) == 0:
+                        continue
+                    y_values = T.interp_nan(y_values)
+
+                    y_vals=signal.detrend(y_values)
+
+                    df_new = pd.DataFrame()
+                    x_var_list_valid = []
+
+                    for x in x_var_list:
+
+                        x_vals = df_mode[x].to_list()
+                        x_vals = T.interp_nan(x_vals)
+
+
+                        if len(x_vals) == 0:
+                            continue
+
+                        if np.isnan(np.nanmean(x_vals)):
+                            continue
+
+
+                        if len(x_vals) != len(y_vals):
+                            continue
+                        # print(x_vals)
+                        if x_vals[0] == None:
+                            continue
+                        x_vals_detrend = signal.detrend(x_vals) #detrend
+                        df_new[x] = x_vals_detrend
+
+                        x_var_list_valid.append(x)
+                        if len(df_new) <= 3:
+                            continue
+                    df_new['y'] = y_vals
+
+
+                    # T.print_head_n(df_new)
+                    df_new = df_new.dropna(axis=1, how='all')
+                    x_var_list_valid_new = []
+                    for v_ in x_var_list_valid:
+                        if not v_ in df_new:
+                            continue
+                        else:
+                            x_var_list_valid_new.append(v_)
+                    # T.print_head_n(df_new)
+
+                    df_new = df_new.dropna()
+
+
+                    linear_model = LinearRegression()
+
+                    linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+                    ##save model
+                    # joblib.dump(linear_model, outf.replace('.npy', f'_{pix}.pkl'))
+                    ##load model
+                    # linear_model = joblib.load(outf.replace('.npy', f'_{pix}.pkl'))
+                    # coef_ = np.array(linear_model.coef_) / y_mean
+                    coef_ = np.array(linear_model.coef_)/y_mean*100 *100 ## *100% * 100mm
+                    coef_dic = dict(zip(x_var_list_valid_new, coef_))
+
+                    # print(df_new['y'])
+                    # exit()
+                    multi_derivative_mode[mode] = coef_dic
+                multi_derivative_period[period] = multi_derivative_mode
+            multi_derivative_period_threshold[f'{threshold}'] = multi_derivative_period
+
+                #### plot bar plot
+
+### plot bar but group by period
+        ##dry
+        # dry_color_list=['peachpuff','orange','darkorange','chocolate','saddlebrown']
+        wet_color_list = [ 'lightblue','cyan', 'deepskyblue', 'dodgerblue', 'navy']
+        multi_derivative_period = {}
+        for period in period_list:
+            multi_derivative_threhold={}
+
+            for threshold in wet_threhold_list:
+                for mode in mode_list:
+
+                    multi_derivative_threhold[threshold] = multi_derivative_period_threshold[threshold][period][mode]['precip']
+            multi_derivative_period[period] = multi_derivative_threhold
+
+                    ##extract precipitation and creat df
+        df_new_plot = pd.DataFrame(multi_derivative_period)
+        df_new_plot = df_new_plot.T
+        df_new_plot.plot(kind='bar',color=wet_color_list,width=0.8)
+        plt.xticks(rotation=0)
+        plt.ylabel('LAI response to precipitation (%/100mm)')
+        plt.show()
+
+
+
+
+
+    def calculate_extreme_year_frequency(self):  ##plot line
+        fdir = rf'D:\Project3\Result\\asymmetry_response\\wet_relative_change\\'
+        threhold_dic={}
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.df'):
+                continue
+            upper_threshold = f.split('_')[-1].replace('.df', '')
+            lower_threshold = f.split('_')[-2]
+
+            df = T.load_df(join(fdir, f))
+            df = self.clean_df(df)
+            df = df.dropna()
+            ### calculate the frequency of the extreme year for each period
+
+            year_list = range(1982, 2021)
+            year_list = np.array(year_list)
+            year_dic = {}
+            for year in year_list:
+                year_dic[year] = 0
+            for year in year_list:
+                df_year = df[df['year'] == year]
+                if len(df_year) == 0:
+                    continue
+
+
+                year_dic[year] = len(df_year)
+            threhold_dic[f'{lower_threshold}_{upper_threshold}'] = year_dic
+
+    #### plot the frequency of the extreme year
+        for threhold in threhold_dic:
+            year_dic = threhold_dic[threhold]
+            year_list = []
+            freq_list = []
+            for year in year_dic:
+                year_list.append(year)
+                freq_list.append(year_dic[year])
+            plt.plot(year_list, freq_list, label=threhold)
+        plt.legend()
+        plt.show()
+
+
+    ###barplot frequency
+    def plot_bar_extreme_year_frequency(self):
+        fdir = rf'D:\Project3\Result\\asymmetry_response\\wet_relative_change\\'
+        threhold_dic = {}
+        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+        wet_threhold_list=['50_100','40_50','30_40','20_30','10_20']
+        # dry_threhold_list=['-100_-80','-80_-60','-60_-40','-40_-20','-20_0']
+
+        for threhold in wet_threhold_list:
+            f=join(fdir,f'asymmetry_response_precip_{threhold}.df')
+
+
+            upper_threshold = f.split('_')[-1].replace('.df', '')
+            lower_threshold = f.split('_')[-2]
+            df=T.load_df(join(fdir,f))
+            df=self.clean_df(df)
+            df = df.dropna()
+            # T.print_head_n(df)
+            # exit()
+            period_dic= {}
+            for period in period_list:
+                df_period = df[df['year'] >= int(period.split('-')[0])]
+                df_period = df_period[df_period['year'] <= int(period.split('-')[1])]
+                frequency=len(df_period)
+                period_dic[period]=frequency
+            threhold_dic[f'{lower_threshold}_{upper_threshold}'] = period_dic
+
+        color_list = ['r', 'b', 'g', 'y','orange'] * 4
+        # print(color_list)
+        # exit()
+
+
+        period_list=['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+
+######## plot bar plot for each period stacked bar each bar has stacked bar with four different threhold
+
+        dic_period = {}
+        for period in period_list:
+            freq_list = []
+            key_list = []
+
+            for threhold in threhold_dic:
+                frequency = threhold_dic[threhold][period]
+
+                freq_list.append(frequency)
+                key_list.append(threhold)
+            dic_period[period] = freq_list
+        # print(dic_period)
+        # exit()
+        df_new = pd.DataFrame(dic_period, index=wet_threhold_list)
+        df_new = df_new.T
+
+        ##plot bar plot
+        df_new.plot(kind='bar', stacked=True, color=color_list)
+        ##legend
+
+
+        plt.show()
+
+    def calculate_frequency_wet_dry(self):  ##based on pixel and then calculate the frequency of the wet and dry year
+        f_precipitation = result_root+rf'relative_change\OBS_LAI_extend\\GPCC.npy'
+
+        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+        # wet_threhold_list = ['50_100', '40_50', '30_40', '20_30', '10_20']
+        dry_threhold_list=['-100_-50','-50_-40','-40_-30','-30_-20','-20_-10',]
+
+        for period in period_list:
+            period_upper = int(period.split('-')[1])+1
+            period_lower = int(period.split('-')[0])
+            year_list = range(period_lower, period_upper)
+            year_list = np.array(year_list)
+
+            for threhold in dry_threhold_list:
+                precip = T.load_npy(f_precipitation)
+                upper_threshold = threhold.split('_')[-1]
+                lower_threshold = threhold.split('_')[0]
+                result_dic={}
+
+                for pix in precip:
+
+
+                    precip_val = precip[pix][period_lower-1982:period_upper-1982]
+                    ###
+                    picked_wet_index = (precip_val > int(lower_threshold)) & (precip_val < int(upper_threshold))
+                    wet_year=year_list[picked_wet_index]
+                    # print(len(picked_wet_index),len(year_list))
+                    # exit()
+                    ## calculate the frequency of the wet year
+                    frenquency = len(wet_year)/len(year_list)
+                    result_dic[pix] = frenquency
+                array=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
+                outdir=join(result_root,'asymmetry_response','frequency')
+                T.mk_dir(outdir)
+                outf=join(outdir,f'frequency_dry_year_{lower_threshold}_{upper_threshold}_{period}.npy')
+                np.save(outf,result_dic)
+                outf = outf.replace('.npy', '.tif')
+                ##array to tif
+                DIC_and_TIF(pixelsize=0.25).arr_to_tif(array, outf)
+
+
+class monte_carlo:
+    def __init__(self):
+        pass
+    def run(self):
+        self.cal_monte_carlo_wet()
+        # self.cal_monte_carlo_dry()
+        # self.check_result()
+        # self.bar_plot()
+        pass
+    def cal_monte_carlo_wet(self):
+        outdir = join(result_root, 'monte_carlo')
+        T.mk_dir(outdir)
+        # if os.path.isfile(outf):
+        #     return
+        ## load LAI npy load preciptation npy
+        ## for each pixel, has dry year and wet year index and using this index to extract LAI and then using mean or random value to subtitute the value
+        ## then calculate trends of LAI
+        ## using monte carlo to repeat 1000 times and then calculate the mean and std of the trends
+
+
+        f_preciptation_relative_change = result_root+rf'\relative_change\OBS_LAI_extend\\GPCC.npy' ##to define the wet and dry year
+
+        f_lai = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\LAI4g.npy'
+        dic_precip_relative_change = T.load_npy(f_preciptation_relative_change)
+
+        dic_lai = T.load_npy(f_lai)
+        year_list = range(1982, 2021)
+        year_list = np.array(year_list)
+
+        random.seed(1)
+        params_list = []
+        wet_threshold_list = [10, 20, 30, 40, 50, 100]
+
+        for wet_thre_i in range(len(wet_threshold_list)):
+            if wet_thre_i + 1 >= len(wet_threshold_list):
+                continue
+            outf = join(outdir, f'monte_carlo_raw_{wet_threshold_list[wet_thre_i]}_{wet_threshold_list[wet_thre_i+1]}.npy')
+
+            wet_threshold_upper = wet_threshold_list[wet_thre_i + 1]
+            wet_threshold_lower = wet_threshold_list[wet_thre_i]
+
+            for pix in tqdm(dic_precip):
+                preciptation_relative_change=dic_precip_relative_change[pix]
+
+                if not pix in dic_lai:
+                    continue
+                lai = dic_lai[pix]
+                # plt.plot(range(len(lai)), lai)
+
+                # a1, b1, r1, p1 = T.nan_line_fit(range(len(lai)), lai)
+                ##calculate slope
+                # k1=stats.linregress(year_list, lai)
+                #
+                # k2=stats.linregress(range(len(lai)), lai)
+                # print(k1.slope)
+                # exit()
+                #
+
+                # print(pix, k, )
+                # plt.show()
+                ## define the different percentile of the precipitation and then find the extreme wet year and dry year
+
+
+                ## based on threshold to find the extreme wet year and dry year
+                # wet_index = precip > wet_threshold  ## return True, False
+                # dry_index = precip < wet_threshold
+                picked_wet_index = (preciptation_relative_change > wet_threshold_lower) & (preciptation_relative_change < wet_threshold_upper)
+                wet_year = year_list[picked_wet_index]  ## extract the year index based on the wet_index
+                # dry_year = year_list[dry_index]
+                params = (pix, precip, lai, year_list, wet_year)
+                params_list.append(params)
+            result = MULTIPROCESS(self.kernel_cal_monte_carlo, params_list).run(process=14)
+            # print(result)
+            pickle.dump(result, open(outf, 'wb'))
+            # T.save_npy(result_dict_slope_std, outf.replace('.npy', '_std.npy'))
+            # plt.plot(range(len(lai_copy)), lai_copy,label='random')
+                # plt.scatter(range(len(lai_copy)), lai_copy,label='random')
+                # plt.plot(range(len(lai)), lai, label='origin')
+                # plt.scatter(range(len(lai)), lai, label='origin')
+                # plt.legend()
+                # plt.show()
+            # plt.hist(slope_list,bins=30)
+            # plt.show()
+            ## calculate the mean and std of the slope
+
+
+            # result_dict_slope[pix] = mean
+            # result_dict_slope_std[pix] = std
+
+    def cal_monte_carlo_dry(self):
+        outdir = join(result_root, 'monte_carlo')
+        T.mk_dir(outdir)
+        # if os.path.isfile(outf):
+        #     return
+        ## load LAI npy load preciptation npy
+        ## for each pixel, has dry year and wet year index and using this index to extract LAI and then using mean or random value to subtitute the value
+        ## then calculate trends of LAI
+        ## using monte carlo to repeat 1000 times and then calculate the mean and std of the trends
+
+
+        ## save the result
+        f_precip = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\GPCC.npy'
+        f_lai = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\LAI4g.npy'
+        dic_precip = T.load_npy(f_precip)
+        dic_lai = T.load_npy(f_lai)
+        year_list = range(1982, 2021)
+        year_list = np.array(year_list)
+
+        random.seed(1)
+        params_list = []
+
+        dry_threshold_list = [0,10, 20, 30, 40]
+        for dry_thre_i in range(len(dry_threshold_list)):
+            if dry_thre_i + 1 >= len(dry_threshold_list):
+                continue
+            outf = join(outdir, f'monte_carlo_raw_{dry_threshold_list[dry_thre_i]}_{dry_threshold_list[dry_thre_i+1]}.npy')
+
+            for pix in tqdm(dic_precip):
+                precip = dic_precip[pix]
+                if not pix in dic_lai:
+                    continue
+                lai = dic_lai[pix]
+                # plt.plot(range(len(lai)), lai)
+
+                # a1, b1, r1, p1 = T.nan_line_fit(range(len(lai)), lai)
+                ##calculate slope
+                # k1=stats.linregress(year_list, lai)
+                #
+                # k2=stats.linregress(range(len(lai)), lai)
+                # print(k1.slope)
+                # exit()
+                #
+
+                # print(pix, k, )
+                # plt.show()
+                ## define the different percentile of the precipitation and then find the extreme wet year and dry year
+
+                dry_threshold_lower = np.nanpercentile(precip, dry_threshold_list[dry_thre_i])
+                dry_threshold_upper = np.nanpercentile(precip, dry_threshold_list[dry_thre_i+1])
+
+                ## based on threshold to find the extreme wet year and dry year
+                # print(dry_threshold_lower,dry_threshold_upper)
+                # exit()
+
+                picked_dry_index = (precip > dry_threshold_lower) & (precip < dry_threshold_upper)
+                dry_year = year_list[picked_dry_index]  ## extract the year index based on the wet_index
+                # dry_year = year_list[dry_index]
+                params = (pix, precip, lai, year_list, dry_year)
+                params_list.append(params)
+            result = MULTIPROCESS(self.kernel_cal_monte_carlo_dry, params_list).run(process=14)
+            # print(result)
+            pickle.dump(result, open(outf, 'wb'))
+            # T.save_npy(result_dict_slope_std, outf.replace('.npy', '_std.npy'))
+            # plt.plot(range(len(lai_copy)), lai_copy,label='random')
+                # plt.scatter(range(len(lai_copy)), lai_copy,label='random')
+                # plt.plot(range(len(lai)), lai, label='origin')
+                # plt.scatter(range(len(lai)), lai, label='origin')
+                # plt.legend()
+                # plt.show()
+            # plt.hist(slope_list,bins=30)
+            # plt.show()
+            ## calculate the mean and std of the slope
+
+
+            # result_dict_slope[pix] = mean
+            # result_dict_slope_std[pix] = std
+
+
+
+
+    def kernel_cal_monte_carlo_wet(self,params):
+        n = 100
+        pix, precip, lai, year_list, wet_year = params
+
+        random_value_list = []
+        for t in range(n):
+            randm_value = random.gauss(np.nanmean(lai), np.nanstd(lai))
+            random_value_list.append(randm_value)
+
+        slope_list = []
+
+        for t in range(n):
+            lai_copy = copy.copy(lai)
+
+            # for dr in dry_year:
+            #     ### here using the random value to substitute the LAI value in dry year
+            #     lai_copy[dr - 1982] = np.random.choice(random_value_list)
+
+            for wet in wet_year:
+
+                lai_copy[wet - 1982] = np.random.choice(random_value_list)
+
+
+            # result_i=stats.linregress(range(len(lai_copy)), lai_copy)
+            # slope_list.append(result_i.slope)
+            a,b,r,p = T.nan_line_fit(range(len(lai_copy)), lai_copy)
+            slope_list.append(a)
+
+
+
+        mean = np.nanmean(slope_list)
+        std = np.nanstd(slope_list)
+        return (pix, mean, std)
+
+        pass
+
+    def kernel_cal_monte_carlo_dry(self,params):
+        n = 100
+        pix, precip, lai, year_list, dry_year = params
+        random_value_list = []
+        for t in range(n):
+            randm_value = random.gauss(np.nanmean(lai), np.nanstd(lai))
+            random_value_list.append(randm_value)
+
+        slope_list = []
+
+        for t in range(n):
+            lai_copy = copy.copy(lai)
+
+            for dr in dry_year:
+                ### here using the random value to substitute the LAI value in dry year
+                lai_copy[dr - 1982] = np.random.choice(random_value_list)
+
+
+
+            # result_i=stats.linregress(range(len(lai_copy)), lai_copy)
+            # slope_list.append(result_i.slope)
+            a,b,r,p = T.nan_line_fit(range(len(lai_copy)), lai_copy)
+            slope_list.append(a)
+
+
+
+        mean = np.nanmean(slope_list)
+        std = np.nanstd(slope_list)
+        return (pix, mean, std)
+
+        pass
+
+    def check_result(self):
+        fdir=rf'D:\Project3\Result\monte_carlo\\'
+        for f in os.listdir(fdir):
+            fpath=join(fdir,f)
+            result_dict = np.load(fpath, allow_pickle=True)
+            spatial_dict1 = {}
+            spatial_dict2 = {}
+            # for i in result_dict:
+            #     print(i)
+            #     exit()
+            for pix,slope,std in result_dict:
+                spatial_dict1[pix] = slope
+                spatial_dict2[pix] = std
+            arr1 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dict1)
+            arr2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dict2)
+            plt.imshow(arr1)
+            plt.colorbar()
+            plt.show()
+            ##save
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr1, fpath.replace('.npy', '_slope.tif'))
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr2, fpath.replace('.npy', '_std.tif'))
+            np.save(fpath.replace('.npy', '_slope.npy'), spatial_dict1)
+            np.save(fpath.replace('.npy', '_std.npy'), spatial_dict2)
+
+    def calcualte_contributing_of_wet_dry(self):
+        ## calculate the contributing of wet and dry year to the LAI trend
+        ## for each pixel,
+        dic_LAI = T.load_npy(rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\LAI4g.npy')
+        fdir_wet = rf'D:\Project3\Result\monte_carlo\\wet\\'
+        for f in os.listdir(fdir_wet):
+            fpath = join(fdir_wet, f)
+            result_dict = np.load(fpath, allow_pickle=True)
+            scenario_dict = {}
+            for pix, slope, std in result_dict:
+                if not pix in dic_LAI:
+                    continue
+                lai_raw = dic_LAI[pix]
+
+                scenario_dict[pix]=slope
+                pass
+
+
+
+
+    def bar_plot(self):
+        dff=rf'D:\Project3\Result\Dataframe\monte_carlo\monte_carlo.df'
+        df = T.load_df(dff)
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['MODIS_LUCC'] != 12]
+        df = df.dropna()
+        #### plt. bar plot for the wet and dry year all the period
+        wet_threshold_list = [60, 70, 80, 90,100]
+        dry_threshold_list = [0,10, 20, 30, 40]
+
+        result_dic_slope={}
+        result_dic_std={}
+        result_contribution_dic = {}
+
+        lai_raw = df['LAI4g_raw'].to_list()
+        lai_raw=np.array(lai_raw)
+        lai_raw_mean = np.nanmean(lai_raw)
+        lai_raw_std = np.nanstd(lai_raw)
+        result_dic_slope['lai_raw'] = lai_raw_mean
+        result_dic_std['lai_raw'] = lai_raw_std
+        result_contribution_dic['lai_raw'] = lai_raw_mean
+
+
+        for wet_thre_i in range(len(wet_threshold_list)):
+            if wet_thre_i + 1 >= len(wet_threshold_list):
+                continue
+            upper = wet_threshold_list[wet_thre_i+1]
+            lower = wet_threshold_list[wet_thre_i]
+
+            vals=df['monte_carlo_raw_'+str(lower)+'_'+str(upper)+'_'+'slope'].to_list()
+            vals_array = np.array(vals)
+
+            differences=lai_raw-vals_array
+            mean = np.nanmean(differences)
+            std = np.nanstd(differences)
+            # contribution[contribution>100] = np.nan
+            result_dic_slope[f'wet_{lower}_{upper}'] = mean
+            result_dic_std[f'wet_{lower}_{upper}'] = std
+            result_contribution_dic[f'wet_{lower}_{upper}'] = np.nanmean(differences)
+        for dry_thre_i in range(len(dry_threshold_list)):
+            if dry_thre_i + 1 >= len(dry_threshold_list):
+                continue
+            upper = dry_threshold_list[dry_thre_i+1]
+            lower = dry_threshold_list[dry_thre_i]
+            vals=df['monte_carlo_raw_'+str(lower)+'_'+str(upper)+'_'+'slope'].to_list()
+            vals_array = np.array(vals)
+            differences=lai_raw-vals_array
+
+
+            mean = np.nanmean(differences)
+            std = np.nanstd(differences)
+            result_dic_slope[f'dry_{lower}_{upper}'] = mean
+            result_dic_std[f'dry_{lower}_{upper}'] = std
+            result_contribution_dic[f'dry_{lower}_{upper}'] = np.nanmean(differences)
+
+
+
+
+
+        ##### plot bar
+        key_list = []
+        val_list = []
+        for key in result_contribution_dic:
+            key_list.append(key)
+            val_list.append(result_contribution_dic[key])
+        plt.bar(key_list,val_list)
+        plt.show()
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class Seasonal_sensitivity:
 
@@ -10069,41 +10942,45 @@ class multi_regression_anomaly():
     def __init__(self):
         # self.fdirX=result_root+rf'anomaly\OBS_extend\\'
         # self.fdirY=result_root+rf'anomaly\OBS_extend\\'
-        self.fdirX = result_root + rf'\split_anomaly\1982_2001\\'
-        self.fdirY = result_root + rf'\split_anomaly\1982_2001\\'
+        self.fdirX = result_root + rf'\anomaly\OBS_extend\\'
+        self.fdirY = result_root + rf'\anomaly\OBS_extend\\'
 
 
-        # self.period=('1982_2020')
-        self.period=('1982_2001')
+        self.period=('1982_2020')
+        # self.period=('1982_2001')
         # self.period=('2002_2020')
-        self.y_var = [f'LAI4g_{self.period}']
-        self.xvar = [f'Tmax_{self.period}', f'GPCC_{self.period}', f'CO2_{self.period}', f'VPD_{self.period}']
-        # self.y_var = ['LAI4g']
-        # self.xvar = ['tmax', 'VPD','CO2', 'GPCC']
+        # self.y_var = [f'LAI4g_{self.period}']
+        # self.xvar = [f'Tmax_{self.period}', f'CRU_{self.period}', f'CO2_{self.period}', f'VPD_{self.period}']
+        self.y_var = ['LAI4g']
+        self.xvar = ['tmax', 'VPD','CO2', 'CRU']
 
 
 
 
-        self.multi_regression_result_dir=result_root+rf'multi_regression\\anomaly2\\{self.period}\\'
+        self.multi_regression_result_dir=result_root+rf'multi_regression\\anomaly\\{self.period}\\'
         T.mk_dir(self.multi_regression_result_dir,force=True)
 
-        self.multi_regression_result_f = result_root + rf'multi_regression\\anomaly2\\{self.period}\\{self.y_var[0]}.npy'
+        self.multi_regression_result_f = result_root + rf'multi_regression\\anomaly\\{self.period}\\{self.y_var[0]}.npy'
+        # r"D:\Project3\Result\multi_regression\anomaly\1982_2020\LAI4g_1982_2020.npy"
         pass
 
     def run(self):
 
         #step 1 build dataframe
-        df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var,self.period)
+        # df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var,self.period)
         # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-        #
-        # # # # step 2 cal correlation
-        self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
+
+        # # # step 2 cal correlation
+        # self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
 
         # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
+        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
 
         ## step 4 convert m2/m2/ppm to %/100ppm
         # self.convert_CO2_sensitivity_unit()
+
+        # step 5
+        self.calculate_trend_contribution()
 
         pass
 
@@ -10319,9 +11196,9 @@ class multi_regression_anomaly():
         plt.show()
 
     def convert_CO2_sensitivity_unit(self):
-        period_list=['1982_2001','2002_2020','1982_2020']
+        period_list=['1982_2020']
         for period in period_list:
-            CO2_sensitivity_f=result_root+rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}_old.tif'
+            CO2_sensitivity_f=result_root+rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
             average_LAI4g_f= result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(CO2_sensitivity_f)
             arr[arr < -99] = np.nan
@@ -10355,11 +11232,82 @@ class multi_regression_anomaly():
             # plt.show()
 
 
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif","_scale.tif")}')
             # DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_CO2_sensitivity, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
-            T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
+            # T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
+
+    def calculate_trend_contribution(self):
+        ## here I would like to calculate the trend contribution of each variable
+        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
+        ## load the trend of each variable
+        ## load the trend of the target variable
+        ## load multi regression result
+        ## calculate the trend contribution
+        trend_dir= result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
+
+        selected_vairables_list = [
+            'CRU_trend',
+            'CO2_trend',
+            'tmax_trend',
+            'VPD_trend',
+        ]
+
+        trend_dict = {}
+        for variable in selected_vairables_list:
+            fpath = join(trend_dir, f'{variable}.npy')
+            array = np.load(fpath, allow_pickle=True)
+            array[array < -9999] = np.nan
+            spatial_dict = D.spatial_arr_to_dic(array)
+            for pix in tqdm(spatial_dict,desc=variable):
+                r,c=pix
+                if r<120:
+                    continue
+                val = spatial_dict[pix]
+                if np.isnan(val):
+                    continue
+                if not pix in trend_dict:
+                    trend_dict[pix] = {}
+                key = variable.replace('_trend', '')
+                trend_dict[pix][key] = spatial_dict[pix]
 
 
+        f = self.multi_regression_result_f
+        print(f)
+        print(isfile(f))
+        # exit()
+        dic_multiregression = T.load_npy(f)
+        var_list = []
+        for pix in dic_multiregression:
+
+            # landcover_value = crop_mask[pix]
+            # if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+            #     continue
+
+            vals = dic_multiregression[pix]
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        # print(var_list)
+        # exit()
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in dic_multiregression:
+                if not pix in trend_dict:
+                    continue
+
+                dic_i = dic_multiregression[pix]
+                if not var_i in dic_i:
+                    continue
+                val_multireg = dic_i[var_i]
+                val_trend = trend_dict[pix][var_i]
+                val_contrib = val_multireg * val_trend
+                spatial_dic[pix] = val_contrib
+            arr_contrib = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
+            plt.colorbar()
+            plt.title(var_i)
+            plt.show()
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib, f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
 
 
 
@@ -10367,17 +11315,17 @@ class multi_regression_detrended_anomaly():
     def __init__(self):
         # self.fdirX=result_root+rf'anomaly\OBS_extend\\'
         # self.fdirY=result_root+rf'anomaly\OBS_extend\\'
-        self.fdirX = result_root + rf'Detrend\detrend_anomaly\\1982_2001\\'
-        self.fdirY = result_root + rf'Detrend\detrend_anomaly\\1982_2001\\'
+        self.fdirX = result_root + rf'Detrend\detrend_anomaly\\1982_2020\\'
+        self.fdirY = result_root + rf'Detrend\detrend_anomaly\\1982_2020\\'
 
 
-        # self.period=('1982_2020')
+        self.period=('1982_2020')
         # self.period=('1982_2001')
-        self.period=('1982_2001')
-        self.y_var = [f'LAI4g_{self.period}']
-        self.xvar = [f'Tmax_{self.period}', f'GLEAM_SMroot_{self.period}', f'VPD_{self.period}']
-        # self.y_var = ['LAI4g']
-        # self.xvar = ['tmax', 'VPD','CO2', 'GPCC']
+        # self.period=('1982_2001')
+        # self.y_var = [f'LAI4g_{self.period}']
+        # self.xvar = [f'Tmax_{self.period}', f'GLEAM_SMroot_{self.period}', f'VPD_{self.period}']
+        self.y_var = ['LAI4g']
+        self.xvar = ['tmax', 'VPD', 'CRU']
 
 
 
@@ -10391,14 +11339,14 @@ class multi_regression_detrended_anomaly():
     def run(self):
 
         #step 1 build dataframe
-        # df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var,self.period)
+        df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var,self.period)
         # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-        #
-        # # # # step 2 cal correlation
-        # self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
+
+        # # # step 2 cal correlation
+        self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
 
         # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
+        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
 
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy,period):
@@ -11537,11 +12485,10 @@ class build_dataframe():
     def __init__(self):
 
         # self.this_class_arr = (data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\')
-        self.this_class_arr = result_root+rf'\Dataframe\multi_regression\\'
+        self.this_class_arr = result_root+rf'\Dataframe\wet_dry_frequency\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'multi_regression.df'
-
+        self.dff = self.this_class_arr + 'wet_dry_frequency.df'
 
 
         pass
@@ -11561,19 +12508,19 @@ class build_dataframe():
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
 
         # df=self.add_AI_classfication(df)
         #
-        # df=self.add_aridity_to_df(df)
-        # # #
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_aridity_to_df(df)
+        # # # #
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # df=self.add_ozone_to_df(df)
         # df=self.add_rooting_depth_to_df(df)
@@ -11581,8 +12528,9 @@ class build_dataframe():
         #
 
         # df=self.rename_columns(df)
-        df=self.show_field(df)
         # df = self.drop_field_df(df)
+        # df=self.show_field(df)
+
 
         T.save_df(df, self.dff)
 
@@ -11793,11 +12741,14 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'trend_analysis\relative_change\OBS_LAI_extend\\LAI4g_trend.npy'
+        f = result_root + rf'asymmetry_response\frequency\\frequency_dry_year_-20_-10_2001-2010.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
 
-        val_array = np.load(f)
-        val_array[val_array<-99]=np.nan
-        val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
+        # val_array = np.load(f)
+        # val_array[val_array<-99]=np.nan
+        # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
         # plt.imshow(val_array)
         # plt.colorbar()
         # plt.show()
@@ -12227,15 +13178,15 @@ class build_dataframe():
 
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'\trend_analysis\event\\'
+        fdir=result_root+rf'\asymmetry_response\frequency\\'
 
         for f in os.listdir(fdir):
-            if not 'CV_rainfall_trend' in f:
-                continue
-
-
             if not f.endswith('.tif'):
                 continue
+            # if not 'slope' in f:
+            #     continue
+
+
 
             variable=(f.split('.')[0])
 
@@ -12269,6 +13220,9 @@ class build_dataframe():
             df[f'{f_name}']=val_list
 
         return df
+
+
+
     def rename_columns(self, df):
         df = df.rename(columns={'Inversion_relative_change': 'Inversion',
 
@@ -12283,10 +13237,8 @@ class build_dataframe():
     def drop_field_df(self, df):
         for col in df.columns:
             print(col)
-        exit()
-        df = df.drop(columns=['GPCP_precip', 'GPCP_precip_pre', 'ENSO_index_DFJ',
-                     'ENSO_index_distance', 'GPCC_raw', 'GPCP_precip_pre_raw', 'noy','nhx',
-                              'GPCP_precip_pre_raw', 'VPD_raw','tmin_raw','tmax_raw',])
+        # exit()
+        df = df.drop(columns=[rf'D:\Project3\Result\trend_analysis\original\OBS_LAI\\LAI4g_trend_raw',])
         return df
 
 
@@ -12533,6 +13485,7 @@ class build_dataframe():
 
         df['wetting_drying_trend'] = val_list
         return df
+
     def show_field(self, df):
         for col in df.columns:
             print(col)
@@ -12729,7 +13682,7 @@ class plot_dataframe():
         self.plot_annual_zscore_based_region_climate_variables()
         # self.plot_monthly_zscore_based_region()
         # self.plot_greening_trend_moisture_trend_heatmap()
-        # self.plot_greening_trend_moisture_relative_change_heatmap()
+        self.plot_greening_trend_moisture_relative_change_heatmap()
 
         # self.plot_anomaly_trendy_LAI()
         self.plot_anomaly_LAI_based_on_cluster() #### widely used
@@ -16007,95 +16960,6 @@ class plt_moving_dataframe():
             ii = ii + 1
             plt.show()
 
-    def plot_multiregression_moving_window(self): #### plt average
-        ## here I would like to plot average
-
-        df = T.load_df(
-            result_root + rf'Dataframe\moving_window_multiregression_anomaly\\moving_window_multiregression_anomaly.df')
-        T.print_head_n(df)
-        print(len(df))
-        df = df[df['landcover_classfication'] != 'Cropland']
-        df = df[df['row'] > 120]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 20]
-        df = df.dropna(subset=['window00_CO2_LAI4g'])
-        # continent_list = ['Global', 'Africa', 'Asia', 'Australia', 'South_America', 'North_America']
-        continent_list = ['Global']
-        all_continent_dict = {}
-        fig=plt.figure()
-        i=1
-        for continent in continent_list:
-            ax = fig.add_subplot(1, 1, i)
-            if continent == 'North_America':
-                df_continent = df[df['lon'] > -125]
-                df_continent = df_continent[df_continent['lon'] < -105]
-                df_continent = df_continent[df_continent['lat'] > 0]
-                df_continent = df_continent[df_continent['lat'] < 45]
-            elif continent == 'Global':
-                df_continent = df
-            else:
-                df_continent = df[df['continent'] == continent]
-
-            vals = df_continent['CO2_LAI4g'].tolist()
-            vals = np.array(vals)
-            vals=vals*100
-
-            # print(vals)
-
-            vals_nonnan = []
-            for val in vals:
-                if type(val) == float:  ## only screening
-                    continue
-                if len(val) == 0:
-                    continue
-                val[val < -99] = np.nan
-
-                if not len(val) == 39:
-                    ## add nan to the end of the list
-                    for j in range(1):
-                        val = np.append(val, np.nan)
-                    # print(val)
-                    # print(len(val))
-
-                vals_nonnan.append(list(val))
-
-                # exit()
-                # print(type(val))
-                # print(len(val))
-                # print(vals)
-
-            ###### calculate mean
-            vals_mean = np.array(vals_nonnan) ## axis=0, mean of each row  竖着加
-            vals_mean = np.nanmean(vals_mean, axis=0)
-            val_std = np.nanstd(vals_mean, axis=0)
-
-
-
-            # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
-            plt.plot(vals_mean, label=continent,color='g')
-            plt.fill_between(range(len(vals_mean)), vals_mean - val_std, vals_mean + val_std, alpha=0.3, color='g')
-
-            ax.set_xticks(range(0, 24, 4))
-            window_size = 15
-
-            # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-            year_range = range(1982, 2021)
-            year_range_str = []
-            for year in year_range:
-
-                start_year = year
-                end_year = year + window_size - 1
-                if end_year > 2020:
-                    break
-                year_range_str.append(f'{start_year}-{end_year}')
-            plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
-            plt.xlabel('year')
-            plt.ylabel('LAI sensitivity to CO2 (%/100ppm)')
-            i=i+1
-
-        plt.legend()
-
-        plt.show()
 
     def plt_CO2_function_of_VPD(self):
         ## bin plot
@@ -16176,7 +17040,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  result_root+rf'\\anomaly\OBS_LAI_extend\\\\CV_rainfall.npy'
+        f =  result_root+rf'\extract_GS\OBS_LAI_extend\LAI4g.npy'
 
 
         dic=T.load_npy(f)
@@ -16320,18 +17184,36 @@ class check_data():
 class Dataframe_func:
 
     def run (self):
-        f = result_root + rf'Result\classification\\classification.df'
+        fdir = result_root + rf'Dataframe\wet_dry_frequency\\'
 
-        df=T.load_df(f)
-        print('add AI')
-        df=self.add_AI_to_df(df)
-        print('add AI_reclass')
-        df=self.AI_reclass(df)
-        print('add SM_trend_label')
-        df=self.add_SM_trend_label(df)
-        T.save_df(df,fdir+f)
-        self.__df_to_excel(df,fdir+f)
-        pass
+        for f in os.listdir(fdir):
+            if not f.endswith('.df'):
+
+                continue
+            outf=fdir+f
+
+            df=T.load_df(fdir+f)
+            print('add aridity')
+            df=self.add_aridity_to_df(df)
+
+            print('add landcover_data')
+            df=self.add_landcover_data_to_df(df)
+            df=self.add_landcover_classfication_to_df(df)
+            print('add MODIS landcover')
+            df=self.add_MODIS_LUCC_to_df(df)
+            print('add continent')
+            df=self.add_continent_to_df(df)
+            print('add row')
+            df=self.add_row(df)
+            print('CCI_max')
+            df=self.add_maxmium_LC_change(df)
+            print('add average_lai')
+            df=self.add_average_lai(df)
+
+
+            T.save_df(df,outf)
+            # T.print_head_n(df)
+            T.df_to_excel(df,outf)
 
 
     # def __init__(self,df,is_clean_df=True):
@@ -16410,10 +17292,34 @@ class Dataframe_func:
         df = T.add_spatial_dic_to_df(df, spatial_dict, 'HI_class')
         return df
 
-    def add_lon_lat(self,df):
-        df = T.add_lon_lat_to_df(df, DIC_and_TIF())
-        return df
+    def add_aridity_to_df(self, df):  ## here is original aridity index not classification
 
+        f = data_root + rf'Base_data\dryland_AI.tif\\dryland.tif'
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        # val_array = np.load(fdir + f)
+
+        # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
+        f_name = 'Aridity'
+        print(f_name)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f'{f_name}'] = val_list
+
+        return df
 
     def AI_reclass(self,df):
         AI_class = []
@@ -16430,6 +17336,93 @@ class Dataframe_func:
                 raise ValueError('AI error')
         df['HI_class'] = AI_class
         return df
+
+
+    def add_MODIS_LUCC_to_df(self, df):
+        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+        f_name = f.split('.')[0]
+        print(f_name)
+        val_list = []
+
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix]
+            val_list.append(vals)
+        df['MODIS_LUCC'] = val_list
+        return df
+
+
+
+    def add_landcover_data_to_df(self, df):
+
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        f_name = f.split('.')[0]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix]
+            val_list.append(vals)
+
+        df['landcover_GLC'] = val_list
+        return df
+    def add_landcover_classfication_to_df(self, df):
+
+        val_list=[]
+        for i,row in tqdm(df.iterrows(),total=len(df)):
+            pix=row['pix']
+            landcover=row['landcover_GLC']
+            if landcover==0 or landcover==4:
+                val_list.append('Evergreen')
+            elif landcover==2 or landcover==4 or landcover==5:
+                val_list.append('Deciduous')
+            elif landcover==6:
+                val_list.append('Mixed')
+            elif landcover==11 or landcover==12:
+                val_list.append('Shrub')
+            elif landcover==13 or landcover==14 or landcover==15:
+                val_list.append('Grass')
+            elif landcover==16 or landcover==17 or landcover==18:
+                val_list.append('Cropland')
+            else:
+                val_list.append(np.nan)
+        df['landcover_classfication']=val_list
+
+        return df
+
+
+        pass
+
+    def add_lon_lat(self,df):
+        df = T.add_lon_lat_to_df(df, DIC_and_TIF())
+        return df
+    def add_row(self, df):
+        r_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            r, c = pix
+            r_list.append(r)
+        df['row'] = r_list
+        return df
+
+
+
 
     def add_SM_trend_label(self, df):  ##
 
@@ -16455,6 +17448,79 @@ class Dataframe_func:
 
         df['wetting_drying_trend'] = val_list
         return df
+
+    def add_continent_to_df(self, df):
+        tiff = rf'D:\Project3\Data\Base_data\\continent.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+        f_name = 'continent'
+
+        dic_convert={1:'Africa',2:'Asia',3:'Australia',4: np.nan, 5:'South_America', 6: np.nan, 7:'Europe',8:'North_America',255: np.nan}
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            # print(val)
+
+            val_convert=dic_convert[val]
+
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val_convert)
+        df[f_name] = val_list
+        return df
+
+    pass
+
+    def add_maxmium_LC_change(self, df): ## #### CCI landcover maximum change
+
+        f = rf'E:\CCI_landcover\trend_analysis_LC\\LC_max.tif'
+
+        array, origin, pixelWidth, pixelHeight, extent = ToRaster().raster2array(f)
+        array[array <-99] = np.nan
+
+        LC_dic =DIC_and_TIF().spatial_arr_to_dic(array)
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            r, c = pix
+
+            val= LC_dic[pix]
+            df.loc[i,'LC_max'] = val
+        return df
+
+    def add_average_lai(self,df):
+
+        f = rf'D:\Project3\Result\state_variables\\LAI4g_1982_2020.npy'
+        lai_mean_dic = T.load_npy(f)
+
+
+        f_name = 'growing_season_LAI_mean'
+        print(f_name)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in lai_mean_dic:
+                val_list.append(np.nan)
+                continue
+            val = lai_mean_dic[pix]
+            if val < -99:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+        df[f_name] = val_list
+        return df
+
+        pass
+
+
+
+
 
     def __df_to_excel(self, df, dff, n=1000, random=False):
         dff = dff.split('.')[0]
@@ -16492,11 +17558,13 @@ def main():
     # multi_regression_anomaly().run()
     # multi_regression_detrended_anomaly().run()
     # data_preprocess_for_random_forest().run()
+    # aysmetry_response().run()
+    # monte_carlo().run()
 
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # plt_moving_dataframe().run()

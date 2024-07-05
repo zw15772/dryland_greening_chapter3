@@ -12,6 +12,7 @@ import pprint
 
 this_script_root = join(this_root, 'ERA5')
 
+
 class ERA5_daily:
 
     def __init__(self):
@@ -1095,15 +1096,18 @@ class Build_df:
         # self.add_extreme_heat_frequency()
         # self.add_attribution_heat_spell()
         # self.add_attribution_cold_spell()
-        # self.add_GPCP()
+        self.add_GPCP()
         # self.add_fire()
-        self.add_maxmium_LC_change()
+        # self.add_rainfall_CV()
+        # self.add_maxmium_LC_change()
+        # self.add_greening_moisture_map()
         # self.add_GPCP_lagged()
         # self.add_VPD()
         # self.add_CO2()
         # self.add_LAI4g()
         # self.add_GMST()
         # self.add_tmax()
+        self.show_field()
 
 
 
@@ -1348,8 +1352,8 @@ class Build_df:
         pass
 
     def add_GPCP(self): ##
-        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'\\Detrend\detrend_anomaly\\1982_2020\\LAI4g.npy'
+        df = T.load_df(rf'E:\\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'Detrend\detrend_anomaly\\\1982_2020\\CRU.npy'
 
         spatial_dic = T.load_npy(f)
 
@@ -1377,16 +1381,16 @@ class Build_df:
 
             NDVI_list.append(v1)
 
-        df['LAI4g_detrended_anomaly'] = NDVI_list
+        df['CRU_detrended_anomaly'] = NDVI_list
 
-        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        outf = 'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
         pass
 
     def add_fire(self): ##
-        df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
-        f = results_root + rf'\extract_GS\fire\\fire_burning_area.npy'
+        df = T.load_df(rf'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\Detrend\event\\fire_burning_area.npy'
 
         spatial_dic = T.load_npy(f)
 
@@ -1425,10 +1429,48 @@ class Build_df:
 
         df['fire_burned_area'] = NDVI_list
 
-        outf = data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        outf = 'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
+
         pass
+
+    def add_rainfall_CV(self): ## here add the coefficient of variation of rainfall of seasonality
+        df = T.load_df(rf'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        f = results_root + rf'\Detrend\event\\CV_rainfall.npy'
+
+
+        spatial_dic = T.load_npy(f)
+
+        NDVI_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            year = row.year_range
+
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in spatial_dic:
+                NDVI_list.append(np.nan)
+                continue
+
+            vals = spatial_dic[pix]
+            vals = np.array(vals)
+
+
+            # print(len(vals))
+
+            v1 = vals[year - 0]
+            # v1=vals[year-1982]
+            # print(v1,year,len(vals))
+
+            NDVI_list.append(v1)
+        df['rainfall_CV_intra'] = NDVI_list
+        outf = 'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+
+
 
     def add_maxmium_LC_change(self): ##
         df = T.load_df(data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
@@ -1608,6 +1650,49 @@ class Build_df:
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
         pass
+    def add_greening_moisture_map(self):
+        df = T.load_df(rf'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        fdir = rf'D:\Project3\Result\Dataframe\anomaly_LAI\\'
+
+        for f in os.listdir(fdir):
+            if not 'greening_moisture_map' in f:
+                continue
+
+            if not f.endswith('.tif'):
+                continue
+
+            variable = (f.split('.')[0])
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
+            array = np.array(array, dtype=float)
+
+            val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+            # val_array = np.load(fdir + f)
+            # val_dic=T.load_npy(fdir+f)
+
+            # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
+            f_name = f.split('.')[0]
+            print(f_name)
+            val_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                pix = row['pix']
+                if not pix in val_dic:
+                    val_list.append(np.nan)
+                    continue
+                val = val_dic[pix]
+                if val < -99:
+                    val_list.append(np.nan)
+                    continue
+                if val > 99:
+                    val_list.append(np.nan)
+                    continue
+                val_list.append(val)
+            df[f'{f_name}'] = val_list
+        outf = rf'E:\Data\ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+        pass
 
     def rename_columns(self):
         df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
@@ -1634,6 +1719,12 @@ class Build_df:
         T.save_df(df,outf)
         T.df_to_excel(df,outf)
 
+        pass
+    def show_field(self):
+        df= T.load_df(rf'E:\\Data\\ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        T.print_head_n(df)
+        for key in df.keys():
+            print(key)
         pass
 class extract_rainfall:
     ## 1) extract rainfall CV
@@ -2325,8 +2416,40 @@ class extract_temperature:
             outf = outdir + f
             np.save(outf, result_dic)
 
-class detrend():
+class detrend_variables():
     pass ## detrend the data
+    def run(self):
+        self.detrend()
+        pass
+    def detrend(self):
+        fdir = rf'D:\Project3\Result\extract_GS\fire\\'
+        outdir = results_root+rf'detrend\\event\\'
+        T.mk_dir(outdir,force=True)
+        for f in T.listdir(fdir):
+
+            spatial_dic = np.load(fdir+f,allow_pickle=True).item()
+            result_dic = {}
+            for pix in spatial_dic:
+
+                vals = spatial_dic[pix]
+                vals = np.array(vals)
+                if T.is_all_nan(vals):
+                    continue
+                if len(vals)==0:
+                    continue
+                vals_detrend = T.detrend_vals(vals)
+                # plt.plot(vals)
+                # plt.show()
+                # plt.plot(vals_detrend)
+                # plt.show()
+
+                result_dic[pix] = vals_detrend
+            outf = outdir+f
+            np.save(outf,result_dic)
+        pass
+
+    pass ## deseasonal the data
+
 class fire_extraction():  ## extract_fire_burning_area
     def __init__(self):
 
@@ -2675,7 +2798,7 @@ class ERA5_hourly:
 
         pass
 
-class plot_all_variables:  ## this figure plot all variables
+class plot_ERA_df:  ## this figure plot all variables
     def __init__(self):
         pass
 
@@ -2692,23 +2815,32 @@ class plot_all_variables:  ## this figure plot all variables
         df = df[df['row'] > 120]
         df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 20]
+        # df=df[df['LC_max']>0]
         return df
     def plot_all_variables(self):
-        df= T.load_df(data_root+rf'\ERA5\ERA5_daily\\SHAP\RF_df\\RF_df')
+        df= T.load_df(rf'E:Data\\ERA5\ERA5_daily\\SHAP\RF_df\\RF_df')
         df= self.clean_df(df)
-        color_list=['black','green', 'lime', 'orange', 'red', 'blue',  'grey', 'yellow', 'pink', 'purple']
+        # dic_label = {'sig_greening_sig_wetting': 1, 'sig_browning_sig_wetting': 2, 'non_sig_greening_sig_wetting': 3,
+        #
+        #              'non_sig_browning_sig_wetting': 4, 'sig_greening_sig_drying': 5, 'sig_browning_sig_drying': 6,
+        #
+        #              'non_sig_greening_sig_drying': 7, 'non_sig_browning_sig_drying': 8, np.nan: 0}
+        #
+
+        color_list=['green','brown', 'black', 'r']
         continents = ['Global','Africa','Asia','Australia','North_America','South_America']
-        continents = ['Global',]
+        continents = [1,5,]
         variable_list= ['VPD_anomaly','CO2_anomaly','tmax_anomaly','GPCC_anomaly','fire_burned_area','CV_rainfall','frequency_wet','average_dry_spell','frequency_heat_event','average_anomaly_heat_event','average_anomaly_cold_event','frequency_cold_event']
         year_list=list(range(0,38))
         for variable in variable_list:
             continent_dic={}
             for continent in continents:
 
-                if continent == 'Global':
-                    df_i = df
-                else:
-                    df_i = df[df['continent']==continent]
+                # if continent == 'Global':
+                #     df_i = df
+                # else:
+                #     df_i = df[df['continent']==continent]
+                df_i=df[df['greening_moisture_map']==continent]
 
                 val_list = []
                 # T.print_head_n(df_i)
@@ -2763,12 +2895,14 @@ def main():
     # ERA5_daily().run()
 
 
-    extract_rainfall().run()
+    # extract_rainfall().run()
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
     # fire_extraction().run()
-    # Build_df().run()
-    # plot_all_variables().run()
+    # detrend_variables().run()
+    Build_df().run()
+
+    # plot_ERA_df().run()
 
     # ERA5_hourly().run()
     pass
