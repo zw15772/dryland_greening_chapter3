@@ -9800,12 +9800,13 @@ class aysmetry_response:
     def run(self):
         # self.pick_wet_year()
         # self.pick_dry_year()
-        self.cal_multi_regression_beta()
+        # self.cal_multi_regression_beta()
 
 
         # self.calculate_extreme_year_frequency()
         # self.plot_bar_extreme_year_frequency()
-        self.calculate_frequency_wet_dry()
+        # self.calculate_frequency_wet_dry()
+        self.plot_bar_frequency_wet_dry()
         pass
 
     def pick_wet_year(self):
@@ -10147,109 +10148,6 @@ class aysmetry_response:
 
 
 
-
-
-    def calculate_extreme_year_frequency(self):  ##plot line
-        fdir = rf'D:\Project3\Result\\asymmetry_response\\wet_relative_change\\'
-        threhold_dic={}
-
-        for f in os.listdir(fdir):
-            if not f.endswith('.df'):
-                continue
-            upper_threshold = f.split('_')[-1].replace('.df', '')
-            lower_threshold = f.split('_')[-2]
-
-            df = T.load_df(join(fdir, f))
-            df = self.clean_df(df)
-            df = df.dropna()
-            ### calculate the frequency of the extreme year for each period
-
-            year_list = range(1982, 2021)
-            year_list = np.array(year_list)
-            year_dic = {}
-            for year in year_list:
-                year_dic[year] = 0
-            for year in year_list:
-                df_year = df[df['year'] == year]
-                if len(df_year) == 0:
-                    continue
-
-
-                year_dic[year] = len(df_year)
-            threhold_dic[f'{lower_threshold}_{upper_threshold}'] = year_dic
-
-    #### plot the frequency of the extreme year
-        for threhold in threhold_dic:
-            year_dic = threhold_dic[threhold]
-            year_list = []
-            freq_list = []
-            for year in year_dic:
-                year_list.append(year)
-                freq_list.append(year_dic[year])
-            plt.plot(year_list, freq_list, label=threhold)
-        plt.legend()
-        plt.show()
-
-
-    ###barplot frequency
-    def plot_bar_extreme_year_frequency(self):
-        fdir = rf'D:\Project3\Result\\asymmetry_response\\wet_relative_change\\'
-        threhold_dic = {}
-        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
-        wet_threhold_list=['50_100','40_50','30_40','20_30','10_20']
-        # dry_threhold_list=['-100_-80','-80_-60','-60_-40','-40_-20','-20_0']
-
-        for threhold in wet_threhold_list:
-            f=join(fdir,f'asymmetry_response_precip_{threhold}.df')
-
-
-            upper_threshold = f.split('_')[-1].replace('.df', '')
-            lower_threshold = f.split('_')[-2]
-            df=T.load_df(join(fdir,f))
-            df=self.clean_df(df)
-            df = df.dropna()
-            # T.print_head_n(df)
-            # exit()
-            period_dic= {}
-            for period in period_list:
-                df_period = df[df['year'] >= int(period.split('-')[0])]
-                df_period = df_period[df_period['year'] <= int(period.split('-')[1])]
-                frequency=len(df_period)
-                period_dic[period]=frequency
-            threhold_dic[f'{lower_threshold}_{upper_threshold}'] = period_dic
-
-        color_list = ['r', 'b', 'g', 'y','orange'] * 4
-        # print(color_list)
-        # exit()
-
-
-        period_list=['1982-1990', '1991-2000', '2001-2010', '2011-2020']
-
-######## plot bar plot for each period stacked bar each bar has stacked bar with four different threhold
-
-        dic_period = {}
-        for period in period_list:
-            freq_list = []
-            key_list = []
-
-            for threhold in threhold_dic:
-                frequency = threhold_dic[threhold][period]
-
-                freq_list.append(frequency)
-                key_list.append(threhold)
-            dic_period[period] = freq_list
-        # print(dic_period)
-        # exit()
-        df_new = pd.DataFrame(dic_period, index=wet_threhold_list)
-        df_new = df_new.T
-
-        ##plot bar plot
-        df_new.plot(kind='bar', stacked=True, color=color_list)
-        ##legend
-
-
-        plt.show()
-
     def calculate_frequency_wet_dry(self):  ##based on pixel and then calculate the frequency of the wet and dry year
         f_precipitation = result_root+rf'relative_change\OBS_LAI_extend\\GPCC.npy'
 
@@ -10289,16 +10187,62 @@ class aysmetry_response:
                 outf = outf.replace('.npy', '.tif')
                 ##array to tif
                 DIC_and_TIF(pixelsize=0.25).arr_to_tif(array, outf)
+    def plot_bar_frequency_wet_dry(self):
+        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+        mode='wet'
+        # dry_threhold_list = ['-100_-50', '-50_-40', '-40_-30', '-30_-20', '-20_-10', ]
+        wet_threhold_list = ['50_100', '40_50', '30_40', '20_30', '10_20']
+        # dry_color_list=['peachpuff','orange','darkorange','chocolate','saddlebrown'] ## reverse
+
+        wet_color_list = ['lightblue', 'cyan', 'deepskyblue', 'dodgerblue', 'navy']
+
+        dff=rf'D:\Project3\Result\Dataframe\wet_dry_frequency\wet_dry_frequency.df'
+
+        df = T.load_df(dff)
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['MODIS_LUCC'] != 12]
+        df = df.dropna()
+        # df = df[df['continent'] == 'Australia']
+        # df = df[df['continent'] == 'North_America']
+        # df = df[df['continent'] == 'South_America']
+        # df = df[df['continent'] == 'Africa']
+
+        result_dic={}
+
+        for period in period_list:
+            val_list=[]
+            period_upper = int(period.split('-')[1])
+            period_lower = int(period.split('-')[0])
+            for threhold in wet_threhold_list:
+
+                vals=df[f'frequency_{mode}_year_{threhold}_{period_lower}-{period_upper}'].to_list()
+                vals_array=np.array(vals)*100
+                average=np.nanmean(vals_array)
+                val_list.append(average)
+            result_dic[period]=val_list
+        df_new = pd.DataFrame(result_dic, index=wet_threhold_list)
+        df_new = df_new.T
+        df_new.plot(kind='bar', stacked=True, color=wet_color_list[::-1])
+        plt.ylabel('Frequency of wet year (%)')
+        plt.xticks(rotation=0)
+        plt.show()
+
+
+
+
+
 
 
 class monte_carlo:
     def __init__(self):
         pass
     def run(self):
-        self.cal_monte_carlo_wet()
+        # self.cal_monte_carlo_wet()
         # self.cal_monte_carlo_dry()
         # self.check_result()
-        # self.bar_plot()
+        self.bar_plot()
         pass
     def cal_monte_carlo_wet(self):
         outdir = join(result_root, 'monte_carlo')
@@ -10332,7 +10276,7 @@ class monte_carlo:
             wet_threshold_upper = wet_threshold_list[wet_thre_i + 1]
             wet_threshold_lower = wet_threshold_list[wet_thre_i]
 
-            for pix in tqdm(dic_precip):
+            for pix in tqdm(dic_precip_relative_change):
                 preciptation_relative_change=dic_precip_relative_change[pix]
 
                 if not pix in dic_lai:
@@ -10360,9 +10304,9 @@ class monte_carlo:
                 picked_wet_index = (preciptation_relative_change > wet_threshold_lower) & (preciptation_relative_change < wet_threshold_upper)
                 wet_year = year_list[picked_wet_index]  ## extract the year index based on the wet_index
                 # dry_year = year_list[dry_index]
-                params = (pix, precip, lai, year_list, wet_year)
+                params = (pix, preciptation_relative_change, lai, year_list, wet_year)
                 params_list.append(params)
-            result = MULTIPROCESS(self.kernel_cal_monte_carlo, params_list).run(process=14)
+            result = MULTIPROCESS(self.kernel_cal_monte_carlo_wet, params_list).run(process=14)
             # print(result)
             pickle.dump(result, open(outf, 'wb'))
             # T.save_npy(result_dict_slope_std, outf.replace('.npy', '_std.npy'))
@@ -10392,9 +10336,9 @@ class monte_carlo:
 
 
         ## save the result
-        f_precip = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\GPCC.npy'
+        f_preciptation_relative_change = result_root+rf'\relative_change\OBS_LAI_extend\\GPCC.npy' ##to define the wet and dry year
         f_lai = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\LAI4g.npy'
-        dic_precip = T.load_npy(f_precip)
+        dic_precip = T.load_npy(f_preciptation_relative_change)
         dic_lai = T.load_npy(f_lai)
         year_list = range(1982, 2021)
         year_list = np.array(year_list)
@@ -10402,10 +10346,13 @@ class monte_carlo:
         random.seed(1)
         params_list = []
 
-        dry_threshold_list = [0,10, 20, 30, 40]
+        dry_threshold_list = [-100, -50, -40, -30, -20, -10]
         for dry_thre_i in range(len(dry_threshold_list)):
             if dry_thre_i + 1 >= len(dry_threshold_list):
                 continue
+            dry_threshold_upper = dry_threshold_list[dry_thre_i + 1]
+            dry_threshold_lower = dry_threshold_list[dry_thre_i]
+
             outf = join(outdir, f'monte_carlo_raw_{dry_threshold_list[dry_thre_i]}_{dry_threshold_list[dry_thre_i+1]}.npy')
 
             for pix in tqdm(dic_precip):
@@ -10428,8 +10375,6 @@ class monte_carlo:
                 # plt.show()
                 ## define the different percentile of the precipitation and then find the extreme wet year and dry year
 
-                dry_threshold_lower = np.nanpercentile(precip, dry_threshold_list[dry_thre_i])
-                dry_threshold_upper = np.nanpercentile(precip, dry_threshold_list[dry_thre_i+1])
 
                 ## based on threshold to find the extreme wet year and dry year
                 # print(dry_threshold_lower,dry_threshold_upper)
@@ -10530,7 +10475,7 @@ class monte_carlo:
         pass
 
     def check_result(self):
-        fdir=rf'D:\Project3\Result\monte_carlo\\'
+        fdir=rf'D:\Project3\Result\monte_carlo\\wet\\'
         for f in os.listdir(fdir):
             fpath=join(fdir,f)
             result_dict = np.load(fpath, allow_pickle=True)
@@ -12485,10 +12430,10 @@ class build_dataframe():
     def __init__(self):
 
         # self.this_class_arr = (data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\')
-        self.this_class_arr = result_root+rf'\Dataframe\wet_dry_frequency\\'
+        self.this_class_arr = result_root+rf'\Dataframe\monte_carlo\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'wet_dry_frequency.df'
+        self.dff = self.this_class_arr + 'monte_carlo.df'
 
 
         pass
@@ -12497,7 +12442,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -12508,7 +12453,7 @@ class build_dataframe():
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
 
         # df=self.add_AI_classfication(df)
         #
@@ -12741,7 +12686,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'asymmetry_response\frequency\\frequency_dry_year_-20_-10_2001-2010.tif'
+        f = result_root + rf'\monte_carlo\dry\\\monte_carlo_raw_-50_-40_slope.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -13178,7 +13123,7 @@ class build_dataframe():
 
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'\asymmetry_response\frequency\\'
+        fdir=result_root+rf'monte_carlo\dry\\'
 
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
@@ -17558,13 +17503,13 @@ def main():
     # multi_regression_anomaly().run()
     # multi_regression_detrended_anomaly().run()
     # data_preprocess_for_random_forest().run()
-    # aysmetry_response().run()
+    aysmetry_response().run()
     # monte_carlo().run()
 
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # plt_moving_dataframe().run()
