@@ -2873,7 +2873,7 @@ class partial_correlation():
         self.fdir_X = result_root + rf'\anomaly\OBS_extend\\'
         self.fdir_Y = result_root + rf'\anomaly\OBS_extend\\'
         self.fy_list = ['LAI4g']
-        self.fx_list=['VPD','CO2','tmax','CV_rainfall']
+        self.fx_list=['VPD','tmax','GPCC']
         self.outdir = result_root + rf'\partial_correlation\anomaly\\'
         T.mk_dir(self.outdir, force=True)
 
@@ -2884,9 +2884,9 @@ class partial_correlation():
         # df=self.build_df(self.fdir_X,self.fdir_Y,self.fx_list,self.fy_list)
 
         # self.cal_partial_corr(df,self.fx_list)
-        self.cal_single_correlation()
+        # self.cal_single_correlation()
         # self.cal_single_correlation_ly()
-        # self.plot_partial_correlation()
+        self.plot_partial_correlation()
 
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
@@ -10203,6 +10203,7 @@ class aysmetry_response:
         df = df[df['row'] > 120]
         df = df[df['LC_max'] < 20]
         df = df[df['MODIS_LUCC'] != 12]
+        # df = df[df['partial_corr_GPCC'] < 0.5]
         df = df.dropna()
         # df = df[df['continent'] == 'Australia']
         # df = df[df['continent'] == 'North_America']
@@ -10498,7 +10499,7 @@ class monte_carlo:
             np.save(fpath.replace('.npy', '_slope.npy'), spatial_dict1)
             np.save(fpath.replace('.npy', '_std.npy'), spatial_dict2)
 
-    def calcualte_contributing_of_wet_dry(self):
+    def calcualte_contributing_of_wet_dry(self):  ##spatial
         ## calculate the contributing of wet and dry year to the LAI trend
         ## for each pixel,
         dic_LAI = T.load_npy(rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\\LAI4g.npy')
@@ -10525,22 +10526,27 @@ class monte_carlo:
         df = df[df['row'] > 120]
         df = df[df['LC_max'] < 20]
         df = df[df['MODIS_LUCC'] != 12]
+        dry_color_list=['peachpuff', 'orange', 'darkorange', 'chocolate', 'saddlebrown']
+
+        wet_color_list=['lightblue', 'cyan', 'deepskyblue', 'dodgerblue', 'navy']
+        color_list=wet_color_list+dry_color_list[::-1]
+        # df=df[df['partial_corr_GPCC']<0.4]
         df = df.dropna()
         #### plt. bar plot for the wet and dry year all the period
-        wet_threshold_list = [60, 70, 80, 90,100]
-        dry_threshold_list = [0,10, 20, 30, 40]
+        wet_threshold_list = [10, 20, 30, 40, 50, 100]
+        dry_threshold_list = [-100, -50, -40, -30, -20, -10]
 
         result_dic_slope={}
         result_dic_std={}
         result_contribution_dic = {}
 
-        lai_raw = df['LAI4g_raw'].to_list()
+        lai_raw = df['LAI4g_trend'].to_list()
         lai_raw=np.array(lai_raw)
         lai_raw_mean = np.nanmean(lai_raw)
         lai_raw_std = np.nanstd(lai_raw)
-        result_dic_slope['lai_raw'] = lai_raw_mean
-        result_dic_std['lai_raw'] = lai_raw_std
-        result_contribution_dic['lai_raw'] = lai_raw_mean
+        # result_dic_slope['lai_raw'] = lai_raw_mean
+        # result_dic_std['lai_raw'] = lai_raw_std
+        # result_contribution_dic['lai_raw'] = lai_raw_mean
 
 
         for wet_thre_i in range(len(wet_threshold_list)):
@@ -10553,12 +10559,15 @@ class monte_carlo:
             vals_array = np.array(vals)
 
             differences=lai_raw-vals_array
+            contribution=differences/lai_raw_mean*100
+            contribution[contribution>100] = np.nan
             mean = np.nanmean(differences)
             std = np.nanstd(differences)
+
             # contribution[contribution>100] = np.nan
             result_dic_slope[f'wet_{lower}_{upper}'] = mean
             result_dic_std[f'wet_{lower}_{upper}'] = std
-            result_contribution_dic[f'wet_{lower}_{upper}'] = np.nanmean(differences)
+            result_contribution_dic[f'wet_{lower}_{upper}'] = np.nanmean(contribution)
         for dry_thre_i in range(len(dry_threshold_list)):
             if dry_thre_i + 1 >= len(dry_threshold_list):
                 continue
@@ -10567,13 +10576,15 @@ class monte_carlo:
             vals=df['monte_carlo_raw_'+str(lower)+'_'+str(upper)+'_'+'slope'].to_list()
             vals_array = np.array(vals)
             differences=lai_raw-vals_array
+            contribution=differences/lai_raw_mean*100
+            contribution[contribution>100] = np.nan
 
 
             mean = np.nanmean(differences)
             std = np.nanstd(differences)
             result_dic_slope[f'dry_{lower}_{upper}'] = mean
             result_dic_std[f'dry_{lower}_{upper}'] = std
-            result_contribution_dic[f'dry_{lower}_{upper}'] = np.nanmean(differences)
+            result_contribution_dic[f'dry_{lower}_{upper}'] = np.nanmean(contribution)
 
 
 
@@ -10585,7 +10596,9 @@ class monte_carlo:
         for key in result_contribution_dic:
             key_list.append(key)
             val_list.append(result_contribution_dic[key])
-        plt.bar(key_list,val_list)
+        plt.bar(key_list,val_list,color=color_list)
+        plt.xticks(rotation=45)
+        plt.ylabel('Contribution to LAI trend (%)')
         plt.show()
         pass
 
@@ -12442,7 +12455,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -12457,15 +12470,15 @@ class build_dataframe():
 
         # df=self.add_AI_classfication(df)
         #
-        df=self.add_aridity_to_df(df)
-        # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # # # # #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # df=self.add_ozone_to_df(df)
         # df=self.add_rooting_depth_to_df(df)
@@ -13123,14 +13136,15 @@ class build_dataframe():
 
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'monte_carlo\dry\\'
+        fdir=result_root+rf'partial_correlation\anomaly\\'
 
         for f in os.listdir(fdir):
+            # if not 'LAI4g' in f:
+            #     continue
             if not f.endswith('.tif'):
                 continue
-            # if not 'slope' in f:
-            #     continue
-
+            if  not 'GPCC' in f:
+                continue
 
 
             variable=(f.split('.')[0])
@@ -13148,6 +13162,7 @@ class build_dataframe():
             # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
             f_name=f.split('.')[0]
             print(f_name)
+
             val_list=[]
             for i,row in tqdm(df.iterrows(),total=len(df)):
                 pix=row['pix']
@@ -17503,8 +17518,8 @@ def main():
     # multi_regression_anomaly().run()
     # multi_regression_detrended_anomaly().run()
     # data_preprocess_for_random_forest().run()
-    aysmetry_response().run()
-    # monte_carlo().run()
+    # aysmetry_response().run()
+    monte_carlo().run()
 
     # fingerprint().run()
     # moving_window().run()
