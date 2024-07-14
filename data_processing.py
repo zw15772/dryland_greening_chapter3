@@ -1328,6 +1328,8 @@ class data_processing():
 
             if not f.endswith('.npy'):
                 continue
+            if not 'LAI4g' in f:
+                continue
 
 
             outf=outdir+f.split('.')[0]+'.npy'
@@ -4153,7 +4155,7 @@ class statistic_analysis():
         outdir = result_root + f'zscore\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'GPCC' in f:
+            if not 'LAI4g' in f:
                 continue
 
 
@@ -4292,8 +4294,6 @@ class statistic_analysis():
         MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-
 
 
         fdir = result_root+rf'\multi_regression_moving_window\window15_anomaly\npy_time_series\\'
@@ -9800,13 +9800,13 @@ class aysmetry_response:
         # self.pick_wet_year_relative_change()
         # self.pick_dry_year_relative_change()
 
-        self.cal_multi_regression_beta()
-
-
-
+        # self.cal_multi_regression_beta()
+        # self.cal_multi_regression_beta_regional()
         # self.calculate_frequency_wet_dry()
+        # self.plot_frequency_wet_dry_spatial()
+
         # self.plot_bar_frequency_wet_dry()
-        pass
+        self.plot_bar_frequency_dry_regional()
 
     def pick_wet_year_percentile(self):
         ## 1) build df for the extreme wet year and dry year for four period (1982-1990, 1991-2000, 2001-2010, 2011-2020)
@@ -10039,7 +10039,7 @@ class aysmetry_response:
 
         T.mk_dir(outdir)
         ### define  mild, moderate, extreme, and random fluation
-        ## mild: 0.5-1, moderate: 1-2, extreme: >2, random: 0-0.5
+
         ##drought  mild -0.5 - -1, moderate drought -1 - -2, severe drought <-2, random -0.5 - 0
 
         f_precipitation_zscore = (result_root + rf'zscore\GPCC.npy')
@@ -10047,23 +10047,23 @@ class aysmetry_response:
 
 
 
-        # plot the distribution of the relative change
-        # value_list = []
-        # for year in range(1982,2021):
-        #     for pix in dic_precip_relative_change:
-        #         value=dic_precip_relative_change[pix][year-1982]
-        #         value_list.append(value)
-        # value_list=np.array(value_list)
-        # ### data_clean 1. remove 3std 2. remove nan
-        # value_list=value_list[np.isnan(value_list)==0]
-        # ## 3std clean
-        # value_list=value_list[value_list<np.nanmean(value_list)+3*np.nanstd(value_list)]
-        # value_list=value_list[value_list>np.nanmean(value_list)-3*np.nanstd(value_list)]
-        #
-        #
-        # plt.hist(value_list,bins=100)
-        # plt.show()
-        # exit()
+        # ////plot the distribution of the relative change
+        value_list = []
+        for year in range(1982,2021):
+            for pix in dic_precip_relative_change:
+                value=dic_precip_relative_change[pix][year-1982]
+                value_list.append(value)
+        value_list=np.array(value_list)
+        ### data_clean 1. remove 3std 2. remove nan
+        value_list=value_list[np.isnan(value_list)==0]
+        ## 3std clean
+        value_list=value_list[value_list<np.nanmean(value_list)+3*np.nanstd(value_list)]
+        value_list=value_list[value_list>np.nanmean(value_list)-3*np.nanstd(value_list)]
+
+
+        plt.hist(value_list,bins=100)
+        plt.show()
+        exit()
 
 
 
@@ -10253,7 +10253,19 @@ class aysmetry_response:
 
         df = df[df['MODIS_LUCC'] != 12]
         df=df.dropna()
-        df=df[df['continent']=='Australia']
+        # print(len(df))
+
+        ## remove the outlier
+        # df = df[df['GPCC_zscore'] > -3]
+        # df = df[df['GPCC_zscore'] < 3]
+        # df=df[df['LAI4g_zscore']>-3]
+        # df=df[df['LAI4g_zscore']<3]
+        # #
+        # print(len(df))
+        # exit()
+
+
+        # df=df[df['continent']=='Australia']
         # df = df[df['continent'] == 'North_America']
         # df = df[df['continent'] == 'South_America']
         # df = df[df['continent'] == 'Africa']
@@ -10279,6 +10291,7 @@ class aysmetry_response:
 
         # mode_list=['wet','dry']
         mode_list = ['mild','moderate','extreme',]
+
         period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
         for period in period_list:
             df_period = df[df['year']>=int(period.split('-')[0])]
@@ -10359,16 +10372,27 @@ class aysmetry_response:
                 multi_derivative_mode[mode] = coef_dic
             multi_derivative_period[period] = multi_derivative_mode
 
-        outf = rf'D:\Project3\Result\asymmetry_response\multi_derivative_period.df'
-        df_new = pd.DataFrame(multi_derivative_period)
-        df_new = df_new.T
-        T.save_df(df_new, outf)
-        T.df_to_excel(df_new, outf)
 
-    def cal_multi_regression_beta_spatial(self, ):
-        f = rf'D:\Project3\Result\\asymmetry_response\\wet_anomaly\\asymmetry_response_precip.df'
+        wet_color_list = ['cyan', 'deepskyblue', 'dodgerblue', 'navy']
+
+        for period in period_list:
+
+            for mode in mode_list:
+                multi_derivative_period[period][mode] = multi_derivative_period[period][mode]['precip']
+        ##extract precipitation and creat df
+        df_new_plot = pd.DataFrame(multi_derivative_period)
+        df_new_plot = df_new_plot.T
+        df_new_plot.plot(kind='bar', color=wet_color_list, width=0.8)
+        plt.xticks(rotation=0)
+        plt.ylabel('LAI response to precipitation (%/100mm)')
+        plt.show()
+
+    def cal_multi_regression_beta_regional(self, ):
+
+        ###creat pixel based
+        f = rf'D:\Project3\Result\\asymmetry_response\\dry_anomaly\\asymmetry_response_precip.df'
         # period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
-        period_list = ['1982-1987', '1988-1993', '1994-1999', '2000-2005', '2006-2011', '2012-2020']
+
 
         df = T.load_df(f)
         df = self.clean_df(df)
@@ -10376,114 +10400,154 @@ class aysmetry_response:
         x_var_list = ['precip', 'vpd', ]
 
         ### loop wet and dry
-        multi_derivative_period = {}
+        multi_derivative_region = {}
 
-        # mode_list=['wet','dry']
+
+        AI_classfication= ['Arid', 'Semi-Arid', 'Sub-Humid']
         mode_list = ['mild', 'moderate', 'extreme', ]
         period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
-        for period in period_list:
-            df_period = df[df['year'] >= int(period.split('-')[0])]
-            df_period = df_period[df_period['year'] <= int(period.split('-')[1])]
-            multi_derivative_period[period] = {}
-            multi_derivative_mode = {}
 
-            for mode in mode_list:
-                df_mode = df_period[df_period['mode'] == mode]
-                y_values = df_mode['lai'].to_list()
-                y_mean = df_mode['growing_season_LAI_mean'].mean()
+        for AI in AI_classfication:
+            df_AI = df[df['AI_classfication'] == AI]
 
-                ## interpolate the nan value
-                if len(y_values) == 0:
-                    continue
-                y_values = T.interp_nan(y_values)
+            multi_derivative_period = {}
 
-                y_vals = signal.detrend(y_values)
+            for period in period_list:
+                df_period = df_AI[df_AI['year'] >= int(period.split('-')[0])]
+                df_period = df_period[df_period['year'] <= int(period.split('-')[1])]
 
-                df_new = pd.DataFrame()
-                x_var_list_valid = []
+                multi_derivative_mode = {}
 
-                for x in x_var_list:
+                for mode in mode_list:
 
-                    x_vals = df_mode[x].to_list()
-                    x_vals = T.interp_nan(x_vals)
+                    df_mode = df_period[df_period['mode'] == mode]
+                    y_values = df_mode['lai'].to_list()
+                    y_mean = df_mode['growing_season_LAI_mean'].mean()
 
-                    if len(x_vals) == 0:
+                    ## interpolate the nan value
+                    if len(y_values) == 0:
                         continue
+                    y_values = T.interp_nan(y_values)
 
-                    if np.isnan(np.nanmean(x_vals)):
-                        continue
+                    y_vals = signal.detrend(y_values)
 
-                    if len(x_vals) != len(y_vals):
-                        continue
-                    # print(x_vals)
-                    if x_vals[0] == None:
-                        continue
-                    x_vals_detrend = signal.detrend(x_vals)  # detrend
-                    df_new[x] = x_vals_detrend
+                    df_new = pd.DataFrame()
+                    x_var_list_valid = []
 
-                    x_var_list_valid.append(x)
-                    if len(df_new) <= 3:
-                        continue
-                df_new['y'] = y_vals
+                    for x in x_var_list:
 
-                # T.print_head_n(df_new)
-                df_new = df_new.dropna(axis=1, how='all')
-                x_var_list_valid_new = []
-                for v_ in x_var_list_valid:
-                    if not v_ in df_new:
-                        continue
-                    else:
-                        x_var_list_valid_new.append(v_)
-                # T.print_head_n(df_new)
+                        x_vals = df_mode[x].to_list()
+                        x_vals = T.interp_nan(x_vals)
 
-                df_new = df_new.dropna()
+                        if len(x_vals) == 0:
+                            continue
 
-                linear_model = LinearRegression()
+                        if np.isnan(np.nanmean(x_vals)):
+                            continue
 
-                linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
-                ##save model
-                # joblib.dump(linear_model, outf.replace('.npy', f'_{pix}.pkl'))
-                ##load model
-                # linear_model = joblib.load(outf.replace('.npy', f'_{pix}.pkl'))
-                # coef_ = np.array(linear_model.coef_) / y_mean
-                coef_ = np.array(linear_model.coef_) / y_mean * 100 * 100  ## *100% * 100mm
-                coef_dic = dict(zip(x_var_list_valid_new, coef_))
+                        if len(x_vals) != len(y_vals):
+                            continue
+                        # print(x_vals)
+                        if x_vals[0] == None:
+                            continue
+                        x_vals_detrend = signal.detrend(x_vals)  # detrend
+                        df_new[x] = x_vals_detrend
 
-                # print(df_new['y'])
-                # exit()
-                multi_derivative_mode[mode] = coef_dic
-            multi_derivative_period[period] = multi_derivative_mode
+                        x_var_list_valid.append(x)
+                        if len(df_new) <= 3:
+                            continue
+                    df_new['y'] = y_vals
 
-        outf = rf'D:\Project3\Result\asymmetry_response\multi_derivative_period.df'
-        df_new = pd.DataFrame(multi_derivative_period)
-        df_new = df_new.T
-        T.save_df(df_new, outf)
-        T.df_to_excel(df_new, outf)
+                    # T.print_head_n(df_new)
+                    df_new = df_new.dropna(axis=1, how='all')
+                    x_var_list_valid_new = []
+                    for v_ in x_var_list_valid:
+                        if not v_ in df_new:
+                            continue
+                        else:
+                            x_var_list_valid_new.append(v_)
+                    # T.print_head_n(df_new)
+
+                    df_new = df_new.dropna()
+                    print(len(df_new))
+
+
+                    linear_model = LinearRegression()
+
+                    linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+                    ##save model
+                    # joblib.dump(linear_model, outf.replace('.npy', f'_{pix}.pkl'))
+                    ##load model
+                    # linear_model = joblib.load(outf.replace('.npy', f'_{pix}.pkl'))
+                    # coef_ = np.array(linear_model.coef_) / y_mean
+                    coef_ = np.array(linear_model.coef_) / y_mean * 100 * 100  ## *100% * 100mm
+                    coef_dic = dict(zip(x_var_list_valid_new, coef_))
+
+                    multi_derivative_mode[mode] = coef_dic
+                multi_derivative_period[period] = multi_derivative_mode
+            multi_derivative_region[AI] = multi_derivative_period
+
 
     ### plot bar but group by period
     ##dry
-    # dry_color_list=['peachpuff','orange','darkorange','chocolate','saddlebrown']
-    wet_color_list = [ 'cyan', 'deepskyblue', 'dodgerblue', 'navy']
+        # dry_color_list=['peachpuff','orange','darkorange']
+        wet_color_list = ['lightblue','cyan', 'deepskyblue', 'dodgerblue']
+        pprint(multi_derivative_region)
+        variables_list = ['precip']
+        # color_dict = {
+        #     'mild': 'cyan',
+        #     'moderate': 'deepskyblue',
+        #     'extreme': 'dodgerblue',
+        # }
 
-    for period in period_list:
+        color_dict = {
+            'mild': 'peachpuff',
+            'moderate': 'orange',
+            'extreme': 'darkorange',
+        }
+        for var_i in variables_list:
+            flag_list = []
+            label_list = []
+            val_list = []
+            color_list = []
+            flag = 0
+            for AI in multi_derivative_region:
+                for year_range in multi_derivative_region[AI]:
+                    for mode in multi_derivative_region[AI][year_range]:
+                        val = multi_derivative_region[AI][year_range][mode][var_i]
+                        # print(val)
+                        key = f'{AI}_{year_range}_{mode}'
+                        color = color_dict[mode]
+                        # plt.bar(key, val)
+                        label_list.append(key)
+                        flag_list.append(flag)
+                        val_list.append(val)
+                        color_list.append(color)
+                        flag += 1
+                    flag += 1
+                    label_list.append(' ')
+                    flag_list.append(flag)
+                    val_list.append(0)
+                    color_list.append('w')
+            plt.bar(flag_list, val_list, color=color_list, tick_label=label_list,width=1)
+            plt.xticks(rotation=90)
+            # plt.title(f'{var_i}')
+            plt.ylabel('LAI response to precipitation (%/100mm)')
+            plt.tight_layout()
+            plt.show()
 
-        for mode in mode_list:
-            multi_derivative_period[period][mode] = multi_derivative_period[period][mode]['precip']
-    ##extract precipitation and creat df
-    df_new_plot = pd.DataFrame(multi_derivative_period)
-    df_new_plot = df_new_plot.T
-    df_new_plot.plot(kind='bar',color=wet_color_list,width=0.8)
-    plt.xticks(rotation=0)
-    plt.ylabel('LAI response to precipitation (%/100mm)')
-    plt.show()
+        exit()
 
 
+### plot grouped bar by region
+        # print(val)
+        ticks = ['Arid', 'Sub Arid', 'Sub Humid']
 
 
 
 
     def calculate_frequency_wet_dry(self):  ##based on pixel and then calculate the frequency of the wet and dry year
-        f_precipitation = result_root+rf'relative_change\OBS_LAI_extend\\GPCC.npy'
+        f_precipitation = result_root+rf'\zscore\GPCC.npy'
         dic_precip = T.load_npy(f_precipitation)
 
 
@@ -10495,40 +10559,83 @@ class aysmetry_response:
             period_lower = int(period.split('-')[0])
             year_list = range(period_lower, period_upper)
             year_list = np.array(year_list)
+
             result_dic = {}
 
             for pix in tqdm(dic_precip):
 
 
                 precip_val = dic_precip[pix][period_lower-1982:period_upper-1982]
-                    ###
-                mild=precip_val[(precip_val>0.5) & (precip_val<1)]
-                moderate=precip_val[(precip_val>1) & (precip_val<2)]
-                extreme=precip_val[(precip_val>2)]
-                random=precip_val[(precip_val>0) & (precip_val<0.5)]
+                    ### wet
+                # mild=precip_val[(precip_val>0.5) & (precip_val<1)]
+                # moderate=precip_val[(precip_val>1) & (precip_val<2)]
+                # extreme=precip_val[(precip_val>2)]
+                # random=precip_val[(precip_val>0) & (precip_val<0.5)]
+
+                ##dry
+
+                mild = precip_val[(precip_val < -0.5) & (precip_val > -1)]
+                moderate = precip_val[(precip_val < -1) & (precip_val > -2)]
+                extreme = precip_val[(precip_val < -2)]
+                random = precip_val[(precip_val < 0) & (precip_val > -0.5)]
                 # print(len(mild),len(moderate),len(extreme),len(random))
                 # exit()
-                mild_frenquency = len(mild)/len(year_list)
-                moderate_frenquency = len(moderate)/len(year_list)
-                extreme_frenquency = len(extreme)/len(year_list)
-                random_frenquency = len(random)/len(year_list)
+                mild_frenquency = len(mild)/len(year_list)*100
+                moderate_frenquency = len(moderate)/len(year_list)*100
+                extreme_frenquency = len(extreme)/len(year_list)*100
+                random_frenquency = len(random)/len(year_list)*100
 
                 result_dic[pix] = {'mild':mild_frenquency,'moderate':moderate_frenquency,'extreme':extreme_frenquency,'random':random_frenquency}
 
 
-                outdir=join(result_root,'asymmetry_response','frequency')
-                T.mk_dir(outdir)
-                outf=join(outdir,f'frequency_{period}.npy')
-                np.save(outf,result_dic)
+            outdir=join(result_root,'asymmetry_response','frequency_dry')
+            T.mk_dir(outdir)
+            outf=join(outdir,f'frequency_{period}.npy')
+            np.save(outf,result_dic)
 
     def plot_frequency_wet_dry_spatial(self):
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+
         period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
         mode_list = ['mild', 'moderate', 'extreme', 'random']
         for period in period_list:
-            f = join(result_root, 'asymmetry_response', 'frequency', f'frequency_{period}.npy')
+            f = join(result_root, 'asymmetry_response', 'frequency_dry', f'frequency_{period}.npy')
             dic = T.load_npy(f)
+            spatial_dic = {}
             for mode in mode_list:
-                pass
+
+                for pix in dic:
+                    r,c=pix
+                    if r<120:
+                        continue
+                    landcover_value = crop_mask[pix]
+                    if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                        continue
+                    if dic_modis_mask[pix] == 12:
+                        continue
+                    spatial_dic[pix] = dic[pix][mode]
+                array= DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+                array=array*array_mask
+                # plt.imshow(array)
+                # plt.colorbar()
+                # plt.show()
+                outf=join(result_root, 'asymmetry_response', 'frequency_dry', f'frequency_{period}_{mode}.tif')
+                DIC_and_TIF(pixelsize=0.25).arr_to_tif(array, outf)
+
+
+
+
+
+
+
 
 
 
@@ -10538,14 +10645,13 @@ class aysmetry_response:
 
     def plot_bar_frequency_wet_dry(self):
         period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
-        mode='dry'
-        dry_threhold_list = ['-100_-50', '-50_-40', '-40_-30', '-30_-20', '-20_-10', ]
-        # wet_threhold_list = ['50_100', '40_50', '30_40', '20_30', '10_20']
+        mode=['mild','moderate','extreme']
+
         dry_color_list=['peachpuff','orange','darkorange','chocolate','saddlebrown'] ## reverse
 
         wet_color_list = ['lightblue', 'cyan', 'deepskyblue', 'dodgerblue', 'navy']
 
-        dff=rf'D:\Project3\Result\Dataframe\wet_dry_frequency\wet_dry_frequency.df'
+        dff=rf'D:\Project3\Result\\asymmetry_response\Dataframe\wet_dry_frequency.df'
 
         df = T.load_df(dff)
         df = df[df['landcover_classfication'] != 'Cropland']
@@ -10562,26 +10668,93 @@ class aysmetry_response:
         result_dic={}
 
         for period in period_list:
-            val_list=[]
-            period_upper = int(period.split('-')[1])
-            period_lower = int(period.split('-')[0])
-            for threhold in dry_threhold_list:
+            result_dic[period]={}
+            lower_period=int(period.split('-')[0])
+            upper_period=int(period.split('-')[1])
+            for mode_ in mode:
 
-                vals=df[f'frequency_{mode}_year_{threhold}_{period_lower}-{period_upper}'].to_list()
-                vals_array=np.array(vals)*100
+                vals=df[f'frequency_{lower_period}-{upper_period}_{mode_}_wet'].to_list()
+                vals_array=np.array(vals)
                 average=np.nanmean(vals_array)
-                val_list.append(average)
-            result_dic[period]=val_list
-        df_new = pd.DataFrame(result_dic, index=dry_threhold_list)
+                result_dic[period][mode_]=average
+        df_new = pd.DataFrame(result_dic)
         df_new = df_new.T
-        df_new.plot(kind='bar', stacked=True, color=dry_color_list[::-1])
+        df_new.plot(kind='bar', stacked=True, color=wet_color_list)
         plt.ylabel('Frequency of wet year (%)')
         plt.xticks(rotation=0)
         plt.ylim(0,50)
         plt.show()
 
+    def plot_bar_frequency_dry_regional(self):
 
 
+        period_list = ['1982-1990', '1991-2000', '2001-2010', '2011-2020']
+        mode=['mild','moderate','extreme']
+
+        # dry_color_list=['peachpuff','orange','darkorange','chocolate','saddlebrown'] ## reverse
+
+        wet_color_list = [ 'cyan', 'deepskyblue', 'dodgerblue', 'navy']
+
+        dff=rf'D:\Project3\Result\\asymmetry_response\Dataframe\wet_dry_frequency.df'
+
+        df = T.load_df(dff)
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['MODIS_LUCC'] != 12]
+        # df = df[df['partial_corr_GPCC'] < 0.5]
+        df = df.dropna()
+
+
+        AI_classfication = ['Arid', 'Semi-Arid', 'Sub-Humid']
+        result_dic = {}
+        for AI in AI_classfication:
+            result_dic[AI] = {}
+            df_AI=df[df['AI_classfication']==AI]
+            for period in period_list:
+
+
+                result_dic[AI][period] = {}
+
+                lower_period = int(period.split('-')[0])
+                upper_period = int(period.split('-')[1])
+
+                for mode_ in mode:
+
+                    result_dic[AI][period][mode_] = {}
+
+                    vals = df_AI[f'frequency_{lower_period}-{upper_period}_{mode_}_wet'].to_list()
+                    vals_array = np.array(vals)
+                    average = np.nanmean(vals_array)
+                    result_dic[AI][period][mode_] = average
+
+
+        pprint(result_dic)
+
+        fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+        flag=0
+
+
+        ##plot stack bar as function of AI and period
+        for AI in AI_classfication:
+            ax=axs[flag]
+
+            result_dic_AI = result_dic[AI]
+            df_new = pd.DataFrame(result_dic_AI)
+            df_new = df_new.T
+            df_new.plot(kind='bar', stacked=True, color=wet_color_list,  width=0.8, ax=ax)
+            x_ticks = df_new.index.to_list()
+            ax.set_xticklabels(x_ticks, rotation=45)
+            ax.set_ylabel('Frequency of dry year (%)')
+            ax.set_title(AI)
+            ax.set_ylim(0, 45)
+
+
+            flag+=1
+        plt.tight_layout()
+
+        plt.show()
+        exit()
 
 
 
@@ -12797,10 +12970,10 @@ class build_dataframe():
     def __init__(self):
 
         # self.this_class_arr = (data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\')
-        self.this_class_arr = result_root+rf'\Dataframe\monte_carlo\\'
+        self.this_class_arr = result_root+rf'asymmetry_response\\Dataframe\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'monte_carlo.df'
+        self.dff = self.this_class_arr + 'wet_dry_frequency.df'
 
 
         pass
@@ -12820,19 +12993,19 @@ class build_dataframe():
         # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
 
-        # df=self.add_AI_classfication(df)
-        #
-        # df=self.add_aridity_to_df(df)
-        # # # # #
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_AI_classfication(df)
+
+        df=self.add_aridity_to_df(df)
+        # # # #
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # df=self.add_ozone_to_df(df)
         # df=self.add_rooting_depth_to_df(df)
@@ -13490,15 +13663,13 @@ class build_dataframe():
 
     def add_trend_to_df(self,df):
 
-        fdir=result_root+rf'trend_analysis\original\OBS_LAI\\'
+        fdir=result_root+rf'asymmetry_response\frequency_dry\\'
 
         for f in os.listdir(fdir):
-            if not 'LAI4g' in f:
-                continue
+
             if not f.endswith('.tif'):
                 continue
-            if  not 'p_value' in f:
-                continue
+
 
 
             variable=(f.split('.')[0])
@@ -17505,24 +17676,33 @@ class Dataframe_func:
 
                 continue
             outf=fdir+f
+            print(outf)
 
             df=T.load_df(fdir+f)
-            print('add aridity')
-            df=self.add_aridity_to_df(df)
+            # print('add aridity')
+            # df=self.add_aridity_to_df(df)
+            #
+            # print('add landcover_data')
+            # df=self.add_landcover_data_to_df(df)
+            # df=self.add_landcover_classfication_to_df(df)
+            # print('add MODIS landcover')
+            # df=self.add_MODIS_LUCC_to_df(df)
+            # print('add continent')
+            # df=self.add_continent_to_df(df)
+            # print('add row')
+            # df=self.add_row(df)
+            # print('CCI_max')
+            # df=self.add_maxmium_LC_change(df)
+            # print('add average_lai')
+            # df=self.add_average_lai(df)
 
-            print('add landcover_data')
-            df=self.add_landcover_data_to_df(df)
-            df=self.add_landcover_classfication_to_df(df)
-            print('add MODIS landcover')
-            df=self.add_MODIS_LUCC_to_df(df)
-            print('add continent')
-            df=self.add_continent_to_df(df)
-            print('add row')
-            df=self.add_row(df)
-            print('CCI_max')
-            df=self.add_maxmium_LC_change(df)
-            print('add average_lai')
-            df=self.add_average_lai(df)
+            # print('add aridity_classfication')
+            # df=self.add_AI_classfication(df)
+            # print('add percipitation_zscore')
+            # df=self.add_precipitation_zscore(df)
+
+            print('add LAI4g_zscore')
+            df = self.add_precipitation_zscore(df)
 
 
             T.save_df(df,outf)
@@ -17832,8 +18012,75 @@ class Dataframe_func:
 
         pass
 
+    def add_AI_classfication(self, df):
 
+        f = data_root + rf'\\Base_data\dryland_AI.tif\\dryland_classfication.tif'
 
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        f_name = f.split('.')[0]
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]
+            if val==0:
+                label='Arid'
+            elif val==1:
+                label='Semi-Arid'
+            elif val==2:
+                label='Sub-Humid'
+            elif val<-99:
+                label=np.nan
+            else:
+                raise
+            val_list.append(label)
+
+        df['AI_classfication'] = val_list
+        return df
+
+    def add_precipitation_zscore(self,df):
+        f = result_root + rf'zscore\GPCC.npy'
+
+        val_dic = T.load_npy(f)
+        f_name = 'LAI4g_zscore'
+        print(f_name)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            year=row['year']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix][year-1982]
+            val_list.append(vals)
+        df[f_name] = val_list
+        return df
+
+    def add_LAI4g_zscore(self,df):
+        f = result_root + rf'zscore\LAI4g.npy'
+
+        val_dic = T.load_npy(f)
+        f_name = 'LAI4g_zscore'
+        print(f_name)
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            year=row['year']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            vals = val_dic[pix][year-1982]
+            val_list.append(vals)
+        df[f_name] = val_list
+        return df
 
 
     def __df_to_excel(self, df, dff, n=1000, random=False):
