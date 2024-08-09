@@ -1087,7 +1087,7 @@ class extration_extreme_event_temperature_ENSO:
 
 class Build_df:
     def run (self):
-        # self.build_df()
+        self.build_df()
         # self.add_attribution_rainfall()
         # self.add_attribution_rainfall_frequency()
         # self.add_attribution_dry_spell()
@@ -1096,7 +1096,7 @@ class Build_df:
         # self.add_extreme_heat_frequency()
         # self.add_attribution_heat_spell()
         # self.add_attribution_cold_spell()
-        self.add_GPCP()
+        # self.add_GPCP()
         # self.add_fire()
         # self.add_rainfall_CV()
         # self.add_maxmium_LC_change()
@@ -1107,7 +1107,7 @@ class Build_df:
         # self.add_LAI4g()
         # self.add_GMST()
         # self.add_tmax()
-        self.show_field()
+        # self.show_field()
 
 
 
@@ -1117,12 +1117,14 @@ class Build_df:
 
         pass
     def build_df(self):
-        fdir = data_root + rf'ERA5\ERA5_daily\dict\dry_spell\\'
-        outdir = data_root + rf'\ERA5\ERA5_daily\SHAP\\RF_df\\'
+        fdir =  rf'E:\Data\ERA5_precip\ERA5_daily\dict\\dry_spell\\'
+        outdir = rf'E:\Data\\\\ERA5_precip\ERA5_daily\SHAP\\original_df\\'
         T.mk_dir(outdir, force=True)
         flag = 1981
         result_dic = {}
         for f in tqdm(T.listdir(fdir)):
+            if not f.endswith('.npy'):
+                continue
             spatial_dic = np.load(fdir + f, allow_pickle=True).item()
 
             for pix in spatial_dic:
@@ -1743,6 +1745,103 @@ class extract_rainfall:
 
         # self.check_spatial_map()
         pass
+
+    def define_quantile_threshold(self):
+        # 1) extract extreme wet event based on 90th percentile and calculate frequency and total duration
+        # 2) extract extreme dry event based on 10th percentile and calculate frequency and total duration
+        # 3) extract wet event intensity
+        ## 4) extract dry event intensity
+        ## extract VPD and calculate the frequency of VPD>2kpa
+        fdir=data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
+        T.mk_dir(outdir,force=True)
+
+        for f in T.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+
+            spatial_dic = np.load(fdir+f,allow_pickle=True).item()
+            result_dic={}
+            for pix in tqdm(spatial_dic):
+
+                vals=spatial_dic[pix]
+                vals_flatten=[item for sublist in vals for item in sublist]
+                vals_flatten = np.array(vals_flatten)
+
+                if T.is_all_nan(vals_flatten):
+                    continue
+                # plt.bar(range(len(vals_flatten)),vals_flatten)
+                # plt.show()
+
+                val_90th= np.percentile(vals_flatten,90)
+                val_10th = np.percentile(vals_flatten, 10)
+                val_95th = np.percentile(vals_flatten, 95)
+                val_5th = np.percentile(vals_flatten, 5)
+                val_99th = np.percentile(vals_flatten, 99)
+                val_1st = np.percentile(vals_flatten, 1)
+                dic_i={
+                    '90th':val_90th,
+                    '10th':val_10th,
+                    '95th':val_95th,
+                    '5th':val_5th,
+                    '99th':val_99th,
+                    '1st':val_1st
+                }
+                result_dic[pix]=dic_i
+            outf=outdir+f
+            np.save(outf,result_dic)
+
+    def extract_extreme_rainfall_event(self):
+        ENSO_type = 'La_nina'
+        fdir_threshold = data_root+rf'ERA5\ERA5_daily\dict\define_quantile_threshold\\'
+        fdir_yearly_all=rf'D:\Project3\Data\ERA5\ERA5_daily\dict\ENSO_year_extraction\\{ENSO_type}\\'
+        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\extreme_event_extraction\\{ENSO_type}\\'
+        T.mk_dir(outdir,force=True)
+        spatial_threshold_dic=T.load_npy_dir(fdir_threshold)
+        result_dic = {}
+        for f in T.listdir(fdir_yearly_all):
+            spatial_dic = T.load_npy(fdir_yearly_all+f)
+            for pix in tqdm(spatial_dic):
+                if not pix in spatial_threshold_dic:
+                    continue
+                threshold_dic=spatial_threshold_dic[pix]
+
+                val_90th = threshold_dic['90th']
+                print(val_90th)
+                val_10th = threshold_dic['10th']
+                print(val_10th)
+                EI_nino_dic= spatial_dic[pix]
+                result_dic_i = {}
+                for year_range in EI_nino_dic:
+
+                    extreme_wet_event = []
+                    extreme_dry_event = []
+                    for val in EI_nino_dic[year_range]:
+                        if val > val_90th:
+                            extreme_wet_event.append(val)
+
+                    ## calculate the frequency and average intensity of extreme wet event and extreme dry event
+                    ## intensity
+                    average_intensity_extreme_wet_event = np.nanmean(extreme_wet_event)
+
+                    ## frequency
+                    frequency_extreme_wet_event = len(extreme_wet_event)
+
+
+
+
+                    result_dic_i[year_range] = {
+                        f'{ENSO_type}_average_intensity_extreme_wet_event':average_intensity_extreme_wet_event,
+
+                        f'{ENSO_type}_frequency_extreme_wet_event':frequency_extreme_wet_event,
+
+
+
+                    }
+                result_dic[pix] = result_dic_i
+            outf = outdir + f
+            np.save(outf, result_dic)
+
     def extract_rainfall_CV_total(self):  ## extract total and CV of rainfall
         fdir = data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
         outdir_CV = data_root+rf'\ERA5\ERA5_daily\dict\\rainfall_CV_total\\'
