@@ -97,10 +97,10 @@ class data_processing():
         # self.resample_trendy()
         # self.resample_AVHRR_LAI()
         # self.resample_GIMMS3g()
-        self.resample_MODIS_LUCC()
+        # self.resample_MODIS_LUCC()
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
-        self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
+        # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -1421,14 +1421,13 @@ class data_processing():
             np.save(outf+'2001_2020.npy',dic_ii)
 
     def extend_nan(self):
-        fdir= result_root + rf'detrend_anomaly\1982_2020\\'
-        outdir=result_root + rf'detrend_anomaly\1982_2020\\'
+        fdir= rf'D:\Project3\Result\growth_rate\\'
+        outdir=rf'D:\Project3\Result\growth_rate\\extend_nan\\'
         T.mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
 
+
             if not f.endswith('.npy'):
-                continue
-            if not 'GLEAM' in f:
                 continue
 
 
@@ -1442,12 +1441,15 @@ class data_processing():
                 r,c=pix
 
                 time_series=dic[pix]
+                # print((time_series))
 
                 time_series=np.array(time_series)
+                if np.isnan(time_series).all():
+                    continue
                 time_series[time_series<-999]=np.nan
                 if np.isnan(np.nanmean(time_series)):
                     continue
-                if len(time_series)<39:
+                if len(time_series)<38:
 
                     time_series_new=np.append(time_series,np.nan)
                     dic_new[pix]=time_series_new
@@ -3435,9 +3437,9 @@ class single_correlation():
 
         pass
     def cal_single_correlation(self):
-        fdir_Y = result_root + rf'extract_GS\OBS_LAI_extend\\'
-        fdir_X = result_root + rf'extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'extract_GS\single_correlation\\'
+        fdir_Y = result_root + rf'growth_rate\\'
+        fdir_X = result_root + rf'growth_rate\\'
+        outdir = result_root + rf'growth_rate\\\single_correlation\\'
         T.mk_dir(outdir, force=True)
 
         for fx in os.listdir(fdir_X):
@@ -3662,7 +3664,7 @@ class statistic_analysis():
         # self.normalised_variables()
         # self.calculate_CV()
         # self.zscore()
-        # self.detrend()
+        self.detrend()
         # self.LAI_baseline()
 
         # self.anomaly_GS()
@@ -3670,7 +3672,7 @@ class statistic_analysis():
         # self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.trend_analysis_for_event()
         # self.trend_differences()
         # self.trend_average_TRENDY()
@@ -3679,7 +3681,8 @@ class statistic_analysis():
 
 
         # self.scerios_analysis() ## this method tried to calculate different scenarios
-
+        # self.calculate_annual_growth_rate()
+        # self.growth_rate_relative_change()
 
 
     def detrend(self):
@@ -3687,14 +3690,13 @@ class statistic_analysis():
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir=result_root + rf'\zscore\\'
-        outdir=result_root + rf'Detrend\detrend_zscore\\1982_2020\\'
+        fdir=result_root + rf'growth_rate\extend_nan\\'
+        outdir=result_root + rf'growth_rate\detrend\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             print(f)
-            if not 'GLEAM_SMroot' in f:
-                continue
+
 
 
 
@@ -3765,8 +3767,9 @@ class statistic_analysis():
                     # print(time_series)
                     detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
                     ###add nan to the end if length is less than time_series
-                    if len(detrend_delta_time_series) < 39:
-                        detrend_delta_time_series=np.append(detrend_delta_time_series, [np.nan]*(39-len(detrend_delta_time_series)))
+                    if len(detrend_delta_time_series) < 38:
+
+                        detrend_delta_time_series=np.append(detrend_delta_time_series, [np.nan]*(38-len(detrend_delta_time_series)))
 
                         detrend_zscore_dic[pix] = detrend_delta_time_series
 
@@ -4458,11 +4461,13 @@ class statistic_analysis():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'multi_regression\events_multiregression\time_series\\'
-        outdir = result_root + rf'multi_regression\events_multiregression\time_series\\trend\\'
+        fdir = result_root+rf'growth_rate\\'
+        outdir = result_root + rf'\\growth_rate\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
 
 
             outf=outdir+f.split('.')[0]
@@ -6335,21 +6340,22 @@ class bivariate_analysis():
         pass
     def bivariate_plot(self):
         import xymap
-        tif_long_term= result_root + rf'\multi_regression_moving_window\events\events_multiregression\time_series\trend\\precip_dry_trend.tif'
-        tif_window=result_root + rf'\multi_regression_moving_window\events\events_multiregression\time_series\\\trend\\precip_wet_trend.tif'
+        tif_long_term= result_root + rf'growth_rate\trend_analysis_growth_rate\\LAI4g_trend.tif'
+        tif_window=result_root + rf'\trend_analysis\original\OBS_LAI\\LAI4g_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
-        outtif=result_root + rf'bivariate_analysis\\wet_vs_dry.tif'
+        outtif=result_root + rf'bivariate_analysis\\trend_vs_growth_rate.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
         tif1=tif_long_term
         tif2=   tif_window
-        tif1_label='dry_trend'
-        tif2_label='wet_trend'
+
+        tif1_label='trend'
+        tif2_label='growth_rate'
         min1=-0.1
         max1=0.1
-        min2=-0.1
-        max2=0.1
+        min2=-0.01
+        max2=0.01
         outf=outtif
 
         # xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
@@ -11796,9 +11802,11 @@ class build_dataframe():
 
         # self.this_class_arr = (data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\')
         # self.this_class_arr = result_root+rf'asymmetry_response\\\relative_change_detrend\\frequency_wet_event_CRU\\'
-        self.this_class_arr = result_root + rf'\\Dataframe\\'
+        self.this_class_arr = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\\Dataframe\\'
+
+
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'Raw_growing_season.df'
+        self.dff = self.this_class_arr + 'raw_data.df'
 
 
         pass
@@ -11814,27 +11822,28 @@ class build_dataframe():
         # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
-        # df=self.append_value(df)
+        # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
+        # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
-
-        df=self.add_AI_classfication(df)
-
-        df=self.add_aridity_to_df(df)
-        # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
+        df=self.add_trend_to_df(df)
+        #
+        # df=self.add_AI_classfication(df)
+        # #
+        # df=self.add_aridity_to_df(df)
+        # # # # # #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -11844,7 +11853,7 @@ class build_dataframe():
 
         # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
-        # df=self.show_field(df)
+        df=self.show_field(df)
 
 
         T.save_df(df, self.dff)
@@ -11881,19 +11890,21 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-        fdir =result_root+ rf'extract_GS\OBS_LAI_extend\\'
+
+        fdir=result_root+rf'growth_rate\\growth_rate_relative_change_trend\\'
         all_dic= {}
         for f in os.listdir(fdir):
 
 
             fname= f.split('.')[0]
-            if fname not in ['LAI4g','GPCC', 'tmax','VPD','GLEAM_SMroot','CRU']:
-                continue
+            # if fname not in ['LAI4g','GPCC', 'tmax','VPD','GLEAM_SMroot','CRU']:
+            #     continue
 
             fpath=fdir+f
 
             dic = T.load_npy(fpath)
-            key_name=fname
+            key_name=fname+'_growth_rate_relative_change_trend'
+            print(key_name)
             all_dic[key_name]=dic
         # print(all_dic.keys())
         df=T.spatial_dics_to_df(all_dic)
@@ -11920,17 +11931,19 @@ class build_dataframe():
 
 
     def append_attributes(self, df):  ## add attributes
-        fdir =  result_root + rf'\relative_change\OBS_LAI_extend\\'
+        fdir = result_root+ rf'\relative_change\OBS_LAI_extend\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
                 continue
-            if not 'leaf_area' in f:
+            if not 'LAI4g' in f:
                 continue
+
+
 
             # array=np.load(fdir+f)
             # dic = DIC_and_TIF().spatial_arr_to_dic(array)
             dic=T.load_npy(fdir+f)
-            key_name = f.split('.')[0]
+            key_name = f.split('.')[0]+'_relative_change'
             print(key_name)
 
             # df[key_name] = df['pix'].map(dic)
@@ -11975,7 +11988,7 @@ class build_dataframe():
 
 
     def append_value(self, df):  ##补齐
-        fdir = result_root + rf'\\anomaly\OBS_extend\\'
+        fdir = result_root + rf'growth_rate\\\growth_rate_relative_change_trend\\'
         col_list=[]
         for f in os.listdir(fdir):
 
@@ -11983,9 +11996,8 @@ class build_dataframe():
                 continue
 
 
-            col_name=f.split('.')[0]
-            if col_name not in ['LAI4g','GPCC', 'tmax','VPD','GLEAM_SMroot',]:
-                continue
+            col_name=f.split('.')[0]+'_growth_rate_relative_change_trend'
+
             col_list.append(col_name)
 
         for col in col_list:
@@ -12008,8 +12020,11 @@ class build_dataframe():
                 #         vals=np.append(vals,np.nan)
                 #     print(len(vals))
                 if len(vals)==38:
-                    vals=np.append(vals,np.nan)
-                    vals_new.append(vals)
+
+                    # vals=np.append(vals,np.nan)
+                    ## append at the beginning
+                    vals = np.insert(vals, 0, np.nan)
+
 
                 vals_new.append(vals)
 
@@ -12023,7 +12038,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\extract_GS\OBS_LAI_extend\LAI4g.npy'
+        f = result_root + rf'extract_GS\OBS_LAI_extend\\LAI4g.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -12050,7 +12065,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g'] = change_rate_list
+        df['LAI4g_raw'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -12109,9 +12124,70 @@ class build_dataframe():
         pass
 
     def add_detrend_zscore_to_df(self, df):
-        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
+
+        fdir=result_root+rf'extract_GS\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['CO2','LAI4g', 'GPCC', 'tmax', 'VPD', 'GLEAM_SMroot', 'CRU']:
+
+
+
+            variable= f.split('.')[0]
+            if variable not in ['CRU','GLEAM_SMroot','CO2','VPD','tmax']:
+                continue
+
+            print(variable)
+
+
+            if not f.endswith('.npy'):
+                continue
+            val_dic = T.load_npy(fdir + f)
+
+            NDVI_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+
+                year = row.year
+                # pix = row.pix
+                pix = row['pix']
+                r, c = pix
+
+
+                if not pix in val_dic:
+                    NDVI_list.append(np.nan)
+                    continue
+
+
+                vals = val_dic[pix]
+
+
+                # print(len(vals))
+                ##### if len vals is 38, the end of list add np.nan
+
+                # if len(vals) == 38:
+                #     vals=np.append(vals,np.nan)
+                #     v1 = vals[year - 1982]
+                #     NDVI_list.append(v1)
+                # if len(vals)==39:
+                # v1 = vals[year - 1982]
+                # v1 = vals[year - 1982]
+                # if year < 2000:  ## fillwith nan
+                #     NDVI_list.append(np.nan)
+                #     continue
+
+
+
+                v1= vals[year - 1982]
+                # print(v1,year,len(vals))
+
+                NDVI_list.append(v1)
+
+
+            df[f'{variable}_raw'] = NDVI_list
+        # exit()
+        return df
+
+    def add_rainfall_characteristic_to_df(self, df):
+        fdir = rf'E:\Data\ERA5_precip\ERA5_daily\dict\dry_spell\\'
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
                 continue
 
             variable= f.split('.')[0]
@@ -12564,12 +12640,13 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'Result\monte_carlo_trend\difference\\'
+        fdir=rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
             # print(f)
             # exit()
-            if not 'tif' in f:
+            if not 'R2' in f:
                 continue
+
 
 
 
@@ -13497,7 +13574,7 @@ class plot_dataframe():
 
     def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
 
-        df = T.load_df(result_root + rf'\Dataframe\relative_changes\relative_changes.df')
+        df = T.load_df(result_root + rf'\growth_rate\DataFrame\\growth_rate_all_years.df')
         print(len(df))
         df=self.clean_df(df)
 
@@ -13534,7 +13611,8 @@ class plot_dataframe():
         i = 1
         variable_list=['GLEAM_SMroot',]
         # variable_list=['VPD',]
-        variable_list=['leaf_area']
+        # variable_list=['leaf_area']
+        variable_list=['LAI4g_relative_change']
         # scenario='S2'
         # variable_list= ['LAI4g',f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
         #      f'ISBA-CTRIP_{scenario}_lai', f'JSBACH_{scenario}_lai', f'JULES_{scenario}_lai',  f'LPJ-GUESS_{scenario}_lai', f'LPX-Bern_{scenario}_lai',
@@ -13560,13 +13638,13 @@ class plot_dataframe():
 
         # exit()
 
-        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America','global']:
-            ax = fig.add_subplot(2, 3, i)
+        for continent in ['Arid', 'Semi-Arid','Sub-Humid','global']:
+            ax = fig.add_subplot(2, 2, i)
             if continent=='global':
                 df_continent=df
             else:
 
-                df_continent = df[df['continent'] == continent]
+                df_continent = df[df['AI_classfication'] == continent]
 
 
 
@@ -13580,7 +13658,7 @@ class plot_dataframe():
 
 
                 vals = df_continent[product].tolist()
-                pixel_area_sum = df_continent['pixel_area'].sum()
+                # pixel_area_sum = df_continent['pixel_area'].sum()
 
 
 
@@ -13596,7 +13674,7 @@ class plot_dataframe():
                         continue
                     val[val<-99]=np.nan
 
-                    if not len(val) == 39:
+                    if not len(val) == 38:
                         ## add nan to the end of the list
                         for j in range(1):
                             val=np.append(val,np.nan)
@@ -13614,7 +13692,7 @@ class plot_dataframe():
                 ###### calculate mean
                 vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
                 vals_mean=np.nanmean(vals_mean,axis=0)
-                vals_mean=vals_mean/pixel_area_sum
+                # vals_mean=vals_mean/pixel_area_sum
 
                 val_std=np.nanstd(vals_mean,axis=0)
 
@@ -16426,7 +16504,7 @@ class check_data():
     def run (self):
         self.plot_sptial()
 
-        self.testrobinson()
+        # self.testrobinson()
         # self.plot_time_series()
         # self.plot_bar()
 
@@ -16434,7 +16512,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project4\Data\GLEAM_SMroot\DIC\\per_pix_dic_000.npy'
+        f =  rf'D:\Project3\Result\growth_rate\\growth_rate_relative_change\\LAI4g.npy'
 
 
         dic=T.load_npy(f)
@@ -16471,7 +16549,7 @@ class check_data():
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
 
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=20)
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=38,vmax=39)
         plt.colorbar()
         plt.title(f)
         plt.show()
@@ -16578,6 +16656,337 @@ class check_data():
         df.plot.bar()
         #
         plt.show()
+
+
+
+
+
+class growth_rate:
+    from scipy import stats, linalg
+    def run(self):
+        # self.calculate_annual_growth_rate()
+        # self.calculate_annual_growth_rate_relative_change()
+
+        self.plot_growth_rate()
+        # self.bar_plot()
+    pass
+
+    def calculate_annual_growth_rate(self):
+        fdir=result_root + rf'\extract_GS\OBS_LAI_extend\\'
+        outdir=result_root + rf'growth_rate\\growth_rate_trend\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
+                continue
+
+            dict=np.load(fdir+f,allow_pickle=True).item()
+            growth_rate_dic={}
+            for pix in tqdm(dict):
+                time_series=dict[pix]
+                print(len(time_series))
+                growth_rate_time_series=np.zeros(len(time_series)-1)
+                for i in range(len(time_series)-1):
+                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])
+                growth_rate_dic[pix]=growth_rate_time_series
+            np.save(outdir+f,growth_rate_dic)
+
+        pass
+
+    def calculate_annual_growth_rate_relative_change(self):
+        fdir=result_root + rf'\extract_GS\OBS_LAI_extend\\'
+        f_mean_LAI4g = result_root + rf'state_variables\\LAI4g_1982_2020.npy'
+        dic_mean_LAI4g = T.load_npy(f_mean_LAI4g)
+        outdir=result_root + rf'growth_rate\\growth_rate_relative_change_trend\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
+                continue
+
+            dict=np.load(fdir+f,allow_pickle=True).item()
+            growth_rate_dic={}
+            for pix in tqdm(dict):
+                if not pix in dic_mean_LAI4g:
+                    continue
+                LAI_mean=dic_mean_LAI4g[pix]
+                time_series=dict[pix]
+                print(len(time_series))
+                growth_rate_time_series=np.zeros(len(time_series)-1)
+                for i in range(len(time_series)-1):
+                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/LAI_mean
+                growth_rate_dic[pix]=growth_rate_time_series
+            np.save(outdir+f,growth_rate_dic)
+
+        pass
+    def plot_growth_rate_npy(self):  ##### plot double y axis
+        fdir = r'D:\Project3\Result\growth_rate\growth_rate_trend\\'
+        for f in T.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+            fpath = join(fdir,f)
+            spatial_dict = T.load_npy(fpath)
+            vals_list =[]
+            for pix in tqdm(spatial_dict):
+                vals = spatial_dict[pix]
+                vals_list.append(vals)
+            vals_mean = np.nanmean(vals_list, axis=0)
+            print(vals_mean)
+            plt.scatter(range(len(vals_mean)),vals_mean)
+            plt.show()
+        pass
+
+    def plot_growth_rate(self):  ##### plot double y axis
+
+        df = T.load_df(result_root + rf'\growth_rate\DataFrame\\growth_rate_all_years.df')
+        fdir = r'D:\Project3\Result\growth_rate\growth_rate_trend\\'
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['Aridity'] < 0.65]
+
+        df = df[df['MODIS_LUCC'] != 12]
+
+        # print(len(df))
+        # exit()
+        #
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['grey'] * 16
+        color_list[0] = 'green'
+        # color_list[1] = 'red'
+        # color_list[2]='blue'
+        # color_list=['green','blue','red','orange','aqua','brown','cyan', 'black', 'yellow', 'purple', 'pink', 'grey', 'brown','lime','teal','magenta']
+        linewidth_list = [1] * 16
+        linewidth_list[0] = 3
+
+
+        fig = plt.figure()
+        fig.set_size_inches(10, 10)
+
+        i = 1
+
+
+        region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
+        print(region_unique)
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+
+        for continent in ['Arid', 'Semi-Arid', 'Sub-Humid', 'global']:
+            ax = fig.add_subplot(2, 2, i)
+            if continent == 'global':
+                df_continent = df
+            else:
+
+                df_continent = df[df['AI_classfication'] == continent]
+
+            vals_growth_rate_relative_change = df_continent['LAI4g_growth_rate_relative_change_trend'].tolist()
+            # print(vals_growth_rate_relative_change);exit()
+            vals_relative_change = df_continent['LAI4g_relative_change'].tolist()
+
+            vals_growth_rate_list = []
+            vals_relative_change_list = []
+            for val_growth_rate in vals_growth_rate_relative_change:
+
+                if type(val_growth_rate) == float:  ## only screening
+                    continue
+                if len(val_growth_rate) == 0:
+                    continue
+                val_growth_rate[val_growth_rate < -99] = np.nan
+                val_growth_rate = np.array(val_growth_rate)*100
+                # print(val_growth_rate)
+
+                if not len(val_growth_rate) == 39:
+                    ## add nan to the end of the list
+                    for j in range(1):
+                        val_growth_rate = np.append(val_growth_rate, np.nan)
+                    # print(val)
+                    # print(len(val))
+
+                vals_growth_rate_list.append(list(val_growth_rate))
+
+            for val_relative_change in vals_relative_change:
+                if type(val_relative_change) == float:  ## only screening
+                    continue
+                if len(val_relative_change) == 0:
+                    continue
+                val_relative_change[val_relative_change < -99] = np.nan
+
+                if not len(val_relative_change) == 39:
+                    ## add nan to the end of the list
+                    for j in range(1):
+                        val_relative_change = np.append(val_relative_change, np.nan)
+                    # print(val)
+                    # print(len(val))
+                vals_relative_change_list.append(list(val_relative_change))
+
+
+
+            ###### calculate mean
+            vals_mean_growth_rate = np.array(vals_growth_rate_list)
+            vals_mean_growth_rate = np.nanmean(vals_mean_growth_rate, axis=0)
+            vals_mean_relative_change = np.array(vals_relative_change_list)
+            vals_mean_relative_change = np.nanmean(vals_mean_relative_change, axis=0)
+
+            plt.plot(vals_mean_growth_rate, color='red', linewidth=2)
+            ## add fiting line
+            x = np.arange(1, 39)
+            y = vals_mean_growth_rate[1:]
+            result_i = stats.linregress(range(1, 39), y)
+
+
+            plt.plot(x, result_i.intercept + result_i.slope * x, 'r--')
+
+
+
+            ax.set_xticks(range(0, 40, 4))
+            ax.set_xticklabels(range(1982, 2021, 4), rotation=45)
+
+
+            ax.set_ylabel('Growth_rate (%)', color='r')
+            ax.set_ylim(-10, 10)
+            ax2 = ax.twinx()
+
+
+            ax2.plot(vals_mean_relative_change, color='green', linewidth=2)
+            ## set y axis color
+            for tl in ax2.get_yticklabels():
+                tl.set_color('g')
+            for tl in ax.get_yticklabels():
+                tl.set_color('r')
+
+            x2 = np.arange(0, 39)
+            y2 = vals_mean_relative_change
+            result_i2 = stats.linregress(range(0, 39), y2)
+            ax2.plot(x2, result_i2.intercept + result_i2.slope * x2, 'g--')
+
+
+            ax2.set_ylabel('Relative_change (%)', color='g')
+            ax2.set_ylim(-10, 10)
+            ## add line when y=0
+            plt.axhline(y=0, color='grey', linestyle='-',alpha=0.5)
+
+            plt.title(f'{continent}')
+            ## add slope and p_value
+            ax.text(0.1, 0.9, f'slope:{result_i.slope:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='red')
+            ax.text(0.1, 0.8, f'p_value:{result_i.pvalue:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='red')
+            ax2.text(0.1, 0.7, f'slope:{result_i2.slope:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='green')
+            ax2.text(0.1, 0.6, f'p_value:{result_i2.pvalue:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='green')
+            ## add legend
+            # ax.legend(['growth_rate', 'growth_rate_fit'], loc='upper left')
+            # ax2.legend(['relative_change', 'relative_change_fit'], loc='upper right')
+
+            i = i + 1
+        plt.tight_layout()
+        plt.show()
+
+    def bar_plot(self):
+        ## layer 1 LAI4g layer 2 LAI4g growth rate
+        # 1 long term LAI4g >0 and growth rate >0 [significant]
+        # 2 long term LAI4g >0 and growth rate <0 [significant]
+        # 3 long term LAI4g <0 and growth rate >0 [significant]
+        # 4 long term LAI4g <0 and growth rate <0 [significant]
+        # 5 long term LAI4g >0 and growth rate is not significant
+        # 6 long term LAI4g <0 and growth rate is not significant
+        df = T.load_df(rf'D:\Project3\Result\growth_rate\DataFrame\growth_rate_all_years.df')
+        print(len(df))
+        T.print_head_n(df)
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['MODIS_LUCC'] != 12]
+        print(len(df))
+
+        df=df.dropna(subset=['LAI4g_trend'])
+        # print(len(df))
+        # exit()
+        T.print_head_n(df)
+        # exit()
+        color_list = ['yellowgreen', 'lime', 'green', 'lightseagreen', 'yellow', 'orange', 'red', 'brown']
+        fig = plt.figure()
+        ii = 1
+        ax = fig.add_subplot(2, 3, ii)
+        flag = 0
+        number1=0
+        number2=0
+        number3=0
+        number4=0
+        number5=0
+        number6=0
+        number7=0
+        number8=0
+        number9=0
+
+
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            LAI4g_trend = row['LAI4g_trend']
+            LAI4g_p_value = row['LAI4g_p_value']
+            growth_rate = row['LAI4g_trend_growth_rate']
+            growth_rate_p_value = row['LAI4g_p_value_growth_rate']
+            if LAI4g_p_value < 0.1 and growth_rate_p_value < 0.1:  ## significant long term and significant growth rate
+                if LAI4g_trend > 0 and growth_rate > 0:  ## significant greening and significant increase growth rate
+                    number1+=1
+                elif LAI4g_trend > 0 and growth_rate < 0:  ## significant greening and significant decrease growth rate
+                    number2+=1
+                elif LAI4g_trend < 0 and growth_rate > 0:  ## significant browning and significant increase growth rate
+                    number3+=1
+                elif LAI4g_trend < 0 and growth_rate < 0:  ## significant browning and significant decrease growth rate
+                    number4+=1
+            elif LAI4g_p_value < 0.1 and growth_rate_p_value > 0.1:  ## significant long term and non-significant growth rate
+                if LAI4g_trend > 0:  ## significant greening and non-significant growth rate
+                    number5+=1
+                elif LAI4g_trend < 0:  ## significant browning and non-significant growth rate
+                    number6+=1
+            elif LAI4g_p_value > 0.1 and growth_rate_p_value < 0.1:  ## non-significant long term and significant growth rate
+                if growth_rate > 0:  ## non-significant long term and significant increase growth rate
+                    number7+=1
+                elif growth_rate < 0:  ## non-significant long term and significant decrease growth rate
+                    number8+=1
+            else:
+                number9+=1  ## non-significant long term and non-significant growth rate
+
+        percentage1=number1/len(df)*100
+        percentage2=number2/len(df)*100
+        percentage3=number3/len(df)*100
+        percentage4=number4/len(df)*100
+        percentage5=number5/len(df)*100
+        percentage6=number6/len(df)*100
+        percentage7=number7/len(df)*100
+        percentage8=number8/len(df)*100
+        percentage9=number9/len(df)*100
+        number_list=[number1,number2,number3,number4,number5,number6,number7,number8,number9]
+        percentage_list=[percentage1,percentage2,percentage3,percentage4,percentage5,percentage6,percentage7,percentage8,percentage9]
+
+
+        ax.bar(range(1,10),percentage_list)
+        plt.xticks(range(1,10),['1','2','3','4','5','6','7','8','9'])
+        plt.ylabel('percentage')
+        plt.show()
+            # exit()
+
+
+
+
+
 
 
 
@@ -17047,6 +17456,7 @@ def main():
     build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
+    # growth_rate().run()
     # plt_moving_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()
