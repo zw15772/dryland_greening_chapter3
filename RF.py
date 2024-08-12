@@ -65,9 +65,9 @@ from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 T=Tools()
 
-this_root = 'E:\Data\ERA5_precip\ERA5_daily\\'
-data_root = 'E:\Data\ERA5_precip\ERA5_daily\\'
-result_root = 'E:\Data\ERA5_precip\ERA5_daily\\'
+this_root = 'E:\Project5\Result\\'
+data_root = 'E:\Project5\Result\RF_pix\\'
+result_root = 'E:\Project5\Result\RF_pix\\'
 D_025 = DIC_and_TIF(pixelsize=0.25)
 
 result_root_this_script = join(result_root, 'statistic')
@@ -866,7 +866,7 @@ class Random_Forests:
         self.this_class_png = data_root + 'SHAP\\png\\'
 
 
-        self.dff = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\Dataframe\\raw_data.df'
+        self.dff = rf'E:\Project5\Result\\Dataframe\\raw_data.df'
         self.variables_list()
 
         ##----------------------------------
@@ -887,7 +887,7 @@ class Random_Forests:
         # self.run_important_for_each_pixel()
         # self.run_important_for_each_pixel_for_two_period()
         # self.plot_importance_result_for_each_pixel()
-        # self.plot_importance_R2_for_each_pixel()
+
         self.plot_most_important_factor_for_each_pixel()
         # self.summarized_important_factor_for_each_continent()
         # self.run_permutation_importance()
@@ -1136,7 +1136,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1170,45 +1170,6 @@ class Random_Forests:
                 plt.show()
                 DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(fdir,f'{fname}_{x_var}.tif'))
 
-    def plot_importance_R2_for_each_pixel(self):
-        keys=list(range(len(self.x_variable_list)))
-        x_variable_dict=dict(zip(self.x_variable_list, keys))
-        print(x_variable_dict)
-        # exit()
-
-        fdir = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\raw_importance_for_each_pixel\\'
-        for f in os.listdir(fdir):
-
-            if not f.endswith('.df'):
-                continue
-            fpath=join(fdir,f)
-            fname=f.split('.')[0]
-
-
-            df = T.load_df(fpath)
-
-            T.print_head_n(df)
-
-            spatial_R2_dic={}
-
-
-
-
-            ## plot individual importance
-            for i, row in df.iterrows():
-                pix = row['pix']
-                importance_dic = row.to_dict()
-                # print(importance_dic)
-
-                spatial_R2_dic[pix] = importance_dic['R2']
-            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_R2_dic)
-
-            plt.imshow(arr,vmin=0,vmax=0.5,interpolation='nearest',cmap='RdYlGn')
-
-            plt.colorbar()
-            plt.title(f'{fname}_R2')
-            plt.show()
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,join(fdir,f'{fname}_R2.tif'))
 
 
 
@@ -1219,7 +1180,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1698,7 +1659,7 @@ class Random_Forests:
         self.x_variable_list = [
             'CO2_raw',
             'VPD_raw',
-            'CRU_raw'
+            'GLEAM_SMroot_raw'
 
 
         ]
@@ -1938,21 +1899,7 @@ class Random_Forests:
         }
 
         pass
-    def df_clean(self,df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df=df[df['row']>120]
-        df=df[df['Aridity']<0.65]
-        df=df[df['LC_max']<20]
 
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-
-
-        return df
 
     def valid_range_df(self,df):
 
@@ -1968,13 +1915,260 @@ class Random_Forests:
         print('filtered len(df):',len(df))
         return df
 
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<20]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        return df
+
+
+
+class threshold():
+    def __int__(self):
+        pass
+    def run(self):
+        # self.heatmap_raw_data()
+        self.heatmap_growth_data()
+        self.plot_spatial_disturbution()
+
+
+        pass
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<20]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        # df=df[df['LAI4g_raw_R2']>0.5]
+
+
+
+
+        return df
+    def heatmap_raw_data(self):
+        dff=rf'E:\Project5\Result\Dataframe\raw_data.df'
+        df = T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
+        df = df.dropna(subset=['LAI4g_relative_change'])
+
+
+        ## x is CRU, y CO2, z is LAI4g
+        x = df['GLEAM_SMroot_relative_change']
+        y = df['CO2_raw']
+
+        # plt.hist(x,bins=50)
+        # plt.show()
+
+
+        CRU_bin_list = np.linspace(-40, 40, 11)
+        CO2_bin_list = np.linspace(340, 410, 11)
+        df_group1, bins_list_str1 = T.df_bin(df, 'GLEAM_SMroot_relative_change', CRU_bin_list)
+        matrix = []
+        matrix_count = []
+        y_labels = []
+        for name1, df_group_i1 in df_group1:
+            df_group2, bins_list_str2 = T.df_bin(df_group_i1, 'CO2_raw', CO2_bin_list)
+            name1_ = name1[0].left
+
+            matrix_i = []
+            matrix_ii = []
+            x_labels = []
+
+            for name2, df_group_i2 in df_group2:
+                name2_ = name2[0].left
+                x_labels.append(name2_)
+                # print(name1,name2)
+                # print(len(df_group_i2))
+                vals= df_group_i2['LAI4g_relative_change']
+                vals[vals<-100]=np.nan
+                vals[vals>100]=np.nan
+                val = np.nanmean(vals)
+
+                matrix_i.append(val)
+
+                count=len(df_group_i2)
+                matrix_ii.append(count)
+
+            matrix.append(matrix_i)
+            matrix_count.append(matrix_ii)
+            y_labels.append(name1_)
+        matrix = np.array(matrix)
+        matrix_count = np.array(matrix_count)
+        # matrix = matrix[::-1, :]
+        plt.imshow(matrix, cmap='RdBu', vmin=-20, vmax=20)
+        # plt.imshow(matrix,cmap='RdBu',vmin=0,vmax=40000)
+        ## add text of the value
+        for i in range(len(CRU_bin_list) - 1):
+            for j in range(len(CO2_bin_list) - 1):
+                plt.text(j, i, f'{matrix_count[i, j]:.0f}', ha='center', va='center', color='black')
+        plt.xticks(np.arange(len(CO2_bin_list) - 1), x_labels)
+        plt.yticks(np.arange(len(CRU_bin_list) - 1), y_labels)
+        plt.xlabel('CO2_raw ppm')
+        plt.ylabel('SM_relative_change %')
+        ## draw 1:1 line
+        # plt.plot([20, 0], [0, 20], 'k-', lw=2)
+
+        plt.colorbar()
+
+
+        plt.show()
+
+        pass
+
+    def heatmap_growth_data(self):
+        dff=rf'D:\Project3\Result\growth_rate\DataFrame\\growth_rate_yearly.df'
+        df = T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
+        df = df.dropna(subset=['LAI4g_growth_rate'])
+
+
+        ## x is CRU, y CO2, z is LAI4g
+        x = df['GLEAM_SMroot_relative_change']
+        y = df['CO2_raw']
+
+        # plt.hist(x,bins=50)
+        # plt.show()
+
+
+        CRU_bin_list = np.linspace(-40, 40, 11)
+        CO2_bin_list = np.linspace(340, 410, 11)
+        df_group1, bins_list_str1 = T.df_bin(df, 'GLEAM_SMroot_relative_change', CRU_bin_list)
+        matrix = []
+        matrix_count = []
+        y_labels = []
+        for name1, df_group_i1 in df_group1:
+            df_group2, bins_list_str2 = T.df_bin(df_group_i1, 'CO2_raw', CO2_bin_list)
+            name1_ = name1[0].left
+
+            matrix_i = []
+            matrix_ii = []
+            x_labels = []
+
+            for name2, df_group_i2 in df_group2:
+                name2_ = name2[0].left
+                x_labels.append(name2_)
+                # print(name1,name2)
+                # print(len(df_group_i2))
+                vals= df_group_i2['LAI4g_growth_rate']
+                vals[vals<-100]=np.nan
+                vals[vals>100]=np.nan
+                val = np.nanmean(vals)
+
+                matrix_i.append(val)
+
+                count=len(df_group_i2)
+                matrix_ii.append(count)
+
+            matrix.append(matrix_i)
+            matrix_count.append(matrix_ii)
+            y_labels.append(name1_)
+        matrix = np.array(matrix)
+        matrix_count = np.array(matrix_count)
+        # matrix = matrix[::-1, :]
+        plt.imshow(matrix, cmap='RdBu', vmin=-20, vmax=20)
+        # plt.imshow(matrix,cmap='RdBu',vmin=0,vmax=40000)
+        ## add text of the value
+        for i in range(len(CRU_bin_list) - 1):
+            for j in range(len(CO2_bin_list) - 1):
+                plt.text(j, i, f'{matrix_count[i, j]:.0f}', ha='center', va='center', color='black')
+        plt.xticks(np.arange(len(CO2_bin_list) - 1), x_labels)
+        plt.yticks(np.arange(len(CRU_bin_list) - 1), y_labels)
+        plt.xlabel('CO2_raw ppm')
+        plt.ylabel('SM_relative_change %')
+        ## draw 1:1 line
+        # plt.plot([20, 0], [0, 20], 'k-', lw=2)
+
+        plt.colorbar()
+
+
+        plt.show()
+
+        pass
+    def plot_spatial_disturbution(self): ## plot the spatial distribution of heat map
+        dff = rf'E:\Project5\Result\Dataframe\raw_data.df'
+        df = T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        # T.print_head_n(df)
+        # df = df.dropna(subset=['LAI4g_relative_change'])
+        # LAI4g_relative_change_list = df['LAI4g_relative_change'].tolist()
+        # LAI4g_relative_change_array= np.array(LAI4g_relative_change_list)
+        # LAI4g_relative_change_array = LAI4g_relative_change_array[~np.isnan(LAI4g_relative_change_array)]
+
+        # plt.hist(LAI4g_relative_change_array,bins=50)
+        # plt.show()
+
+        df_selected=df[df['LAI4g_relative_change']<-20]
+        df_selected = df_selected[df_selected['GLEAM_SMroot_relative_change']<-20]
+
+
+        df_selected = df_selected[df_selected['CO2_raw']>375]
+        print(len(df_selected))
+
+        spatial_dic = {}
+        for i, row in df_selected.iterrows():
+            pix = row['pix']
+
+            spatial_dic[pix] = 1
+        # arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+        ###### select the pixs in the spatial_dic and then plot time series
+
+        # T.print_head_n(df)
+        df_selected_new = df[df['pix'].isin(list(spatial_dic.keys()))]
+        # T.print_head_n(df)
+        print(len(df_selected_new))
+        # exit()
+
+
+        for var in ['LAI4g_relative_change','GLEAM_SMroot_relative_change','LAI4g_raw','GLEAM_SMroot_raw']:
+            data_list = []
+            df_pix_group = T.df_groupby(df_selected_new, 'pix')
+            for pix in tqdm(df_pix_group):
+                df_pix = df_pix_group[pix]
+                val_ = df_pix[var].tolist()
+                data_list.append(val_)
+
+            data_array = np.array(data_list)
+            # data_array[data_array<-50]=np.nan
+            # data_array[data_array>50]=np.nan
+            data_array = np.nanmean(data_array, axis=0)
+            plt.plot(data_array)
+            plt.title(var)
+            plt.show()
+
+            # for i in range(len(data_array)):
+            #     plt.plot(data_array[i])
+            # plt.show()
+
+
+
+
+
+
+        pass
 
 def main():
     # Dataframe().run()
     # Bivariate_statistic().run()
     # Correlation_Lag_statistic().run()
     # Trend_statistic().run()
-    Random_Forests().run()
+    # Random_Forests().run()
+    threshold().run()
     pass
 
 

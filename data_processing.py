@@ -11800,13 +11800,12 @@ class build_dataframe():
 
     def __init__(self):
 
-        # self.this_class_arr = (data_root + rf'\ERA5\ERA5_daily\SHAP\RF_df\\')
-        # self.this_class_arr = result_root+rf'asymmetry_response\\\relative_change_detrend\\frequency_wet_event_CRU\\'
-        self.this_class_arr = rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\\Dataframe\\'
 
+        # self.this_class_arr = rf'E:\Project5\Result\Dataframe\\'
+        self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'raw_data.df'
+        self.dff = self.this_class_arr + 'growth_rate_yearly.df'
 
 
         pass
@@ -11825,25 +11824,25 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         #
-        # df=self.add_AI_classfication(df)
-        # #
-        # df=self.add_aridity_to_df(df)
-        # # # # # #
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_AI_classfication(df)
+        #
+        df=self.add_aridity_to_df(df)
+        # # # # #
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -11891,7 +11890,7 @@ class build_dataframe():
     def build_df(self, df):
 
 
-        fdir=result_root+rf'growth_rate\\growth_rate_relative_change_trend\\'
+        fdir=result_root+rf'growth_rate\\growth_rate_trend_method2\\'
         all_dic= {}
         for f in os.listdir(fdir):
 
@@ -11903,7 +11902,7 @@ class build_dataframe():
             fpath=fdir+f
 
             dic = T.load_npy(fpath)
-            key_name=fname+'_growth_rate_relative_change_trend'
+            key_name=fname+'_growth_rate_trend_method2'
             print(key_name)
             all_dic[key_name]=dic
         # print(all_dic.keys())
@@ -11988,7 +11987,7 @@ class build_dataframe():
 
 
     def append_value(self, df):  ##补齐
-        fdir = result_root + rf'growth_rate\\\growth_rate_relative_change_trend\\'
+        fdir = result_root + rf'growth_rate\\\growth_rate_trend_method2\\'
         col_list=[]
         for f in os.listdir(fdir):
 
@@ -11996,7 +11995,7 @@ class build_dataframe():
                 continue
 
 
-            col_name=f.split('.')[0]+'_growth_rate_relative_change_trend'
+            col_name=f.split('.')[0]+'_growth_rate_trend_method2'
 
             col_list.append(col_name)
 
@@ -12038,7 +12037,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = result_root + rf'extract_GS\OBS_LAI_extend\\LAI4g.npy'
+        f = result_root + rf'growth_rate\growth_rate_trend_method2\\LAI4g.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -12053,7 +12052,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 1982
+            y = 1983
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -12065,7 +12064,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g_raw'] = change_rate_list
+        df['LAI4g_growth_rate'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -12125,14 +12124,15 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=result_root+rf'extract_GS\OBS_LAI_extend\\'
+        fdir=result_root+rf'growth_rate\growth_rate_trend_method2\\'
         for f in os.listdir(fdir):
 
 
 
+
             variable= f.split('.')[0]
-            if variable not in ['CRU','GLEAM_SMroot','CO2','VPD','tmax']:
-                continue
+            # if variable not in ['CRU','GLEAM_SMroot','VPD','tmax']:
+            #     continue
 
             print(variable)
 
@@ -12174,13 +12174,13 @@ class build_dataframe():
 
 
 
-                v1= vals[year - 1982]
+                v1= vals[year - 1983]
                 # print(v1,year,len(vals))
 
                 NDVI_list.append(v1)
 
 
-            df[f'{variable}_raw'] = NDVI_list
+            df[f'{variable}_growth_rate'] = NDVI_list
         # exit()
         return df
 
@@ -12640,7 +12640,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'E:\Data\ERA5_precip\ERA5_daily\RF_pix\raw_importance_for_each_pixel\\'
+        fdir=rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
             # print(f)
             # exit()
@@ -16512,7 +16512,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project3\Result\growth_rate\\growth_rate_relative_change\\LAI4g.npy'
+        f =  rf'D:\Project3\Result\growth_rate\growth_rate_trend_method2\\LAI4g.npy'
 
 
         dic=T.load_npy(f)
@@ -16554,7 +16554,7 @@ class check_data():
         plt.title(f)
         plt.show()
     def testrobinson(self):
-        fdir=result_root+rf'ERA_precip_CV_trend\cv_trend\\'
+        fdir=rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
         period='1982_2020'
         fpath_p_value=result_root+rf'\multi_regression_moving_window\events\events_multiregression\time_series\trend\\precip_wet_p_value.tif'
         temp_root=r'trend_analysis\anomaly\\temp_root\\'
@@ -16673,7 +16673,7 @@ class growth_rate:
 
     def calculate_annual_growth_rate(self):
         fdir=result_root + rf'\extract_GS\OBS_LAI_extend\\'
-        outdir=result_root + rf'growth_rate\\growth_rate_trend\\'
+        outdir=result_root + rf'growth_rate\\growth_rate_trend_method2\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
@@ -16686,7 +16686,7 @@ class growth_rate:
                 print(len(time_series))
                 growth_rate_time_series=np.zeros(len(time_series)-1)
                 for i in range(len(time_series)-1):
-                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])
+                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/time_series[i]
                 growth_rate_dic[pix]=growth_rate_time_series
             np.save(outdir+f,growth_rate_dic)
 
@@ -16798,7 +16798,7 @@ class growth_rate:
 
                 df_continent = df[df['AI_classfication'] == continent]
 
-            vals_growth_rate_relative_change = df_continent['LAI4g_growth_rate_relative_change_trend'].tolist()
+            vals_growth_rate_relative_change = df_continent['LAI4g_growth_rate_trend_method2'].tolist()
             # print(vals_growth_rate_relative_change);exit()
             vals_relative_change = df_continent['LAI4g_relative_change'].tolist()
 
@@ -16842,6 +16842,8 @@ class growth_rate:
 
             ###### calculate mean
             vals_mean_growth_rate = np.array(vals_growth_rate_list)
+            ## remove inf
+            vals_mean_growth_rate[vals_mean_growth_rate >9999]=np.nan
             vals_mean_growth_rate = np.nanmean(vals_mean_growth_rate, axis=0)
             vals_mean_relative_change = np.array(vals_relative_change_list)
             vals_mean_relative_change = np.nanmean(vals_mean_relative_change, axis=0)
