@@ -3672,7 +3672,7 @@ class statistic_analysis():
         # self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.trend_analysis_for_event()
         # self.trend_differences()
         # self.trend_average_TRENDY()
@@ -11819,7 +11819,7 @@ class build_dataframe():
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
-        # df=self.append_attributes(df)  ## 加属性
+        df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
         # df=self.append_value(df)   ## insert or append value
 
@@ -11836,13 +11836,13 @@ class build_dataframe():
         #
         # df=self.add_aridity_to_df(df)
         # # # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
         # # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -11930,11 +11930,11 @@ class build_dataframe():
 
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+ rf'\relative_change\OBS_LAI_extend\\'
+        fdir = result_root+ rf'extract_GS\OBS_LAI_extend\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
                 continue
-            if not 'LAI4g' in f:
+            if not 'GLEAM_SMroot' in f:
                 continue
 
 
@@ -11942,7 +11942,7 @@ class build_dataframe():
             # array=np.load(fdir+f)
             # dic = DIC_and_TIF().spatial_arr_to_dic(array)
             dic=T.load_npy(fdir+f)
-            key_name = f.split('.')[0]+'_relative_change'
+            key_name = f.split('.')[0]
             print(key_name)
 
             # df[key_name] = df['pix'].map(dic)
@@ -17436,7 +17436,7 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    # statistic_analysis().run()
+    statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
