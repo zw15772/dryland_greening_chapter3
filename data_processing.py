@@ -11801,11 +11801,11 @@ class build_dataframe():
     def __init__(self):
 
 
-        self.this_class_arr = rf'E:\Project5\Result\Dataframe\\'
+        self.this_class_arr = rf'D:\Project3\Result\Dataframe\growing_season_original\\'
         # self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'raw_data.df'
+        self.dff = self.this_class_arr + 'growing_season_original.df'
 
 
         pass
@@ -11836,13 +11836,13 @@ class build_dataframe():
         #
         # df=self.add_aridity_to_df(df)
         # # # # # #
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -17458,9 +17458,9 @@ def main():
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
-    plot_dataframe().run()
+    # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
     # check_data().run()
