@@ -11801,11 +11801,11 @@ class build_dataframe():
     def __init__(self):
 
 
-        # self.this_class_arr = rf'E:\Project5\Result\Dataframe\\'
-        self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
+        self.this_class_arr = rf'E:\Project5\Result\Dataframe\\'
+        # self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'growth_rate_yearly.df'
+        self.dff = self.this_class_arr + 'raw_data.df'
 
 
         pass
@@ -11814,7 +11814,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -11824,7 +11824,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
@@ -11832,18 +11832,18 @@ class build_dataframe():
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         #
-        df=self.add_AI_classfication(df)
+        # df=self.add_AI_classfication(df)
         #
-        df=self.add_aridity_to_df(df)
-        # # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # # # # # #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
+        # # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
         #
@@ -12124,9 +12124,10 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=result_root+rf'growth_rate\growth_rate_trend_method2\\'
+        fdir=result_root+rf'\extract_GS\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
-
+            if not 'GPCC' in f:
+                continue
 
 
 
@@ -12156,6 +12157,8 @@ class build_dataframe():
 
 
                 vals = val_dic[pix]
+                vals[vals<0]=np.nan
+                vals[vals>1500]=np.nan
 
 
                 # print(len(vals))
@@ -12174,13 +12177,13 @@ class build_dataframe():
 
 
 
-                v1= vals[year - 1983]
+                v1= vals[year - 1982]
                 # print(v1,year,len(vals))
 
                 NDVI_list.append(v1)
 
 
-            df[f'{variable}_growth_rate'] = NDVI_list
+            df[f'{variable}_raw'] = NDVI_list
         # exit()
         return df
 
@@ -17455,9 +17458,9 @@ def main():
     # fingerprint().run()
     # moving_window().run()
     # multi_regression_window().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
-    # plot_dataframe().run()
+    plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
     # check_data().run()

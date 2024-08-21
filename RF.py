@@ -889,6 +889,7 @@ class Random_Forests:
         # self.plot_importance_result_for_each_pixel()
 
         self.plot_most_important_factor_for_each_pixel()
+        self.plot_variance_explained()
         # self.summarized_important_factor_for_each_continent()
         # self.run_permutation_importance()
         # self.plot_importance_result()
@@ -963,8 +964,8 @@ class Random_Forests:
             flag += 1
             vals = df[x_var].tolist()
             vals = np.array(vals)
-            vals[vals>1] = np.nan
-            vals[vals<0] = np.nan
+            # vals[vals>1000] = np.nan
+            # vals[vals<-1000] = np.nan
             plt.hist(vals,bins=100)
             plt.xlabel(x_var)
         plt.tight_layout()
@@ -985,6 +986,7 @@ class Random_Forests:
         dff = self.dff
         df = T.load_df(dff)
         df=self.df_clean(df)
+
         pix_list = T.get_df_unique_val_list(df,'pix')
         spatial_dict = {}
         for pix in pix_list:
@@ -1136,7 +1138,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel_CRU\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1159,6 +1161,10 @@ class Random_Forests:
                     pix = row['pix']
                     importance_dic = row.to_dict()
                     # print(importance_dic)
+                    print(importance_dic)
+
+
+
 
                     spatial_dic[pix] = importance_dic[x_var]
                 arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
@@ -1243,6 +1249,77 @@ class Random_Forests:
             outtif=join(fdir,f'{fname}_most.tif')
 
             DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,outtif)
+
+            pass
+
+    def plot_variance_explained(self):
+
+        keys = list(range(len(self.x_variable_list)))
+        x_variable_dict = dict(zip(self.x_variable_list, keys))
+        print(x_variable_dict)
+        # exit()
+
+        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
+        for f in os.listdir(fdir):
+
+            if not f.endswith('.df'):
+                continue
+            fpath = join(fdir, f)
+            fname = f.split('.')[0]
+
+            df = T.load_df(fpath)
+
+            T.print_head_n(df)
+            spatial_dic = {}
+            sptial_R2_dic = {}
+            for i, row in df.iterrows():
+                pix = row['pix']
+                importance_dic = row.to_dict()
+                # print(importance_dic)
+                x_variable_list = self.x_variable_list
+                importance_dici = {}
+                for x_var in x_variable_list:
+                    importance_dici[x_var] = importance_dic[x_var]
+                    # print(importance_dici)
+                R2=importance_dic['R2']
+                ## detremine % varibility in LAI predicted by the model
+                # variance=100*R2* x
+
+
+                spatial_dic[pix] = max_var_val
+
+                # print(max_var_val)
+                # print(max_var)
+                importance_dici['R2'] = importance_dic['R2']
+                R2 = importance_dic['R2']
+                sptial_R2_dic[pix] = R2
+            #### print average R2
+            # R2_list = list(sptial_R2_dic.values())
+            # R2_mean = np.nanmean(R2_list)
+            # print(f'{fname} R2 mean: {R2_mean}')
+            # exit()
+
+            ### plot R2
+            arrR2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(sptial_R2_dic)
+            arrR2[arrR2 < 0] = np.nan
+            plt.imshow(arrR2, vmin=0, vmax=0.5, interpolation='nearest', cmap='RdYlGn')
+            plt.colorbar()
+            plt.title(f'{fname}_R2')
+            plt.show()
+            outtif_R2 = join(fdir, f'{fname}_R2.tif')
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arrR2, outtif_R2)
+
+            ### plot importance
+            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+
+            plt.imshow(arr, vmin=0, vmax=12, interpolation='nearest')
+            plt.colorbar()
+            plt.title(fname)
+            plt.show()
+            outtif = join(fdir, f'{fname}_most.tif')
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, outtif)
 
             pass
 
@@ -1658,8 +1735,9 @@ class Random_Forests:
     def variables_list(self):
         self.x_variable_list = [
             'CO2_raw',
-            'VPD_raw',
-            'GLEAM_SMroot_raw'
+            'CRU_raw',
+            # 'GPCC_raw',
+            # 'GLEAM_SMroot_raw'
 
 
         ]
@@ -1925,6 +2003,7 @@ class Random_Forests:
         df=df[df['LC_max']<20]
 
         df = df[df['landcover_classfication'] != 'Cropland']
+
         return df
 
 
@@ -1933,9 +2012,14 @@ class threshold():
     def __int__(self):
         pass
     def run(self):
-        # self.heatmap_raw_data()
-        self.heatmap_growth_data()
-        self.plot_spatial_disturbution()
+        self.heatmap_raw_data()
+
+        # self.heatmap_growth_data()
+        # self.plot_spatial_disturbution_raw()
+        # self.plot_spatial_disturbution_percentile()
+
+        # self.plot_spatial_disturbution_growth_rate()
+
 
 
         pass
@@ -1947,6 +2031,7 @@ class threshold():
         df=df[df['row']>120]
         df=df[df['Aridity']<0.65]
         df=df[df['LC_max']<20]
+        df = df[df['MODIS_LUCC'] != 12]
 
         df = df[df['landcover_classfication'] != 'Cropland']
         # df=df[df['LAI4g_raw_R2']>0.5]
@@ -1964,16 +2049,16 @@ class threshold():
 
 
         ## x is CRU, y CO2, z is LAI4g
-        x = df['GLEAM_SMroot_relative_change']
+        x = df['CRU_relative_change']
         y = df['CO2_raw']
 
-        # plt.hist(x,bins=50)
-        # plt.show()
+        plt.hist(x,bins=50)
+        plt.show()
 
 
-        CRU_bin_list = np.linspace(-40, 40, 11)
+        CRU_bin_list = np.linspace(-90, 90, 11)
         CO2_bin_list = np.linspace(340, 410, 11)
-        df_group1, bins_list_str1 = T.df_bin(df, 'GLEAM_SMroot_relative_change', CRU_bin_list)
+        df_group1, bins_list_str1 = T.df_bin(df, 'CRU_relative_change', CRU_bin_list)
         matrix = []
         matrix_count = []
         y_labels = []
@@ -2006,7 +2091,7 @@ class threshold():
         matrix = np.array(matrix)
         matrix_count = np.array(matrix_count)
         # matrix = matrix[::-1, :]
-        plt.imshow(matrix, cmap='RdBu', vmin=-20, vmax=20)
+        plt.imshow(matrix, cmap='RdBu', vmin=-15, vmax=15)
         # plt.imshow(matrix,cmap='RdBu',vmin=0,vmax=40000)
         ## add text of the value
         for i in range(len(CRU_bin_list) - 1):
@@ -2015,7 +2100,7 @@ class threshold():
         plt.xticks(np.arange(len(CO2_bin_list) - 1), x_labels)
         plt.yticks(np.arange(len(CRU_bin_list) - 1), y_labels)
         plt.xlabel('CO2_raw ppm')
-        plt.ylabel('SM_relative_change %')
+        plt.ylabel('CRU_relative_change %')
         ## draw 1:1 line
         # plt.plot([20, 0], [0, 20], 'k-', lw=2)
 
@@ -2062,8 +2147,11 @@ class threshold():
                 # print(name1,name2)
                 # print(len(df_group_i2))
                 vals= df_group_i2['LAI4g_growth_rate']
-                vals[vals<-100]=np.nan
-                vals[vals>100]=np.nan
+                vals[vals < -999] = np.nan
+                vals[vals > 999] = np.nan
+                vals=vals*100
+
+
                 val = np.nanmean(vals)
 
                 matrix_i.append(val)
@@ -2096,11 +2184,12 @@ class threshold():
         plt.show()
 
         pass
-    def plot_spatial_disturbution(self): ## plot the spatial distribution of heat map
+    def plot_spatial_disturbution_raw(self): ## plot the spatial distribution of heat map
         dff = rf'E:\Project5\Result\Dataframe\raw_data.df'
         df = T.load_df(dff)
         df=self.df_clean(df)
         print(len(df))
+        T.print_head_n(df)
         # T.print_head_n(df)
         # df = df.dropna(subset=['LAI4g_relative_change'])
         # LAI4g_relative_change_list = df['LAI4g_relative_change'].tolist()
@@ -2109,13 +2198,229 @@ class threshold():
 
         # plt.hist(LAI4g_relative_change_array,bins=50)
         # plt.show()
+        df_selected = copy.copy(df)
+        # indx = df_selected['LAI4g_relative_change']>-20
+        # print(indx);exit()
+        # df_selected['LAI4g_relative_change'][indx] = np.nan
 
         df_selected=df[df['LAI4g_relative_change']<-20]
         df_selected = df_selected[df_selected['GLEAM_SMroot_relative_change']<-20]
+        # #
+        # #
+        df_selected = df_selected[df_selected['CO2_raw']>385]
+        # df_selected = df
+        # print(len(df_selected))
+
+        spatial_dic = {}
+        for i, row in df_selected.iterrows():
+            pix = row['pix']
+
+            spatial_dic[pix] = 1
+        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr,interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+        ##### select the pixs in the spatial_dic and then plot time series
+
+        # T.print_head_n(df)
+        df_selected_new = df[df['pix'].isin(list(spatial_dic.keys()))]
+        # T.print_head_n(df)
+        # print(len(df_selected_new))
+        # exit()
+
+        continent_list= ['North_America','Australia','others']
 
 
-        df_selected = df_selected[df_selected['CO2_raw']>375]
-        print(len(df_selected))
+        for var in ['LAI4g_relative_change','GLEAM_SMroot_relative_change','LAI4g_raw','GLEAM_SMroot_raw','tmax_relative_change']:
+
+            flag=0
+            for continent in continent_list:
+                if continent == 'others':
+                    df_continent = df_selected_new[~df_selected_new['continent'].isin(continent_list)]
+
+                else:
+                    df_continent = df_selected_new[df_selected_new['continent']==continent]
+
+
+                data_list = []
+                df_pix_group = T.df_groupby(df_continent, 'pix')
+                color_list = ['red', 'blue', 'green']
+                for pix in tqdm(df_pix_group):
+                    df_pix = df_pix_group[pix]
+                    val_ = df_pix[var].tolist()
+                    # print(len(val_))
+                    data_list.append(val_)
+
+                data_array = np.array(data_list)
+                data_array[data_array<-100]=np.nan
+                data_array[data_array>100]=np.nan
+                #### just picked the random 10% of the data\
+                indx = np.random.choice(range(len(data_array)),int(len(data_array)*0.1))
+                data_array = data_array[indx]
+
+
+                for i in range(len(data_array)):
+                    plt.plot(data_array[i],color=color_list[flag],linewidth=0.5)
+
+            # data_array = np.nanmean(data_array, axis=0)
+            # plt.plot(data_array)
+            # plt.xlabel('year')
+            # plt.ylabel(f'{var} (%)')
+            # plt.title(var)
+                flag=flag+1
+                plt.ylim(-100,100)
+                plt.title(continent)
+                plt.ylabel(f'{var} (%)')
+                plt.show()
+
+            # for i in range(len(data_array)):
+            #     plt.plot(data_array[i])
+            # plt.show()
+
+
+
+
+
+
+        pass
+
+
+    def plot_spatial_disturbution_percentile(self): ## plot the spatial distribution of heat map
+        dff = rf'E:\Project5\Result\Dataframe\raw_data.df'
+        df = T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        T.print_head_n(df)
+        # T.print_head_n(df)
+        # df = df.dropna(subset=['LAI4g_relative_change'])
+        # LAI4g_relative_change_list = df['LAI4g_relative_change'].tolist()
+        # LAI4g_relative_change_array= np.array(LAI4g_relative_change_list)
+        # LAI4g_relative_change_array = LAI4g_relative_change_array[~np.isnan(LAI4g_relative_change_array)]
+
+        # plt.hist(LAI4g_relative_change_array,bins=50)
+        # plt.show()
+        df_selected = copy.copy(df)
+        # indx = df_selected['LAI4g_relative_change']>-20
+        # print(indx);exit()
+        # df_selected['LAI4g_relative_change'][indx] = np.nan
+
+        df_selected=df[df['LAI4g_relative_change']<-20]
+        df_selected = df_selected[df_selected['GLEAM_SMroot_relative_change']<-20]
+        # #
+        # #
+        df_selected = df_selected[df_selected['CO2_raw']>385]
+        # df_selected = df
+        # print(len(df_selected))
+
+        spatial_dic = {}
+        for i, row in df_selected.iterrows():
+            pix = row['pix']
+
+            spatial_dic[pix] = 1
+        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+        ##### select the pixs in the spatial_dic and then plot time series
+
+        # T.print_head_n(df)
+        df_selected_new = df[df['pix'].isin(list(spatial_dic.keys()))]
+        # T.print_head_n(df)
+        # print(len(df_selected_new))
+        # exit()
+
+        continent_list= ['North_America','Australia','others']
+
+
+        for var in ['LAI4g_relative_change','GLEAM_SMroot_relative_change','LAI4g_raw','GLEAM_SMroot_raw','tmax_relative_change']:
+
+            flag=0
+            for continent in continent_list:
+                if continent == 'others':
+                    df_continent = df_selected_new[~df_selected_new['continent'].isin(continent_list)]
+
+                else:
+                    df_continent = df_selected_new[df_selected_new['continent']==continent]
+
+
+                data_list = []
+                df_pix_group = T.df_groupby(df_continent, 'pix')
+                color_list = ['red', 'blue', 'green']
+                for pix in tqdm(df_pix_group):
+                    df_pix = df_pix_group[pix]
+                    val_ = df_pix[var].tolist()
+                    # print(len(val_))
+                    data_list.append(val_)
+
+                data_array = np.array(data_list)
+                data_array[data_array<-100]=np.nan
+                data_array[data_array>100]=np.nan
+                #### picked data based on percentile
+                pecentile_list = [5,25,50,75,95]
+                for pecentile in pecentile_list:
+                    data_array_percentile = np.nanpercentile(data_array,pecentile,axis=0)
+                    plt.plot(data_array_percentile,label=f'{pecentile} percentile',linewidth=0.5)
+                    plt.legend()
+                    ## add y=0 line
+                    plt.plot([0,len(data_array_percentile)],[0,0],'k--',linewidth=0.5)
+
+
+
+            # plt.title(var)
+                flag=flag+1
+                plt.ylim(-100,100)
+                plt.title(f'{continent} {var} percentile')
+                plt.ylabel(f'{var} (%)')
+                plt.legend()
+                plt.show()
+
+            # for i in range(len(data_array)):
+            #     plt.plot(data_array[i])
+            # plt.show()
+
+
+
+
+
+
+        pass
+
+
+
+
+
+    def plot_spatial_disturbution_growth_rate(self): ## plot the spatial distribution of heat map
+        dff = rf'D:\Project3\Result\growth_rate\DataFrame\growth_rate_yearly.df'
+        df = T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        T.print_head_n(df)
+        # T.print_head_n(df)
+        # df = df.dropna(subset=['LAI4g_relative_change'])
+        # LAI4g_relative_change_list = df['LAI4g_relative_change'].tolist()
+        # LAI4g_relative_change_array= np.array(LAI4g_relative_change_list)
+        # LAI4g_relative_change_array = LAI4g_relative_change_array[~np.isnan(LAI4g_relative_change_array)]
+
+        # plt.hist(LAI4g_relative_change_array,bins=50)
+        # plt.show()
+        df_selected = copy.copy(df)
+        # indx = df_selected['LAI4g_relative_change']>-20
+        # print(indx);exit()
+        # df_selected['LAI4g_relative_change'][indx] = np.nan
+
+        vals=df['LAI4g_growth_rate'].tolist()
+        vals=np.array(vals)
+        vals[vals<-100]=np.nan
+        vals[vals>100]=np.nan
+        vals=vals*100
+        df['LAI4g_growth_rate']=vals
+        df_selected=df[df['LAI4g_growth_rate']<-20]
+        df_selected = df_selected[df_selected['GLEAM_SMroot_relative_change']<-20]
+        # #
+        # #
+        df_selected = df_selected[df_selected['CO2_raw']>385]
+        # df_selected = df
+        # print(len(df_selected))
 
         spatial_dic = {}
         for i, row in df_selected.iterrows():
@@ -2126,21 +2431,23 @@ class threshold():
         # plt.imshow(arr,interpolation='nearest')
         # plt.colorbar()
         # plt.show()
-        ###### select the pixs in the spatial_dic and then plot time series
+        ##### select the pixs in the spatial_dic and then plot time series
 
         # T.print_head_n(df)
         df_selected_new = df[df['pix'].isin(list(spatial_dic.keys()))]
         # T.print_head_n(df)
-        print(len(df_selected_new))
+        # print(len(df_selected_new))
         # exit()
 
 
-        for var in ['LAI4g_relative_change','GLEAM_SMroot_relative_change','LAI4g_raw','GLEAM_SMroot_raw']:
+        for var in ['LAI4g_growth_rate','GLEAM_SMroot_relative_change','tmax_relative_change']:
             data_list = []
             df_pix_group = T.df_groupby(df_selected_new, 'pix')
             for pix in tqdm(df_pix_group):
                 df_pix = df_pix_group[pix]
                 val_ = df_pix[var].tolist()
+
+                # print(len(val_))
                 data_list.append(val_)
 
             data_array = np.array(data_list)
@@ -2148,6 +2455,8 @@ class threshold():
             # data_array[data_array>50]=np.nan
             data_array = np.nanmean(data_array, axis=0)
             plt.plot(data_array)
+            plt.xlabel('year')
+            plt.ylabel(f'{var} (%)')
             plt.title(var)
             plt.show()
 
@@ -2167,8 +2476,8 @@ def main():
     # Bivariate_statistic().run()
     # Correlation_Lag_statistic().run()
     # Trend_statistic().run()
-    # Random_Forests().run()
-    threshold().run()
+    Random_Forests().run()
+    # threshold().run()
     pass
 
 
