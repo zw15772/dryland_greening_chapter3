@@ -77,4 +77,9 @@ def mk_dir(outdir):
 
 
 class PLOT:
+    def __init__(self):
+        pass
+
+    def __del__(self):
+        pass
     pass
