@@ -862,11 +862,10 @@ class Trend_statistic:
 class Random_Forests:
 
     def __init__(self):
-        self.this_class_arr = data_root + 'RF_pix\\'
-        self.this_class_png = data_root + 'SHAP\\png\\'
-
+        self.this_class_arr = data_root
 
         self.dff = rf'E:\Project5\Result\\Dataframe\\raw_data.df'
+
         self.variables_list()
 
         ##----------------------------------
@@ -885,22 +884,29 @@ class Random_Forests:
 
         # self.check_variables_valid_ranges()
         # self.run_important_for_each_pixel()
-        # self.run_important_for_each_pixel_for_two_period()
+
         # self.plot_importance_result_for_each_pixel()
-
-        self.plot_most_important_factor_for_each_pixel()
-        self.plot_variance_explained()
-        # self.summarized_important_factor_for_each_continent()
-        # self.run_permutation_importance()
-        # self.plot_importance_result()
-        # self.plot_importance_result_R2()
-        # self.partial_SHAP(df,self.x_variable_list,self.y_variable_list[0])
-        # self.run_partial_dependence_plots()
-
-        # self.plot_run_partial_dependence_plots()
-
+        # self.plot_most_important_factor_for_each_pixel()
+        self.plot_three_demension()
 
         pass
+
+    def __gen_df_init(self):
+        if not os.path.isfile(self.dff):
+            df = pd.DataFrame()
+            T.save_df(df,self.dff)
+            return df
+        else:
+            df,dff = self.__load_df()
+            return df
+
+    def __load_df(self):
+        dff = self.dff
+        df = T.load_df(dff)
+        T.print_head_n(df)
+        print('len(df):',len(df))
+        return df,dff
+
 
     def copy_df(self):
         outdir = join(self.this_class_arr,'RF')
@@ -912,46 +918,6 @@ class Random_Forests:
         shutil.copy(dff_origin_xlsx,join(outdir,'RF.df.xlsx'))
         pass
 
-    def add_CV(self,df):
-        data_obj_list = [
-            Load_Data().CRU_tmp_origin_GS,
-            Load_Data().CRU_precip_origin_GS,
-            Load_Data().P_ET_diff_origin_GS
-        ]
-        T.print_head_n(df)
-        for data_obj in data_obj_list:
-            data_dict,data_name = data_obj()
-            spatial_dict_CV = {}
-            for pix in data_dict:
-                vals = data_dict[pix]
-                if T.is_all_nan(vals):
-                    continue
-                mean = np.nanmean(vals)
-                std = np.nanstd(vals)
-                CV = std/mean
-                spatial_dict_CV[pix] = CV
-            df = T.add_spatial_dic_to_df(df,spatial_dict_CV,data_name+'_CV')
-        return df
-        pass
-
-    def add_trend(self,df):
-        data_obj_list = [
-            Load_Data().CRU_tmp_anomaly_GS,
-            Load_Data().CRU_precip_anomaly_GS,
-            Load_Data().P_ET_diff_anomaly_GS
-        ]
-        T.print_head_n(df)
-        for data_obj in data_obj_list:
-            data_dict, data_name = data_obj()
-            spatial_dict_trend = {}
-            for pix in tqdm(data_dict,desc=data_name):
-                vals = data_dict[pix]
-                if T.is_all_nan(vals):
-                    continue
-                a,b,r,p = T.nan_line_fit(list(range(len(vals))),vals)
-                spatial_dict_trend[pix] = a
-            df = T.add_spatial_dic_to_df(df,spatial_dict_trend,data_name+'_trend')
-        return df
 
     def check_variables_valid_ranges(self):
         dff = self.dff
@@ -1015,10 +981,13 @@ class Random_Forests:
 
 
         outdir= join(self.this_class_arr,'raw_importance_for_each_pixel')
+        outdir_distribution= join(outdir,'separate_folder')
         T.mk_dir(outdir,force=True)
+        T.mk_dir(outdir_distribution,force=True)
 
         for y_var in self.y_variable_list:
             importance_spatial_dict = {}
+            spatial_model_dic = {}
 
             for pix in tqdm(group_dic):
                 df_pix = group_dic[pix]
@@ -1056,7 +1025,7 @@ class Random_Forests:
                                                                     random_state=1)  # split the data into training and testing
                 # clf=xgb.XGBRegressor(objective="reg:squarederror",booster='gbtree',n_estimators=100,
                 #                  max_depth=11,eta=0.05,random_state=42,n_jobs=12)
-                clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
+                clf = RandomForestRegressor(n_estimators=100,random_state=42,)  # build a random forest model
                 clf.fit(X_train, Y_train)  # train the model
                 # R2= clf.score(X_test, Y_test)  # calculate the R2
                 R = stats.pearsonr(clf.predict(X_test),Y_test)[0]
@@ -1069,6 +1038,7 @@ class Random_Forests:
 
                 # print(importance_dic)
                 importance_spatial_dict[pix]=importance_dic
+                spatial_model_dic[pix]=clf
             importance_dateframe = T.dic_to_df(importance_spatial_dict, 'pix')
             T.print_head_n(importance_dateframe)
             outf = join(outdir, f'{y_var}.df')
@@ -1076,60 +1046,34 @@ class Random_Forests:
             outf_xlsx = outf + '.xlsx'
             T.df_to_excel(importance_dateframe, outf_xlsx)
 
-    def run_important_for_each_pixel_for_two_period(self):  ### run for two_period
-        dff = self.dff
-        df = T.load_df(dff)
-        df_early = df[df['year_range']<17]
-        df_late = df[df['year_range']>=17]
-        df_early = df_early.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
-        df_late = df_late.dropna(subset=[self.y_variable_list[0]]+self.x_variable_list,how='any')
-        df_list = [df_early,df_late]
-        period_list = ['early','late']
-        for df_i in df_list:
-            period=period_list[df_list.index(df_i)]
-            period='late'
+            # outf = join(outdir, f'{y_var}.pkl')
+            # T.save_dict_to_binary(spatial_model_dic, outf)
+            self.save_distributed_perpix_dic(spatial_model_dic, outdir_distribution, n=10000)
 
+    def save_distributed_perpix_dic(self, dic, outdir, n=10000):
+        '''
+        :param dic:
+        :param outdir:
+        :param n: save to each file every n sample
+        :return:
+        '''
+        flag = 0
+        temp_dic = {}
+        for key in tqdm(dic, 'saving...'):
+            flag += 1
+            arr = dic[key]
+            # arr = np.array(arr)
+            temp_dic[key] = arr
+            if flag % n == 0:
+                outf = outdir + '/per_pix_dic_%03d.pkl' % (flag / n)
+                T.save_dict_to_binary(temp_dic, outf)
+                # np.save(outdir + '/per_pix_dic_%03d' % (flag / n), temp_dic)
+                temp_dic = {}
+        # np.save(outdir + '/per_pix_dic_%03d' % 0, temp_dic)
+        outf_0 = outdir + '/per_pix_dic_%03d.pkl' % 0
+        T.save_dict_to_binary(temp_dic, outf_0)
 
-            group_dic = T.df_groupby(df_i,'pix')
-            outdir= join(self.this_class_arr,'important_for_each_pixel')
-            T.mk_dir(outdir,force=True)
-
-            for y_var in self.y_variable_list:
-                importance_spatial_dict = {}
-
-                for pix in tqdm(group_dic):
-                    df_pix = group_dic[pix]
-
-                    df_pix=df_pix.dropna(subset=[y_var]+self.x_variable_list,how='any')
-                    # T.print_head_n(df_pix)
-                    if len(df_pix)<10:
-                        continue
-
-                    x_variable_list = self.x_variable_list
-                    X=df_pix[x_variable_list]
-                    Y=df_pix[y_var]
-
-                    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2,
-                                                                        random_state=1)  # split the data into training and testing
-                    clf = RandomForestRegressor(n_estimators=20)  # build a random forest model
-                    clf.fit(X_train, Y_train)  # train the model
-                    R2= clf.score(X_test, Y_test)  # calculate the R2
-                    importance=clf.feature_importances_
-                    # print(importance)
-                    importance_dic=dict(zip(x_variable_list,importance))
-                    importance_dic['R2']=R2
-
-                    # print(importance_dic)
-                    importance_spatial_dict[pix]=importance_dic
-                importance_dateframe = T.dic_to_df(importance_spatial_dict, 'pix')
-                T.print_head_n(importance_dateframe)
-
-                ## save to df with two period
-
-                outdf=join(outdir,f'{y_var}_{period}.df')
-                T.save_df(importance_dateframe,outdf)
-                outf_xlsx = outdf + '.xlsx'
-                T.df_to_excel(importance_dateframe, outf_xlsx)
+        pass
 
 
     def plot_importance_result_for_each_pixel(self):
@@ -1138,7 +1082,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel_CRU\\'
+        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1163,9 +1107,6 @@ class Random_Forests:
                     # print(importance_dic)
                     print(importance_dic)
 
-
-
-
                     spatial_dic[pix] = importance_dic[x_var]
                 arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
 
@@ -1180,13 +1121,14 @@ class Random_Forests:
 
 
 
+
     def plot_most_important_factor_for_each_pixel(self):  ## second important factor/ third important factor
         keys=list(range(len(self.x_variable_list)))
         x_variable_dict=dict(zip(self.x_variable_list, keys))
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1196,6 +1138,11 @@ class Random_Forests:
 
 
             df = T.load_df(fpath)
+
+            # df_R2_05=df[df['R2']>0.4]
+            # percent = len(df_R2_05) / len(df) * 100
+            # # print(percent)
+            # # exit()
 
             T.print_head_n(df)
             spatial_dic={}
@@ -1231,13 +1178,21 @@ class Random_Forests:
                 ### plot R2
             arrR2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(sptial_R2_dic)
             arrR2[arrR2<0]=np.nan
+            arrR2_flat=arrR2.flatten()
+
+            # plt.hist(arrR2_flat, bins=100)
+            # plt.title(rf'R2_hist_{percent:.2f}%')
+            # plt.show()
+
             plt.imshow(arrR2,vmin=0,vmax=0.5,interpolation='nearest',cmap='RdYlGn')
             plt.colorbar()
             plt.title(f'{fname}_R2')
             plt.show()
+
             outtif_R2 = join(fdir, f'{fname}_R2.tif')
 
             DIC_and_TIF(pixelsize=0.25).arr_to_tif(arrR2, outtif_R2)
+
 
             ### plot importance
             arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
@@ -1252,166 +1207,114 @@ class Random_Forests:
 
             pass
 
-    def plot_variance_explained(self):
 
-        keys = list(range(len(self.x_variable_list)))
-        x_variable_dict = dict(zip(self.x_variable_list, keys))
-        print(x_variable_dict)
-        # exit()
-
-        fdir = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
+    def plot_three_demension(self):
+        fdir = join(self.this_class_arr, 'raw_importance_for_each_pixel','separate_folder')
         for f in os.listdir(fdir):
 
-            if not f.endswith('.df'):
-                continue
-            fpath = join(fdir, f)
-            fname = f.split('.')[0]
+            model_dict = T.load_dict_from_binary(join(fdir,f))
+            R2_f = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\LAI4g_raw_R2.tif'
+            array_R, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(R2_f)
+            dic_r2 = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(array_R)
+            f_cluster = rf'E:\Project5\Result\RF_pix\\spatial_distribution.tif'
+            arr_cluster, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_cluster)
+            dic_cluster = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(arr_cluster)
+            for pix in model_dict:
+                model = model_dict[pix]
+                R2=dic_r2[pix]
+                if R2<0.4:
+                    continue
 
-            df = T.load_df(fpath)
+                cluster = dic_cluster[pix]
+                if not cluster==1:
+                    continue
 
-            T.print_head_n(df)
-            spatial_dic = {}
-            sptial_R2_dic = {}
-            for i, row in df.iterrows():
-                pix = row['pix']
-                importance_dic = row.to_dict()
-                # print(importance_dic)
-                x_variable_list = self.x_variable_list
-                importance_dici = {}
-                for x_var in x_variable_list:
-                    importance_dici[x_var] = importance_dic[x_var]
-                    # print(importance_dici)
-                R2=importance_dic['R2']
-                ## detremine % varibility in LAI predicted by the model
-                # variance=100*R2* x
+                CO2_values = np.linspace(350, 450, 50)  # CO2 from 300 to 500 ppm
+                # CO2_values = np.array([405,])
+                # print(CO2_values);exit()
+                precip_values = np.linspace(0, 1000, 50)  # Precipitation from 0 to 1000 mm
+                # tmax_values = np.linspace(0, 40, 50)
+                tmax_values = np.array([40,])
 
-
-                spatial_dic[pix] = max_var_val
-
-                # print(max_var_val)
-                # print(max_var)
-                importance_dici['R2'] = importance_dic['R2']
-                R2 = importance_dic['R2']
-                sptial_R2_dic[pix] = R2
-            #### print average R2
-            # R2_list = list(sptial_R2_dic.values())
-            # R2_mean = np.nanmean(R2_list)
-            # print(f'{fname} R2 mean: {R2_mean}')
-            # exit()
-
-            ### plot R2
-            arrR2 = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(sptial_R2_dic)
-            arrR2[arrR2 < 0] = np.nan
-            plt.imshow(arrR2, vmin=0, vmax=0.5, interpolation='nearest', cmap='RdYlGn')
-            plt.colorbar()
-            plt.title(f'{fname}_R2')
-            plt.show()
-            outtif_R2 = join(fdir, f'{fname}_R2.tif')
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arrR2, outtif_R2)
-
-            ### plot importance
-            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
-
-            plt.imshow(arr, vmin=0, vmax=12, interpolation='nearest')
-            plt.colorbar()
-            plt.title(fname)
-            plt.show()
-            outtif = join(fdir, f'{fname}_most.tif')
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, outtif)
-
-            pass
-
-    def summarized_important_factor_for_each_continent(self):
-        dff=rf'D:\Project3\Data\RF_pix\detrended_anomaly_RF\\LAI4g_detrended_anomaly.df'
-        df = T.load_df(dff)
-        continent_list=['Global','Asia','Australia','North_America','South_America',]
-        color_list=['grey','red','blue','green','yellow']
-        result_continent_dic={}
-
-        for continent in continent_list:
-            if continent == 'Global':
-                df_continent = df
-            else:
-
-                df_continent = df[df['continent']==continent]
+                # Create a meshgrid for CO2 and precipitation
+                CO2_grid, tmax_grid, precip_grid = np.meshgrid(CO2_values,tmax_values, precip_values)
+                precip_grid1, CO2_grid1, = np.meshgrid(precip_values, CO2_values)
 
 
-            x_variable_list = self.x_variable_list
-            ### count the number of each variable
+                # Prepare data for prediction
+                input_data = np.c_[CO2_grid.ravel(),precip_grid.ravel(), tmax_grid.ravel()]
+                # print(input_data);exit()
 
-            VPD_relative_change_detrended_num=0
-            GPCC_relative_change_detrended_num=0
-            fire_burned_area_num=0
-            CV_rainfall_num=0
-            average_anomaly_heat_event_num=0
+                # Predict LAI using the RF model
 
-            for i, row in df_continent.iterrows():
-                pix = row['pix']
-                importance_dic = row.to_dict()
-                importance_dici = {}
-                for x_var in x_variable_list:
+                predicted_LAI = model.predict(input_data)
+                # print(predicted_LAI.shape);exit()
+
+                # Reshape the predictions back to the grid shape
+                predicted_LAI_grid = predicted_LAI.reshape(CO2_grid1.shape)
+
+                # Now, plot the data
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+
+                # 3D Surface Plot
+                surf = ax.plot_surface(CO2_grid1, precip_grid1, predicted_LAI_grid, cmap='viridis')
+
+                # Add labels and title
+                ax.set_xlabel('CO2 (ppm)')
+                # ax.set_xlabel('Tmax (C)')
+                ax.set_ylabel('Precipitation (mm)')
+                ax.set_zlabel('LAI')
+                ax.set_title(rf'{pix}_R2_{R2:.2f}')
+
+                plt.show()
+
+                pass
+
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<20]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def variables_list(self):
+        self.x_variable_list = [
+            'CO2_raw',
+            'CRU_raw',
+            'tmax_raw',
 
 
-                    importance_dici[x_var] = importance_dic[x_var]
+        ]
 
-                # max_var = max(importance_dici, key=importance_dici.get)
-                ##second
-                max_var = sorted(importance_dici, key=importance_dici.get, reverse=True)[2]
-                if max_var == 'VPD_relative_change_detrended':
-                    VPD_relative_change_detrended_num+=1
-                if max_var == 'CV_rainfall':
-                    CV_rainfall_num+=1
-                if max_var == 'GPCC_relative_change_detrended':
 
-                    GPCC_relative_change_detrended_num+=1
-                if max_var == 'fire_burned_area':
-                    fire_burned_area_num+=1
-                if max_var == 'average_anomaly_heat_event':
-                    average_anomaly_heat_event_num+=1
-            percentage_VPD_relative_change_detrended = VPD_relative_change_detrended_num/len(df_continent)*100
-            percentage_GPCC_relative_change_detrended = GPCC_relative_change_detrended_num/len(df_continent)*100
-            percentage_fire_burned_area = fire_burned_area_num/len(df_continent)*100
-            percentage_CV_rainfall = CV_rainfall_num/len(df_continent)*100
-            percentage_average_anomaly_heat_event = average_anomaly_heat_event_num/len(df_continent)*100
-            result_continent_dic[continent] = [percentage_VPD_relative_change_detrended,percentage_GPCC_relative_change_detrended,
-            percentage_fire_burned_area,percentage_CV_rainfall,percentage_average_anomaly_heat_event]
-        result_continent_df = pd.DataFrame(result_continent_dic,index=['VPD_relative_change_detrended','GPCC_relative_change_detrended',
-        'fire_burned_area','CV_rainfall','average_anomaly_heat_event'])
-        print(result_continent_df)
-        ## plot
-        result_continent_df.plot(kind='bar',color=color_list)
-        x_label=['VPD_IAV','Precip_IAV', 'fire_burned_area','Rainfall_seasonality','extreme_heat_event_anomaly']
-        plt.xticks(np.arange(5),x_label,rotation=0)
-        plt.ylabel('Percentage (%)')
+        self.y_variable_list = [
+            'LAI4g_raw',
 
-        plt.show()
+
+        ]
         pass
 
+        self.x_variable_range_dict = {
+            'CO2_raw': [350, 450],
+
+            'CRU_raw': [0, 1000],
+            'tmax_raw': [0, 40],
 
 
 
+        }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+class Permutation_importance:
+    def __init__(self):
+        pass
     def run_permutation_importance(self): ### run for whole region
         outdir = join(self.this_class_arr, 'permutation_importance')
         T.mk_dir(outdir, force=True)
@@ -1993,18 +1896,6 @@ class Random_Forests:
         print('filtered len(df):',len(df))
         return df
 
-    def df_clean(self,df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df=df[df['row']>120]
-        df=df[df['Aridity']<0.65]
-        df=df[df['LC_max']<20]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
 
 
 
@@ -2012,10 +1903,10 @@ class threshold():
     def __int__(self):
         pass
     def run(self):
-        self.heatmap_raw_data()
+        # self.heatmap_raw_data()
 
         # self.heatmap_growth_data()
-        # self.plot_spatial_disturbution_raw()
+        self.plot_spatial_disturbution_raw()
         # self.plot_spatial_disturbution_percentile()
 
         # self.plot_spatial_disturbution_growth_rate()
@@ -2203,23 +2094,33 @@ class threshold():
         # print(indx);exit()
         # df_selected['LAI4g_relative_change'][indx] = np.nan
 
+
         df_selected=df[df['LAI4g_relative_change']<-20]
-        df_selected = df_selected[df_selected['GLEAM_SMroot_relative_change']<-20]
+        df_selected = df_selected[df_selected['CRU_relative_change']<-30]
         # #
         # #
         df_selected = df_selected[df_selected['CO2_raw']>385]
         # df_selected = df
         # print(len(df_selected))
-
         spatial_dic = {}
-        for i, row in df_selected.iterrows():
+        ## select df when continent is North America or Australia or Asia
+
+        df_selected_region = df_selected[df_selected['continent'].isin(['North_America','Australia','Asia'])]
+
+        for i, row in df_selected_region.iterrows():
             pix = row['pix']
 
             spatial_dic[pix] = 1
+        outf=rf'E:\Project5\Result\RF_pix\spatial_distribution.tif'
         arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+        arr[arr<-1]=np.nan
+        arr[arr>999]=np.nan
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr,outf)
+
         plt.imshow(arr,interpolation='nearest')
         plt.colorbar()
         plt.show()
+        exit()
         ##### select the pixs in the spatial_dic and then plot time series
 
         # T.print_head_n(df)

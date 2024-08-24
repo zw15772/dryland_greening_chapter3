@@ -1466,6 +1466,7 @@ class extract_rainfall:
         np.save(outdir + 'wet_frequency_95th.npy', result_dic_wet_extreme_frequency)
 
     def peak_timing_of_rainfall(self):
+        ## using moving window to calculate the peak timing of rainfall
         fdir = rf'E:\Data\\ERA5_precip\ERA5_daily\dict\\precip_transform\\'
         outdir = rf'E:\Data\\ERA5_precip\ERA5_daily\dict\\peak_timing_of_rainfall\\'
         T.mk_dir(outdir, force=True)
@@ -1478,16 +1479,10 @@ class extract_rainfall:
 
             vals = spatial_dic[pix]
             for val in vals:
-                ## calculate the peak timing of rainfall events
 
                 if T.is_all_nan(val):
                     continue
-                peak_timing = np.argmax(val)
-                # print(peak_timing)
-                # exit()
-                peak_timing_list.append(peak_timing)
-            result_dic[pix] = peak_timing_list
-        np.save(outdir + 'peak_timing_of_rainfall.npy', result_dic)
+
 
 
     def rainfall_intensity(self):
@@ -1645,6 +1640,7 @@ class extract_rainfall:
             np.save(outf + '_trend', arr_trend)
             np.save(outf + '_p_value', p_value_arr)
     pass
+
     def check_spatial_map(self):
         fdir = data_root + rf'\ERA5\ERA5_daily\dict\\dry_spell\\'
         spatial_dic= T.load_npy_dir(fdir)
