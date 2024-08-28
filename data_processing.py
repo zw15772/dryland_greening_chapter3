@@ -3664,7 +3664,7 @@ class statistic_analysis():
         # self.normalised_variables()
         # self.calculate_CV()
         # self.zscore()
-        self.detrend()
+        # self.detrend()
         # self.LAI_baseline()
 
         # self.anomaly_GS()
@@ -4461,8 +4461,8 @@ class statistic_analysis():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'growth_rate\\'
-        outdir = result_root + rf'\\growth_rate\\trend_analysis\\'
+        fdir = result_root+rf'\multi_regression_moving_window\window15_anomaly\npy_time_series\\'
+        outdir = result_root + rf'multi_regression_moving_window\window15_anomaly\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -7657,37 +7657,37 @@ class moving_window():
 
 class multi_regression_window():
     def __init__(self):
-        self.fdirX=result_root+rf'extract_window\extract_original_window\\15\\'
-        self.fdir_Y=result_root+rf'extract_window\extract_original_window\\15\\'
+        self.fdirX=result_root+rf'extract_window\extract_anomaly_window\\'
+        self.fdir_Y=result_root+rf'extract_window\extract_anomaly_window\\'
 
-        self.xvar_list = ['CO2','CRU']
+        self.xvar_list = ['CO2','GPCC']
         self.y_var = ['LAI4g']
         pass
 
     def run(self):
 
         self.window = 39-15
-        outdir = result_root + rf'multi_regression_moving_window\window15_original\\'
+        outdir = result_root + rf'multi_regression_moving_window\\window15_anomaly\\'
         T.mk_dir(outdir, force=True)
 
         ## step 1 build dataframe
-        for i in range(self.window):
-
-            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-
-
-            outf= outdir+rf'\\window{i:02d}.npy'
-            if os.path.isfile(outf):
-                continue
-            print(outf)
-
-            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        # for i in range(self.window):
+        #
+        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
+        #
+        #
+        #     outf= outdir+rf'\\window{i:02d}.npy'
+        #     if os.path.isfile(outf):
+        #         continue
+        #     print(outf)
+        # #
+            # self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
         # step 2 crate individial files
         # self.plt_multi_regression_result(outdir,self.y_var)
 
         # step 3 covert to time series
 
-        # self.convert_files_to_time_series(outdir,self.y_var)
+        self.convert_files_to_time_series(outdir,self.y_var)
         ### step`
         # self.plot_moving_window_time_series()
 
@@ -7710,7 +7710,9 @@ class multi_regression_window():
             if len(vals) == 0:
                 continue
             vals = np.array(vals)
-            vals = vals
+            vals[vals>999] = np.nan
+            vals[vals<-999] = np.nan
+
             pix_list.append(pix)
             y_val_list.append(vals)
         df['pix'] = pix_list
@@ -7734,6 +7736,8 @@ class multi_regression_window():
                     continue
                 vals = x_arr[pix][w]
                 vals = np.array(vals)
+                vals[vals > 999] = np.nan
+                vals[vals < -999] = np.nan
                 if len(vals) == 0:
                     x_val_list.append([])
                     continue
@@ -7898,9 +7902,13 @@ class multi_regression_window():
 
             # plt.show()
     def convert_files_to_time_series(self, multi_regression_result_dir,y_var):
-        dryland_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(dryland_mask_f)
-        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
         average_LAI_f = result_root + rf'state_variables\LAI4g_1982_2020.npy'
         average_LAI_dic = T.load_npy(average_LAI_f)  ### normalized Co2 effect
 
@@ -7909,7 +7917,7 @@ class multi_regression_window():
 
 
 
-        variable_list = ['CRU', 'tmax', 'GLEAM_SMroot', 'VPD']
+        variable_list = ['GPCC', 'CO2']
 
         for variable in variable_list:
             array_list = []
@@ -7936,8 +7944,13 @@ class multi_regression_window():
             result_dic = {}
             for pix in dic:
                 r, c = pix
-                classval = dic_dryland_mask[pix]
-                if np.isnan(classval):
+
+                if r < 120:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
                     continue
 
 
@@ -7947,10 +7960,12 @@ class multi_regression_window():
                     continue
 
                 LAI_average=average_LAI_dic[pix]
+                if LAI_average==0:
+                    continue
 
                 time_series=dic[pix]
                 time_series = np.array(time_series)
-                time_series = time_series/LAI_average*100
+                time_series = time_series/LAI_average*100 *100
                 result_dic[pix]=time_series
 
 
@@ -8009,6 +8024,9 @@ class multi_regression_window():
 
             plt.title(region)
         plt.show()
+
+    def plot_precipitation_vs_LAI(self):
+        pass
 
 
 class residual_method():
@@ -17491,7 +17509,7 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    # statistic_analysis().run()
+    statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
