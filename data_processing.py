@@ -109,7 +109,7 @@ class data_processing():
         # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
-        # self.tif_to_dic()
+        self.tif_to_dic()
 
 
         # self.extract_GS()
@@ -6934,11 +6934,11 @@ class moving_window():
     def __init__(self):
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
         # self.moving_window_trend_anaysis()
         # self.moving_window_CV_extraction_anaysis()
-        self.moving_window_CV_trends()
+        # self.moving_window_CV_trends()
         # self.moving_window_average_anaysis()
         # self.produce_trend_for_each_slides()
         # self.calculate_trend_spatial()
@@ -6951,11 +6951,11 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'\Detrend\detrend_original\\'
-        outdir = result_root + rf'extract_window\extract_detrend_original_window\\15\\'
+        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
+        outdir = result_root + rf'extract_window\extract_original_window\\15\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['VPD','CRU']:
+            if f.split('.')[0] not in ['VPD','CRU','LAI4g','CO2','GPCC','tmax']:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -7657,17 +7657,17 @@ class moving_window():
 
 class multi_regression_window():
     def __init__(self):
-        self.fdirX=result_root+rf'extract_window\extract_detrend_relative_change_window\\15\\'
-        self.fdir_Y=result_root+rf'extract_window\extract_detrend_relative_change_window\\15\\'
+        self.fdirX=result_root+rf'extract_window\extract_original_window\\15\\'
+        self.fdir_Y=result_root+rf'extract_window\extract_original_window\\15\\'
 
-        self.xvar_list = ['tmax','CRU','VPD',]
+        self.xvar_list = ['CO2','CRU']
         self.y_var = ['LAI4g']
         pass
 
     def run(self):
 
         self.window = 39-15
-        outdir = result_root + rf'multi_regression_moving_window\window15_detrended_relative_change\\'
+        outdir = result_root + rf'multi_regression_moving_window\window15_original\\'
         T.mk_dir(outdir, force=True)
 
         ## step 1 build dataframe
@@ -10254,58 +10254,53 @@ class Seasonal_sensitivity:
 
         pass
 
+
 class multi_regression_anomaly():
     def __init__(self):
-        # self.fdirX=result_root+rf'anomaly\OBS_extend\\'
-        # self.fdirY=result_root+rf'anomaly\OBS_extend\\'
-        self.fdirX = result_root + rf'\anomaly\OBS_extend\\'
-        self.fdirY = result_root + rf'\anomaly\OBS_extend\\'
 
+        self.fdirX = result_root+rf'extract_GS\OBS_LAI_extend\\'
+        self.fdirY = result_root+rf'extract_GS\OBS_LAI_extend\\'
 
-        self.period=('1982_2020')
+        self.period = ('1982_2020')
         # self.period=('1982_2001')
         # self.period=('2002_2020')
         # self.y_var = [f'LAI4g_{self.period}']
         # self.xvar = [f'Tmax_{self.period}', f'CRU_{self.period}', f'CO2_{self.period}', f'VPD_{self.period}']
         self.y_var = ['LAI4g']
-        self.xvar = ['tmax', 'VPD','CO2', 'CRU']
+        self.xvar = [ 'CO2', 'CRU']
 
+        self.multi_regression_result_dir = result_root + rf'multi_regression\\original\\{self.period}\\'
+        T.mk_dir(self.multi_regression_result_dir, force=True)
 
+        self.multi_regression_result_f = result_root + rf'multi_regression\\original\\{self.period}\\{self.y_var[0]}.npy'
 
-
-        self.multi_regression_result_dir=result_root+rf'multi_regression\\anomaly\\{self.period}\\'
-        T.mk_dir(self.multi_regression_result_dir,force=True)
-
-        self.multi_regression_result_f = result_root + rf'multi_regression\\anomaly\\{self.period}\\{self.y_var[0]}.npy'
-        # r"D:\Project3\Result\multi_regression\anomaly\1982_2020\LAI4g_1982_2020.npy"
         pass
 
     def run(self):
 
-        #step 1 build dataframe
-        # df = self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var,self.period)
+        # step 1 build dataframe
+
         # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
 
         # # # step 2 cal correlation
-        # self.cal_multi_regression_beta(df, self.xvar)  # 修改参数
+        self.cal_multi_regression_beta()
 
         # step 3 plot
-        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
+        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
 
         ## step 4 convert m2/m2/ppm to %/100ppm
         # self.convert_CO2_sensitivity_unit()
 
         # step 5
-        self.calculate_trend_contribution()
+        # self.calculate_trend_contribution()
 
         pass
 
-
-    def build_df(self,fdir_X,fdir_Y,fx_list,fy,period):
+    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
 
         df = pd.DataFrame()
 
-        filey=fdir_Y+fy[0]+'.npy'
+        filey = fdir_Y + fy[0] + '.npy'
         print(filey)
 
         dic_y = T.load_npy(filey)
@@ -10335,7 +10330,7 @@ class multi_regression_anomaly():
 
             # print(var_name)
             x_val_list = []
-            filex=fdir_X+xvar+'.npy'
+            filex = fdir_X + xvar + '.npy'
             # filex = fdir_X + xvar + f'_{period}.npy'
 
             # print(filex)
@@ -10363,9 +10358,11 @@ class multi_regression_anomaly():
             # x_val_list = np.array(x_val_list)
             df[xvar] = x_val_list
         T.print_head_n(df)
+        ## save df
+        T.save_df(df, self.multi_regression_result_dir + fy[0] + '.df')
+        T.df_to_excel(df, self.multi_regression_result_dir + fy[0] + '.xlsx')
 
         return df
-
 
     def __linearfit(self, x, y):
         '''
@@ -10387,15 +10384,22 @@ class multi_regression_anomaly():
         r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
         return a, b, r
 
-
-    def cal_multi_regression_beta(self, df, x_var_list):
+    def cal_multi_regression_beta(self):
+        import statsmodels.api as sm
+        import statsmodels.formula.api as smf
+        import pandas as pd
         import joblib
 
+        df = T.load_df(rf'D:\Project3\Result\\multi_regression\original\1982_2020\\LAI4g.df')
+
+        x_var_list = self.xvar
 
         outf = self.multi_regression_result_f
 
         multi_derivative = {}
+
         for i, row in tqdm(df.iterrows(), total=len(df)):
+            # print(row);exit()
             pix = row.pix
 
             y_vals = row['y']
@@ -10418,28 +10422,27 @@ class multi_regression_anomaly():
 
                 if np.isnan(np.nanmean(x_vals)):
                     continue
-                # x_vals = T.interp_nan(x_vals)
-                # if len(y_vals) == 18:
-                #     x_vals = x_vals[:-1]
-
 
                 if len(x_vals) != len(y_vals):
                     continue
                 # print(x_vals)
                 if x_vals[0] == None:
                     continue
-                # x_vals_detrend = signal.detrend(x_vals) #detrend
+
                 df_new[x] = x_vals
-                # df_new[x] = x_vals_detrend   #detrend
 
                 x_var_list_valid.append(x)
             if len(df_new) <= 3:
                 continue
+            if len(x_var_list_valid) < 2:
+                continue
+            # T.print_head_n(df_new)
 
             df_new['y'] = y_vals  # nodetrend
 
             # T.print_head_n(df_new)
             df_new = df_new.dropna(axis=1, how='all')
+
             x_var_list_valid_new = []
             for v_ in x_var_list_valid:
                 if not v_ in df_new:
@@ -10447,17 +10450,18 @@ class multi_regression_anomaly():
                 else:
                     x_var_list_valid_new.append(v_)
             # T.print_head_n(df_new)
+            # x_var_list_valid_new.append('CO2:CRU')
+            # # x_var_list_valid_new.append('tmax:CRU')
 
             df_new = df_new.dropna()
-            linear_model = LinearRegression()
+            ## build multiregression model and consider interactioon
 
-            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
-            ##save model
-            # joblib.dump(linear_model, outf.replace('.npy', f'_{pix}.pkl'))
-            ##load model
-            # linear_model = joblib.load(outf.replace('.npy', f'_{pix}.pkl'))
-            # coef_ = np.array(linear_model.coef_) / y_mean
-            coef_ = np.array(linear_model.coef_)
+            # model = smf.ols('y ~ CO2 + CRU +  CO2:CRU ',
+            #                 data=df_new).fit()
+            model = smf.ols('y ~ CO2 + CRU ',
+                            data=df_new).fit()
+
+            coef_ = np.array(model.params)
             coef_dic = dict(zip(x_var_list_valid_new, coef_))
             # print(df_new['y'])
             # exit()
@@ -10466,29 +10470,40 @@ class multi_regression_anomaly():
 
     pass
 
-    def plt_multi_regression_result(self, multi_regression_result_dir,y_var,period):
+    def plt_multi_regression_result(self, multi_regression_result_dir, y_var, period):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        f=self.multi_regression_result_f
+        f = self.multi_regression_result_f
 
         dic = T.load_npy(f)
         var_list = []
         for pix in dic:
 
-            landcover_value = crop_mask[pix]
-            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                continue
 
             vals = dic[pix]
             for var_i in vals:
                 var_list.append(var_i)
         var_list = list(set(var_list))
         for var_i in var_list:
+            # print(var_i)
             spatial_dic = {}
             for pix in dic:
+                r, c = pix
+                if r < 120:
+                    continue
+
+                landcover_value = crop_mask[pix]
+
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
 
                 dic_i = dic[pix]
                 if not var_i in dic_i:
@@ -10497,6 +10512,14 @@ class multi_regression_anomaly():
                 spatial_dic[pix] = val
             arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
             arr = arr * array_mask
+            print(var_i)
+            if var_i=='tmax:CRU':
+                var_i = 'tmax_CRU'
+            elif var_i=='CO2:CRU':
+                var_i = 'CO2_CRU'
+            else:
+                var_i = var_i
+
             DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_{y_var}_{period}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
@@ -10504,7 +10527,7 @@ class multi_regression_anomaly():
             vmax = mean + std
             plt.figure()
             # arr[arr > 0.1] = 1
-            plt.imshow(arr,vmin=-5,vmax=5)
+            plt.imshow(arr, vmin=-5, vmax=5)
 
             plt.title(var_i)
             plt.colorbar()
@@ -10512,16 +10535,15 @@ class multi_regression_anomaly():
         plt.show()
 
     def convert_CO2_sensitivity_unit(self):
-        period_list=['1982_2020']
+        period_list = ['1982_2020']
         for period in period_list:
-            CO2_sensitivity_f=result_root+rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
-            average_LAI4g_f= result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
+            CO2_sensitivity_f = result_root + rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
+            average_LAI4g_f = result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(CO2_sensitivity_f)
             arr[arr < -99] = np.nan
             dic_CO2_sensitivity = DIC_and_TIF().spatial_arr_to_dic(arr)
 
             dic_LAI4g_average = T.load_npy(average_LAI4g_f)
-
 
             for pix in dic_CO2_sensitivity:
                 CO2_sensitivity = dic_CO2_sensitivity[pix]
@@ -10540,15 +10562,14 @@ class multi_regression_anomaly():
                     continue
                 dic_CO2_sensitivity[pix] = CO2_sensitivity
             arr_new = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic_CO2_sensitivity)
-            arr_new[arr_new <-99] = np.nan
-            arr_new[arr_new >99] = np.nan
+            arr_new[arr_new < -99] = np.nan
+            arr_new[arr_new > 99] = np.nan
 
             # plt.imshow(arr_new)
             # plt.colorbar()
             # plt.show()
 
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif","_scale.tif")}')
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif", "_scale.tif")}')
             # DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_CO2_sensitivity, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
             # T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
 
@@ -10559,7 +10580,7 @@ class multi_regression_anomaly():
         ## load the trend of the target variable
         ## load multi regression result
         ## calculate the trend contribution
-        trend_dir= result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
+        trend_dir = result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
 
         selected_vairables_list = [
             'CRU_trend',
@@ -10574,9 +10595,9 @@ class multi_regression_anomaly():
             array = np.load(fpath, allow_pickle=True)
             array[array < -9999] = np.nan
             spatial_dict = D.spatial_arr_to_dic(array)
-            for pix in tqdm(spatial_dict,desc=variable):
-                r,c=pix
-                if r<120:
+            for pix in tqdm(spatial_dict, desc=variable):
+                r, c = pix
+                if r < 120:
                     continue
                 val = spatial_dict[pix]
                 if np.isnan(val):
@@ -10585,7 +10606,6 @@ class multi_regression_anomaly():
                     trend_dict[pix] = {}
                 key = variable.replace('_trend', '')
                 trend_dict[pix][key] = spatial_dict[pix]
-
 
         f = self.multi_regression_result_f
         print(f)
@@ -10623,8 +10643,8 @@ class multi_regression_anomaly():
             plt.colorbar()
             plt.title(var_i)
             plt.show()
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib, f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
-
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib,
+                                                   f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
 
 
 class multi_regression_detrended_anomaly():
@@ -11801,11 +11821,11 @@ class build_dataframe():
     def __init__(self):
 
 
-        self.this_class_arr = rf'D:\Project3\Result\Dataframe\growing_season_original\\'
+        self.this_class_arr = result_root+rf'growth_rate\DataFrame\\'
         # self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'growing_season_original.df'
+        self.dff = self.this_class_arr + 'growth_rate_yearly.df'
 
 
         pass
@@ -11819,12 +11839,13 @@ class build_dataframe():
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
-        df=self.append_attributes(df)  ## 加属性
+        # df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
         # df=self.append_value(df)   ## insert or append value
 
 
         # df = self.add_detrend_zscore_to_df(df)
+        df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
 
@@ -12122,11 +12143,45 @@ class build_dataframe():
 
         pass
 
+    def add_GPCP_lagged(self,df): ##
+        fdir=result_root+rf'\extract_GS\OBS_LAI_extend\\'
+        for f in os.listdir(fdir):
+            if f.split('.')[0] not in ['GPCC','CRU','tmax']:
+                continue
+
+            spatial_dic = T.load_npy(fdir+f)
+
+            NDVI_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+
+                year = row.year
+
+                pix = row['pix']
+                r, c = pix
+
+                if not pix in spatial_dic:
+                    NDVI_list.append(np.nan)
+                    continue
+
+                vals = spatial_dic[pix][1:]
+
+
+                v1=vals[year-1983]
+                # print(v1,year,len(vals))
+
+                NDVI_list.append(v1)
+            col_name=f.split('.')[0]
+            print(col_name)
+            df[col_name]=NDVI_list
+
+            return df
+            pass
+
     def add_detrend_zscore_to_df(self, df):
 
         fdir=result_root+rf'\extract_GS\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
-            if not 'GPCC' in f:
+            if not 'CRU' in f:
                 continue
 
 
@@ -12643,11 +12698,11 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
+        fdir=rf'D:\Project3\Result\trend_analysis\original\OBS_LAI\\'
         for f in os.listdir(fdir):
             # print(f)
             # exit()
-            if not 'R2' in f:
+            if not 'LAI4g' in f:
                 continue
 
 
@@ -17436,7 +17491,7 @@ class Dataframe_func:
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
+    # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
@@ -17457,8 +17512,8 @@ def main():
 
     # fingerprint().run()
     # moving_window().run()
-    # multi_regression_window().run()
-    build_dataframe().run()
+    multi_regression_window().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()

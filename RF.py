@@ -887,7 +887,8 @@ class Random_Forests:
 
         # self.plot_importance_result_for_each_pixel()
         # self.plot_most_important_factor_for_each_pixel()
-        self.plot_three_demension()
+        # self.plot_three_demension()
+        self.plot_two_demension()
 
         pass
 
@@ -980,7 +981,7 @@ class Random_Forests:
         # plt.show()
 
 
-        outdir= join(self.this_class_arr,'raw_importance_for_each_pixel')
+        outdir= join(self.this_class_arr,'raw_importance_for_each_pixel_ENSO')
         outdir_distribution= join(outdir,'separate_folder')
         T.mk_dir(outdir,force=True)
         T.mk_dir(outdir_distribution,force=True)
@@ -1082,7 +1083,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel_ENSO\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1128,7 +1129,7 @@ class Random_Forests:
         print(x_variable_dict)
         # exit()
 
-        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel\\'
+        fdir = rf'E:\Project5\Result\RF_pix\\raw_importance_for_each_pixel_ENSO\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.df'):
@@ -1209,11 +1210,11 @@ class Random_Forests:
 
 
     def plot_three_demension(self):
-        fdir = join(self.this_class_arr, 'raw_importance_for_each_pixel','separate_folder')
+        fdir = join(self.this_class_arr, 'raw_importance_for_each_pixel_ENSO','separate_folder')
         for f in os.listdir(fdir):
 
             model_dict = T.load_dict_from_binary(join(fdir,f))
-            R2_f = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\LAI4g_raw_R2.tif'
+            R2_f = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel_ENSO\\LAI4g_raw_R2.tif'
             array_R, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(R2_f)
             dic_r2 = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(array_R)
             f_cluster = rf'E:\Project5\Result\RF_pix\\spatial_distribution.tif'
@@ -1230,11 +1231,12 @@ class Random_Forests:
                     continue
 
                 CO2_values = np.linspace(350, 450, 50)  # CO2 from 300 to 500 ppm
+                ENSO_values = np.linspace(-2, 2, 0.5)  # ENSO from -0.5 to 0.5
                 # CO2_values = np.array([405,])
                 # print(CO2_values);exit()
-                precip_values = np.linspace(0, 1000, 50)  # Precipitation from 0 to 1000 mm
+                # precip_values = np.linspace(0, 1000, 50)  # Precipitation from 0 to 1000 mm
                 # tmax_values = np.linspace(0, 40, 50)
-                tmax_values = np.array([40,])
+                # tmax_values = np.array([40,])
 
                 # Create a meshgrid for CO2 and precipitation
                 CO2_grid, tmax_grid, precip_grid = np.meshgrid(CO2_values,tmax_values, precip_values)
@@ -1266,6 +1268,78 @@ class Random_Forests:
                 ax.set_ylabel('Precipitation (mm)')
                 ax.set_zlabel('LAI')
                 ax.set_title(rf'{pix}_R2_{R2:.2f}')
+                ## auto rotate and show
+
+
+
+
+
+
+                plt.show()
+
+                pass
+
+    def plot_two_demension(self):
+        fdir = join(self.this_class_arr, 'raw_importance_for_each_pixel_ENSO','separate_folder')
+        for f in os.listdir(fdir):
+
+            model_dict = T.load_dict_from_binary(join(fdir,f))
+            R2_f = rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel_ENSO\\LAI4g_raw_R2.tif'
+            array_R, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(R2_f)
+            dic_r2 = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(array_R)
+            f_cluster = rf'E:\Project5\Result\RF_pix\\spatial_distribution.tif'
+            arr_cluster, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_cluster)
+            dic_cluster = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(arr_cluster)
+            for pix in model_dict:
+                model = model_dict[pix]
+                R2=dic_r2[pix]
+                if R2<0.4:
+                    continue
+
+                cluster = dic_cluster[pix]
+                if not cluster==1:
+                    continue
+
+                CO2_values = np.linspace(350, 450, 50)  # CO2 from 300 to 500 ppm
+                ENSO_values = np.linspace(-2, 2, 0.5)  # ENSO from -0.5 to 0.5
+
+
+                # Create a meshgrid for CO2 and precipitation
+                CO2_grid, ENSO_grid = np.meshgrid(CO2_values,ENSO_values)
+
+
+
+                # Prepare data for prediction
+                input_data = np.c_[CO2_grid.ravel(),ENSO_grid.ravel()]
+                # print(input_data);exit()
+
+                # Predict LAI using the RF model
+
+                predicted_LAI = model.predict(input_data)
+                # print(predicted_LAI.shape);exit()
+
+                # Reshape the predictions back to the grid shape
+                predicted_LAI_grid = predicted_LAI.reshape(CO2_grid.shape)
+
+                # Now, plot the data
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+
+                # 3D Surface Plot
+                surf = ax.plot_surface(CO2_grid, ENSO_grid, predicted_LAI_grid, cmap='viridis')
+
+                # Add labels and title
+                ax.set_xlabel('CO2 (ppm)')
+                # ax.set_xlabel('Tmax (C)')
+                ax.set_ylabel('ENSO (mm)')
+                ax.set_zlabel('LAI')
+                ax.set_title(rf'{pix}_R2_{R2:.2f}')
+                ## auto rotate and show
+
+
+
+
+
 
                 plt.show()
 
@@ -1287,8 +1361,8 @@ class Random_Forests:
     def variables_list(self):
         self.x_variable_list = [
             'CO2_raw',
-            'CRU_raw',
-            'tmax_raw',
+            'ENSO_index_average',
+
 
 
         ]
@@ -2379,6 +2453,7 @@ def main():
     # Trend_statistic().run()
     Random_Forests().run()
     # threshold().run()
+
     pass
 
 

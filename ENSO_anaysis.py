@@ -66,9 +66,9 @@ T=Tools()
 
 
 
-this_root = 'D:\Project3\\'
-data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+this_root = 'E:\Project5\\'
+data_root = 'E:\Project5\Data\\'
+result_root = 'E:\Project5\Result\\'
 
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
@@ -203,7 +203,7 @@ class ENSO_anaysis():
 
 
         for year in year_list:
-            if year>=2020:
+            if year>=2021:
                 break
 
             growing_season_Southern=vals_list_flatten[(year-1982)*12+10:(year-1982+1)*12+4]
@@ -221,12 +221,12 @@ class ENSO_anaysis():
 
 
         #### add into df
-        df= T.load_df(data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df')
+        df= T.load_df(result_root + rf'Dataframe\raw_data.df')
 
         NDVI_list = []
         for i, row in tqdm(df.iterrows(), total=len(df)):
 
-            index = row.year_range
+            index = row.year
 
             pix = row['pix']
             r,c=pix
@@ -235,18 +235,18 @@ class ENSO_anaysis():
                 continue
             elif 120<=r<240:
                 ## index type to string
-                val=growing_season_Northern_dic_average[index+1982]
+                val=growing_season_Northern_dic_average[index]
             elif 240<=r<480:
-                val=growing_season_tropical_dic_average[index+1982]
+                val=growing_season_tropical_dic_average[index]
             elif r>=480:
-                val=growing_season_Southern_dic_average[index+1982]
+                val=growing_season_Southern_dic_average[index]
             else:
                 raise
             NDVI_list.append(val)
 
         df['ENSO_index_average'] = NDVI_list
         df = df.dropna(subset=['ENSO_index_average'])
-        outf=data_root+rf'ERA5\ERA5_daily\SHAP\RF_df\\RF_df'
+        outf=rf'E:\Project5\Result\Dataframe\\raw_data.df'
         T.save_df(df,outf)
         # ## xlxs
         T.df_to_excel(df, outf)
