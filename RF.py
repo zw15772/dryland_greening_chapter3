@@ -1979,8 +1979,8 @@ class threshold():
     def run(self):
         # self.heatmap_raw_data()
 
-        # self.heatmap_growth_data()
-        self.plot_spatial_disturbution_raw()
+        self.heatmap_growth_data()
+        # self.plot_spatial_disturbution_raw()
         # self.plot_spatial_disturbution_percentile()
 
         # self.plot_spatial_disturbution_growth_rate()
@@ -2451,8 +2451,8 @@ def main():
     # Bivariate_statistic().run()
     # Correlation_Lag_statistic().run()
     # Trend_statistic().run()
-    Random_Forests().run()
-    # threshold().run()
+    # Random_Forests().run()
+    threshold().run()
 
     pass
 
