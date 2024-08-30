@@ -75,12 +75,233 @@ def mk_dir(outdir):
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
 
-class statistic():
+class growth_rate:
+    from scipy import stats, linalg
+    def run(self):
+
+        self.calculate_annual_growth_rate()
+
+        # self.plot_growth_rate()
+        # self.bar_plot()
+    pass
+
+    def calculate_annual_growth_rate(self):
+        fdir=result_root + rf'\relative_change\OBS_LAI_extend\\'
+        outdir=result_root + rf'growth_rate\\growth_rate_relative_change\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
+                continue
+
+            dict=np.load(fdir+f,allow_pickle=True).item()
+            growth_rate_dic={}
+            for pix in tqdm(dict):
+                time_series=dict[pix]
+                # print(len(time_series))
+                growth_rate_time_series=np.zeros(len(time_series)-1)
+                for i in range(len(time_series)-1):
+                    if time_series[i]==0:
+                        continue
+                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/time_series[i]*100
+                growth_rate_dic[pix]=growth_rate_time_series
+            np.save(outdir+f,growth_rate_dic)
+
+        pass
+
+
+    def plot_growth_rate_npy(self):  ##### plot double y axis
+        fdir = r'D:\Project3\Result\growth_rate\growth_rate_trend\\'
+        for f in T.listdir(fdir):
+            if not 'LAI4g' in f:
+                continue
+            fpath = join(fdir,f)
+            spatial_dict = T.load_npy(fpath)
+            vals_list =[]
+            for pix in tqdm(spatial_dict):
+                vals = spatial_dict[pix]
+                vals_list.append(vals)
+            vals_mean = np.nanmean(vals_list, axis=0)
+            print(vals_mean)
+            plt.scatter(range(len(vals_mean)),vals_mean)
+            plt.show()
+        pass
+
+    def plot_growth_rate(self):  ##### plot double y axis
+
+        df = T.load_df(result_root + rf'\growth_rate\DataFrame\\growth_rate_all_years.df')
+        fdir = r'D:\Project3\Result\growth_rate\growth_rate_trend\\'
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        df = df[df['row'] > 120]
+        df = df[df['LC_max'] < 20]
+        df = df[df['Aridity'] < 0.65]
+
+        df = df[df['MODIS_LUCC'] != 12]
+
+        # print(len(df))
+        # exit()
+        #
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['grey'] * 16
+        color_list[0] = 'green'
+        # color_list[1] = 'red'
+        # color_list[2]='blue'
+        # color_list=['green','blue','red','orange','aqua','brown','cyan', 'black', 'yellow', 'purple', 'pink', 'grey', 'brown','lime','teal','magenta']
+        linewidth_list = [1] * 16
+        linewidth_list[0] = 3
+
+
+        fig = plt.figure()
+        fig.set_size_inches(10, 10)
+
+        i = 1
+
+
+        region_unique = T.get_df_unique_val_list(df, 'AI_classfication')
+        print(region_unique)
+        region_val_dict = {
+            'Arid': 1,
+            'Semi-Arid': 2,
+            'Sub-Humid': 3,
+        }
+        region_val = []
+        # for i,row in df.iterrows():
+        #     region = row['AI_classfication']
+        #     val = region_val_dict[region]
+        #     region_val.append(val)
+        # df['region_val'] = region_val
+        # spatial_dict_region = T.df_to_spatial_dic(df, 'region_val')
+        # region_arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_region)
+        # plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+
+        for continent in ['Arid', 'Semi-Arid', 'Sub-Humid', 'global']:
+            ax = fig.add_subplot(2, 2, i)
+            if continent == 'global':
+                df_continent = df
+            else:
+
+                df_continent = df[df['AI_classfication'] == continent]
+
+            vals_growth_rate_relative_change = df_continent['LAI4g_growth_rate_trend_method2'].tolist()
+            # print(vals_growth_rate_relative_change);exit()
+            vals_relative_change = df_continent['LAI4g_relative_change'].tolist()
+
+            vals_growth_rate_list = []
+            vals_relative_change_list = []
+            for val_growth_rate in vals_growth_rate_relative_change:
+
+                if type(val_growth_rate) == float:  ## only screening
+                    continue
+                if len(val_growth_rate) == 0:
+                    continue
+                val_growth_rate[val_growth_rate < -99] = np.nan
+                val_growth_rate = np.array(val_growth_rate)*100
+                # print(val_growth_rate)
+
+                if not len(val_growth_rate) == 39:
+                    ## add nan to the end of the list
+                    for j in range(1):
+                        val_growth_rate = np.append(val_growth_rate, np.nan)
+                    # print(val)
+                    # print(len(val))
+
+                vals_growth_rate_list.append(list(val_growth_rate))
+
+            for val_relative_change in vals_relative_change:
+                if type(val_relative_change) == float:  ## only screening
+                    continue
+                if len(val_relative_change) == 0:
+                    continue
+                val_relative_change[val_relative_change < -99] = np.nan
+
+                if not len(val_relative_change) == 39:
+                    ## add nan to the end of the list
+                    for j in range(1):
+                        val_relative_change = np.append(val_relative_change, np.nan)
+                    # print(val)
+                    # print(len(val))
+                vals_relative_change_list.append(list(val_relative_change))
+
+
+
+            ###### calculate mean
+            vals_mean_growth_rate = np.array(vals_growth_rate_list)
+            ## remove inf
+            vals_mean_growth_rate[vals_mean_growth_rate >9999]=np.nan
+            vals_mean_growth_rate = np.nanmean(vals_mean_growth_rate, axis=0)
+            vals_mean_relative_change = np.array(vals_relative_change_list)
+            vals_mean_relative_change = np.nanmean(vals_mean_relative_change, axis=0)
+
+            plt.plot(vals_mean_growth_rate, color='red', linewidth=2)
+            ## add fiting line
+            x = np.arange(1, 39)
+            y = vals_mean_growth_rate[1:]
+            result_i = stats.linregress(range(1, 39), y)
+
+
+            plt.plot(x, result_i.intercept + result_i.slope * x, 'r--')
+
+
+
+            ax.set_xticks(range(0, 40, 4))
+            ax.set_xticklabels(range(1982, 2021, 4), rotation=45)
+
+
+            ax.set_ylabel('Growth_rate (%)', color='r')
+            ax.set_ylim(-10, 10)
+            ax2 = ax.twinx()
+
+
+            ax2.plot(vals_mean_relative_change, color='green', linewidth=2)
+            ## set y axis color
+            for tl in ax2.get_yticklabels():
+                tl.set_color('g')
+            for tl in ax.get_yticklabels():
+                tl.set_color('r')
+
+            x2 = np.arange(0, 39)
+            y2 = vals_mean_relative_change
+            result_i2 = stats.linregress(range(0, 39), y2)
+            ax2.plot(x2, result_i2.intercept + result_i2.slope * x2, 'g--')
+
+
+            ax2.set_ylabel('Relative_change (%)', color='g')
+            ax2.set_ylim(-10, 10)
+            ## add line when y=0
+            plt.axhline(y=0, color='grey', linestyle='-',alpha=0.5)
+
+            plt.title(f'{continent}')
+            ## add slope and p_value
+            ax.text(0.1, 0.9, f'slope:{result_i.slope:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='red')
+            ax.text(0.1, 0.8, f'p_value:{result_i.pvalue:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='red')
+            ax2.text(0.1, 0.7, f'slope:{result_i2.slope:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='green')
+            ax2.text(0.1, 0.6, f'p_value:{result_i2.pvalue:.3f}', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, color='green')
+            ## add legend
+            # ax.legend(['growth_rate', 'growth_rate_fit'], loc='upper left')
+            # ax2.legend(['relative_change', 'relative_change_fit'], loc='upper right')
+
+            i = i + 1
+        plt.tight_layout()
+        plt.show()
+
+
+
+class trend_analysis():  ## figure 1
     def __init__(self):
         pass
     def run(self):
-        self.trend_analysis()
-    def trend_analysis(self):
+        # self.trend_analysis_spatial()
+        # self.robinson()
+        self.plt_histgram()
+    def trend_analysis_spatial(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
@@ -90,13 +311,14 @@ class statistic():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'\multi_regression_moving_window\window15_anomaly\npy_time_series\\'
-        outdir = result_root + rf'multi_regression_moving_window\window15_anomaly\\trend_analysis\\'
+        fdir = result_root+rf'multi_regression_moving_window\window15_anomaly_CRU\npy_time_series\\'
+        outdir = result_root + rf'multi_regression_moving_window\window15_anomaly_CRU\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
+
 
 
             outf=outdir+f.split('.')[0]
@@ -160,38 +382,201 @@ class statistic():
 
             np.save(outf + '_trend', arr_trend_dryland)
             np.save(outf + '_p_value', p_value_arr_dryland)
+
+    def robinson(self):
+        fdir=result_root+rf'\\Result_new\trend_anaysis\\'
+
+
+        temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
+        out_pdf_fdir=result_root+r'Result_new\trend_anaysis\\robinson\\pdf\\'
+
+        T.mk_dir(out_pdf_fdir,force=True)
+
+        for f in os.listdir(fdir):
+            if not 'LAI' in f:
+                continue
+            if not f.endswith('.tif'):
+                continue
+            if 'p_value' in f:
+                continue
+            f_p_value=f.split('.')[0]+'.tif'
+            fpath_p_value=join(fdir,f_p_value)
+
+
+            fname=f.split('.')[0]
+            print(fname)
+
+
+            m,ret=Plot().plot_Robinson(fdir+f, vmin=-1,vmax=1,is_discrete=True,colormap_n=7,)
+            self.plot_Robinson_significance_scatter(m,fpath_p_value,temp_root,0.05,s=5)
+
+            fname=f.split('.')[0]
+            plt.title(f'{fname}_(%)')
+            # plt.show()
+            ## save fig pdf
+            #save
+            plt.savefig(out_pdf_fdir+fname+'.pdf', dpi=300, )
+            plt.close()
+
+
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=5,
+                                        c='k', marker='.',
+                                        zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 100000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample_ortho)
+
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample_ortho)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        lon_list = lon_list - originX
+        lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=False, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+    def plt_histgram(self):
+        ## plot the histogram of spatial distribution of LAI
+        dff=rf'D:\Project3\Result\Dataframe\relative_changes\\relative_changes.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+
+        vals=df['LAI4g_trend'].to_list()
+        ## drop nan
+
+        vals=np.array(vals)
+
+        # df.dropna(subset=['CRU_trend'],inplace=True)
+        vals[vals>50]=np.nan
+        vals[vals<-50]=np.nan
+        vals = vals[~np.isnan(vals)]
+
+
+        # plt.hist(vals, bins=20, alpha=0.5, label='Positive', color='green',rwidth=0.9)
+        # plt.hist(vals, bins=21, alpha=0.5, color='green',width=0.6)
+        ## plt probability density function
+        df.sort_values(by='LAI4g_trend',inplace=True)
+        df_mean=df['LAI4g_trend'].mean()
+        df_std=df['LAI4g_trend'].std()
+        pdf=stats.norm.pdf(vals,df_mean,df_std)
+        plt.plot(vals,pdf,linewidth=0.5)
+        plt.show()
+
+
+
+
+        # plt.xlabel('Precipitation')
+        # plt.xlim(-2,2)
+        # plt.ylabel('Count')
+        # plt.title('Histogram of Precipitation')
+        #
+        # plt.show()
+
+
+
+
+
+        pass
+
+
+
+        pass
+
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<20]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+
+
+
 def main():
-    # data_processing().run()
-    # statistic_analysis().run()
-    # classification().run()
-    # calculating_variables().run()
-    # plot_response_function().run()
-    # maximum_trend().run()
-    # partial_correlation().run()
-    # single_correlation().run()
-    # ResponseFunction().run()
-    # bivariate_analysis().run()
-    # CCI_LC_preprocess().run()
-    # calculating_variables().run()
-    # pick_event().run()
-    # selection().run()
-    # multi_regression_anomaly().run()
-    # multi_regression_detrended_anomaly().run()
-    # data_preprocess_for_random_forest().run()
-
-    # monte_carlo().run()
-
-    # fingerprint().run()
-    # moving_window().run()
-
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
-    # plot_dataframe().run()
     # growth_rate().run()
-    # plt_moving_dataframe().run()
-    # check_data().run()
-    # Dataframe_func().run()
-    # Check_plot().run()
+
+    trend_analysis().run()
 
 
     pass

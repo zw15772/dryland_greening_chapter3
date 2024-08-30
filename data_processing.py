@@ -6921,11 +6921,11 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir = result_root + rf'extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'extract_window\extract_original_window\\15\\'
+        fdir = result_root + rf'\anomaly\OBS_extend\\'
+        outdir = result_root + rf'extract_window\extract_anomaly_window\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['VPD','CRU','LAI4g','CO2','GPCC','tmax']:
+            if f.split('.')[0] not in ['CRU']:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -12320,7 +12320,7 @@ class build_dataframe():
         for f in os.listdir(fdir):
             # print(f)
             # exit()
-            if not 'LAI4g' in f:
+            if not 'CRU' in f:
                 continue
 
 
@@ -16380,7 +16380,7 @@ class growth_rate:
     from scipy import stats, linalg
     def run(self):
         # self.calculate_annual_growth_rate()
-        # self.calculate_annual_growth_rate_relative_change()
+        self.calculate_annual_growth_rate_relative_change()
 
         self.plot_growth_rate()
         # self.bar_plot()
@@ -16411,7 +16411,7 @@ class growth_rate:
         fdir=result_root + rf'\extract_GS\OBS_LAI_extend\\'
         f_mean_LAI4g = result_root + rf'state_variables\\LAI4g_1982_2020.npy'
         dic_mean_LAI4g = T.load_npy(f_mean_LAI4g)
-        outdir=result_root + rf'growth_rate\\growth_rate_relative_change_trend\\'
+        outdir=result_root + rf'growth_rate\\growth_rate_relative_change\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
@@ -16427,7 +16427,8 @@ class growth_rate:
                 print(len(time_series))
                 growth_rate_time_series=np.zeros(len(time_series)-1)
                 for i in range(len(time_series)-1):
-                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/LAI_mean
+                    # growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/LAI_mean
+                    growth_rate_time_series[i] = (time_series[i + 1] - time_series[i]) *100
                 growth_rate_dic[pix]=growth_rate_time_series
             np.save(outdir+f,growth_rate_dic)
 
@@ -17170,10 +17171,10 @@ def main():
     # fingerprint().run()
     # moving_window().run()
 
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
-    # growth_rate().run()
+    growth_rate().run()
     # plt_moving_dataframe().run()
     # check_data().run()
     # Dataframe_func().run()
