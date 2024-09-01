@@ -299,8 +299,8 @@ class trend_analysis():  ## figure 1
         pass
     def run(self):
         # self.trend_analysis_spatial()
-        # self.robinson()
-        self.plt_histgram()
+        self.robinson()
+        # self.plt_histgram()
     def trend_analysis_spatial(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -311,8 +311,8 @@ class trend_analysis():  ## figure 1
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'multi_regression_moving_window\window15_anomaly_CRU\npy_time_series\\'
-        outdir = result_root + rf'multi_regression_moving_window\window15_anomaly_CRU\trend_analysis\\'
+        fdir = result_root+rf'multi_regression_moving_window\window15_anomaly_GPCC\npy_time_series\\'
+        outdir = result_root + rf'multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -384,7 +384,7 @@ class trend_analysis():  ## figure 1
             np.save(outf + '_p_value', p_value_arr_dryland)
 
     def robinson(self):
-        fdir=result_root+rf'\\Result_new\trend_anaysis\\'
+        fdir=result_root+rf'Result_new\single_correlation\\'
 
 
         temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
@@ -393,25 +393,26 @@ class trend_analysis():  ## figure 1
         T.mk_dir(out_pdf_fdir,force=True)
 
         for f in os.listdir(fdir):
-            if not 'LAI' in f:
+            if not 'LAI4g_LAI4g' in f:
                 continue
             if not f.endswith('.tif'):
                 continue
-            if 'p_value' in f:
-                continue
-            f_p_value=f.split('.')[0]+'.tif'
+
+
+            f_p_value=f.split('.')[0]
+
+            f_p_value=f_p_value.split('_')[0]+'_'+f_p_value.split('_')[1]+'_pvalue.tif'
             fpath_p_value=join(fdir,f_p_value)
+            print(fpath_p_value)
 
-
-            fname=f.split('.')[0]
-            print(fname)
 
 
             m,ret=Plot().plot_Robinson(fdir+f, vmin=-1,vmax=1,is_discrete=True,colormap_n=7,)
             self.plot_Robinson_significance_scatter(m,fpath_p_value,temp_root,0.05,s=5)
 
             fname=f.split('.')[0]
-            plt.title(f'{fname}_(%)')
+            # plt.title(f'{fname}_(%/yr)')
+            plt.title('r')
             # plt.show()
             ## save fig pdf
             #save
@@ -509,66 +510,125 @@ class trend_analysis():  ## figure 1
         BBOX[-90,-180,90,180]],
     ID["ESRI",53030]]'''
         return wkt
+
+
+
+
+        pass
+
+
+class PLOT_dataframe:
+    def __init__(self):
+        pass
+
+    def plot_time_series(self):
+        pass
+
     def plt_histgram(self):
         ## plot the histogram of spatial distribution of LAI
-        dff=rf'D:\Project3\Result\Dataframe\relative_changes\\relative_changes.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
+        dff = rf'D:\Project3\Result\Dataframe\relative_changes\\relative_changes.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
         print(len(df))
 
-        vals=df['LAI4g_trend'].to_list()
+        vals = df['LAI4g_trend'].to_list()
         ## drop nan
 
-        vals=np.array(vals)
+        vals = np.array(vals)
 
         # df.dropna(subset=['CRU_trend'],inplace=True)
-        vals[vals>50]=np.nan
-        vals[vals<-50]=np.nan
+        vals[vals > 50] = np.nan
+        vals[vals < -50] = np.nan
         vals = vals[~np.isnan(vals)]
 
-
         # plt.hist(vals, bins=20, alpha=0.5, label='Positive', color='green',rwidth=0.9)
-        # plt.hist(vals, bins=21, alpha=0.5, color='green',width=0.6)
+        plt.hist(vals, bins=21, alpha=0.5, color='green', range=(-2, 2))
         ## plt probability density function
-        df.sort_values(by='LAI4g_trend',inplace=True)
-        df_mean=df['LAI4g_trend'].mean()
-        df_std=df['LAI4g_trend'].std()
-        pdf=stats.norm.pdf(vals,df_mean,df_std)
-        plt.plot(vals,pdf,linewidth=0.5)
-        plt.show()
-
-
-
 
         # plt.xlabel('Precipitation')
         # plt.xlim(-2,2)
         # plt.ylabel('Count')
         # plt.title('Histogram of Precipitation')
         #
-        # plt.show()
-
-
-
-
+        plt.show()
 
         pass
 
+    def plot_LAItrend_vs_LAICV(self):  ## LAI trend vs LAI CV trend for corrlation>0 and corrlation<0
+        dff=rf'D:\Project3\Result\Dataframe\relative_changes\\relative_changes.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
 
 
-        pass
+        threhold_list = [ -1,-0.8,-0.6,-0.4,-0.2,0.2,0.4,0.6,0.8,1]
+        threhold_list=np.linspace(-1,1,21)
+
+
+        correlation_list=['positive_R','negative_R']
+        result_dict = {}
+
+
+        for corr in correlation_list:
+            CV_list_mean = []
+            CV_list_std = []
+            if corr == 'positive_R':
+                df_temp = df[df['LAI4g_CV_LAI4g_trend_R'] > 0]
+                df_temp = df_temp[df_temp['LAI4g_CV_LAI4g_trend_pvalue'] < 0.05]
+            elif corr == 'negative_R':
+                df_temp = df[df['LAI4g_CV_LAI4g_trend_R'] < 0]
+                df_temp = df_temp[df_temp['LAI4g_CV_LAI4g_trend_pvalue'] < 0.05]
+
+
+            for i in range(len(threhold_list) - 1):
+                threhold1 = threhold_list[i]
+                threhold2 = threhold_list[i + 1]
+
+                ## extract values in the threhold
+
+
+                df_ii = df_temp[(df_temp['LAI4g_trend'] > threhold1) & (df_temp['LAI4g_trend'] < threhold2)]
+
+                CV_val=df_ii['LAI4g_CV_trend'].to_list()
+
+
+                CV_list_mean.append(np.mean(CV_val))
+                CV_list_std.append(np.std(CV_val))
+
+            result_dict[corr] = [CV_list_mean,CV_list_std]
+
+        print(result_dict)
+
+        ## plot
+        color_list = ['green','red']
+        for i in range(len(correlation_list)):
+            corr = correlation_list[i]
+            CV_list_mean = result_dict[corr][0]
+            CV_list_std = result_dict[corr][1]
+
+            plt.errorbar(threhold_list[1:], CV_list_mean, yerr=CV_list_std, label=corr, color=color_list[i])
+
+
+
+
+        plt.legend()
+        plt.xlabel('LAI trend %')
+        plt.ylabel('LAI CV trend %')
+        plt.show()
+
 
     def df_clean(self,df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df=df[df['row']>120]
-        df=df[df['Aridity']<0.65]
-        df=df[df['LC_max']<20]
+            T.print_head_n(df)
+            # df = df.dropna(subset=[self.y_variable])
+            # T.print_head_n(df)
+            # exit()
+            df=df[df['row']>120]
+            df=df[df['Aridity']<0.65]
+            df=df[df['LC_max']<20]
 
-        df = df[df['landcover_classfication'] != 'Cropland']
+            df = df[df['landcover_classfication'] != 'Cropland']
 
-        return df
+            return df
 
 
 
@@ -576,7 +636,9 @@ class trend_analysis():  ## figure 1
 def main():
     # growth_rate().run()
 
-    trend_analysis().run()
+    # trend_analysis().run()
+
+    PLOT_dataframe().plot_LAItrend_vs_LAICV()
 
 
     pass
