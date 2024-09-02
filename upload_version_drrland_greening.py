@@ -298,8 +298,8 @@ class trend_analysis():  ## figure 1
     def __init__(self):
         pass
     def run(self):
-        # self.trend_analysis_spatial()
-        self.robinson()
+        self.trend_analysis_spatial()
+        # self.robinson()
         # self.plt_histgram()
     def trend_analysis_spatial(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
@@ -311,8 +311,8 @@ class trend_analysis():  ## figure 1
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = rf'E:\Data\ERA5_daily\dict\rainfall_CV\\'
-        outdir =rf'E:\Data\ERA5_daily\dict\rainfall_CV\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\rainfall_extreme_wet_event\\'
+        outdir =rf'E:\Data\ERA5_daily\dict\rainfall_extreme_wet_event\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -506,6 +506,9 @@ class trend_analysis():  ## figure 1
         pass
 
 class extract_rainfall:
+    def __init__(self):
+        self.data_root = rf'E:\Data\ERA5_daily\dict\\'
+        pass
     ## 1) extract rainfall CV
     ## 2) extract rainfall total
     ## 3) extract rainfall frequency
@@ -517,12 +520,18 @@ class extract_rainfall:
 
         # self.extract_growing_season()
         # self.extract_rainfall_CV_total()
-        self.extract_rainfall_CV()
+        # self.extract_rainfall_CV()
         # self.rainfall_frequency()
         # self.dry_spell()
+        # self.rainfall_frequency()
+        # self.rainfall_extreme_wet_event()
+        self.peak_rainfall_timing()
 
         # self.check_spatial_map()
         pass
+
+
+
 
     def define_quantile_threshold(self):
         # 1) extract extreme wet event based on 90th percentile and calculate frequency and total duration
@@ -569,56 +578,6 @@ class extract_rainfall:
             outf=outdir+f
             np.save(outf,result_dic)
 
-    def extract_extreme_rainfall_event(self):
-        ENSO_type = 'La_nina'
-        fdir_threshold = data_root+rf'ERA5\ERA5_daily\dict\define_quantile_threshold\\'
-        fdir_yearly_all=rf'D:\Project3\Data\ERA5\ERA5_daily\dict\ENSO_year_extraction\\{ENSO_type}\\'
-        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\extreme_event_extraction\\{ENSO_type}\\'
-        T.mk_dir(outdir,force=True)
-        spatial_threshold_dic=T.load_npy_dir(fdir_threshold)
-        result_dic = {}
-        for f in T.listdir(fdir_yearly_all):
-            spatial_dic = T.load_npy(fdir_yearly_all+f)
-            for pix in tqdm(spatial_dic):
-                if not pix in spatial_threshold_dic:
-                    continue
-                threshold_dic=spatial_threshold_dic[pix]
-
-                val_90th = threshold_dic['90th']
-                print(val_90th)
-                val_10th = threshold_dic['10th']
-                print(val_10th)
-                EI_nino_dic= spatial_dic[pix]
-                result_dic_i = {}
-                for year_range in EI_nino_dic:
-
-                    extreme_wet_event = []
-                    extreme_dry_event = []
-                    for val in EI_nino_dic[year_range]:
-                        if val > val_90th:
-                            extreme_wet_event.append(val)
-
-                    ## calculate the frequency and average intensity of extreme wet event and extreme dry event
-                    ## intensity
-                    average_intensity_extreme_wet_event = np.nanmean(extreme_wet_event)
-
-                    ## frequency
-                    frequency_extreme_wet_event = len(extreme_wet_event)
-
-
-
-
-                    result_dic_i[year_range] = {
-                        f'{ENSO_type}_average_intensity_extreme_wet_event':average_intensity_extreme_wet_event,
-
-                        f'{ENSO_type}_frequency_extreme_wet_event':frequency_extreme_wet_event,
-
-
-
-                    }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
 
     def extract_rainfall_CV_total(self):  ## extract total and CV of rainfall
         fdir = data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
@@ -763,11 +722,61 @@ class extract_rainfall:
             outf = outdir + f
             np.save(outf, result_dic)
 
-    def rainfall_frequency(self):
+    def rainfall_frequency(self):  ## extract rainfall frequency
 
         fdir =rf'E:\Data\\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir= rf'D:\Project3\Result\anomaly\OBS\\'
-        threshold_f=rf'E:\Data\\\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
+        outdir= rf'E:\Data\\\ERA5_daily\dict\\rainfall_frequency\\'
+        threshold_f=rf'E:\Data\\\ERA5_daily\dict\\define_quantile_threshold\\'
+        dic_threshold = T.load_npy_dir(threshold_f)
+        T.mk_dir(outdir,force=True)
+
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+        for pix in tqdm(spatial_dic):
+            r,c=pix
+            if not pix in dic_threshold:
+                continue
+            vals = spatial_dic[pix]
+            vals_flatten = np.array(vals).flatten()
+
+            intensity_wet_list = []
+            for i in range(38):
+                if 120<r<=240:  # Northern hemisphere
+
+                    vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
+                    ## calculate days >threshold
+
+
+
+                elif 240 < r < 480:  ### whole year is growing season
+
+                    vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+
+                else:  ## october to April is growing season  Southern hemisphere
+                    if i >= 37:
+                        break
+
+                    vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+                vals_growing_season = np.array(vals_growing_season)
+                if T.is_all_nan(vals_growing_season):
+                    continue
+
+                ## calculate average intensity when there is rain in the growing season
+
+                intensity_wet = np.mean(vals_growing_season)
+                intensity_wet_list.append(intensity_wet)
+
+
+            result_dic[pix] = intensity_wet_list
+            outf = outdir + 'intensity_wet.npy'
+            np.save(outf, result_dic)
+
+    def rainfall_extreme_wet_event(self):
+
+        fdir =rf'E:\Data\\ERA5\ERA5_daily\dict\\precip_transform\\'
+        outdir= rf'E:\Data\\\ERA5_daily\dict\\rainfall_extreme_wet_event\\'
+        threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(threshold_f)
         T.mk_dir(outdir,force=True)
 
@@ -808,7 +817,7 @@ class extract_rainfall:
                 vals_growing_season = np.array(vals_growing_season)
                 if T.is_all_nan(vals_growing_season):
                     continue
-                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
+                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])/len(vals_growing_season) * 100
                 frequency_wet_list.append(frequency_wet)
 
 
@@ -877,73 +886,6 @@ class extract_rainfall:
             outf = outdir + f
             np.save(outf, result_dic)
 
-    def peak_rainfall_timing(self):  ## Weighted Mean of the Peak Rainfall Timing
-        from scipy.ndimage import gaussian_filter1d
-        time = np.arange(0, 365)
-        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir = data_root + rf'\ERA5\ERA5_daily\dict\\peak_rainfall_timing\\'
-        T.mk_dir(outdir, force=True)
-        for f in T.listdir(fdir):
-
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r,c=pix
-
-                vals = spatial_dic[pix]
-                vals_flatten = np.array(vals).flatten()
-
-                result_dic_i = {}
-
-                for i in range(38):
-                    if 120<r<=240:  # Northern hemisphere
-
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-
-                    if T.is_all_nan(vals_growing_season):
-                            continue
-                        ## smooth rainfall
-                    smoothed_rainfall = gaussian_filter1d(vals_growing_season, sigma=5)
-                    peaks = (np.diff(np.sign(np.diff(smoothed_rainfall))) < 0).nonzero()[0] + 1
-
-                    peak_timing = []
-                    for peak in peaks:
-                        # Consider a window around each peak (e.g., +/- 5 days)
-                        window = 5
-                        start = max(0, peak - window)
-                        end = min(len(time), peak + window + 1)
-
-                        peak_time = self.weighted_mean_timing(time[start:end], smoothed_rainfall[start:end])
-                        peak_timing.append(peak_time)
-
-                    ## plot
-                        plt.figure(figsize=(10, 6))
-                        plt.plot(time, vals_growing_season, label='Original Rainfall')
-                        plt.plot(time, smoothed_rainfall, label='Smoothed Rainfall', linewidth=2)
-                        plt.scatter(peaks, smoothed_rainfall[peaks], color='red', label='Identified Peaks')
-                        plt.scatter(peak_timing, smoothed_rainfall[np.round(peak_timing).astype(int)], color='green',
-                                    label='Weighted Mean Timing')
-
-                        plt.xlabel('Day of Year')
-                        plt.ylabel('Rainfall')
-                        plt.legend()
-                        plt.title('Rainfall Peak Timing Using Weighted Mean')
-                        plt.show()
-
-
-
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
 
     def weighted_mean_timing(time, rainfall):
         weighted_sum = np.sum(time * rainfall)
@@ -1174,7 +1116,8 @@ class PLOT_dataframe:
 def main():
     # growth_rate().run()
 
-    trend_analysis().run()
+    # trend_analysis().run()
+    extract_rainfall().run()
 
     # PLOT_dataframe().plot_LAItrend_vs_LAICV()
 

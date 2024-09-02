@@ -1988,7 +1988,60 @@ class extract_rainfall:
     def rainfall_frequency(self):
 
         fdir =rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
-        outdir= rf'D:\Project3\Result\anomaly\OBS\\'
+        outdir=rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
+        threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
+        dic_threshold = T.load_npy_dir(threshold_f)
+        T.mk_dir(outdir,force=True)
+
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+        for pix in tqdm(spatial_dic):
+            r,c=pix
+            if not pix in dic_threshold:
+                continue
+            vals = spatial_dic[pix]
+            vals_flatten = np.array(vals).flatten()
+            threshold = dic_threshold[pix]
+            threshold_wet = threshold['90th']
+
+
+
+
+            result_dic_i = {}
+            frequency_wet_list = []
+            for i in range(38):
+                if 120<r<=240:  # Northern hemisphere
+
+                    vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
+                    ## calculate days >threshold
+
+
+
+                elif 240 < r < 480:  ### whole year is growing season
+
+                    vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
+
+                else:  ## october to April is growing season  Southern hemisphere
+                    if i >= 37:
+                        break
+
+                    vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
+                vals_growing_season = np.array(vals_growing_season)
+                if T.is_all_nan(vals_growing_season):
+                    continue
+                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])/len(vals_growing_season) * 100
+                frequency_wet_list.append(frequency_wet)
+
+
+            result_dic[pix] = frequency_wet_list
+            outf = outdir + 'wet_frequency_90th.npy'
+            np.save(outf, result_dic)
+
+    def rainfall_extreme_events(self):
+
+        fdir =rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
+        outdir=rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
         threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(threshold_f)
         T.mk_dir(outdir,force=True)
