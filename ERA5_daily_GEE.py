@@ -1895,8 +1895,8 @@ class extract_rainfall:
             np.save(outf,result_dic)
 
     def extract_rainfall_CV(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Data\ERA5\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\\ERA5\ERA5_daily\dict\\rainfall_CV\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
 
         T.mk_dir(outdir_CV,force=True)
 
@@ -1987,9 +1987,9 @@ class extract_rainfall:
 
     def rainfall_frequency(self):
 
-        fdir =rf'E:\Data\\ERA5\ERA5_daily\dict\\precip_transform\\'
+        fdir =rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
         outdir= rf'D:\Project3\Result\anomaly\OBS\\'
-        threshold_f=rf'E:\Data\\\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
+        threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
         dic_threshold = T.load_npy_dir(threshold_f)
         T.mk_dir(outdir,force=True)
 
@@ -2030,7 +2030,7 @@ class extract_rainfall:
                 vals_growing_season = np.array(vals_growing_season)
                 if T.is_all_nan(vals_growing_season):
                     continue
-                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])
+                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])/len(vals_growing_season) * 100
                 frequency_wet_list.append(frequency_wet)
 
 
@@ -2994,12 +2994,12 @@ def main():
     # ERA5_daily().run()
 
 
-    # extract_rainfall().run()
+    extract_rainfall().run()
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
     # fire_extraction().run()
     # detrend_variables().run()
-    Build_df().run()
+    # Build_df().run()
 
     # plot_ERA_df().run()
 
