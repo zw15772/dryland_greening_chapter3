@@ -1116,14 +1116,15 @@ class extract_rainfall_annual():
         # self.define_quantile_threshold()
 
         # self.extract_rainfall_CV()
-        # #
+        self.extract_rainfall_std()
+        self.extract_rainfall_mean()
         # self.dry_spell()
         # #
         # self.rainfall_extreme_wet_event()
         # self.rainfall_intensity()
 
         # self.peak_rainfall_timing()
-        self.trend_analysis()
+        # self.trend_analysis()
 
         # self.check_spatial_map()
         pass
@@ -1204,6 +1205,68 @@ class extract_rainfall_annual():
         outf = outdir_CV + 'CV_rainfall.npy'
 
         np.save(outf, result_dic)
+
+    def extract_rainfall_std(self):  ## extract std of rainfall ready for multiregression
+        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\std_rainfall\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            std_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+                val = np.array(val)
+
+                std=np.std(val)
+
+                std_list.append(std)
+            result_dic[pix] = std_list
+
+        outf = outdir_CV + 'std_rainfall.npy'
+
+        np.save(outf, result_dic)
+
+    def extract_rainfall_mean(self):  ## extract std of rainfall ready for multiregression
+        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\mean_rainfall\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            mean_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+                val = np.array(val)
+
+                mean=np.mean(val)
+
+                mean_list.append(mean)
+            result_dic[pix] = mean_list
+
+        outf = outdir_CV + 'mean_rainfall.npy'
+
+        np.save(outf, result_dic)
+
+
 
     def rainfall_extreme_wet_event(self):
 
@@ -1499,17 +1562,18 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
         # self.moving_window_trend_anaysis()
         # self.moving_window_CV_extraction_anaysis()
         # self.moving_window_CV_trends()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
+        self.trend_analysis()
 
         pass
     def moving_window_extraction(self):
 
-        fdir =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\peak_rainfall_timing\\'
+        fdir =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\std_rainfall\\'
         outdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\extract_window\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
@@ -1803,7 +1867,7 @@ class moving_window():
         outdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'peak_rainfall_timing' in f:
+            if not 'std' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
@@ -1861,6 +1925,8 @@ class moving_window():
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'std' in f:
+                continue
 
             outf = outdir + f.split('.')[0]
             if os.path.isfile(outf + '_trend.tif'):
@@ -1927,6 +1993,132 @@ class moving_window():
             np.save(outf + '_p_value', p_value_arr)
 
     pass
+
+    def robinson(self):
+        fdir=rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\trend_analysis\\'
+        temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
+        out_pdf_fdir=result_root+r'Result_new\trend_anaysis\\robinson\\pdf\\'
+
+        T.mk_dir(out_pdf_fdir,force=True)
+
+        variable='CV_rainfall'
+        f_trend=fdir+variable+'_trend.tif'
+
+        f_p_value=fdir+variable+'_p_value.tif'
+
+
+        m,ret=Plot().plot_Robinson(f_trend, vmin=-1,vmax=1,is_discrete=True,colormap_n=7,)
+        self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=5)
+
+
+        # plt.title(f'{variable}_(%/yr)')
+        plt.title(f'{variable}_(day/yr)')
+        # plt.title('r')
+        # plt.show()
+        ## save fig pdf
+        #save pdf
+        plt.savefig(out_pdf_fdir+variable+'.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=5,
+                                        c='k', marker='.',
+                                        zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 100000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample_ortho)
+
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample_ortho)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        lon_list = lon_list - originX
+        lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=False, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+
+
+
+
+        pass
+
+
+
+
 
 class Check_data():
     def __init__(self):
@@ -2075,7 +2267,7 @@ def main():
 
     # Intra_CV_preprocessing().run()
 
-    extract_rainfall_annual().run()
+    # extract_rainfall_annual().run()
     moving_window().run()
     # PLOT().run()
     # Check_data().run()
