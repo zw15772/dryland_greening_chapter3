@@ -12113,8 +12113,11 @@ class build_moving_window_dataframe():
         fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
-            if not variable in ['LAI4g_CV','maxmum_dry_spell','rainfall_intensity','wet_frequency_90th',
-                'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell',]:
+            # if not variable in ['LAI4g_CV','maxmum_dry_spell','rainfall_intensity','wet_frequency_90th',
+            #     'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell',]:
+
+            if not variable in ['LAI4g',
+                                'CV_rainfall', 'peak_rainfall_timing' ]:
                 continue
 
 
@@ -17268,8 +17271,8 @@ def main():
     # fingerprint().run()
 
 
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
