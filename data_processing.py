@@ -10721,11 +10721,10 @@ class build_dataframe():
     def __init__(self):
 
 
-        self.this_class_arr = result_root+rf'\Dataframe\relative_changes\\'
-        # self.this_class_arr =result_root+rf'growth_rate\DataFrame\\'
+        self.this_class_arr =rf'E:\Data\ERA5_daily\dict\Dataframe\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'relative_changes.df'
+        self.dff = self.this_class_arr + 'moving_window.df'
 
 
         pass
@@ -10754,17 +10753,17 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
-        # df=self.add_AI_classfication(df)
+        df=self.add_AI_classfication(df)
 
-        # df=self.add_aridity_to_df(df)
+        df=self.add_aridity_to_df(df)
         # # # # # #
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -11959,15 +11958,17 @@ class build_dataframe():
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (result_root + rf'\moving_window_extraction\Dataframe\\')
+        self.this_class_arr = (rf'E:\Data\ERA5_daily\dict\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + 'moving_window.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
-        df=self.append_attributes(df)
+        # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
+        # df=self.foo1(df)
+        df=self.add_window_to_df(df)
         T.save_df(df, self.dff)
         self.__df_to_excel(df, self.dff)
     def show_field(self):
@@ -11992,7 +11993,7 @@ class build_moving_window_dataframe():
         return df
         # return df_early,dff
 
-    def __df_to_excel(self, df, dff, n=1000, random=False):
+    def __df_to_excel(self, df, dff, n=1000, random=True):
         dff = dff.split('.')[0]
         if n == None:
             df.to_excel('{}.xlsx'.format(dff))
@@ -12072,6 +12073,103 @@ class build_moving_window_dataframe():
 
         pass
 
+    def foo1(self, df):
+
+        f = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\CO2.npy'
+        # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        # array = np.array(array, dtype=float)
+        # dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        dic = T.load_npy(f)
+
+        pix_list = []
+        change_rate_list = []
+        year = []
+
+        for pix in tqdm(dic):
+            time_series = dic[pix]
+            y = 0
+
+
+
+            for val in time_series:
+                pix_list.append(pix)
+                change_rate_list.append(val)
+                window=rf'window_{y:02d}'
+                # print(window)
+                year.append(window)
+                y += 1
+
+        df['pix'] = pix_list
+
+
+
+        df['window'] = year
+
+        df['CO2'] = change_rate_list
+        return df
+    def add_window_to_df(self, df):
+
+        fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
+        for f in os.listdir(fdir):
+            variable = f.split('.')[0]
+            if not variable in ['LAI4g_CV','maxmum_dry_spell','rainfall_intensity','wet_frequency_90th',
+                'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell',]:
+                continue
+
+
+            variable= f.split('.')[0]
+
+            print(variable)
+
+
+            if not f.endswith('.npy'):
+                continue
+            val_dic = T.load_npy(fdir + f)
+
+            NDVI_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+
+                window = row.window
+                # pix = row.pix
+                pix = row['pix']
+                r, c = pix
+
+
+                if not pix in val_dic:
+                    NDVI_list.append(np.nan)
+                    continue
+
+                y = int(window[-2:])
+
+                vals = val_dic[pix]
+                vals=np.array(vals)
+                # vals[vals<0]=np.nan
+                # vals[vals>1500]=np.nan
+
+
+
+                # print(len(vals))
+                ##### if len vals is 38, the end of list add np.nan
+
+                if len(vals) == 23:
+                    vals=np.append(vals,np.nan)
+                    v1 = vals[y-0]
+                    NDVI_list.append(v1)
+                elif len(vals)==24:
+                    v1= vals[y-0]
+                    NDVI_list.append(v1)
+                else:
+                    NDVI_list.append(np.nan)
+                # print(y)
+
+
+                # print(v1,year,len(vals))
+
+
+            df[f'{variable}'] = NDVI_list
+        # exit()
+        return df
     def append_attributes(self, df):  ## add attributes
         fdir =  result_root + rf'\\moving_window_extraction\wet_year_moving_window_extraction\\'
         for f in tqdm(os.listdir(fdir)):
@@ -15508,7 +15606,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'D:\Project3\Result\growth_rate\growth_rate_trend_method2\\LAI4g.npy'
+        f =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\extract_window\wet_frequency_95th.npy'
 
 
         dic=T.load_npy(f)

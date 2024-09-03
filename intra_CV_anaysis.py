@@ -1829,11 +1829,11 @@ class extract_rainfall_annual():
     def run(self):
         # self.define_quantile_threshold()
 
-        self.extract_rainfall_CV()
-        #
-        self.dry_spell()
-        #
-        self.rainfall_extreme_wet_event()
+        # self.extract_rainfall_CV()
+        # #
+        # self.dry_spell()
+        # #
+        # self.rainfall_extreme_wet_event()
         # self.rainfall_intensity()
 
         self.peak_rainfall_timing()
@@ -1891,7 +1891,7 @@ class extract_rainfall_annual():
 
     def extract_rainfall_CV(self):  ## extract CV of rainfall ready for multiregression
         fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\\\ERA5\ERA5_daily\dict\\extract_rainfall_annual\\CV_rainfall\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\CV_rainfall\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -1901,17 +1901,17 @@ class extract_rainfall_annual():
         for pix in tqdm(spatial_dic):
             ### ui==if northern hemisphere
             r, c = pix
-            if r>120:
-                continue
+
             vals = spatial_dic[pix]
             CV_list = []
             for val in vals:
-
-
                 if T.is_all_nan(val):
                     continue
 
-                CV = np.std(val) / np.mean(val)
+                val = np.array(val)
+                val[val < 1] = np.nan
+                CV = np.nanstd(val) / np.nanmean(val) *100
+                print(CV)
                 CV_list.append(CV)
             result_dic[pix] = CV_list
 
@@ -1953,7 +1953,7 @@ class extract_rainfall_annual():
 
                 frequency_wet = len(np.where((val > threshold_wet) & (val < threhold_wet_extreme))[0])
                 frequency_wet_list.append(frequency_wet)
-                frequency_wet_extreme = len(np.where(val > threhold_wet_extreme)[0])
+                frequency_wet_extreme = len(np.where(val > threhold_wet_extreme)[0])/len(val) * 100
                 frequency_wet_extreme_list.append(frequency_wet_extreme)
             # print(frequency_wet_list)
             # print(frequency_wet_extreme_list)
@@ -1967,8 +1967,8 @@ class extract_rainfall_annual():
 
 
     def rainfall_intensity(self):
-        fdir = rf'E:\Data\\ERA5_precip\ERA5_daily\dict\\precip_transform\\'
-        outdir = rf'E:\Data\\ERA5_precip\ERA5_daily\dict\\rainfall_intensity\\'
+        fdir = rf'E:\Data\\\ERA5_daily\dict\\precip_transform\\'
+        outdir = rf'E:\Data\\\ERA5_daily\dict\\extract_rainfall_annual\\rainfall_intensity\\'
         T.mk_dir(outdir, force=True)
 
         spatial_dic = T.load_npy_dir(fdir)
@@ -2050,40 +2050,36 @@ class extract_rainfall_annual():
         fdir = rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
         outdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\peak_rainfall_timing\\'
         T.mk_dir(outdir, force=True)
-        for f in T.listdir(fdir):
+        spatial_dic = T.load_npy_dir(fdir)
 
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
+        result_dic = {}
+        for pix in tqdm(spatial_dic):
+            r, c = pix
 
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r, c = pix
-                if r>120:
+
+            vals = spatial_dic[pix]
+            rainfall_peak_list = []
+            for val in vals:
+
+
+                if T.is_all_nan(val):
                     continue
+                ## smooth rainfall
+                smoothed_rainfall = SMOOTH().mid_window_smooth(val, 5)
+                # plt.plot(time, smoothed_rainfall, label='Smoothed Rainfall')
+                # plt.show()
 
-                vals = spatial_dic[pix]
-                rainfall_peak_list = []
-                for val in vals:
+                ## find peaks
+                # max_index = T.pick_max_indx_from_1darray(smoothed_rainfall, 0, 365)
+                max_indexs, max_values = T.pick_max_n_index(smoothed_rainfall,1)
+                print(max_indexs[0])
 
+                rainfall_peak_list.append(max_indexs[0])
 
-                    if T.is_all_nan(val):
-                        continue
-                    ## smooth rainfall
-                    smoothed_rainfall = SMOOTH().mid_window_smooth(val, 5)
-                    # plt.plot(time, smoothed_rainfall, label='Smoothed Rainfall')
-                    # plt.show()
+            result_dic[pix] = rainfall_peak_list
 
-                    ## find peaks
-                    # max_index = T.pick_max_indx_from_1darray(smoothed_rainfall, 0, 365)
-                    max_indexs, max_values = T.pick_max_n_index(smoothed_rainfall,1)
+        np.save(outdir + 'peak_rainfall_timing.npy', result_dic)
 
-                    rainfall_peak_list.append(max_indexs[0])
-
-                result_dic[pix] = rainfall_peak_list
-
-
-
-            outf = outdir + f
-            np.save(outf, result_dic)
 
 
     def trend_analysis(self):
@@ -2094,8 +2090,8 @@ class extract_rainfall_annual():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Data\ERA5_precip\ERA5_daily\dict\dry_spell\\'
-        outdir = rf'E:\Data\ERA5_precip\ERA5_daily\dict\dry_spell\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\\\CV_rainfall\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -2146,11 +2142,13 @@ class extract_rainfall_annual():
                 except:
                     continue
 
+
             arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
 
             p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
 
-            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
+            # plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
             #
             # plt.colorbar()
             # plt.title(f)

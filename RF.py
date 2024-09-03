@@ -883,12 +883,12 @@ class Random_Forests:
         df = self.__gen_df_init()
 
         # self.check_variables_valid_ranges()
-        # self.run_important_for_each_pixel()
+        self.run_important_for_each_pixel()
 
         # self.plot_importance_result_for_each_pixel()
         # self.plot_most_important_factor_for_each_pixel()
         # self.plot_three_demension()
-        self.plot_two_demension()
+        # self.plot_two_demension()
 
         pass
 
@@ -2451,8 +2451,8 @@ def main():
     # Bivariate_statistic().run()
     # Correlation_Lag_statistic().run()
     # Trend_statistic().run()
-    # Random_Forests().run()
-    threshold().run()
+    Random_Forests().run()
+    # threshold().run()
 
     pass
 

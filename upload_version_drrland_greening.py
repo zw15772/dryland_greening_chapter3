@@ -298,8 +298,8 @@ class trend_analysis():  ## figure 1
     def __init__(self):
         pass
     def run(self):
-        self.trend_analysis_spatial()
-        # self.robinson()
+        # self.trend_analysis_spatial()
+        self.robinson()
         # self.plt_histgram()
     def trend_analysis_spatial(self):
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
@@ -384,23 +384,23 @@ class trend_analysis():  ## figure 1
             np.save(outf + '_p_value', p_value_arr_dryland)
 
     def robinson(self):
-        fdir=rf'E:\Data\ERA5_daily\dict\\dry_spell\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\trend_analysis\\'
         temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
         out_pdf_fdir=result_root+r'Result_new\trend_anaysis\\robinson\\pdf\\'
 
         T.mk_dir(out_pdf_fdir,force=True)
 
-        variable='rainfall_intensity'
+        variable='CV_rainfall'
         f_trend=fdir+variable+'_trend.tif'
 
         f_p_value=fdir+variable+'_p_value.tif'
 
 
-        m,ret=Plot().plot_Robinson(f_trend, vmin=-1,vmax=1,is_discrete=True,colormap_n=7,)
+        m,ret=Plot().plot_Robinson(f_trend, vmin=-2,vmax=2,is_discrete=True,colormap_n=7,)
         self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=5)
 
 
-        plt.title(f'{variable}_(day/yr)')
+        plt.title(f'{variable}_(%/yr)')
         # plt.title('r')
         # plt.show()
         ## save fig pdf
@@ -1116,8 +1116,8 @@ class PLOT_dataframe:
 def main():
     # growth_rate().run()
 
-    # trend_analysis().run()
-    extract_rainfall().run()
+    trend_analysis().run()
+    # extract_rainfall().run()
 
     # PLOT_dataframe().plot_LAItrend_vs_LAICV()
 
