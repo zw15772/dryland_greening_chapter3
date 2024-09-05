@@ -118,7 +118,7 @@ class data_processing():
         # self.extract_seasonality()
         #
         # self.extend_GS() ## for SDGVM， it has 37 year GS, to align with other models, we add one more year
-        self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
+        # self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
         # self.scales_GPP_Trendy()
         # self.split_data()
         # self.weighted_LAI()
@@ -847,7 +847,7 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\monthly_data\LAI4g'
+        fdir_all = rf'D:\Project3\Data\monthly_data\LAI4g\\'
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -861,9 +861,9 @@ class data_processing():
             if not 'scales_LAI4g' in fdir:
                 continue
 
-            outdir =data_root+rf'\LAI4g\\biweekly_dic\\'
-            if os.path.isdir(outdir):
-                pass
+            outdir =data_root+rf'D:\Project3\Data\monthly_data\\LAI4g\\'
+            # if os.path.isdir(outdir):
+            #     pass
 
             T.mk_dir(outdir, force=True)
             all_array = []  #### so important  it should be go with T.mk_dic
@@ -1025,6 +1025,11 @@ class data_processing():
             np.save(outf, annual_spatial_dict)
 
         pass
+
+
+
+
+
 
     def extract_GS_return_monthly_data(self):  ## extract growing season but return monthly data
 
@@ -3658,7 +3663,7 @@ class statistic_analysis():
         pass
     def run(self):
 
-        # self.detrend()  ##original
+        self.detrend()  ##original
         # self.detrend_zscore_monthly()
         # self.relative_change()
         # self.normalised_variables()
@@ -12114,10 +12119,10 @@ class build_moving_window_dataframe():
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
             # if not variable in ['LAI4g_CV','maxmum_dry_spell','rainfall_intensity','wet_frequency_90th',
-            #     'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell',]:
+            #     'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell','CV_rainfall', 'peak_rainfall_timing']:
 
-            if not variable in ['LAI4g',
-                                'CV_rainfall', 'peak_rainfall_timing' ]:
+            if not variable in ['LAI4g_CV'
+                                 ]:
                 continue
 
 
@@ -12147,8 +12152,8 @@ class build_moving_window_dataframe():
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
-                # vals[vals<0]=np.nan
-                # vals[vals>1500]=np.nan
+                vals[vals<-500]=np.nan
+                vals[vals>500]=np.nan
 
 
 
@@ -15609,11 +15614,11 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        f =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\extract_window\wet_frequency_95th.npy'
+        fdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\annual_LAI\\'
 
 
-        dic=T.load_npy(f)
-        # dic=T.load_npy_dir(f)
+        # dic=T.load_npy(fdir)
+        dic=T.load_npy_dir(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -15639,16 +15644,16 @@ class check_data():
             # plt.show()
 
 
-            # len_dic[pix]=np.nanmean(vals)
+            len_dic[pix]=np.nanmean(vals)
             # len_dic[pix]=np.nanstd(vals)
 
-            len_dic[pix] = len(vals)
+            # len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
 
 
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=38,vmax=39)
         plt.colorbar()
-        plt.title(f)
+        plt.title(fdir)
         plt.show()
     def testrobinson(self):
         fdir=rf'E:\Project5\Result\RF_pix\raw_importance_for_each_pixel\\'
@@ -16538,8 +16543,8 @@ class moving_window():
         # self.moving_window_trend_anaysis()
         # self.moving_window_CV_extraction_anaysis()
         # self.moving_window_CV_trends()
-        self.moving_window_average_anaysis()
-        # self.produce_trend_for_each_slides()
+        # self.moving_window_average_anaysis()
+        self.produce_trend_for_each_slides()
         # self.calculate_trend_spatial()
         # self.calculate_trend_trend()
         # self.convert_trend_trend_to_tif()
@@ -17248,7 +17253,7 @@ class moving_window():
 
 def main():
     # data_processing().run()
-    # statistic_analysis().run()
+    statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
@@ -17272,11 +17277,11 @@ def main():
 
 
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    # check_data().run()
+    check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 
