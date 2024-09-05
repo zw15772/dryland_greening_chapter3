@@ -1647,12 +1647,13 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
         # self.moving_window_extraction_for_LAI()
-        # self.moving_window_trend_anaysis()
+
         # self.moving_window_CV_extraction_anaysis()
-        # self.moving_window_CV_trends()
+
         # self.moving_window_average_anaysis()
+        self.moving_window_trend_anaysis()
         # self.trend_analysis()
         # self.robinson()
 
@@ -1660,10 +1661,10 @@ class moving_window():
     def moving_window_extraction(self):
 
         fdir_all =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\\\\'
-        outdir = rf'E:\Data\ERA5_daily\\dict\\moving_window_extraction\\'
+        outdir = rf'E:\Data\ERA5_daily\\dict\\extract_window\\'
         T.mk_dir(outdir, force=True)
         for fdir in os.listdir(fdir_all):
-            if not 'LAI' in fdir:
+            if not 'LAI4g' in fdir:
                 continue
 
 
@@ -1797,7 +1798,7 @@ class moving_window():
 
     def moving_window_CV_extraction_anaysis(self):
         window_size=15
-        fdir = rf'E:\Data\ERA5_daily\dict\\moving_window_extraction\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\\extract_window\\'
         outdir =  rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
@@ -1808,6 +1809,7 @@ class moving_window():
             slides = 39-window_size
             outf = outdir + f.split('.')[0] + f'.npy'
             print(outf)
+
             # if os.path.isfile(outf):
             #     continue
 
@@ -1832,7 +1834,7 @@ class moving_window():
                     time_series=time_series_all[ss]
                     if np.nanmax(time_series) == np.nanmin(time_series):
                         continue
-                    print(len(time_series))
+                    # print(len(time_series))
 
                     if np.nanmean(time_series)==0:
                         continue
@@ -1854,11 +1856,11 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
 
-        fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\extract_window\\'
-        outdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\\extract_window\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'std' in f:
+            if not 'annual_LAI4g' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
@@ -1902,7 +1904,58 @@ class moving_window():
 
                 ## save
             np.save(outf, trend_dic)
+    def moving_window_trend_anaysis(self): ## each window calculating the average
+        window_size = 15
 
+        fdir=rf'E:\Data\ERA5_daily\dict\\extract_window\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not 'annual_LAI4g' in f:
+                continue
+
+            dic = T.load_npy(fdir + f)
+
+            slides = 38 - window_size
+            outf = outdir + f.split('.')[0] + f'_trend.npy'
+            print(outf)
+
+            trend_dic = {}
+
+
+            for pix in tqdm(dic):
+                trend_list = []
+
+                time_series_all = dic[pix]
+                time_series_all = np.array(time_series_all)
+                # print(time_series_all)
+                if np.isnan(np.nanmean(time_series_all)):
+                    print('error')
+                    continue
+                for ss in range(slides):
+
+
+                    ### if all values are identical, then continue
+                    if len(time_series_all)<23:
+                        continue
+
+
+                    time_series = time_series_all[ss]
+                    # print(time_series)
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
+                    print(len(time_series))
+                    ### calculate slope and intercept
+
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    print(slope)
+
+                    trend_list.append(slope)
+
+                trend_dic[pix] = trend_list
+
+                ## save
+            np.save(outf, trend_dic)
     def trend_analysis(self):
 
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
@@ -1911,11 +1964,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Data\ERA5_biweekly\\moving_window_extraction\\'
-        outdir = rf'E:\Data\ERA5_biweekly\\trend_analysis\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'annual_LAI4g' in f:
+                continue
 
             outf = outdir + f.split('.')[0]
             if os.path.isfile(outf + '_trend.tif'):
