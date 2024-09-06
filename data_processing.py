@@ -10729,7 +10729,7 @@ class build_dataframe():
         self.this_class_arr =rf'E:\Data\ERA5_daily\dict\Dataframe\\'
 
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window.df'
+        self.dff = self.this_class_arr + 'raw_data.df'
 
 
         pass
@@ -10748,7 +10748,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -10758,17 +10758,17 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
-        df=self.add_AI_classfication(df)
-
-        df=self.add_aridity_to_df(df)
-        # # # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_AI_classfication(df)
+        #
+        # df=self.add_aridity_to_df(df)
+        # # # # # # #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
         # # df=self.add_soil_texture_to_df(df)
         #
         # df=self.add_rooting_depth_to_df(df)
@@ -11084,9 +11084,9 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=result_root+rf'\extract_GS\OBS_LAI_extend\\'
+        fdir=result_root+rf'\relative_change\OBS_LAI_extend\\'
         for f in os.listdir(fdir):
-            if not 'CRU' in f:
+            if not 'CO2' in f:
                 continue
 
 
@@ -11117,8 +11117,8 @@ class build_dataframe():
 
 
                 vals = val_dic[pix]
-                vals[vals<0]=np.nan
-                vals[vals>1500]=np.nan
+                # vals[vals<0]=np.nan
+                # vals[vals>1500]=np.nan
 
 
                 # print(len(vals))
@@ -11143,7 +11143,7 @@ class build_dataframe():
                 NDVI_list.append(v1)
 
 
-            df[f'{variable}_raw'] = NDVI_list
+            df[f'{variable}_relative_change'] = NDVI_list
         # exit()
         return df
 
@@ -12115,13 +12115,13 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
             # if not variable in ['LAI4g_CV','maxmum_dry_spell','rainfall_intensity','wet_frequency_90th',
             #     'CV_rainfall', 'wet_frequency_95th', 'average_dry_spell','CV_rainfall', 'peak_rainfall_timing']:
 
-            if not variable in ['LAI4g_CV'
+            if not variable in ['detrended_annual_LAI4g_CV'
                                  ]:
                 continue
 
@@ -15614,11 +15614,11 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\annual_LAI\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\moving_window_average_anaysis\\annual_LAI4g_trend.npy'
 
 
-        # dic=T.load_npy(fdir)
-        dic=T.load_npy_dir(fdir)
+        dic=T.load_npy(fdir)
+        # dic=T.load_npy_dir(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -15651,7 +15651,7 @@ class check_data():
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
 
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=38,vmax=39)
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=-0.0011,vmax=0.001)
         plt.colorbar()
         plt.title(fdir)
         plt.show()
@@ -17253,7 +17253,7 @@ class moving_window():
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
+    # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
@@ -17276,12 +17276,12 @@ def main():
     # fingerprint().run()
 
 
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 
