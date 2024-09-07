@@ -384,24 +384,25 @@ class trend_analysis():  ## figure 1
             np.save(outf + '_p_value', p_value_arr_dryland)
 
     def robinson(self):
-        fdir=rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\trend_analysis\\'
-        temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
-        out_pdf_fdir=result_root+r'Result_new\trend_anaysis\\robinson\\pdf\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\simple_linear_regression\\'
+        temp_root=result_root+r'Result_new\simple_linear_regression\\robinson\\'
+        out_pdf_fdir=result_root+r'Result_new\simple_linear_regression\\robinson\\pdf\\'
 
         T.mk_dir(out_pdf_fdir,force=True)
 
-        variable='CV_rainfall'
-        f_trend=fdir+variable+'_trend.tif'
+        variable='linear_regression_result'
+        f_trend=fdir+variable+'.tif'
+        #
+        # f_p_value=fdir+variable+'_p_value.tif'
 
-        f_p_value=fdir+variable+'_p_value.tif'
 
-
-        m,ret=Plot().plot_Robinson(f_trend, vmin=-1,vmax=1,is_discrete=True,colormap_n=7,)
-        self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=5)
+        m,ret=Plot().plot_Robinson(f_trend, vmin=-0.001,vmax=0.001,is_discrete=True,colormap_n=7,)
+        # self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=5)
 
 
         # plt.title(f'{variable}_(%/yr)')
-        plt.title(f'{variable}_(day/yr)')
+        # plt.title(f'{variable}_(day/yr)')
+        plt.title(f'{variable}_(m2/m2/yr/%)')
         # plt.title('r')
         # plt.show()
         ## save fig pdf

@@ -992,19 +992,26 @@ class extract_rainfall_annual_based_on_daily():
         # self.extract_rainfall_CV()
         # self.extract_rainfall_std()
         # self.extract_rainfall_mean()
+        # self.extract_rainfall_sum()
         # self.dry_spell()
-        self.extract_rainfall_event_size()
-        self.extract_heavy_rainfall_days()
-        self.extract_rainfall_seasonal_distribution()
+        # self.extract_rainfall_event_size()
+        # self.extract_heavy_rainfall_days()
+        # self.extract_rainfall_frequency()
+        # self.extract_rainfall_seasonal_distribution()
         # #
         # self.rainfall_extreme_wet_event()
         # self.rainfall_intensity()
+        # self.extract_seasonal_rainfall_event_size()
+        # self.extract_seasonal_rainfall_intervals()
+
 
         # self.peak_rainfall_timing()
         # self.aggreate_AVHRR_LAI()
         # self.tif_to_dic()
         # self.extract_annual_LAI()
-        self.detrend()
+        self.relative_change()
+
+        # self.detrend()
         # self.trend_analysis()
 
         # self.check_spatial_map()
@@ -1162,9 +1169,9 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
 
-    def extract_rainfall_seasonal_distribution(self):  ## extract CV of rainfall ready for multiregression
+    def extract_seasonal_rainfall_event_size(self):  ## extract CV of rainfall ready for multiregression
         fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\rainfall_seasonal_distribution\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\seasonal_rainfall_event_size\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -1186,21 +1193,102 @@ class extract_rainfall_annual_based_on_daily():
 
                 ## number of rainy days is when precip>1
 
-                val = val[val > 1]
+                val_rainy = val[val > 1]
+                if len(val_rainy) == 0:
+                    continue
+                SI=np.sum(val_rainy)
+                SImax=np.max(val_rainy)
 
-                stats = len(val)
+                n=len(val_rainy)
+                temp=0
+                for i in val_rainy:
+                    pi=i/SI
+                    q=1/n
+                    temp+=pi*np.log2(pi/q)
+                Dsize=temp*SI/SImax
 
-                # print(CV)
-                CV_list.append(stats)
+                CV_list.append(Dsize)
+
             result_dic[pix] = CV_list
 
-        outf = outdir_CV + 'rainfall_frequency.npy'
+        outf = outdir_CV + 'seasonal_rainfall_event_size.npy'
+
+        np.save(outf, result_dic)
+
+    def extract_seasonal_rainfall_intervals(self):  ## extract CV of rainfall ready for multiregression
+        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\seasonal_rainfall_intervals\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+        # for f in os.listdir(fdir):
+        #     if not '050.npy' in f:
+        #         continue
+        #     spatial_dic=np.load(fdir+f, allow_pickle=True, encoding='latin1').item()
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            CV_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+                ### This is the total number of precipitation events during the period of interest.
+
+                val = np.array(val)
+
+
+                val[val >= 1] = np.nan
+
+                dry_index = np.where(~np.isnan(val))
+                if len(dry_index[0]) == 0:
+                    continue
+                dry_index = np.array(dry_index)
+                dry_index = dry_index.flatten()
+                dry_index_groups = T.group_consecutive_vals(dry_index)
+
+                # plt.bar(range(len(val)), val)
+                # plt.bar(range(len(val)), vals_wet)
+                # print(dry_index_groups)
+                # plt.show()
+                ## calcuate average wet spell
+                dry_spell = []
+                for group in dry_index_groups:
+                    dry_spell.append(len(group))
+                dry_spell = np.array(dry_spell)
+
+
+                tI=np.sum(dry_spell)
+                tmax=np.max(dry_spell)
+
+                ## n is number of dry spells
+
+                n=len(dry_spell)
+                temp=0
+                for i in dry_spell:
+                    lnti=i
+                    pi=lnti/tI
+                    q=1/n
+                    temp+=pi*np.log2(pi/q)
+
+                Dinterval=temp*tI/tmax
+
+
+                CV_list.append(Dinterval)
+
+            result_dic[pix] = CV_list
+
+        outf = outdir_CV + 'seasonal_rainfall_intervals.npy'
 
         np.save(outf, result_dic)
 
     def extract_heavy_rainfall_days(self):  ##
         fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\rainfall_seasonal_distribution\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\heavy_rainfall_days\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -1230,7 +1318,7 @@ class extract_rainfall_annual_based_on_daily():
                 CV_list.append(stats)
             result_dic[pix] = CV_list
 
-        outf = outdir_CV + 'rainfall_frequency.npy'
+        outf = outdir_CV + 'heavy_rainfall_days.npy'
 
         np.save(outf, result_dic)
 
@@ -1291,6 +1379,38 @@ class extract_rainfall_annual_based_on_daily():
             result_dic[pix] = mean_list
 
         outf = outdir_CV + 'mean_rainfall.npy'
+
+        np.save(outf, result_dic)
+
+    def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
+        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
+        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\sum_rainfall\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            mean_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+
+                val = np.array(val)
+                val_rainy=val[val>1]
+
+                sum=np.sum(val_rainy)
+
+                mean_list.append(sum)
+            result_dic[pix] = mean_list
+
+        outf = outdir_CV + 'sum_rainfall.npy'
 
         np.save(outf, result_dic)
 
@@ -1360,7 +1480,8 @@ class extract_rainfall_annual_based_on_daily():
 
                 if T.is_all_nan(val):
                     continue
-                intensity = np.nanmean(val)
+                val_rainy = val[val > 1]
+                intensity = np.nanmean(val_rainy)
                 intensity_list.append(intensity)
             result_dic[pix] = intensity_list
         np.save(outdir + 'rainfall_intensity.npy', result_dic)
@@ -1637,10 +1758,43 @@ class extract_rainfall_annual_based_on_daily():
         pass
 
 
+    def relative_change(self, ):  ## calculate annual relative change of LAI
+        fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\annual_LAI4g\\'
+
+        outdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\annual_LAI4g\\'
+        Tools().mk_dir(outdir, force=True)
+        annual_spatial_dict = {}
+        dict = T.load_npy_dir(fdir)
+        for pix in tqdm(dict):
+            time_series = dict[pix]
+            time_series[time_series == 65535] = np.nan
+            if T.is_all_nan(time_series):
+                continue
+
+            # plt.plot(time_series)
+
+            plt.plot(time_series)
+            average=np.nanmean(time_series)
+            relative_change = (time_series - average) / average * 100
+
+            annual_spatial_dict[pix] = relative_change
+
+
+            # print((detrended_annual_time_series))
+            # plt.plot(relative_change, color='r')
+            # plt.show()
+
+            annual_spatial_dict[pix] = relative_change
+        np.save(outdir + 'relative_change_annual_LAI4g.npy', annual_spatial_dict)
+
+        pass
+
+        pass
+
     def detrend(self): ## detrend LAI4g
 
-        fdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\annual_LAI\\'
-        outdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\annual_LAI\\'
+        fdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\annual_LAI4g\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\\extract_rainfall_annual\\annual_LAI4g\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         dict = T.load_npy_dir(fdir)
@@ -1802,9 +1956,9 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis()
 
-        self.moving_window_average_anaysis()
-        self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        # self.moving_window_average_anaysis()
+        # self.moving_window_trend_anaysis()
+        self.trend_analysis()
         # self.robinson()
 
         pass
@@ -1814,17 +1968,20 @@ class moving_window():
         outdir = rf'E:\Data\ERA5_daily\\dict\\extract_window\\'
         T.mk_dir(outdir, force=True)
         for fdir in os.listdir(fdir_all):
-            if not 'LAI4g' in fdir:
+            if fdir not in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+                            'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall','annual_LAI4g']:
                 continue
 
 
             for f in os.listdir(fdir_all + fdir):
+                if not 'relative_change_annual_LAI4g' in f:
+                    continue
 
 
                 outf = outdir + f.split('.')[0] + '.npy'
                 print(outf)
-                # if os.path.isfile(outf):
-                #     continue
+                if os.path.isfile(outf):
+                    continue
 
                 dic = T.load_npy(fdir_all + fdir + '\\' + f)
                 window = 15
@@ -2010,14 +2167,13 @@ class moving_window():
         outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'annual_LAI4g' in f:
-                continue
-            if 'detrend' in f:
+            if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+        'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall']:
                 continue
 
             dic = T.load_npy(fdir + f)
 
-            slides = 39 - window_size
+            slides = 38 - window_size   ## revise!!
             outf = outdir + f.split('.')[0] + f'_average.npy'
             print(outf)
 
@@ -2113,17 +2269,16 @@ class moving_window():
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
-    def moving_window_trend_anaysis(self): ## each window calculating the average
+    def moving_window_trend_anaysis(self): ## each window calculating the trend
         window_size = 15
 
         fdir=rf'E:\Data\ERA5_daily\dict\\extract_window\\'
         outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'annual_LAI4g' in f:
+            if not 'relative_change_annual_LAI4g' in f:
                 continue
-            if 'detrend' in f:
-                continue
+
 
             dic = T.load_npy(fdir + f)
 
@@ -2147,7 +2302,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<23:
+                    if len(time_series_all)<24:
                         continue
 
 
@@ -2180,7 +2335,9 @@ class moving_window():
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'annual_LAI4g_trend' in f:
+            if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+                                       'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
+                                       'sum_rainfall']:
                 continue
 
             outf = outdir + f.split('.')[0]
@@ -2526,9 +2683,9 @@ def main():
     # Intra_CV_preprocessing().run()
 
     # extract_rainfall_annual_based_on_weekly().run()
-    extract_rainfall_annual_based_on_daily().run()
+    # extract_rainfall_annual_based_on_daily().run()
 
-    # moving_window().run()
+    moving_window().run()
     # PLOT().run()
     # Check_data().run()
 
