@@ -1957,6 +1957,7 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis()
 
         # self.moving_window_average_anaysis()
+        # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
         self.trend_analysis()
         # self.robinson()
@@ -2213,7 +2214,7 @@ class moving_window():
                 ## save
             np.save(outf, trend_dic)
 
-    def moving_window_std_extraction_anaysis(self):
+    def moving_window_std_anaysis(self):
         window_size=15
         fdir = rf'E:\Data\ERA5_daily\dict\\extract_window\\'
         outdir =  rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
@@ -2335,9 +2336,10 @@ class moving_window():
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
-                                       'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
-                                       'sum_rainfall']:
+            # if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+            #                            'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
+            #                            'sum_rainfall']:
+            if not 'detrended_annual_LAI4g_std' in f:
                 continue
 
             outf = outdir + f.split('.')[0]
