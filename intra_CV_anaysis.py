@@ -483,7 +483,207 @@ class Intra_CV_preprocessing():
             np.save(outf, detrend_zscore_dic)
 
         pass
+class extract_heatevent():
+    def run (self):
+        # self.extract_climatology()
+        # self.extract_extreme_heat_frequency()
+        self.extract_extreme_heat_event_temp()
 
+
+
+    def extract_climatology(self):
+        fdir=rf'C:\Users\wenzhang1\Desktop\max_temp\\transform\\'
+        outdir=rf'E:\Data\\ERA5_daily\\extract_heatevent\\extract_climatology\\'
+
+        T.mk_dir(outdir, force=True)
+        for f in T.listdir(fdir):
+            spatial_dic = T.load_npy(fdir+f)
+            anomaly_dic = {}
+            for pix in tqdm(spatial_dic):
+                r, c = pix
+                vals = spatial_dic[pix]
+                vals = np.array(vals)
+                if np.isnan(np.nanmean(vals)):
+                    continue
+                vals_flatten = vals.flatten()
+                plt.plot(vals_flatten, 'k')
+                self.daily_climatology_anomaly(vals_flatten)
+                anomaly_dic[pix] = self.daily_climatology_anomaly(vals_flatten)
+
+            np.save(outdir+f, anomaly_dic)
+    def daily_climatology_anomaly(self, vals):
+        '''
+        juping
+        :param vals: 40 * 365
+        :return:
+        '''
+        pix_anomaly = []
+        climatology_means = []
+        for day in range(1, 366):
+            one_day = []
+            for i in range(len(vals)):
+                d = i % 365 + 1
+                if day == d:
+                    one_day.append(vals[i])
+            mean = np.nanmean(one_day)
+            std = np.nanstd(one_day)
+            climatology_means.append(mean)
+        for i in range(len(vals)):
+            d_ind = i % 365
+            mean_ = climatology_means[d_ind]
+            anomaly = vals[i] - mean_
+            pix_anomaly.append(anomaly)
+        pix_anomaly = np.array(pix_anomaly)
+        return pix_anomaly
+    def extract_extreme_heat_frequency(self):
+
+        # fdir = rf'E:\Data\\ERA5\\max_temp\\climatology_anomaly\\'
+        fdir=rf'C:\Users\wenzhang1\Desktop\max_temp\deseasonal\\'
+        outdir = rf'E:\Data\\ERA5_daily\\extract_heatevent\\\\'
+
+        T.mk_dir(outdir, force=True)
+        average_heat_spell_annual_dic = {}
+        maxmum_heat_spell_annual_dic = {}
+        heat_event_count_annual_dic = {}
+
+        spatial_dic = T.load_npy_dir(fdir)
+        for pix in tqdm(spatial_dic):
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            vals=np.array(vals)
+            ##resha 38 year
+            average_heat_spell_annual_list = []
+            maxmum_heat_spell_annual_list = []
+            heat_event_count_annual_list = []
+
+            vals_reshape = vals.reshape(38, 365)
+            for val in vals_reshape:
+                if T.is_all_nan(val):
+                    continue
+                vals_heat = val.copy()
+                # print(vals_heat);exit()
+
+                vals_heat[vals_heat <= 5] = np.nan
+
+                heat_index = np.where(~np.isnan(vals_heat))
+                heat_index = heat_index[0]
+                heat_index = np.array(heat_index)
+
+                heat_index_groups = T.group_consecutive_vals(heat_index)
+                # print(heat_index_groups)
+
+                # plt.bar(range(len(val)), val)
+                # plt.bar(range(len(val)), vals_heat, alpha=0.5)
+                # # print(dry_index_groups)
+                # plt.show()
+                ## calcuate average wet spell
+                heat_spell = []
+                for group in heat_index_groups:
+                    if len(group) < 5:
+                        continue
+                    heat_days=np.array(group)
+
+                    heat_spell.append(len(heat_days))
+                    # print(heat_spell)
+                heat_spell = np.array(heat_spell)
+                if len(heat_spell) == 0:
+
+                    heat_event_count_annual_list.append(0)
+                    average_heat_spell_annual_list.append(0)
+                    maxmum_heat_spell_annual_list.append(0)
+
+                    continue
+
+                frequency = len(heat_spell)
+                heat_event_count_annual_list.append(frequency)
+
+                average_heat = np.nanmean(heat_spell)
+                average_heat_spell_annual_list.append(average_heat)
+
+                maxmum_wet_spell = np.nanmax(heat_spell)
+                maxmum_heat_spell_annual_list.append(maxmum_wet_spell)
+
+            average_heat_spell_annual_dic[pix] = average_heat_spell_annual_list
+            maxmum_heat_spell_annual_dic[pix] = maxmum_heat_spell_annual_list
+            heat_event_count_annual_dic[pix] = heat_event_count_annual_list
+
+        np.save(outdir + 'average_heat_spell.npy', average_heat_spell_annual_dic)
+        np.save(outdir + 'maxmum_heat_spell.npy', maxmum_heat_spell_annual_dic)
+        np.save(outdir + 'heat_event_frequency.npy', heat_event_count_annual_dic)
+
+    ###
+
+    def extract_extreme_heat_event_temp(self):
+
+        # fdir = rf'E:\Data\\ERA5\\max_temp\\climatology_anomaly\\'
+        fdir=rf'C:\Users\wenzhang1\Desktop\max_temp\deseasonal\\'
+        outdir = rf'E:\Data\ERA5_daily\dict\extract_heatevent_annual\heat_event_extraction\\'
+
+        T.mk_dir(outdir, force=True)
+        average_heat_event_temp_annual_dic = {}
+
+
+        spatial_dic = T.load_npy_dir(fdir)
+        for pix in tqdm(spatial_dic):
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            vals=np.array(vals)
+            ##resha 38 year
+            average_heat_heat_event_temp_annual_list = []
+
+
+            vals_reshape = vals.reshape(38, 365)
+            for val in vals_reshape:
+                if T.is_all_nan(val):
+                    continue
+                vals_heat = val.copy()
+                # print(vals_heat);exit()
+
+                vals_heat[vals_heat <= 5] = np.nan
+
+                heat_index = np.where(~np.isnan(vals_heat))
+                heat_index = heat_index[0]
+                heat_index = np.array(heat_index)
+
+                heat_index_groups = T.group_consecutive_vals(heat_index)
+                ##get index corresponding values
+                #heat_vals_groups
+                # print(heat_index_groups)
+
+                # plt.bar(range(len(val)), val)
+                # plt.bar(range(len(val)), vals_heat, alpha=0.5)
+                # # print(dry_index_groups)
+                # plt.show()
+                ## calcuate average wet spell
+                heat_event_value_list = []
+                for group in heat_index_groups:
+                    if len(group) < 5:
+                        continue
+                    ##get corresponding values
+                    heat_vals_groups = vals[group]
+
+                    heat_event_value_list.append(np.nanmean(heat_vals_groups))
+                    # print(heat_spell)
+                heat_event_value_group = np.array(heat_event_value_list)
+                if len(heat_event_value_group) == 0:
+
+                    average_heat_heat_event_temp_annual_list.append(0)
+
+                    continue
+
+                average_heat = np.nanmean(heat_event_value_list)
+                average_heat_heat_event_temp_annual_list.append(average_heat)
+
+            average_heat_event_temp_annual_dic[pix] = average_heat_heat_event_temp_annual_list
+
+
+        np.save(outdir + 'average_heat_event_temp.npy', average_heat_event_temp_annual_dic)
+
+    ###
+
+pass
 class extract_rainfall_annual_based_on_weekly():
     ## 1) extract rainfall CV
     ## 2) extract rainfall total
@@ -731,7 +931,7 @@ class extract_rainfall_annual_based_on_weekly():
         fdir = rf'D:\Project3\Data\biweekly\Precip\\'
         outdir = rf'E:\Data\\ERA5_biweekly\\extract_rainfall_annual\\dry_spell\\'
         T.mk_dir(outdir, force=True)
-        T.mk_dir(outdir, force=True)
+
 
         spatial_dic = T.load_npy_dir(fdir)
 
@@ -1956,7 +2156,7 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis()
 
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
         self.trend_analysis()
@@ -1965,18 +2165,22 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir_all =  rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\\\\'
+        fdir_all =  rf'E:\Data\ERA5_daily\dict\extract_heatevent_annual\\'
         outdir = rf'E:\Data\ERA5_daily\\dict\\extract_window\\'
         T.mk_dir(outdir, force=True)
         for fdir in os.listdir(fdir_all):
-            if fdir not in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
-                            'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall','annual_LAI4g']:
+            if fdir not in ['heat_event_extraction' ]:
                 continue
+            # if fdir not in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+            #                 'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall','annual_LAI4g']:
+            #     continue
 
 
             for f in os.listdir(fdir_all + fdir):
-                if not 'relative_change_annual_LAI4g' in f:
+                if f.split('.')[0] not in ['average_heat_event_temp',]:
+
                     continue
+
 
 
                 outf = outdir + f.split('.')[0] + '.npy'
@@ -2168,14 +2372,13 @@ class moving_window():
         outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
-        'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall']:
+            if not f.split('.')[0] in ['average_heat_event_temp']:
                 continue
 
             dic = T.load_npy(fdir + f)
 
             slides = 38 - window_size   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_average.npy'
+            outf = outdir + f.split('.')[0] + f'.npy'
             print(outf)
 
             trend_dic = {}
@@ -2277,13 +2480,14 @@ class moving_window():
         outdir = rf'E:\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'relative_change_annual_LAI4g' in f:
+            if not f.split('.')[0] in ['average_heat_spell', 'heat_event_frequency',
+               'maxmum_heat_spell']:
                 continue
 
 
             dic = T.load_npy(fdir + f)
 
-            slides = 39 - window_size
+            slides = 38 - window_size
             outf = outdir + f.split('.')[0] + f'_trend.npy'
             print(outf)
 
@@ -2303,7 +2507,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<24:
+                    if len(time_series_all)<23:
                         continue
 
 
@@ -2323,7 +2527,7 @@ class moving_window():
 
                 ## save
             np.save(outf, trend_dic)
-    def trend_analysis(self):
+    def trend_analysis(self):  ##each window average trend
 
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
@@ -2338,13 +2542,12 @@ class moving_window():
         for f in os.listdir(fdir):
             # if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
             #                            'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
-            #                            'sum_rainfall']:
-            if not 'detrended_annual_LAI4g_std' in f:
-                continue
 
-            outf = outdir + f.split('.')[0]
-            if os.path.isfile(outf + '_trend.tif'):
+            if not f.split('.')[0] in ['average_heat_event_temp']:
                 continue
+            outf = outdir + f.split('.')[0]
+            # if os.path.isfile(outf + '_trend.tif'):
+            #     continue
             print(outf)
 
             if not f.endswith('.npy'):
@@ -2410,26 +2613,26 @@ class moving_window():
     pass
 
     def robinson(self):
-        fdir=rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\trend_analysis_moving_window\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\\trend_analysis_moving_window\\'
         temp_root=result_root+r'Result_new\trend_anaysis\\robinson\\'
         out_pdf_fdir=result_root+r'Result_new\trend_anaysis\\robinson\\pdf\\'
 
         T.mk_dir(out_pdf_fdir,force=True)
 
 
-        variable='peak_rainfall_timing'
+        variable='detrended_annual_LAI4g_std'
         f_trend=fdir+variable+'_trend.tif'
 
         f_p_value=fdir+variable+'_p_value.tif'
 
 
-        m,ret=Plot().plot_Robinson(f_trend, vmin=-2,vmax=2,is_discrete=True,colormap_n=7,)
+        m,ret=Plot().plot_Robinson(f_trend, vmin=-0.005,vmax=0.005,is_discrete=True,colormap_n=7,)
         self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=5)
 
 
-        # plt.title(f'{variable}_(%/yr)')
+        plt.title(f'{variable}_(m2/m2/yr)')
         # plt.title(f'{variable}_(mm/day/yr)')
-        plt.title(f'{variable}_(day/yr)')
+        # plt.title(f'{variable}_(day/yr)')
         # plt.title('r')
         # plt.show()
         ## save fig pdf
@@ -2684,7 +2887,7 @@ def main():
 
     # Intra_CV_preprocessing().run()
 
-    # extract_rainfall_annual_based_on_weekly().run()
+    # extract_heatevent().run()
     # extract_rainfall_annual_based_on_daily().run()
 
     moving_window().run()
