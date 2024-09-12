@@ -79,14 +79,92 @@ class data_processing():
     def __init__(self):
         pass
     def run(self):
+        # self.tif_to_dic()
 
         # self.extract_water_year_LAI4g()
         # self.extract_water_year_GPCC()
         self.relative_change()
 
         pass
+
+    def tif_to_dic(self):
+
+        fdir_all = rf'D:\Project3\Data\monthly_data\GPCC\\'
+
+
+        year_list = list(range(1982, 2021))
+
+
+        # 作为筛选条件
+        for fdir in os.listdir(fdir_all):
+            if not 'TIFF' in fdir:
+                continue
+
+            outdir=rf'E:\western US\Data\\monthly_data\\GPCC\\'
+            T.mk_dir(outdir, force=True)
+            # if os.path.isdir(outdir):
+            #     pass
+
+            T.mk_dir(outdir, force=True)
+            all_array = []  #### so important  it should be go with T.mk_dic
+
+            for f in os.listdir(fdir_all+ fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:
+                    continue
+
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir_all + fdir + '\\' + f)
+                array = np.array(array, dtype=float)
+
+
+                array_unify = array[:720][:720,
+                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+
+                array_unify[array_unify < -999] = np.nan
+                # array_unify[array_unify > 7] = np.nan
+                # array[array ==0] = np.nan
+
+                array_unify[array_unify < 0] = np.nan
+
+
+
+
+                all_array.append(array_unify)
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
+
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
+
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+
     def extract_water_year_LAI4g(self):
-        fdir_all = rf'D:\Project3\Data\monthly_data\\'
+        fdir_all = rf'E:\western US\Data\monthly_data\\'
 
         outdir = result_root + f'extract_water_year\\'
         Tools().mk_dir(outdir, force=True)
@@ -137,18 +215,18 @@ class data_processing():
 
 
     def extract_water_year_GPCC(self):
-        fdir_all = rf'D:\Project3\Data\monthly_data\\GPCC\\'
+        fdir_all = rf'E:\western US\Data\monthly_data\\'
 
         outdir = result_root + f'extract_water_year\\'
         Tools().mk_dir(outdir, force=True)
 
 
         for fdir in os.listdir(fdir_all):
-            if not 'dic' in fdir:
+            if not 'GPC' in fdir:
                 continue
 
             spatial_dict = {}
-            outf = outdir +'\\' + 'GPCC.npy'
+            outf = outdir +'raw\\' + 'GPCC_water_year.npy'
 
             if os.path.isfile(outf):
                 continue
@@ -180,9 +258,9 @@ class data_processing():
 
     def relative_change(self):
 
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        # NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        # array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        # dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
         fdir = result_root + rf'\extract_water_year\raw\\'
         outdir = result_root + rf'extract_water_year\\relative_change\\'
@@ -192,8 +270,8 @@ class data_processing():
 
 
             outf = outdir + f.split('.')[0] + '.npy'
-            if isfile(outf):
-                continue
+            # if isfile(outf):
+            #     continue
             print(outf)
 
             dic = T.load_npy(fdir + f)
@@ -202,8 +280,8 @@ class data_processing():
 
             for pix in tqdm(dic):
                 delta_time_series_list = []
-                if pix not in dic_dryland_mask:
-                    continue
+                # if pix not in dic_dryland_mask:
+                #     continue
 
                 # print(len(dic[pix]))
                 time_series = dic[pix]
@@ -253,7 +331,7 @@ class build_dataframe():
         # df=self.add_multiregression_to_df(df)
         df=self.build_df(df)
         # df=self.build_df_monthly(df)
-        df=self.append_attributes(df)  ## 加属性
+        # df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
         # df=self.append_value(df)   ## insert or append value
 
@@ -344,22 +422,6 @@ class build_dataframe():
         T.print_head_n(df)
         return df
 
-    def build_df_monthly(self, df):
-
-
-        fdir = result_root+rf'extract_GS_return_monthly_data\individual_month_relative_change\X\\'
-        all_dic= {}
-
-        for fdir_ii in os.listdir(fdir):
-
-            dic=T.load_npy(fdir+fdir_ii)
-
-            key_name=fdir_ii.split('.')[0]
-            all_dic[key_name] = dic
-                # print(all_dic.keys())
-        df = T.spatial_dics_to_df(all_dic)
-        T.print_head_n(df)
-        return df
 
 
 
@@ -1478,7 +1540,7 @@ class check_data():
 
     def plot_sptial(self):
 
-        fdir = rf'E:\western US\Result\extract_water_year\\relative_change\\\\GPCC_water_year.npy'
+        fdir = rf'E:\western US\Result\extract_water_year\\raw\\\\GPCC_water_year.npy'
 
         dic = T.load_npy(fdir)
         # dic=T.load_npy_dir(fdir)
@@ -1626,15 +1688,16 @@ class PLOT:
         # self.plot_anomaly_LAI_based_on_cluster()
         self.trend_analysis()
         # self.spatial_average()
+        # self.diff_spatial_average()
 
 
     def clean_df(self, df):
-        df = df[df['landcover_classfication'] != 'Cropland']
+        # df = df[df['landcover_classfication'] != 'Cropland']
         df = df[df['row'] > 120]
         df = df[df['LC_max'] < 20]
-        df = df[df['Aridity'] < 0.65]
+        # df = df[df['Aridity'] < 0.65]
 
-        df = df[df['MODIS_LUCC'] != 12]
+        # df = df[df['MODIS_LUCC'] != 12]
 
         df = df[df['lon'] > -125]
         df = df[df['lon'] < -105]
@@ -1644,7 +1707,7 @@ class PLOT:
         return df
     def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
 
-        df = T.load_df(result_root + rf'\Dataframe\growing_season_original\\growing_season_original.df')
+        df = T.load_df(result_root + rf'\DataFrame\\Dataframe.df')
         print(len(df))
 
 
@@ -1675,7 +1738,7 @@ class PLOT:
 
         fig = plt.figure()
         i = 1
-        variable_list=['GLEAM_SMroot',]
+        variable_list=['GPCC_water_year',]
         # variable_list=['CRU','GPCC']
 
         # variable_list=['LAI4g']
@@ -1687,7 +1750,7 @@ class PLOT:
         print(region_unique)
 
 
-        for continent in ['Grass', 'Evergreen', 'Shrub', 'Deciduous','Mixed','North_America']:
+        for continent in ['Grass', 'Evergreen', 'Shrub', 'Cropland','North_America']:
             ax = fig.add_subplot(2, 3, i)
             if continent=='North_America':
                 df_continent=df
@@ -1712,16 +1775,9 @@ class PLOT:
                         continue
                     if len(val) ==0:
                         continue
+                    val=np.array(val)
+                    # print(val)
                     val[val<-99]=np.nan
-
-                    if not len(val) == 38:
-                        ## add nan to the end of the list
-                        for j in range(1):
-                            val=np.append(val,np.nan)
-                            val[val>9999]=np.nan
-                            val[val < -9999] = np.nan
-                        # print(val)
-                        # print(len(val))
 
 
                     vals_nonnan.append(list(val))
@@ -1730,28 +1786,29 @@ class PLOT:
                 ###### calculate mean
                 vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
                 vals_mean=np.nanmean(vals_mean,axis=0)
-                # vals_mean=vals_mean/pixel_area_sum
 
                 val_std=np.nanstd(vals_mean,axis=0)
 
                 # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
                 plt.plot(vals_mean,label=product,color=color_list[variable_list.index(product)],linewidth=linewidth_list[variable_list.index(product)])
                 # plt.fill_between(range(len(vals_mean)),vals_mean-val_std,vals_mean+val_std,alpha=0.3,color=color_list[self.product_list.index(product)])
+                a,b,r,p,se=stats.linregress(range(len(vals_mean)),vals_mean)
 
+                plt.plot(range(len(vals_mean)),a*range(len(vals_mean))+b,color='r',linewidth=1)
+                plt.text(0,40,f'{product} r={r:.2f} p={p:.2f}',fontsize=12)
 
-                # plt.scatter(range(len(vals_mean)),vals_mean)
-                # plt.text(0,vals_mean[0],product,fontsize=8)
             i=i+1
 
             ax.set_xticks(range(0, 40, 4))
-            ax.set_xticklabels(range(1982, 2021, 4), rotation=45)
+            ax.set_xticklabels(range(1983, 2021, 4), rotation=45, fontsize=8)
             # plt.ylim(-0.2, 0.2)
-            # plt.ylim(-1,1)
+            plt.ylim(-50, 50)
 
 
             # plt.xlabel('year')
 
-            plt.ylabel(f'GLEAM_SMroot(m^3/m^3)')
+            # plt.ylabel(f'LAI4g(%)', fontsize=12)
+            plt.ylabel(f'precip(%/year)')
             plt.title(f'{continent}_{pixel_number}_pixels')
             plt.grid(which='major', alpha=0.5)
         plt.legend()
@@ -1767,18 +1824,19 @@ class PLOT:
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'\extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'trend_analysis\\western_US\\'
+        fdir = result_root+rf'\extract_water_year\raw\\'
+        outdir = result_root + rf'trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
-            if not 'GLEAM_SMroot' in f:
+            if not 'LAI4g' in f:
                 continue
 
 
-            outf=outdir+f.split('.')[0]
+
+            outf=outdir+f.split('.')[0]+'_first_trend'
 
 
             if not f.endswith('.npy'):
@@ -1787,22 +1845,21 @@ class PLOT:
 
             trend_dic = {}
             p_value_dic = {}
-            resolution=0.25
+
             for pix in tqdm(dic):
                 r,c=pix
 
 
-
-                landcover_value=crop_mask[pix]
-                if landcover_value==16 or landcover_value==17 or landcover_value==18:
-                    continue
-                if dic_modis_mask[pix]==12:
-                    continue
+                # landcover_value=crop_mask[pix]
+                # if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                #     continue
+                # if dic_modis_mask[pix]==12:
+                #     continue
                 # time_series = dic[pix]
 
-                # time_series=dic[pix][0:18]
-                time_series = dic[pix][18:]  # 2000-2020
-                print(len(time_series))
+                time_series=dic[pix][0:19] #1983-2001
+                # time_series = dic[pix][19:]  # 2002-2020
+                # print(len(time_series))
                 # exit()
 
 
@@ -1817,9 +1874,9 @@ class PLOT:
                 if np.nanstd(time_series) == 0:
                     continue
                 try:
-
-                        # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
                     slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    # slope = 1
+                    # p_value=0
                     trend_dic[pix] = slope
                     p_value_dic[pix] = p_value
                 except:
@@ -1830,58 +1887,61 @@ class PLOT:
             p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
             ## extract the region of interest
 
-            # lon_start, lon_end = -125, -105
-            # lat_start, lat_end = 0, 45
-            # Calculate row (latitude) and column (longitude) indices
-            lat_start_index = 180
-            lat_end_index = 360
+            arr_trend_dict = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(arr_trend)
+            p_value_arr_dict = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(p_value_arr)
 
-            lon_start_index = 220
-            lon_end_index = 300
+            all_dict = {'trend':arr_trend_dict,'p_value':p_value_arr_dict}
+            df = T.spatial_dics_to_df(all_dict)
+            df = T.add_lon_lat_to_df(df, DIC_and_TIF(pixelsize=0.25))
+            # df = df[df['lon'] > -125]
+            # df = df[df['lon'] < -105]
+            # df = df[df['lat'] > 30]
+            # df = df[df['lat'] < 45]
 
-            arr_trend = arr_trend[lat_start_index:lat_end_index+1, lon_start_index:lon_end_index+1]
-            p_value_arr = p_value_arr[lat_start_index:lat_end_index+1, lon_start_index:lon_end_index+1]
-            ## plot point using p_value
-            # plt.imshow(arr_trend, cmap='RdBu', vmin=-0.005, vmax=0.005)
+            arr_trend_dict_roi = T.df_to_spatial_dic(df, 'trend')
+            p_value_arr_dict_roi = T.df_to_spatial_dic(df, 'p_value')
+
+            arr_trend_roi = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(arr_trend_dict_roi)
+            p_value_arr_roi = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_arr_dict_roi)
+            plt.imshow(arr_trend_roi, cmap='RdBu', vmin=-0.01, vmax=0.01)
             # plt.colorbar(label='LAI_trend (m2/m2/year)')
-            # plt.imshow(arr_trend, cmap='RdBu', vmin=-4, vmax=4)
-            #
-            # plt.colorbar(label='CRU_trend (mm/year)')
 
-            plt.imshow(arr_trend, cmap='RdBu', vmin=-0.001, vmax=0.001)
 
-            plt.colorbar(label='GLEAM_SMroot_trend (m^3/m^3/year)')
+            # plt.ylabel(f'precip(mm/year)')
+            # plt.title(f'{pixel_number}_pixels')
+            plt.grid(which='major', alpha=0.5)
+            plt.grid(which='minor', alpha=0.2)
 
-            significant_point = np.where(p_value_arr < 0.05)
+            # plt.colorbar(label='Precip_trend (mm/year)')
+            plt.colorbar(label='LAI4g_trend (m2/m2/year)')
+
+            significant_point = np.where(p_value_arr_roi < 0.05)
             plt.scatter(significant_point[1], significant_point[0], s=0.5, c='black',label='p<0.05',marker='*',alpha=0.5)
-
-
-            ## set y lim
-            plt.ylim(100,0)
 
 
             plt.title(f.split('.')[0])
             plt.show()
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend_roi, outf + '_trend_new.tif')
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr_roi, outf + '_p_value.tif')
             #
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
-            #
-            # np.save(outf + '_trend', arr_trend)
-            # np.save(outf + '_p_value', p_value_arr)
+            # np.save(outf + '_trend', arr_trend_roi)
+            # np.save(outf + '_p_value', p_value_arr_roi)
+            exit()
 
 
     def spatial_average(self):
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+        # NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        # array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        # landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        # crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        # MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        # MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        # dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'\extract_GS\OBS_LAI_extend\\'
-        outdir = result_root + rf'trend_analysis\\western_US\\'
+        fdir = result_root+rf'\extract_water_year\raw\\'
+        outdir = result_root + rf'spatial_average\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1890,8 +1950,7 @@ class PLOT:
             if not 'GPCC' in f:
                 continue
 
-
-            outf=outdir+f.split('.')[0]
+            outf=outdir+f.split('.')[0]+'_first.tif'
 
 
             if not f.endswith('.npy'):
@@ -1903,16 +1962,11 @@ class PLOT:
             for pix in tqdm(dic):
                 r,c=pix
 
+                # time_series=dic[pix]
+                time_series=dic[pix][0:19]  # 1983-2001
 
-
-                landcover_value=crop_mask[pix]
-                if landcover_value==16 or landcover_value==17 or landcover_value==18:
-                    continue
-                if dic_modis_mask[pix]==12:
-                    continue
-
-                time_series=dic[pix][19:]
-                print(len(time_series))
+                # time_series=dic[pix][19:] # 2002-2020
+                # print(len(time_series))
 
 
                 if len(time_series) == 0:
@@ -1937,37 +1991,69 @@ class PLOT:
 
             arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(average_dic)
 
-            # lat_start, lat_end = 0, 45
-            # Calculate row (latitude) and column (longitude) indices
-            lat_start_index = 180
-            lat_end_index = 360
 
-            lon_start_index = 220
-            lon_end_index = 300
+        ## extract the region of interest
 
-            arr_trend = arr_trend[lat_start_index:lat_end_index+1, lon_start_index:lon_end_index+1]
-
-            ## plot point using p_value
-            # plt.imshow(arr_trend, cmap='RdBu', vmin=0, vmax=1)
-            # plt.colorbar(label='LAI_average (m2/m2)')
-            plt.imshow(arr_trend, cmap='RdBu', vmin=-1, vmax=1)
-
-            plt.colorbar(label='GPCC_trend (mm/year)')
+            arr_trend_dict = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(arr_trend)
 
 
+            all_dict = {'trend':arr_trend_dict}
+            df = T.spatial_dics_to_df(all_dict)
+            df = T.add_lon_lat_to_df(df, DIC_and_TIF(pixelsize=0.25))
+            df = df[df['lon'] > -125]
+            df = df[df['lon'] < -105]
+            df = df[df['lat'] > 30]
+            df = df[df['lat'] < 45]
 
-            ## set y lim
-            plt.ylim(100,0)
+            arr_trend_dict_roi = T.df_to_spatial_dic(df, 'trend')
+
+
+            arr_trend_roi = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(arr_trend_dict_roi)
+
+            plt.imshow(arr_trend_roi,  vmin=200, vmax=500, cmap='Spectral')
+            # plt.colorbar(label='LAI_trend (m2/m2/year)')
+
+
+            # plt.ylabel(f'precip(mm/year)')
+            # plt.title(f'{pixel_number}_pixels')
+            plt.grid(which='major', alpha=0.5)
+            plt.grid(which='minor', alpha=0.2)
+
+            plt.colorbar(label='Precip_average (mm/year)')
+            # plt.colorbar(label='LAI4g_trend (m2/m2/)')
+
 
 
             plt.title(f.split('.')[0])
             plt.show()
-            #
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
-            #
-            # np.save(outf + '_trend', arr_trend)
-            # np.save(outf + '_p_value', p_value_arr)
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend_roi, outf + '_trend.tif')
+
+            np.save(outf + '_trend', arr_trend_roi)
+
+    def diff_spatial_average(self):
+        fdir = result_root+rf'spatial_average\\'
+
+        arr1, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + 'GPCC_water_year_second.tif_trend.tif')
+
+        arr2, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + 'GPCC_water_year_first.tif_trend.tif')
+
+        arr = arr1-arr2
+        arr[arr==0]=np.nan
+        plt.imshow(arr,  vmin=-100, vmax=100, cmap='RdBu')
+
+        plt.colorbar(label='Precip_average (mm/year)')
+
+        plt.grid(which='major', alpha=0.5)
+        plt.grid(which='minor', alpha=0.2)
+
+
+        plt.show()
+
+        DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, fdir + 'GPCC_water_year_diff.tif')
+
+
+
 
 
 
@@ -1975,9 +2061,9 @@ class PLOT:
 def main():
 
     # data_processing().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # check_data().run()
-    # PLOT().run()
+    PLOT().run()
 
     pass
 

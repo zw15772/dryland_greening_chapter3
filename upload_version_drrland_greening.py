@@ -62,6 +62,7 @@ import pickle
 from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 from pprint import pprint
+
 T=Tools()
 D = DIC_and_TIF(pixelsize=0.25)
 
@@ -384,13 +385,13 @@ class trend_analysis():  ## figure 1
             np.save(outf + '_p_value', p_value_arr_dryland)
 
     def robinson(self):
-        fdir=rf'D:\Project3\Result\growth_rate\growth_rate_raw\trend_analysis\\'
-        temp_root=result_root+r'Result_new\growth_rate_raw\\robinson\\'
-        out_pdf_fdir=result_root+r'Result_new\growth_rate_raw\\robinson\\pdf\\'
+        fdir=rf'E:\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
+        temp_root=result_root+r'Result_new\trend_analysis_moving_window\\robinson\\'
+        out_pdf_fdir=result_root+r'Result_new\trend_analysis_moving_window\\robinson\\pdf\\'
 
         T.mk_dir(out_pdf_fdir,force=True)
 
-        variable='LAI4g'
+        variable='rainfall_event_size'
         f_trend=fdir+variable+'_trend.tif'
         #
         f_p_value=fdir+variable+'_p_value.tif'
@@ -400,7 +401,8 @@ class trend_analysis():  ## figure 1
         self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=2)
 
 
-        plt.title(f'{variable}_(%/yr)')
+        # plt.title(f'{variable}_(%/yr)')
+        plt.title(f'rainfall_intensity (mm/yr)')
         # plt.title(f'{variable}_(day/yr)')
         # plt.title(f'(%/100mm/yr)')
         # plt.title('r')
@@ -512,7 +514,9 @@ class bivariate_analysis():
     def __init__(self):
         pass
     def run(self):
-        self.bivariate_plot()
+        # self.bivariate_plot()
+        self.xy_map_growth_rate()
+
 
         pass
     def bivariate_plot(self):
@@ -520,22 +524,22 @@ class bivariate_analysis():
         # print(result_root)
 
         import xymap
-        tif_long_term= result_root + rf'multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\\100mm_unit\\GPCC_LAI4g_trend.tif'
-        tif_window=result_root + rf'trend_analysis\relative_change\OBS_extend\\GPCC_trend.tif'
+        tif_long_term= rf'E:\Data\ERA5_daily\dict\trend_analysis_moving_window\\seasonal_rainfall_event_size_trend.tif'
+        tif_window=rf'E:\Data\ERA5_daily\dict\trend_analysis_moving_window\\LAI4g_CV_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
-        outtif=result_root + rf'bivariate_analysis\\sensitivity_trend_GPCC_trend.tif'
+        outtif=result_root + rf'bivariate_analysis\\CV_seasonal_rainfall.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
         tif1=tif_long_term
         tif2=   tif_window
 
-        tif1_label='Trends in LAI sensitivity to precipitation (%/100mm/year)'
-        tif2_label='Precip trend (%/year)'
-        min1=-5
-        max1=5
-        min2=-1
-        max2=1
+        tif1_label='seasonal distribution (unitless/year)'
+        tif2_label='CV trend (%/year)'
+        min1=-1
+        max1=1
+        min2=-0.05
+        max2=0.05
         outf=outtif
         upper_left_color = [143, 196, 34],  #
         upper_right_color = [156, 65, 148],  #
@@ -559,6 +563,66 @@ class bivariate_analysis():
         Biv.plot_bivariate(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
         print(outf)
         plt.show()
+
+    def xy_map_growth_rate(self):
+
+
+        import xymap
+
+
+        fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
+        outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
+        T.mk_dir(outdir,force=True)
+
+        tif_LAI4g_trend = join(fdir,'heat_event_frequency_trend.tif')
+        tif_LAI4g_trend_growth_rate_trend = join(fdir,'detrended_annual_LAI4g_CV_trend.tif')
+
+        outf = join(outdir,f'heat_event_frequency_trend.tif')
+        x_label = 'heat_event_frequency_trend(unitless/year)'
+        y_label = 'CV trend (%/year)'
+        min1 = -0.1
+        max1 = 0.1
+        min2 = -.5
+        max2 = .5
+        xymap.Bivariate_plot_1(alpha = 255,upper_left_color = (255,202, 202), #
+                 upper_right_color = (148, 202, 112), #
+                 lower_left_color = (110,0, 0), #
+                 lower_right_color = (0, 0, 110), #
+                 center_color = (240,240, 240), ).plot_bivariate(
+            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
+            x_label, y_label, min1, max1, min2, max2, outf)
+        print(outf)
+
+
+    def xy_map_heat_event(self): ##
+
+
+        import xymap
+
+
+        fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
+        outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
+        T.mk_dir(outdir,force=True)
+
+        tif_LAI4g_trend = join(fdir,'heat_event_frequency_trend.tif')
+        tif_LAI4g_trend_growth_rate_trend = join(fdir,'detrended_annual_LAI4g_CV_trend.tif')
+
+        outf = join(outdir,f'heat_event_frequency_trend.tif')
+        x_label = 'heat_event_frequency_trend(unitless/year)'
+        y_label = 'CV trend (%/year)'
+        min1 = -0.1
+        max1 = 0.1
+        min2 = -.5
+        max2 = .5
+        xymap.Bivariate_plot_1(alpha = 255,upper_right_color = (255,202, 202), #
+                 upper_left_color = (148, 202, 112), #
+                 lower_right_color = (110,0, 0), #
+                 lower_left_color = (0, 0, 110), #
+                 center_color = (240,240, 240), ).plot_bivariate(
+            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
+            x_label, y_label, min1, max1, min2, max2, outf)
+        print(outf)
+
 
 
 class PLOT_dataframe:
@@ -681,6 +745,7 @@ def main():
     # growth_rate().run()
 
     trend_analysis().run()
+    # bivariate_analysis().run()
     # extract_rainfall().run()
 
     # PLOT_dataframe().plot_LAItrend_vs_LAICV()

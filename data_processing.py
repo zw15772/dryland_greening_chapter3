@@ -861,7 +861,7 @@ class data_processing():
             if not 'scales_LAI4g' in fdir:
                 continue
 
-            outdir =data_root+rf'D:\Project3\Data\monthly_data\\LAI4g\\'
+            outdir=data_root+rf':\Project3\Data\monthly_data\\LAI4g\\'
             # if os.path.isdir(outdir):
             #     pass
 
@@ -17209,7 +17209,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
