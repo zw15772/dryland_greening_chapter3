@@ -515,7 +515,8 @@ class bivariate_analysis():
         pass
     def run(self):
         # self.bivariate_plot()
-        self.xy_map_growth_rate()
+        self.xy_map_growth_rate()  ## growth rate, rainfall seasonal distribution use the same  color scale
+        # self.xy_map_heat_event()
 
 
         pass
@@ -596,9 +597,7 @@ class bivariate_analysis():
 
     def xy_map_heat_event(self): ##
 
-
         import xymap
-
 
         fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
         outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
@@ -739,13 +738,22 @@ class PLOT_dataframe:
             return df
 
 
+class TRENDY_model:
+    ## 1)
+
+    def __init__(self):
+        pass
+
+    def run(self):
+
+        pass
 
 
 def main():
     # growth_rate().run()
 
-    trend_analysis().run()
-    # bivariate_analysis().run()
+    # trend_analysis().run()
+    bivariate_analysis().run()
     # extract_rainfall().run()
 
     # PLOT_dataframe().plot_LAItrend_vs_LAICV()

@@ -1685,8 +1685,8 @@ class PLOT:
     def __del__(self):
         pass
     def run(self):
-        # self.plot_anomaly_LAI_based_on_cluster()
-        self.trend_analysis()
+        self.plot_anomaly_LAI_based_on_cluster()
+        # self.trend_analysis()
         # self.spatial_average()
         # self.diff_spatial_average()
 
@@ -1738,10 +1738,10 @@ class PLOT:
 
         fig = plt.figure()
         i = 1
-        variable_list=['GPCC_water_year',]
+        # variable_list=['GPCC_water_year',]
         # variable_list=['CRU','GPCC']
 
-        # variable_list=['LAI4g']
+        variable_list=['LAI4g_water_year']
         scenario='S2'
         # variable_list= ['LAI4g',f'CABLE-POP_{scenario}_lai', f'CLASSIC_{scenario}_lai', 'CLM5',  f'IBIS_{scenario}_lai', f'ISAM_{scenario}_lai',
         #      f'ISBA-CTRIP_{scenario}_lai', f'JSBACH_{scenario}_lai', f'JULES_{scenario}_lai',  f'LPJ-GUESS_{scenario}_lai', f'LPX-Bern_{scenario}_lai',
@@ -1750,8 +1750,8 @@ class PLOT:
         print(region_unique)
 
 
-        for continent in ['Grass', 'Evergreen', 'Shrub', 'Cropland','North_America']:
-            ax = fig.add_subplot(2, 3, i)
+        for continent in ['Grass', 'Evergreen', 'Shrub', 'North_America']:
+            ax = fig.add_subplot(2, 2, i)
             if continent=='North_America':
                 df_continent=df
             else:
@@ -1795,20 +1795,20 @@ class PLOT:
                 a,b,r,p,se=stats.linregress(range(len(vals_mean)),vals_mean)
 
                 plt.plot(range(len(vals_mean)),a*range(len(vals_mean))+b,color='r',linewidth=1)
-                plt.text(0,40,f'{product} r={r:.2f} p={p:.2f}',fontsize=12)
+                plt.text(2,40,f'r={r:.2f} p={p:.2f}',fontsize=12)
 
             i=i+1
 
             ax.set_xticks(range(0, 40, 4))
-            ax.set_xticklabels(range(1983, 2021, 4), rotation=45, fontsize=8)
+            ax.set_xticklabels(range(1983, 2021, 4), rotation=45, fontsize=12)
             # plt.ylim(-0.2, 0.2)
-            plt.ylim(-50, 50)
+            plt.ylim(-15, 15)
 
 
             # plt.xlabel('year')
 
-            # plt.ylabel(f'LAI4g(%)', fontsize=12)
-            plt.ylabel(f'precip(%/year)')
+            plt.ylabel(f'LAI4g(%)', fontsize=15)
+            # plt.ylabel(f'precip(%/year)', fontsize=15)
             plt.title(f'{continent}_{pixel_number}_pixels')
             plt.grid(which='major', alpha=0.5)
         plt.legend()
@@ -1831,12 +1831,12 @@ class PLOT:
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
-            if not 'LAI4g' in f:
+            if not 'GPCC' in f:
                 continue
 
 
 
-            outf=outdir+f.split('.')[0]+'_first_trend'
+            outf=outdir+f.split('.')[0]+'_second'
 
 
             if not f.endswith('.npy'):
@@ -1850,15 +1850,15 @@ class PLOT:
                 r,c=pix
 
 
-                # landcover_value=crop_mask[pix]
-                # if landcover_value==16 or landcover_value==17 or landcover_value==18:
-                #     continue
-                # if dic_modis_mask[pix]==12:
-                #     continue
+                landcover_value=crop_mask[pix]
+                if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                    continue
+                if dic_modis_mask[pix]==12:
+                    continue
                 # time_series = dic[pix]
 
-                time_series=dic[pix][0:19] #1983-2001
-                # time_series = dic[pix][19:]  # 2002-2020
+                time_series=dic[pix][0:17] ## 1983-1999
+                # time_series = dic[pix][17:]
                 # print(len(time_series))
                 # exit()
 
@@ -1882,28 +1882,21 @@ class PLOT:
                 except:
                     continue
 
-            arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
 
-            p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
-            ## extract the region of interest
-
-            arr_trend_dict = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(arr_trend)
-            p_value_arr_dict = DIC_and_TIF(pixelsize=0.25).spatial_arr_to_dic(p_value_arr)
-
-            all_dict = {'trend':arr_trend_dict,'p_value':p_value_arr_dict}
+            all_dict = {'trend':trend_dic,'p_value':p_value_dic}
             df = T.spatial_dics_to_df(all_dict)
             df = T.add_lon_lat_to_df(df, DIC_and_TIF(pixelsize=0.25))
-            # df = df[df['lon'] > -125]
-            # df = df[df['lon'] < -105]
-            # df = df[df['lat'] > 30]
-            # df = df[df['lat'] < 45]
+            df = df[df['lon'] > -125]
+            df = df[df['lon'] < -105]
+            df = df[df['lat'] > 30]
+            df = df[df['lat'] < 45]
 
             arr_trend_dict_roi = T.df_to_spatial_dic(df, 'trend')
             p_value_arr_dict_roi = T.df_to_spatial_dic(df, 'p_value')
 
             arr_trend_roi = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(arr_trend_dict_roi)
             p_value_arr_roi = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_arr_dict_roi)
-            plt.imshow(arr_trend_roi, cmap='RdBu', vmin=-0.01, vmax=0.01)
+            plt.imshow(arr_trend_roi, cmap='RdBu', vmin=-5, vmax=5)
             # plt.colorbar(label='LAI_trend (m2/m2/year)')
 
 
@@ -1911,33 +1904,37 @@ class PLOT:
             # plt.title(f'{pixel_number}_pixels')
             plt.grid(which='major', alpha=0.5)
             plt.grid(which='minor', alpha=0.2)
+            ## turn off ticks
+            # plt.xticks([])
+            # plt.yticks([])
+            #
 
-            # plt.colorbar(label='Precip_trend (mm/year)')
-            plt.colorbar(label='LAI4g_trend (m2/m2/year)')
+            plt.colorbar(label='Precip_trend (mm/year)')
+            # plt.colorbar(label='LAI4g_trend (m2/m2/year)')
 
             significant_point = np.where(p_value_arr_roi < 0.05)
-            plt.scatter(significant_point[1], significant_point[0], s=0.5, c='black',label='p<0.05',marker='*',alpha=0.5)
+            plt.scatter(significant_point[1], significant_point[0], s=1, c='black',label='p<0.05',marker='*',alpha=0.5)
 
 
-            plt.title(f.split('.')[0])
+            # plt.title(f.split('.')[0])
             plt.show()
 
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend_roi, outf + '_trend_new.tif')
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend_roi, outf + '_trend.tif')
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr_roi, outf + '_p_value.tif')
-            #
+            # #
             # np.save(outf + '_trend', arr_trend_roi)
             # np.save(outf + '_p_value', p_value_arr_roi)
-            exit()
+
 
 
     def spatial_average(self):
         # NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         # array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        # landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
-        # crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        # MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
-        # MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        # dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
         fdir = result_root+rf'\extract_water_year\raw\\'
@@ -1950,7 +1947,7 @@ class PLOT:
             if not 'GPCC' in f:
                 continue
 
-            outf=outdir+f.split('.')[0]+'_first.tif'
+            outf=outdir+f.split('.')[0]+'_second.tif'
 
 
             if not f.endswith('.npy'):
@@ -1961,11 +1958,17 @@ class PLOT:
 
             for pix in tqdm(dic):
                 r,c=pix
+                landcover_value=crop_mask[pix]
+                if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                    continue
+                if dic_modis_mask[pix]==12:
+                    continue
+
 
                 # time_series=dic[pix]
-                time_series=dic[pix][0:19]  # 1983-2001
+                # time_series=dic[pix][0:17]  # 1983-1999
 
-                # time_series=dic[pix][19:] # 2002-2020
+                time_series=dic[pix][17:] # 2002-2020
                 # print(len(time_series))
 
 
@@ -2043,6 +2046,8 @@ class PLOT:
         plt.imshow(arr,  vmin=-100, vmax=100, cmap='RdBu')
 
         plt.colorbar(label='Precip_average (mm/year)')
+
+        ## fontsize
 
         plt.grid(which='major', alpha=0.5)
         plt.grid(which='minor', alpha=0.2)
