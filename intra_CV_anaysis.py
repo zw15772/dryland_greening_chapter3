@@ -899,7 +899,7 @@ class extract_rainfall_annual_based_on_daily():
 
     def aggreate_AVHRR_LAI(self):  # aggregate biweekly data to monthly
         fdir_all = rf'D:\Project3\Data\\LAI4g\\\scales_LAI4g_weekly\\'
-        outdir = rf'D:\Project3\Data\\LAI4g\\scales_LAI4g_weekly_monthly\\'
+        outdir = rf'D:\Project3\Data\\LAI4g\\scales_LAI4g_monthly\\'
         Tools().mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
@@ -1857,6 +1857,383 @@ class moving_window():
 
 
 
+class TRENDY_model:
+    ## 1)
+
+    def __init__(self):
+        pass
+
+    def run(self):
+        # self.TIFF_to_dic()
+
+        # self.extract_annual_LAI()
+        # self.detrend()
+        # self.moving_window_extraction()
+        self.moving_window_CV_anaysis()
+        # self.trend_analysis()
+
+        pass
+    def TIFF_to_dic(self):
+        fdir_all=rf'E:\Project3\Data\TRENDY_LAI\unify_tiff\\'
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+
+        year_list = list(range(1982, 2021))
+
+        # 作为筛选条件
+        for fdir in os.listdir(fdir_all):
+
+
+            outdir  = rf'E:\Project3\Data\TRENDY_LAI_DIC\\{fdir}\\'
+
+
+            T.mk_dir(outdir, force=True)
+            all_array = []  #### so important  it should be go with T.mk_dic
+
+            for f in os.listdir(fdir_all + fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:
+                    continue
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+                    fdir_all + fdir + '\\' + f)
+                array = np.array(array, dtype=float)
+
+                array_unify = array[:720][:720,
+                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+
+                array_unify[array_unify < -999] = np.nan
+
+
+                array_unify[array_unify < 0] = np.nan
+
+                # plt.imshow(array)
+                # plt.show()
+                array_mask = np.array(array_mask, dtype=float)
+                # plt.imshow(array_mask)
+                # plt.show()
+                array_dryland = array_unify * array_mask
+                # plt.imshow(array_dryland)
+                # plt.show()
+
+                all_array.append(array_dryland)
+
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
+
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
+
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+
+    def extract_annual_LAI(self):  ## extract annaul LAI
+
+        fdir_all = rf'E:\Project3\Data\TRENDY_LAI\TRENDY_LAI_DIC\\'
+        outdir = rf'E:Project3\Data\TRENDY_LAI\\extract_annual_LAI\\'
+        for fdir in os.listdir(fdir_all):
+
+
+            outf=outdir + f'{fdir}_annual.npy'
+            print(outf)
+            if os.path.exists(outf):
+                continue
+            Tools().mk_dir(outdir, force=True)
+            annual_spatial_dict = {}
+            dict=T.load_npy_dir(fdir_all+fdir)
+            for pix in tqdm(dict):
+                time_series = dict[pix]
+                time_series=np.array(time_series)
+                print(time_series.shape)
+
+                if T.is_all_nan(time_series):
+                    continue
+
+                annual_time_series_reshape = np.reshape(time_series, (-1, 12))
+
+                annual_time_series = np.nanmean(annual_time_series_reshape, axis=1)
+
+
+                annual_spatial_dict[pix] = annual_time_series
+
+
+            np.save(outf, annual_spatial_dict)
+
+        pass
+
+    def detrend(self): ## detrend LAI4g
+
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\extract_annual_LAI\\'
+        outdir = rf'E:Project3\Data\TRENDY_LAI\\detrend\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            dict = T.load_npy(fdir + f)
+            annual_spatial_dict = {}
+            for pix in tqdm(dict):
+                time_series = dict[pix]
+
+                if T.is_all_nan(time_series):
+                    continue
+
+                plt.plot(time_series)
+
+
+                detrended_annual_time_series = signal.detrend(time_series)+np.mean(time_series)
+                # print((detrended_annual_time_series))
+                # plt.plot(detrended_annual_time_series)
+                # plt.show()
+
+                annual_spatial_dict[pix] = detrended_annual_time_series
+            outf=outdir +f'{f.split(".")[0]}_detrend.npy'
+            np.save(outf, annual_spatial_dict)
+
+
+
+        pass
+
+    def moving_window_extraction(self):
+
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\detrend\\'
+        outdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+
+            outf = outdir + f
+            print(outf)
+            if os.path.isfile(outf):
+                continue
+
+            dic = T.load_npy(fdir + f)
+            window = 15
+
+            new_x_extraction_by_window = {}
+            for pix in tqdm(dic):
+
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+
+                # time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    print('error')
+                    continue
+                # print((len(time_series)))
+                ### if all values are identical, then continue
+                if np.nanmax(time_series) == np.nanmin(time_series):
+                    continue
+
+                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
+                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
+
+            T.save_npy(new_x_extraction_by_window, outf)
+
+    def forward_window_extraction(self, x, window):
+        # 前窗滤波
+        # window = window-1
+        # 不改变数据长度
+
+        if window < 0:
+            raise IOError('window must be greater than 0')
+        elif window == 0:
+            return x
+        else:
+            pass
+
+        x = np.array(x)
+
+        # new_x = np.array([])
+        # plt.plot(x)
+        # plt.show()
+        new_x_extraction_by_window=[]
+        for i in range(len(x)):
+            if i + window >= len(x):
+                continue
+            else:
+                anomaly = []
+                relative_change_list=[]
+                x_vals=[]
+                for w in range(window):
+                    x_val=(x[i + w])
+                    x_vals.append(x_val)
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+
+                # x_mean=np.nanmean(x_vals)
+
+                # for i in range(len(x_vals)):
+                #     if x_vals[0]==None:
+                #         continue
+                    # x_anomaly=(x_vals[i]-x_mean)
+                    # relative_change = (x_vals[i] - x_mean) / x_mean
+
+                    # relative_change_list.append(x_vals)
+                new_x_extraction_by_window.append(x_vals)
+        return new_x_extraction_by_window
+    def moving_window_CV_anaysis(self):
+        window_size=15
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
+        outdir =  rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+            dic = T.load_npy(fdir + f)
+            slides = 39-window_size
+            outf = outdir + f.split('.')[0] + f'.npy'
+            print(outf)
+
+            if os.path.isfile(outf):
+                continue
+
+            new_x_extraction_by_window = {}
+            trend_dic={}
+            p_value_dic={}
+
+            for pix in tqdm(dic):
+                trend_list = []
+
+                time_series_all = dic[pix]
+                if len(time_series_all)<23:
+                    continue
+                time_series_all = np.array(time_series_all)
+                # print(time_series_all)
+                for ss in range(slides):
+                    if np.isnan(np.nanmean(time_series_all)):
+                        print('error')
+                        continue
+                    # print((len(time_series)))
+                    ### if all values are identical, then continue
+                    time_series=time_series_all[ss]
+                    # print(time_series)
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
+                    # print(len(time_series))
+
+                    if np.nanmean(time_series)==0:
+                        continue
+                    cv=np.nanstd(time_series)/np.nanmean(time_series)*100
+                    trend_list.append(cv)
+
+                trend_dic[pix]=trend_list
+
+            np.save(outf, trend_dic)
+
+            ##tiff
+            # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
+            #
+            # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+    def trend_analysis(self):  ##each window average trend
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
+        outdir = rf'E:\Project3\Data\TRENDY_LAI\trend_analysis\moving_window_CV\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            # if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+            #                            'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
+
+
+            outf = outdir + f.split('.')[0]
+            # if os.path.isfile(outf + '_trend.tif'):
+            #     continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r, c = pix
+                if r < 120:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                    ## ignore the last one year
+
+                # time_series = dic[pix][:-1]
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+                # print(time_series)
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                # if len(set(time_series)) == 1:
+                #     continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+
+            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
+
+            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+
+            # plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
+
+    pass
+
+
 
 
 class Check_data():
@@ -2008,8 +2385,9 @@ def main():
 
     # extract_heatevent().run()
     # extract_rainfall_annual_based_on_daily().run()
+    TRENDY_model().run()
 
-    moving_window().run()
+    # moving_window().run()
     # PLOT().run()
     # Check_data().run()
 

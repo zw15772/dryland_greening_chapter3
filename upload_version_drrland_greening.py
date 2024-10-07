@@ -738,15 +738,7 @@ class PLOT_dataframe:
             return df
 
 
-class TRENDY_model:
-    ## 1)
 
-    def __init__(self):
-        pass
-
-    def run(self):
-
-        pass
 
 
 def main():
