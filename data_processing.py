@@ -102,6 +102,7 @@ class data_processing():
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
+        self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
         # self.scale_LAI()
@@ -109,7 +110,7 @@ class data_processing():
         # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
-        self.tif_to_dic()
+        # self.tif_to_dic()
 
 
         # self.extract_GS()
@@ -1581,12 +1582,14 @@ class data_processing():
 
 
     def resample_trendy(self):
-        fdir_all = data_root + 'GPP\\NIRvGPP\TIFF\\'
+        fdir_all = 'E:\Project3\Data\CO2_TIFF\\'
         for fdir in tqdm(os.listdir(fdir_all)):
-
-            outdir = data_root + rf'\GPP\\NIRvGPP\\resample\\\\{fdir}\\'
-            if os.path.isdir(outdir):
+            if 'resample' in fdir:
                 continue
+
+            outdir = rf'E:\Project3\Data\CO2_TIFF\\resample\\{fdir}\\'
+            # if os.path.isdir(outdir):
+            #     continue
 
 
             T.mk_dir(outdir, force=True)
@@ -1905,18 +1908,77 @@ class data_processing():
 
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_average, outdir + '{}{:02d}.tif'.format(year, month))
     def unify_TIFF(self):
-        fdir_all=rf'E:\Carbontracker\resample\\'
-        outdir=rf'E:\Carbontracker\unify\\'
-        Tools().mk_dir(outdir,force=True)
+        fdir_all=rf'E:\Project3\Data\CO2_TIFF\resample\\'
 
-        for f in tqdm(os.listdir(fdir_all)):
-            fpath=fdir_all+f
-            outpath=outdir+f
-            if not f.endswith('.tif'):
+
+        for fdir in os.listdir(fdir_all):
+            outdir = rf'E:\Project3\Data\CO2_TIFF\unify\\{fdir}\\'
+            Tools().mk_dir(outdir, force=True)
+
+            for f in tqdm(os.listdir(fdir_all+fdir)):
+                fpath=join(fdir_all,fdir,f)
+
+                outpath=join(outdir,f)
+
+                if not f.endswith('.tif'):
+                    continue
+                if f.startswith('._'):
+                    continue
+                unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.25)
+
+    def aggreate_CO2(self):  # aggregate biweekly data to monthly
+        fdir_all = rf'E:\Project3\Data\CO2_TIFF\unify\SSP245\\'
+        outdir = rf'E:\Project3\Data\CO2_TIFF\annual\SSP245\\'
+        Tools().mk_dir(outdir, force=True)
+
+        year_list = list(range(2015, 2021))
+
+
+        for year in tqdm(year_list):
+            data_list = []
+
+
+            for f in tqdm(os.listdir(fdir_all)):
+                if not f.endswith('.tif'):
+                    continue
+
+                data_year = f.split('.')[0][0:4]
+
+
+                if not int(data_year) == year:
+                    continue
+
+
+                arr = ToRaster().raster2array(fdir_all + f)[0]
+                # arr=arr/1000 ###
+                arr_unify = arr[:720][:720,
+                            :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                arr_unify = np.array(arr_unify)
+
+                data_list.append(arr_unify)
+            data_list = np.array(data_list)
+            print(data_list.shape)
+            # print(len(data_list))
+            # exit()
+
+            ##define arr_average and calculate arr_average
+
+            arr_average = np.nanmean(data_list, axis=0)
+            arr_average = np.array(arr_average)
+
+            if np.isnan(np.nanmean(arr_average)):
                 continue
-            if f.startswith('._'):
-                continue
-            unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.25)
+            # if np.nanmean(arr_average) < 0.:
+            #     continue
+            # plt.imshow(arr_average)
+            # plt.title(f'{year}{month}')
+            # plt.show()
+
+            # save
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_average, outdir+f'{year}.tif')
+
+
 
     def average_temperature(self):  ### calculate the average temperature of each year
         fdir_tmax=rf'C:\Users\wenzhang1\Desktop\Terra\resample\tmax\\'
@@ -11963,7 +12025,7 @@ class build_dataframe():
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'E:\Data\ERA5_daily\dict\\Dataframe\\')
+        self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + 'moving_window.df'
     def run(self):
@@ -12115,12 +12177,14 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'E:\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Data\ERA5_monthly\dict\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
-
-            if not f.split('.')[0] in ['average_heat_event_temp']:
+            if not 'CRU' in variable:
                 continue
+
+            # if not f.split('.')[0] in ['CO2',]:
+            #     continue
 
             variable= f.split('.')[0]
 
@@ -15610,7 +15674,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'E:\Data\ERA5_daily\dict\extract_heatevent_annual\heat_event_extraction\\average_heat_event_temp.npy'
+        fdir = rf'D:\Project3\Data\monthly_data\GPCC\dic\\per_pix_dic_000.npy'
 
 
         dic=T.load_npy(fdir)
@@ -15630,6 +15694,8 @@ class check_data():
             # if r<480:
             #     continue
             vals=dic[pix]
+
+
             if len(vals)<1:
                 continue
             if np.isnan(np.nanmean(vals)):
@@ -17209,7 +17275,7 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()

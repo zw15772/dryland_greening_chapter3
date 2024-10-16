@@ -75,7 +75,198 @@ result_root = 'D:/Project3/Result/'
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
+class data_processing:
+    def run(self):
+        # self.aggreate_CO2()
+        #
+        # self.gobal_average()
+        # self.create_nan_mask()
+        # self.tif_to_dic()
+        self.interpolation()
+        pass
 
+    def aggreate_CO2(self):  # aggregate biweekly data to monthly
+        fdir_all = rf'E:\Project3\Data\CO2_TIFF\unify\historic\\'
+        outdir = rf'E:\Project3\Data\CO2_TIFF\annual\historic\\'
+        Tools().mk_dir(outdir, force=True)
+
+        year_list = list(range(1982, 2015))
+
+
+        for year in tqdm(year_list):
+            data_list = []
+
+
+            for f in tqdm(os.listdir(fdir_all)):
+                if not f.endswith('.tif'):
+                    continue
+
+                data_year = f.split('.')[0][0:4]
+
+
+                if not int(data_year) == year:
+                    continue
+
+
+                arr = ToRaster().raster2array(fdir_all + f)[0]
+                # arr=arr/1000 ###
+                arr_unify = arr[:720][:720,
+                            :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                arr_unify = np.array(arr_unify)
+
+                data_list.append(arr_unify)
+            data_list = np.array(data_list)
+            print(data_list.shape)
+            # print(len(data_list))
+            # exit()
+
+            ##define arr_average and calculate arr_average
+
+            arr_average = np.nanmean(data_list, axis=0)
+            arr_average = np.array(arr_average)
+
+            if np.isnan(np.nanmean(arr_average)):
+                continue
+            # if np.nanmean(arr_average) < 0.:
+            #     continue
+            # plt.imshow(arr_average)
+            # plt.title(f'{year}{month}')
+            # plt.show()
+
+            # save
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_average, outdir+f'{year}.tif')
+
+
+
+    def gobal_average(self):  ## CO2 global average
+        fdir = rf'E:\Project3\Data\CO2_TIFF\annual\historic\\'
+        data_list = []
+        for f in os.listdir(fdir):
+            arr = ToRaster().raster2array(fdir + f)[0]
+            ## flatten and avergae
+            arr = arr.flatten()
+            arr[arr < -9999] = np.nan
+            arr = np.nanmean(arr)
+            print(arr)
+
+            data_list.append(arr)
+        plt.plot(data_list)
+        plt.show()
+    def create_nan_mask(self):
+        ## creat nan mask
+        fdir = rf'E:\Project3\Data\CO2_TIFF\annual\\historic\\'
+        arr=np.ones((720,1440))*np.nan
+        DIC_and_TIF().arr_to_tif(arr,fdir+'2014.tif')
+
+        pass
+    def tif_to_dic(self):
+
+        fdir_all =rf'E:\Project3\Data\CO2\\CO2_TIFF\annual\\'
+
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+
+        year_list = list(range(1982, 2021))
+
+        # 作为筛选条件
+        for fdir in os.listdir(fdir_all):
+            if not 'historic' in fdir:
+                continue
+
+            outdir = rf'E:\Project3\Data\CO2\\dic\{fdir}\\'
+            # if os.path.isdir(outdir):
+            #     pass
+
+            T.mk_dir(outdir, force=True)
+            all_array = []  #### so important  it should be go with T.mk_dic
+
+            for f in os.listdir(fdir_all + fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:
+                    continue
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir_all + fdir + '\\' + f)
+                array = np.array(array, dtype=float)
+
+                array_unify = array[:720][:720,
+                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+
+                array_unify[array_unify < -999] = np.nan
+                # array_unify[array_unify > 7] = np.nan
+                # array[array ==0] = np.nan
+
+
+
+                # plt.imshow(array)
+                # plt.show()
+                array_mask = np.array(array_mask, dtype=float)
+                # plt.imshow(array_mask)
+                # plt.show()
+                array_dryland = array_unify * array_mask
+                # plt.imshow(array_dryland)
+                # plt.show()
+
+                all_array.append(array_dryland)
+
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
+
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
+
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+
+        pass
+    def interpolation(self):
+        fdir=rf'E:\Project3\Data\CO2\dic\historic\\'
+
+        dict=T.load_npy_dir(fdir)
+        dict_new={}
+        for pix in tqdm(dict):
+            time_series=dict[pix]
+
+            ## interpolation
+
+            if np.isnan(time_series).all():
+                continue
+            # print(time_series)
+            ## interpolation
+            time_series=np.array(time_series)
+            time_series_interp=T.interp_nan(time_series)
+            # print(time_series_interp)
+
+            dict_new[pix]=time_series_interp
+
+
+        np.save(rf'E:\Project3\Data\CO2\dic\historic\CO2.npy',dict_new)
+
+        pass
 class growth_rate:
     from scipy import stats, linalg
     def run(self):
@@ -571,20 +762,21 @@ class bivariate_analysis():
         import xymap
 
 
-        fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
-        outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
+        fdir_CV = rf'E:\Project3\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
+        fdir_trend = rf'D:\Project3\Result\trend_analysis\relative_change\OBS_extend\\'
+        outdir = rf'D:\Project3\Result\bivariate\\\LAI_trend_vs_CV\\'
         T.mk_dir(outdir,force=True)
 
-        tif_LAI4g_trend = join(fdir,'heat_event_frequency_trend.tif')
-        tif_LAI4g_trend_growth_rate_trend = join(fdir,'detrended_annual_LAI4g_CV_trend.tif')
+        tif_LAI4g_trend = fdir_CV+'LAI4g_CV_trend.tif'
+        tif_LAI4g_trend_growth_rate_trend = fdir_trend+'LAI4g_trend.tif'
 
-        outf = join(outdir,f'heat_event_frequency_trend.tif')
-        x_label = 'heat_event_frequency_trend(unitless/year)'
-        y_label = 'CV trend (%/year)'
-        min1 = -0.1
-        max1 = 0.1
-        min2 = -.5
-        max2 = .5
+        outf = join(outdir,f'LAI_trend_vs_CV.tif')
+        x_label = 'LAI4g_CV_trend(%/year)'
+        y_label = 'LAI4g_trend (%//year)'
+        min1 = -1
+        max1 = 1
+        min2 = -.05
+        max2 = .05
         xymap.Bivariate_plot_1(alpha = 255,upper_left_color = (255,202, 202), #
                  upper_right_color = (148, 202, 112), #
                  lower_left_color = (110,0, 0), #
@@ -742,10 +934,11 @@ class PLOT_dataframe:
 
 
 def main():
+    data_processing().run()
     # growth_rate().run()
 
     # trend_analysis().run()
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
     # extract_rainfall().run()
 
     # PLOT_dataframe().plot_LAItrend_vs_LAICV()
