@@ -102,7 +102,7 @@ class data_processing():
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
-        self.aggreate_CO2()
+        # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
         # self.scale_LAI()
@@ -110,7 +110,7 @@ class data_processing():
         # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
-        # self.tif_to_dic()
+        self.tif_to_dic()
 
 
         # self.extract_GS()
@@ -848,7 +848,7 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\monthly_data\LAI4g\\'
+        fdir_all = rf'D:\Project3\Data\monthly_data\CRU\\'
 
         NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -859,10 +859,10 @@ class data_processing():
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'scales_LAI4g' in fdir:
+            if not 'unify' in fdir:
                 continue
 
-            outdir=data_root+rf':\Project3\Data\monthly_data\\LAI4g\\'
+            outdir=rf'D:\Project3\Data\monthly_data\\CRU\\DIC\\'
             # if os.path.isdir(outdir):
             #     pass
 
@@ -887,7 +887,7 @@ class data_processing():
                 # array_unify[array_unify > 7] = np.nan
                 # array[array ==0] = np.nan
 
-                array_unify[array_unify < 0] = np.nan
+                # array_unify[array_unify < 0] = np.nan
 
 
 
@@ -12177,10 +12177,10 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'E:\Project3\Data\ERA5_monthly\dict\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
-            if not 'CRU' in variable:
+            if not 'detrended_sum_rainfall_std' in variable:
                 continue
 
             # if not f.split('.')[0] in ['CO2',]:
@@ -15674,11 +15674,11 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'D:\Project3\Data\monthly_data\GPCC\dic\\per_pix_dic_000.npy'
+        fdir = rf'D:\Project3\Data\monthly_data\GPCC\dic\\'
 
 
-        dic=T.load_npy(fdir)
-        # dic=T.load_npy_dir(fdir)
+        # dic=T.load_npy(fdir)
+        dic=T.load_npy_dir(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -15691,9 +15691,33 @@ class check_data():
 
         for pix in dic:
             r,c=pix
+            # (r,c)=(817,444)
+            # if not r==444:
+            #     continue
+            # if not c==817:
+            #     continue
             # if r<480:
             #     continue
             vals=dic[pix]
+            # date_list = []
+            # date_base = datetime.datetime(1982, 1, 1)
+            # for i in range(len(vals)):
+            #     # date_list.append(date_base + datetime.timedelta(months=i))
+            #     date_obj = T.month_index_to_date_obj(i, date_base,)
+            #     date_list.append(date_obj)
+            # # exit()
+            #
+            # plt.plot(date_list,vals)
+            # plt.title(pix)
+            # plt.figure()
+            # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
+            # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
+            # arr[arr>999999] = np.nan
+            # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
+            # plt.colorbar()
+            # plt.scatter(pix[1],pix[0],c='k',s=200)
+            # plt.show()
+
 
 
             if len(vals)<1:
@@ -15708,12 +15732,15 @@ class check_data():
 
             # len_dic[pix]=np.nanmean(vals)
             # len_dic[pix]=np.nanstd(vals)
+            vals=np.array(vals)
+
+            vals=vals[~np.isnan(vals)]
 
             len_dic[pix] = len(vals)
         arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
 
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=-0.0011,vmax=0.001)
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=460,vmax=468)
         plt.colorbar()
         plt.title(fdir)
         plt.show()

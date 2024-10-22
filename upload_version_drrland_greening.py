@@ -512,7 +512,6 @@ class trend_analysis():  ## figure 1
                 continue
 
 
-
             outf=outdir+f.split('.')[0]
             if os.path.isfile(outf+'_trend.tif'):
                 continue
@@ -576,32 +575,32 @@ class trend_analysis():  ## figure 1
             np.save(outf + '_p_value', p_value_arr_dryland)
 
     def robinson(self):
-        fdir=rf'E:\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
+        fdir=rf'E:\Project3\Data\ERA5_daily\dict\partial_correlation_CV\partial_correlation_sign_CV\\'
         temp_root=result_root+r'Result_new\trend_analysis_moving_window\\robinson\\'
-        out_pdf_fdir=result_root+r'Result_new\trend_analysis_moving_window\\robinson\\pdf\\'
+        out_pdf_fdir=rf'E:\Project3\Data\ERA5_daily\dict\partial_correlation_CV\partial_correlation_sign_CV\pdf\\'
 
         T.mk_dir(out_pdf_fdir,force=True)
+        for f in os.listdir(fdir):
+            variable=f.split('.')[0]
+            if not f.endswith('.tif'):
+                continue
 
-        variable='rainfall_event_size'
-        f_trend=fdir+variable+'_trend.tif'
-        #
-        f_p_value=fdir+variable+'_p_value.tif'
-
-
-        m,ret=Plot().plot_Robinson(f_trend, vmin=-0.1,vmax=0.1,is_discrete=True,colormap_n=7,)
-        self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=2)
+            fpath=fdir+f
 
 
-        # plt.title(f'{variable}_(%/yr)')
-        plt.title(f'rainfall_intensity (mm/yr)')
-        # plt.title(f'{variable}_(day/yr)')
-        # plt.title(f'(%/100mm/yr)')
-        # plt.title('r')
-        # plt.show()
-        ## save fig pdf
-        #save pdf
-        plt.savefig(out_pdf_fdir+variable+'.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+            Plot().plot_Robinson(fpath, vmin=-1,vmax=1,is_discrete=True,colormap_n=11,)
+        # self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=2)
+
+            # plt.title(f'{variable}_(%/yr)')
+            # plt.title(f'{variable}')
+            # plt.title(f'{variable}_(day/yr)')
+            # plt.title(f'(%/100mm/yr)')
+            # plt.title('r')
+            # plt.show()
+            ## save fig pdf
+            #save pdf
+            plt.savefig(out_pdf_fdir+variable+'.pdf', dpi=300, bbox_inches='tight')
+            plt.close()
 
 
     def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=5,
@@ -934,10 +933,10 @@ class PLOT_dataframe:
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # growth_rate().run()
 
-    # trend_analysis().run()
+    trend_analysis().run()
     # bivariate_analysis().run()
     # extract_rainfall().run()
 
