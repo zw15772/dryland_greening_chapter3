@@ -1728,845 +1728,7 @@ class Build_df:
         for key in df.keys():
             print(key)
         pass
-class extract_rainfall:
-    ## 1) extract rainfall CV
-    ## 2) extract rainfall total
-    ## 3) extract rainfall frequency
-    ## extract dry frequency
-    ## 4) extract rainfall intensity
-    ## 5) extract rainfall wet spell
-    ## 6) extract rainfall dry spell
-    def run(self):
-        # self.extract_growing_season()
-        # self.extract_rainfall_CV_total()
-        # self.extract_rainfall_CV()
-        self.rainfall_frequency()
-        # self.dry_spell()
 
-        # self.check_spatial_map()
-        pass
-
-    def define_quantile_threshold(self):
-        # 1) extract extreme wet event based on 90th percentile and calculate frequency and total duration
-        # 2) extract extreme dry event based on 10th percentile and calculate frequency and total duration
-        # 3) extract wet event intensity
-        ## 4) extract dry event intensity
-        ## extract VPD and calculate the frequency of VPD>2kpa
-        fdir=data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\define_quantile_threshold\\'
-        T.mk_dir(outdir,force=True)
-
-        for f in T.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-
-            spatial_dic = np.load(fdir+f,allow_pickle=True).item()
-            result_dic={}
-            for pix in tqdm(spatial_dic):
-
-                vals=spatial_dic[pix]
-                vals_flatten=[item for sublist in vals for item in sublist]
-                vals_flatten = np.array(vals_flatten)
-
-                if T.is_all_nan(vals_flatten):
-                    continue
-                # plt.bar(range(len(vals_flatten)),vals_flatten)
-                # plt.show()
-
-                val_90th= np.percentile(vals_flatten,90)
-                val_10th = np.percentile(vals_flatten, 10)
-                val_95th = np.percentile(vals_flatten, 95)
-                val_5th = np.percentile(vals_flatten, 5)
-                val_99th = np.percentile(vals_flatten, 99)
-                val_1st = np.percentile(vals_flatten, 1)
-                dic_i={
-                    '90th':val_90th,
-                    '10th':val_10th,
-                    '95th':val_95th,
-                    '5th':val_5th,
-                    '99th':val_99th,
-                    '1st':val_1st
-                }
-                result_dic[pix]=dic_i
-            outf=outdir+f
-            np.save(outf,result_dic)
-
-    def extract_extreme_rainfall_event(self):
-        ENSO_type = 'La_nina'
-        fdir_threshold = data_root+rf'ERA5\ERA5_daily\dict\define_quantile_threshold\\'
-        fdir_yearly_all=rf'D:\Project3\Data\ERA5\ERA5_daily\dict\ENSO_year_extraction\\{ENSO_type}\\'
-        outdir = data_root+rf'\ERA5\ERA5_daily\dict\\extreme_event_extraction\\{ENSO_type}\\'
-        T.mk_dir(outdir,force=True)
-        spatial_threshold_dic=T.load_npy_dir(fdir_threshold)
-        result_dic = {}
-        for f in T.listdir(fdir_yearly_all):
-            spatial_dic = T.load_npy(fdir_yearly_all+f)
-            for pix in tqdm(spatial_dic):
-                if not pix in spatial_threshold_dic:
-                    continue
-                threshold_dic=spatial_threshold_dic[pix]
-
-                val_90th = threshold_dic['90th']
-                print(val_90th)
-                val_10th = threshold_dic['10th']
-                print(val_10th)
-                EI_nino_dic= spatial_dic[pix]
-                result_dic_i = {}
-                for year_range in EI_nino_dic:
-
-                    extreme_wet_event = []
-                    extreme_dry_event = []
-                    for val in EI_nino_dic[year_range]:
-                        if val > val_90th:
-                            extreme_wet_event.append(val)
-
-                    ## calculate the frequency and average intensity of extreme wet event and extreme dry event
-                    ## intensity
-                    average_intensity_extreme_wet_event = np.nanmean(extreme_wet_event)
-
-                    ## frequency
-                    frequency_extreme_wet_event = len(extreme_wet_event)
-
-
-
-
-                    result_dic_i[year_range] = {
-                        f'{ENSO_type}_average_intensity_extreme_wet_event':average_intensity_extreme_wet_event,
-
-                        f'{ENSO_type}_frequency_extreme_wet_event':frequency_extreme_wet_event,
-
-
-
-                    }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-    def extract_rainfall_CV_total(self):  ## extract total and CV of rainfall
-        fdir = data_root+rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir_CV = data_root+rf'\ERA5\ERA5_daily\dict\\rainfall_CV_total\\'
-
-        T.mk_dir(outdir_CV,force=True)
-
-        for f in T.listdir(fdir):
-
-            spatial_dic = np.load(fdir+f,allow_pickle=True).item()
-            result_dic = {}
-
-            for pix in tqdm(spatial_dic):
-                ### ui==if northern hemisphere
-                r,c = pix
-                vals = spatial_dic[pix]
-                vals_flatten = np.array(vals).flatten()
-
-
-                result_dic_i = {}
-
-                for i in range(38):
-
-                    if 120<r<=240:  # Northern hemisphere
-                        ### April to October is growing season
-
-                        vals_growing_season = vals_flatten[i*365+120:(i+1)*365+304]
-
-                    elif 240<r<480:### whole year is growing season
-
-                        vals_growing_season = vals_flatten[i*365:(i+1)*365]
-
-
-                    else: ## october to April is growing season  Southern hemisphere
-                        if i >=37:
-                            break
-
-
-                        vals_growing_season = vals_flatten[i*365+304:(i+1)*365+120]
-
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-                    CV = np.std(vals_growing_season)/np.mean(vals_growing_season)
-                    total = np.nansum(vals_growing_season)
-                    result_dic_i[i] = {f'CV_rainfall':CV,
-                                       }
-                result_dic[pix] = result_dic_i
-
-            outf = outdir_CV+f
-
-            np.save(outf,result_dic)
-
-    def extract_rainfall_CV(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
-
-        T.mk_dir(outdir_CV,force=True)
-
-
-
-        spatial_dic = T.load_npy_dir(fdir)
-        result_dic = {}
-
-        for pix in tqdm(spatial_dic):
-            ### ui==if northern hemisphere
-            r,c = pix
-            vals = spatial_dic[pix]
-            vals_flatten = np.array(vals).flatten()
-
-
-            CV_list = []
-
-            for i in range(38):
-
-                if 120<r<=240:  # Northern hemisphere
-                    ### April to October is growing season
-
-                    vals_growing_season = vals_flatten[i*365+120:(i+1)*365+304]
-
-                elif 240<r<480:### whole year is growing season
-
-                    vals_growing_season = vals_flatten[i*365:(i+1)*365]
-
-
-                else: ## october to April is growing season  Southern hemisphere
-                    if i >=37:
-                        break
-
-
-                    vals_growing_season = vals_flatten[i*365+304:(i+1)*365+120]
-
-                vals_growing_season = np.array(vals_growing_season)
-                if T.is_all_nan(vals_growing_season):
-                    continue
-                CV = np.std(vals_growing_season)/np.mean(vals_growing_season)
-                CV_list.append(CV)
-            result_dic[pix] = CV_list
-
-        outf = outdir_CV+'CV_rainfall.npy'
-
-        np.save(outf,result_dic)
-
-    def extract_growing_season(self):
-        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir = data_root + rf'\ERA5\ERA5_daily\dict\\growing_season_extraction\\'
-        T.mk_dir(outdir, force=True)
-
-        for f in T.listdir(fdir):
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-
-                spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-
-                r, c = pix
-                vals = spatial_dic[pix]
-                vals_flatten = np.array(vals).flatten()
-
-                for i in range(38):
-
-                    if 120 < r <= 240:  # Northern hemisphere
-                        ### April to October is growing season
-
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-
-
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
-                            break
-
-                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-
-                    vals_growing_season = np.array(vals_growing_season)
-                    result_dic[pix] = vals_growing_season
-
-
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-    def rainfall_frequency(self):
-
-        fdir =rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
-        outdir=rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
-        threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
-        dic_threshold = T.load_npy_dir(threshold_f)
-        T.mk_dir(outdir,force=True)
-
-
-        spatial_dic = T.load_npy_dir(fdir)
-        result_dic = {}
-        for pix in tqdm(spatial_dic):
-            r,c=pix
-            if not pix in dic_threshold:
-                continue
-            vals = spatial_dic[pix]
-            vals_flatten = np.array(vals).flatten()
-            threshold = dic_threshold[pix]
-            threshold_wet = threshold['90th']
-
-
-
-
-            result_dic_i = {}
-            frequency_wet_list = []
-            for i in range(38):
-                if 120<r<=240:  # Northern hemisphere
-
-                    vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-                    ## calculate days >threshold
-
-
-
-                elif 240 < r < 480:  ### whole year is growing season
-
-                    vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-
-                else:  ## october to April is growing season  Southern hemisphere
-                    if i >= 37:
-                        break
-
-                    vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-                vals_growing_season = np.array(vals_growing_season)
-                if T.is_all_nan(vals_growing_season):
-                    continue
-                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])/len(vals_growing_season) * 100
-                frequency_wet_list.append(frequency_wet)
-
-
-            result_dic[pix] = frequency_wet_list
-            outf = outdir + 'wet_frequency_90th.npy'
-            np.save(outf, result_dic)
-
-    def rainfall_extreme_events(self):
-
-        fdir =rf'E:\Data\ERA5_daily\dict\\precip_transform\\'
-        outdir=rf'E:\Data\\ERA5_daily\dict\\rainfall_CV\\'
-        threshold_f=rf'E:\Data\\ERA5_daily\dict\\define_quantile_threshold\\'
-        dic_threshold = T.load_npy_dir(threshold_f)
-        T.mk_dir(outdir,force=True)
-
-
-        spatial_dic = T.load_npy_dir(fdir)
-        result_dic = {}
-        for pix in tqdm(spatial_dic):
-            r,c=pix
-            if not pix in dic_threshold:
-                continue
-            vals = spatial_dic[pix]
-            vals_flatten = np.array(vals).flatten()
-            threshold = dic_threshold[pix]
-            threshold_wet = threshold['90th']
-
-
-
-
-            result_dic_i = {}
-            frequency_wet_list = []
-            for i in range(38):
-                if 120<r<=240:  # Northern hemisphere
-
-                    vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-                    ## calculate days >threshold
-
-
-
-                elif 240 < r < 480:  ### whole year is growing season
-
-                    vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-
-                else:  ## october to April is growing season  Southern hemisphere
-                    if i >= 37:
-                        break
-
-                    vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-                vals_growing_season = np.array(vals_growing_season)
-                if T.is_all_nan(vals_growing_season):
-                    continue
-                frequency_wet = len(np.where(vals_growing_season > threshold_wet)[0])/len(vals_growing_season) * 100
-                frequency_wet_list.append(frequency_wet)
-
-
-            result_dic[pix] = frequency_wet_list
-            outf = outdir + 'wet_frequency_90th.npy'
-            np.save(outf, result_dic)
-
-    def dry_spell(self):
-
-        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\precip_transform\\'
-        outdir = data_root + rf'\ERA5\ERA5_daily\dict\\dry_spell\\'
-        T.mk_dir(outdir, force=True)
-        for f in T.listdir(fdir):
-
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r,c=pix
-
-                vals = spatial_dic[pix]
-                vals_flatten = np.array(vals).flatten()
-
-                result_dic_i = {}
-
-                for i in range(38):
-                    if 120<r<=240:  # Northern hemisphere
-
-                        vals_growing_season = vals_flatten[i * 365 + 120:(i) * 365 + 304]
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals_flatten[i * 365:(i + 1) * 365]
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-                        vals_growing_season = vals_flatten[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    vals_wet = vals_growing_season.copy()
-
-                    vals_wet[vals_wet >= 1] = np.nan
-
-                    dry_index = np.where(~np.isnan(vals_wet))
-                    if len(dry_index[0]) == 0:
-                        continue
-                    dry_index = np.array(dry_index)
-                    dry_index = dry_index.flatten()
-                    dry_index_groups = T.group_consecutive_vals(dry_index)
-
-                    # plt.bar(range(len(vals_growing_season)), vals_growing_season)
-                    # plt.bar(range(len(vals_growing_season)), vals_wet)
-                    # print(dry_index_groups)
-                    # plt.show()
-                    ## calcuate average wet spell
-                    dry_spell = []
-                    for group in dry_index_groups:
-                        dry_spell.append(len(group))
-                    dry_spell = np.array(dry_spell)
-
-                    average_wet_spell = np.nanmean(dry_spell)
-                    maxmum_wet_spell = np.nanmax(dry_spell)
-                    result_dic_i[i] = {
-                        f'average_dry_spell': average_wet_spell,
-                        f'maximum_dry_spell': maxmum_wet_spell
-                    }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-
-    pass
-    def check_spatial_map(self):
-        fdir = data_root + rf'\ERA5\ERA5_daily\dict\\dry_spell\\'
-        spatial_dic= T.load_npy_dir(fdir)
-        key_list = ['average_dry_spell','maximum_dry_spell']
-
-        for key in key_list:
-            spatial_dict_num = {}
-            spatial_dict_mean = {}
-
-            for pix in spatial_dic:
-
-                annual_dict = spatial_dic[pix]
-                if len(annual_dict)==0:
-                    continue
-
-                valid_year = 0
-                vals_list = []
-                for year in annual_dict:
-                    dict_i = annual_dict[year]
-                    if not key in dict_i:
-                        continue
-                    val = dict_i[key]
-                    vals_list.append(val)
-
-                    valid_year+=1
-                vals_mean = np.nanmean(vals_list)
-                spatial_dict_num[pix] = valid_year
-                spatial_dict_mean[pix] = vals_mean
-
-            arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_mean)
-            plt.figure()
-            plt.imshow(arr,interpolation='nearest')
-            plt.title(key)
-            plt.colorbar()
-        plt.show()
-
-
-
-        #     spatial_dict_test[pix] = np.nanmean(vals['average_dry_spell'])
-        # arr = DIC_and_TIF(pixelsize=.25).pix_dic_to_spatial_arr(spatial_dict_test)
-        # plt.imshow(arr,interpolation='nearest')
-        # # plt.title(key)
-        # plt.show()
-
-
-
-
-        pass
-
-class extract_temperature:
-    def run(self):
-
-        self.extract_extreme_heat_frequency()
-        # self.extract_extreme_cold_frequency()
-        # self.extract_tmax_average_CV()
-        # self.extract_tmin_average_CV()
-        # self.cold_spell()
-        # self.heat_spell()
-
-
-        pass
-    def extract_extreme_heat_frequency(self):
-        threshold_f = rf'E:\Data\\ERA5\\max_temp\define_quantile_threshold\\'
-        fdir = rf'E:\Data\\ERA5\\max_temp\\deseasonal_detrend\\'
-        outdir = rf'E:\Data\\ERA5\\max_temp\\extreme_heat_frequency\\'
-
-
-        T.mk_dir(outdir, force=True)
-        spatial_threshold_dic = T.load_npy_dir(threshold_f)
-        result_dic = {}
-        for f in T.listdir(fdir):
-
-
-            spatial_dic = T.load_npy(fdir + f)
-            for pix in tqdm(spatial_dic):
-                r, c = pix
-                if not pix in spatial_threshold_dic:
-                    continue
-                threshold_dic = spatial_threshold_dic[pix]
-
-                val_90th = threshold_dic['90th']
-                # print(val_90th)
-
-                vals = spatial_dic[pix]
-
-
-                result_dic_i = {}
-                for i in range(38):
-                    if 120 < r <= 240:  # Northern hemisphere
-
-                        vals_growing_season = vals[i * 365 + 120:i * 365 + 304]
-                        ## calculate days >threshold
-
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals[i * 365:(i + 1) * 365]
-
-
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-
-                        vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-                    array_abovethrehold=np.where(vals_growing_season>val_90th,vals_growing_season,-999)
-                    ### calculate average anomaly of days >threshold
-                    array_abovethrehold[array_abovethrehold<-99]=np.nan
-                    average_anomaly_heat = np.nanmean(array_abovethrehold)
-
-
-
-                    frequency_heat = len(np.where(vals_growing_season > val_90th)[0])
-                    ### average anomaly heat event = average anomaly of all days >threshold
-
-
-
-
-
-                    result_dic_i[i] = {f'frequency_heat_event': frequency_heat,
-                                        f'average_anomaly_heat_event': average_anomaly_heat}
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-    def extract_extreme_cold_frequency(self):
-        threshold_f = rf'E:\Data\\ERA5\\min_temp\define_quantile_threshold\\'
-        fdir = rf'E:\Data\\ERA5\\min_temp\\deseasonal_detrend\\'
-        outdir = rf'E:\Data\\ERA5\\min_temp\\\extreme_cold_frequency\\'
-
-        T.mk_dir(outdir, force=True)
-        spatial_threshold_dic = T.load_npy_dir(threshold_f)
-        result_dic = {}
-        for f in T.listdir(fdir):
-
-            spatial_dic = T.load_npy(fdir + f)
-            for pix in tqdm(spatial_dic):
-                r, c = pix
-                if not pix in spatial_threshold_dic:
-                    continue
-                threshold_dic = spatial_threshold_dic[pix]
-
-                val_10th = threshold_dic['10th']
-                # print(val_90th)
-
-                vals = spatial_dic[pix]
-
-                result_dic_i = {}
-                for i in range(38):
-                    if 120 < r <= 240:  # Northern hemisphere
-
-                        vals_growing_season = vals[i * 365 + 120:(i) * 365 + 304]
-                        ## calculate days >threshold
-
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals[i * 365:(i + 1) * 365]
-
-
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-
-                        vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-                    frequency_heat = len(np.where(vals_growing_season < val_10th)[0])
-                    ### calculate average anomaly of days >threshold
-                    array_abovethrehold = np.where(vals_growing_season < val_10th, vals_growing_season, -999)
-                    array_abovethrehold[array_abovethrehold <-99] = np.nan
-                    average_anomaly_heat = np.nanmean(array_abovethrehold)
-
-                    result_dic_i[i] = {f'frequency_cold_event': frequency_heat,
-                                       f'average_anomaly_cold_event': average_anomaly_heat}
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-    def extract_tmin_average_CV(self):  ## extract total and CV of temperature
-        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\\extreme_tmin_average_CV\\'
-
-
-        T.mk_dir(outdir, force=True)
-
-        for f in T.listdir(fdir):
-
-            spatial_dic = np.load(fdir+f,allow_pickle=True).item()
-            result_dic = {}
-
-            for pix in tqdm(spatial_dic):
-                ### ui==if northern hemisphere
-                r,c = pix
-                vals = spatial_dic[pix]
-
-
-
-                result_dic_i = {}
-
-                for i in range(38):
-
-                    if 120<r<=240:  # Northern hemisphere
-                        ### April to October is growing season
-
-                        vals_growing_season = vals[i*365+120:(i)*365+304]
-
-                    elif 240<r<480:### whole year is growing season
-
-                        vals_growing_season = vals[i*365:(i+1)*365]
-
-
-                    else: ## october to April is growing season  Southern hemisphere
-                        if i > 37:
-                            break
-
-
-                        vals_growing_season = vals[i*365+304:(i+1)*365+120]
-
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-
-                    CV= np.std(vals_growing_season)/np.mean(vals_growing_season)
-                    result_dic_i[i] = {
-                                       f'tmin_CV':CV}
-                result_dic[pix] = result_dic_i
-
-            outf = outdir+f
-
-            np.save(outf,result_dic)
-
-    def extract_tmax_average_CV(self):  ## extract total and CV of temperature
-        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\deseasonal_detrend\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\max_temp\\extreme_tmax_average_CV\\'
-
-        T.mk_dir(outdir, force=True)
-
-        for f in T.listdir(fdir):
-
-            spatial_dic = np.load(fdir + f, allow_pickle=True).item()
-            result_dic = {}
-
-            for pix in tqdm(spatial_dic):
-                ### ui==if northern hemisphere
-                r, c = pix
-                vals = spatial_dic[pix]
-
-                result_dic_i = {}
-
-                for i in range(38):
-
-                    if 120 < r <= 240:  # Northern hemisphere
-                        ### April to October is growing season
-
-                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
-
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals[i * 365:(i + 1) * 365]
-
-
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i > 37:
-                            break
-
-                        vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
-
-                    vals_growing_season = np.array(vals_growing_season)
-                    if T.is_all_nan(vals_growing_season):
-                        continue
-
-                    CV = np.std(vals_growing_season) / np.mean(vals_growing_season)
-
-                    result_dic_i[i] = {
-                                       f'tmax_CV': CV}
-                result_dic[pix] = result_dic_i
-
-            outf = outdir + f
-
-            np.save(outf, result_dic)
-
-    def heat_spell(self):
-        fdir_threshold = rf'E:\Data\\ERA5\max_temp\define_quantile_threshold\\'
-        dic_threshold = T.load_npy_dir(fdir_threshold)
-
-        fdir_yearly_all = rf'E:\Data\\ERA5\max_temp\\deseasonal_detrend\\'
-        outdir = rf'E:\Data\\ERA5\max_temp\heat_spell\\'
-        T.mk_dir(outdir, force=True)
-        for f in T.listdir(fdir_yearly_all):
-
-            fdir_yearly_data = fdir_yearly_all + f
-            spatial_dic = T.load_npy(fdir_yearly_data)
-
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r, c = pix
-                threshold = dic_threshold[pix]
-                val_90th = threshold['90th']
-
-                vals = spatial_dic[pix]
-
-
-                result_dic_i = {}
-
-                for i in range(38):
-                    if 120 < r <= 240:  # Northern hemisphere
-
-                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals[i * 365:(i + 1) * 365]
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-                        vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    vals_wet = vals_growing_season.copy()
-
-                    vals_wet[vals_wet >= val_90th] = np.nan
-
-                    dry_index = np.where(~np.isnan(vals_wet))
-                    if len(dry_index[0]) == 0:
-                        continue
-                    dry_index = np.array(dry_index)
-                    dry_index = dry_index.flatten()
-                    dry_index_groups = T.group_consecutive_vals(dry_index)
-
-                    # plt.bar(range(len(vals_growing_season)), vals_growing_season)
-                    # plt.bar(range(len(vals_growing_season)), vals_wet)
-                    # print(dry_index_groups)
-                    # plt.show()
-                    ## calcuate average wet spell
-                    dry_spell = []
-                    for group in dry_index_groups:
-                        dry_spell.append(len(group))
-                    dry_spell = np.array(dry_spell)
-
-                    average_wet_spell = np.nanmean(dry_spell)
-                    maxmum_wet_spell = np.nanmax(dry_spell)
-                    result_dic_i[i] = {
-                        f'average_heat_spell': average_wet_spell,
-                        f'maximun_heat_spell': maxmum_wet_spell
-                    }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
-
-    def cold_spell(self):
-        fdir_threshold = rf'E:\Data\\ERA5\min_temp\define_quantile_threshold\\'
-        dic_threshold = T.load_npy_dir(fdir_threshold)
-
-        fdir_yearly_all = rf'E:\Data\\ERA5\min_temp\\deseasonal_detrend\\'
-        outdir = rf'E:\Data\\ERA5\min_temp\cold_spell\\'
-        T.mk_dir(outdir, force=True)
-        for f in T.listdir(fdir_yearly_all):
-
-            fdir_yearly_data = fdir_yearly_all + f
-            spatial_dic = T.load_npy(fdir_yearly_data)
-
-            result_dic = {}
-            for pix in tqdm(spatial_dic):
-                r, c = pix
-                threshold = dic_threshold[pix]
-                val_10th = threshold['10th']
-
-                vals = spatial_dic[pix]
-
-                result_dic_i = {}
-
-                for i in range(38):
-                    if 120 < r <= 240:  # Northern hemisphere
-
-                        vals_growing_season = vals[i * 365 + 120:(i ) * 365 + 304]
-                    elif 240 < r < 480:  ### whole year is growing season
-
-                        vals_growing_season = vals[i * 365:(i + 1) * 365]
-                    else:  ## october to April is growing season  Southern hemisphere
-                        if i >= 37:
-                            break
-                        vals_growing_season = vals[i * 365 + 304:(i + 1) * 365 + 120]
-                    vals_growing_season = np.array(vals_growing_season)
-                    vals_wet = vals_growing_season.copy()
-
-                    vals_wet[vals_wet <= val_10th] = np.nan
-
-                    dry_index = np.where(~np.isnan(vals_wet))
-                    if len(dry_index[0]) == 0:
-                        continue
-                    dry_index = np.array(dry_index)
-                    dry_index = dry_index.flatten()
-                    dry_index_groups = T.group_consecutive_vals(dry_index)
-
-                    # plt.bar(range(len(vals_growing_season)), vals_growing_season)
-                    # plt.bar(range(len(vals_growing_season)), vals_wet)
-                    # print(dry_index_groups)
-                    # plt.show()
-                    ## calcuate average wet spell
-                    dry_spell = []
-                    for group in dry_index_groups:
-                        dry_spell.append(len(group))
-                    dry_spell = np.array(dry_spell)
-
-                    average_wet_spell = np.nanmean(dry_spell)
-                    maxmum_wet_spell = np.nanmax(dry_spell)
-                    result_dic_i[i] = {
-                        f'average_cold_spell': average_wet_spell,
-                        f'maximun_cold_spell': maxmum_wet_spell
-                    }
-                result_dic[pix] = result_dic_i
-            outf = outdir + f
-            np.save(outf, result_dic)
 
 class detrend_variables():
     pass ## detrend the data
@@ -3042,12 +2204,256 @@ class plot_ERA_df:  ## this figure plot all variables
 
 
 
+class CRU_JRA:
+
+    def __init__(self):
+        self.datadir = '/home/liyang/Desktop/14T/wen/CRU-JRA'
+        pass
+
+    def run(self):
+        # self.nc_to_tif()
+        # self.resample()
+        # self.aggregation()
+
+        # self.check_tiff()
+        # self.extract_dryland_tiff()
+        # self.tiff_to_dict()
+        self.transform()
+        # self.extract_dryland_dic()
+        # self.plot_spatial_map()
+
+        pass
+    def nc_to_tif(self):
+        fdir = join(self.datadir,'Tmax','nc')
+        outdir = join(self.datadir,'Tmax','tiff')
+        for folder in T.listdir(fdir):
+            fdir_i = join(fdir,folder)
+            year = folder.split('.')[-4]
+            date_list = []
+            base_time = datetime.datetime(1901,1,1)
+            for d in range(0,365):
+                date = base_time + datetime.timedelta(days=d)
+                for h in [0,6,12,18]:
+                    date_i = date + datetime.timedelta(hours=h)
+                    date_list.append(date_i)
+            # print(len(date_list))
+
+            outdir_i = join(outdir,year)
+            T.mk_dir(outdir_i,force=True)
+            for f in T.listdir(fdir_i):
+                fpath = join(fdir_i,f)
+                outpath = join(outdir_i,f)
+                ncin = Dataset(fpath, 'r')
+                variables = ncin.variables
+                # print(variables.keys())
+                arrs = ncin.variables['tmax'][:]
+
+                for i,arr in tqdm(enumerate(arrs),desc=year,total=len(arrs)):
+                    arr = arr[::-1]-273.15
+                    # print(np.shape(arr));exit()
+                    date = date_list[i]
+                    mon = date.month
+                    day = date.day
+                    hour = date.hour
+                    date_str = f'{year}{mon:02d}{day:02d}{hour:02d}'
+                    newRasterfn = join(outdir_i,f'{date_str}.tif')
+                    longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.5, -0.5
+                    ToRaster().array2raster(newRasterfn, longitude_start, latitude_start, pixelWidth, pixelHeight, arr)
+        pass
+
+    def resample(self):
+        fdir_all = join(self.datadir,'Tmax','tiff')
+        outdir = join(self.datadir,'resample')
+        T.mk_dir(outdir,force=True)
+
+        for fdir in T.listdir(fdir_all):
+            for f in T.listdir(join(fdir_all,fdir)):
+                if not f.endswith('.tif'):
+                    continue
+
+                if f.startswith('._'):
+                    continue
+
+
+                print(f)
+                # exit()
+                date = f.split('.')[0]
+
+                # print(date)
+                # exit()
+                dataset = gdal.Open(fdir_all + '\\' + fdir + '\\' + f)
+                # print(dataset.GetGeoTransform())
+                original_x = dataset.GetGeoTransform()[1]
+                original_y = dataset.GetGeoTransform()[5]
+
+                # band = dataset.GetRasterBand(1)
+                # newRows = dataset.YSize * 2
+                # newCols = dataset.XSize * 2
+                try:
+                    gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.25, yRes=0.25, dstSRS='EPSG:4326')
+                # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+                # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+                except Exception as e:
+                    pass
+
+        pass
+
+    def extract_dryland_tiff(self):
+        NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask.tif')
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+        outdir = join(self.datadir,'aggregate2_dryland')
+        T.mk_dir(outdir,force=True)
+
+        fdir_all = join(self.datadir,'aggregate2')
+        for fdir in T.listdir(fdir_all):
+            fdir_i = join(fdir_all,fdir)
+            outdir_i = join(outdir,fdir)
+            T.mk_dir(outdir_i)
+            for fi in tqdm(T.listdir(fdir_i),desc=fdir):
+                if not fi.endswith('.tif'):
+                    continue
+                fpath = join(fdir_i,fi)
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr[np.isnan(array_mask)] = np.nan
+                # plt.imshow(arr)
+                # plt.show()
+                outpath = join(outdir_i,fi)
+
+                ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
+
+
+
+        pass
+
+    def aggregation(self):
+        fdir = join(self.datadir,'resample')
+        outdir = join(self.datadir,'aggregate2')
+        T.mk_dir(outdir)
+        for year in T.listdir(fdir):
+            print(year,'\n')
+            fdir_i = join(fdir,year)
+            outdir_i = join(outdir,year)
+            T.mk_dir(outdir_i)
+            mon_list = range(1,13)
+            day_list = range(1,32)
+            date_list = []
+            for mon in mon_list:
+                for day in day_list:
+                    date = f'{year}{mon:02d}{day:02d}'
+                    date_list.append(date)
+            for date in tqdm(date_list):
+                selected_list = []
+                for fi in T.listdir(fdir_i):
+                    if not fi.endswith('.tif'):
+                        continue
+                    date_f = fi[:8]
+                    if date_f == date:
+                        fpath = join(fdir_i,fi)
+                        selected_list.append(fpath)
+                if len(selected_list) == 0:
+                    continue
+                outpath = join(outdir_i,f'{date}.tif')
+                print(outpath)
+                # print(date,'\n')
+                if os.path.exists(outpath):
+                    continue
+                selected_arr = []
+                for f in selected_list:
+                    arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+                    selected_arr.append(arr)
+                selected_arr = np.array(selected_arr)
+                selected_arr_sum = np.sum(selected_arr, axis=0)
+
+                longitude_start, latitude_start, pixelWidth, pixelHeight = originX, originY, pixelWidth, pixelHeight
+                ToRaster().array2raster(outpath, longitude_start, latitude_start, pixelWidth, pixelHeight, selected_arr_sum)
+
+        pass
+
+    def check_tiff(self):
+        fdir = join(self.datadir, 'aggregate1')
+        for year in T.listdir(fdir):
+            fdir_i = join(fdir, year)
+            for fi in tqdm(T.listdir(fdir_i),desc=year):
+                fpath = join(fdir_i, fi)
+                try:
+                    arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                except:
+                    print(fpath)
+                    os.remove(fpath)
+
+        pass
+
+    def tiff_to_dict(self):
+
+        fdir_all = join(self.datadir,'aggregate2_dryland')
+        outdir = join(self.datadir,'dict')
+        T.mk_dir(outdir, force=True)
+
+        NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask.tif')
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+
+        year_list = list(range(1982, 2021))
+
+        # 作为筛选条件
+        for folder in os.listdir(fdir_all):
+
+            outdir_i = join(outdir, folder)
+            T.mk_dir(outdir_i, force=True)
+            fdir_i = join(fdir_all, folder)
+
+            Pre_Process().data_transform(fdir_i,outdir_i)
+
+    def transform(self):
+
+        fdir_all = join(self.datadir,'dict')
+        outdir = join(self.datadir,'precip_transform')
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(106):
+            data_list.append(i)
+
+        for data in data_list:
+            dic_all_list = []
+            for fdir_i in T.listdir(fdir_all):
+
+                for f in T.listdir(join(fdir_all, fdir_i)):
+                    if not f.endswith('.npy'):
+                        continue
+                    if f.split('.')[0].split('_')[-1] != '%03d' % data:
+                        continue
+
+                    spatial_dic = np.load(join(fdir_all, fdir_i, f), allow_pickle=True).item()
+                    dic_all_list.append(spatial_dic)
+
+            result_dic = {}
+
+
+            for pix in tqdm(dic_all_list[0].keys()):
+                result_list = []
+                for i in range(len(dic_all_list)):
+                    if pix not in dic_all_list[i].keys():
+                        continue
+                    else:
+                        # print(dic_all_list[i][pix])
+                        result_list.append(dic_all_list[i][pix][0:365])
+                result_dic[pix] = result_list
+            outpath = join(outdir, f'per_pix_dic_%03d' % data)
+            ## save
+            np.save(outpath, result_dic)
+
+
+
+
+
 
 def main():
     # ERA5_daily().run()
 
 
-    extract_rainfall().run()
+
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
     # fire_extraction().run()

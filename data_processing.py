@@ -10789,9 +10789,13 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (rf'D:\Project3\Result\growth_rate\DataFrame\\')
+        # self.this_class_arr = (rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\')
+        # Tools().mk_dir(self.this_class_arr, force=True)
+        # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
+
+        self.this_class_arr = (rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'growth_rate_all_years.df'
+        self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
         pass
 
@@ -10802,14 +10806,14 @@ class build_dataframe():
         # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
-        df=self.build_df(df)
+        # df=self.build_df(df)
         # df=self.build_df_monthly(df)
-        df=self.append_attributes(df)  ## 加属性
+        # df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
-        df=self.append_value(df)   ## insert or append value
+        # df=self.append_value(df)   ## insert or append value
 
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -10818,20 +10822,20 @@ class build_dataframe():
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
-        #
-        df=self.add_AI_classfication(df)
-        #
-        df=self.add_aridity_to_df(df)
-        # # # # # # #
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
         # #
+        # df=self.add_AI_classfication(df)
+        # #
+        # df=self.add_aridity_to_df(df)
+        # # # # # # # #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
+        # # #
         # df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
@@ -10877,18 +10881,18 @@ class build_dataframe():
     def build_df(self, df):
 
 
-        fdir=result_root+rf'growth_rate\growth_rate_raw\\'
+        fdir=rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\'
         all_dic= {}
         for f in os.listdir(fdir):
 
 
             fname= f.split('.')[0]
-            if 'LAI4g' not in fname:
+            if 'CV' not in fname:
                 continue
             fpath=fdir+f
 
             dic = T.load_npy(fpath)
-            key_name=fname+'_growth_rate_raw'
+            key_name=fname
             print(key_name)
             all_dic[key_name]=dic
         # print(all_dic.keys())
@@ -11025,7 +11029,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = result_root + rf'growth_rate\growth_rate_trend_method2\\LAI4g.npy'
+        f = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\CV_rainfall.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -11040,7 +11044,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 1983
+            y = 1982
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -11052,7 +11056,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g_growth_rate'] = change_rate_list
+        df['interannual_rainfall_CV'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -11146,11 +11150,10 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=result_root+rf'\relative_change\OBS_LAI_extend\\'
+        fdir=rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\'
         for f in os.listdir(fdir):
-            if not 'CO2' in f:
+            if  not 'rainfall_intensity' in f:
                 continue
-
 
 
             variable= f.split('.')[0]
@@ -11179,6 +11182,13 @@ class build_dataframe():
 
 
                 vals = val_dic[pix]
+                # print(len(vals))
+                if len(vals)<38:
+
+                    NDVI_list.append(np.nan)
+
+                    continue
+
                 # vals[vals<0]=np.nan
                 # vals[vals>1500]=np.nan
 
@@ -11205,7 +11215,7 @@ class build_dataframe():
                 NDVI_list.append(v1)
 
 
-            df[f'{variable}_relative_change'] = NDVI_list
+            df[f'{variable}'] = NDVI_list
         # exit()
         return df
 
@@ -11240,7 +11250,7 @@ class build_dataframe():
 
                 vals = val_dic[pix]
 
-                # print(len(vals))
+                print(len(vals))
                 ##### if len vals is 38, the end of list add np.nan
 
                 # if len(vals) == 38:
@@ -12180,7 +12190,7 @@ class build_moving_window_dataframe():
         fdir=rf'E:\Project3\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
-            if not 'detrended_sum_rainfall_std' in variable:
+            if not 'rainfall_intensity' in variable:
                 continue
 
             # if not f.split('.')[0] in ['CO2',]:
@@ -17326,8 +17336,8 @@ def main():
     # fingerprint().run()
 
 
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
