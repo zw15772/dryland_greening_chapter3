@@ -67,9 +67,9 @@ D = DIC_and_TIF(pixelsize=0.25)
 
 
 
-this_root = 'D:\Project3\\'
-data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+this_root = 'E:\Project3\\'
+data_root = 'E:/Project3/Data/'
+result_root = 'E:/Project3/Result/'
 
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
@@ -88,6 +88,45 @@ def global_get_gs(pix):
         return global_southern_hemi_gs
     else:
         raise ValueError('r not in range')
+class extract_water_year():
+    def __init__(self):
+        self.datadir = data_root
+    def run (self):
+        self.extract_water_year_precip()
+        pass
+
+    def extract_water_year_precip(self):
+        fdir_all = self.datadir + rf'CPC\transform\\'
+
+        outdir = self.datadir + rf'CPC\water_year\\'
+        Tools().mk_dir(outdir, force=True)
+
+
+        for f in T.listdir(fdir_all):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir_all + f, allow_pickle=True, encoding='latin1').item())
+
+            water_spatial_dict = {}
+            for pix in tqdm(spatial_dict):
+                r, c = pix
+                ## northern hemisphere and southern hemisphere and tropical
+
+                time_series = spatial_dict[pix]
+                ### from 1982 Nov to 2020 Oct
+                ##oct1 is  274 to next year 273
+                time_series=np.array(time_series)
+                time_series_flatten = time_series.flatten()
+                time_series_flatten_watter_year=time_series_flatten[273:-(365-273)]
+                time_series_flatten_watter_year_reshape = time_series_flatten_watter_year.reshape(-1, 365)
+
+                water_spatial_dict[pix] = time_series_flatten_watter_year_reshape
+
+
 
 class extract_heatevent():
     def run (self):
@@ -337,7 +376,7 @@ class extract_rainfall_annual_based_on_daily():
         # self.extract_rainfall_std()
         # self.extract_rainfall_mean()
         # self.extract_rainfall_sum()
-        # self.dry_spell()
+        self.dry_spell()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
         # self.extract_rainfall_frequency()
@@ -346,7 +385,7 @@ class extract_rainfall_annual_based_on_daily():
         # self.rainfall_extreme_wet_event()
 
         # self.extract_rainfall_seasonality()
-        self.extract_rainfall_seasonality_all_year()
+        # self.extract_rainfall_seasonality_all_year()
         # self.extract_seasonal_rainfall_intervals()
         # self.extract_seasonal_rainfall_seasonality()
 
@@ -358,7 +397,7 @@ class extract_rainfall_annual_based_on_daily():
         # self.relative_change()
 
         # self.detrend()
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.mask_spatial_map()
 
         # self.check_spatial_map()
@@ -913,7 +952,7 @@ class extract_rainfall_annual_based_on_daily():
             vals_flatten = np.array(vals).flatten()
             if T.is_all_nan(vals_flatten):
                 continue
-            print(len(vals_flatten))
+            # print(len(vals_flatten))
 
             for val in vals:
 
@@ -1211,11 +1250,11 @@ class extract_rainfall_annual_based_on_daily():
 
     def detrend(self): ## detrend LAI4g
 
-        fdir = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\sum_rainfall\\'
-        outdir = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\sum_rainfall\\'
+        f = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\sum_rainfall\\sum_rainfall.npy'
+        outdir = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\sum_rainfall\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
-        dict = T.load_npy_dir(fdir)
+        dict = T.load_npy(f)
         for pix in tqdm(dict):
             time_series = dict[pix]
             # time_series[time_series==65535]=np.nan
@@ -1248,8 +1287,8 @@ class extract_rainfall_annual_based_on_daily():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\\rainfall_frequency\\'
-        outdir = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_frequency\\\trend\\'
+        fdir = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\dry_spell\\'
+        outdir = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\dry_spell\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1823,28 +1862,28 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis()
 
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.robinson()
 
         pass
     def moving_window_extraction(self):
 
-        fdir_all =  rf'E:\Project3\Data\ERA5_daily\dict\extract_heatevent_annual\\'
+        fdir_all =  rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\\'
         outdir = rf'E:\Project3\Data\ERA5_daily\dict\\extract_window\\'
         T.mk_dir(outdir, force=True)
         for fdir in os.listdir(fdir_all):
-            if fdir not in ['heat_event_extraction' ]:
-                continue
-            # if fdir not in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
-            #                 'rainfall_frequency','heavy_rainfall_days','rainfall_event_size','sum_rainfall','annual_LAI4g']:
+            # if fdir not in ['heat_event_extraction' ]:
             #     continue
+            if fdir not in [ 'rainfall_seasonality_all_year', 'dry_spell',
+                            'rainfall_frequency','heavy_rainfall_days','rainfall_intensity','sum_rainfall',]:
+                continue
 
 
             for f in os.listdir(fdir_all + fdir):
-                if not 'detrended_average_annual_tmax' in f:
+                if not f.endswith('.npy'):
                     continue
 
 
@@ -1975,12 +2014,13 @@ class moving_window():
 
     def moving_window_CV_extraction_anaysis(self):
         window_size=15
-        fdir = rf'E:Project3\Data\ERA5_daily\dict\\extract_window\\'
-        outdir =  rf'E:Project3\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
+        fdir = rf'E:\Project3\Data\CRU-JRA\extract_window\\'
+        outdir =  rf'E:\Project3\Data\CRU-JRA\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'detrended_average_annual_tmax' in f:
+            if not 'detrended' in f:
                 continue
+
 
             dic = T.load_npy(fdir + f)
             slides = 39-window_size
@@ -2033,16 +2073,15 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
 
-        fdir=rf'E:\Project3\Data\ERA5_daily\dict\\extract_window\\'
-        outdir = rf'E:\Project3\Data\ERA5_daily\dict\\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Data\CRU-JRA\extract_window\\'
+        outdir = rf'E:\Project3\Data\CRU-JRA\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not f.split('.')[0] in ['detrended_average_annual_tmax']:
-                continue
+
 
             dic = T.load_npy(fdir + f)
 
-            slides = 38 - window_size   ## revise!!
+            slides = 39 - window_size   ## revise!!
             outf = outdir + f.split('.')[0] + f'.npy'
             print(outf)
 
@@ -3513,9 +3552,10 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     # extract_heatevent().run()
-    extract_rainfall_annual_based_on_daily().run()
+    # extract_rainfall_annual_based_on_daily().run()
     # TRENDY_model().run()
     # check_correlation().run()
+    extract_water_year().run()
 
     # moving_window().run()
     # partial_correlation_CV().run()

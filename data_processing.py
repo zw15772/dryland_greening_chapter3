@@ -10793,9 +10793,9 @@ class build_dataframe():
         # Tools().mk_dir(self.this_class_arr, force=True)
         # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
-        self.this_class_arr = (rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\')
+        self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
+        self.dff = self.this_class_arr + 'moving_window_new.df'
 
         pass
 
@@ -10813,7 +10813,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -10826,17 +10826,17 @@ class build_dataframe():
         # df=self.add_AI_classfication(df)
         # #
         # df=self.add_aridity_to_df(df)
-        # # # # # # # #
+
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
+        # # df=self.add_continent_to_df(df)
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         # # #
-        # df=self.add_rooting_depth_to_df(df)
+        df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -12037,7 +12037,7 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window.df'
+        self.dff = self.this_class_arr + 'moving_window_new.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -12046,6 +12046,8 @@ class build_moving_window_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         df=self.add_window_to_df(df)
+        # self.show_field()
+
         T.save_df(df, self.dff)
         self.__df_to_excel(df, self.dff)
     def show_field(self):
@@ -12152,7 +12154,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\CO2.npy'
+        f = rf'E:Project3\Data\ERA5_daily\dict\moving_window_average_anaysis\\LAI4g_CV.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -12183,18 +12185,16 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['CO2'] = change_rate_list
+        df['LAI4g_CV'] = change_rate_list
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'E:\Project3\Data\ERA5_daily\dict\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Data\CRU-JRA\moving_window_average_anaysis\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
-            if not 'rainfall_intensity' in variable:
-                continue
 
-            # if not f.split('.')[0] in ['CO2',]:
-            #     continue
+            if not 'detrended_annual_LAI4g_CV' in variable:
+                continue
 
             variable= f.split('.')[0]
 
@@ -12222,6 +12222,8 @@ class build_moving_window_dataframe():
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
+                print(len(vals))
+
                 # vals[vals<-500]=np.nan
                 # vals[vals>2000]=np.nan
 
@@ -17336,8 +17338,8 @@ def main():
     # fingerprint().run()
 
 
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
