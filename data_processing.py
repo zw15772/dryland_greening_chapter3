@@ -96,8 +96,9 @@ class data_processing():
 
         # self.resample_trendy()
         # self.resample_AVHRR_LAI()
-        # self.resample_GIMMS3g()
+        # self.resample_GIMMS4g()
         # self.resample_MODIS_LUCC()
+        self.resample_glc_LUCC()
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
@@ -106,11 +107,12 @@ class data_processing():
         # self.average_temperature()
         # self.scales_Inversion()
         # self.scale_LAI()
+        # self.extract_dryland_tiff()
 
         # self.trendy_ensemble_calculation()  ##这个函数不用 因为ensemble original data 会出现最后一年加入数据不全，使得最后一年得知降低
 
 
-        self.tif_to_dic()
+        # self.tif_to_dic()
 
 
         # self.extract_GS()
@@ -848,21 +850,21 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\monthly_data\CRU\\'
+        fdir_all = rf'E:\Project3\Data\LAI4g\\'
 
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        array_mask[array_mask < 0] = np.nan
+        # NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        # array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        # array_mask[array_mask < 0] = np.nan
 
         year_list = list(range(1982, 2021))
 
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'unify' in fdir:
+            if not 'tiff_dryland' in fdir:
                 continue
 
-            outdir=rf'D:\Project3\Data\monthly_data\\CRU\\DIC\\'
+            outdir=rf'E:\Project3\Data\LAI4g\dic\\'
             # if os.path.isdir(outdir):
             #     pass
 
@@ -880,9 +882,10 @@ class data_processing():
                 array = np.array(array, dtype=float)
 
 
-                array_unify = array[:720][:720,
-                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
-
+                # array_unify = array[:720][:720,
+                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                array_unify = array[:360][:360,
+                              :720]
                 array_unify[array_unify < -999] = np.nan
                 # array_unify[array_unify > 7] = np.nan
                 # array[array ==0] = np.nan
@@ -893,10 +896,11 @@ class data_processing():
 
                 # plt.imshow(array)
                 # plt.show()
-                array_mask = np.array(array_mask, dtype=float)
+                # array_mask = np.array(array_mask, dtype=float)
                 # plt.imshow(array_mask)
                 # plt.show()
-                array_dryland = array_unify * array_mask
+                # array_dryland = array_unify * array_mask
+                array_dryland = array_unify
                 # plt.imshow(array_dryland)
                 # plt.show()
 
@@ -1685,10 +1689,10 @@ class data_processing():
             except Exception as e:
                 pass
 
-    def resample_GIMMS3g(self):
-        fdir_all = rf'D:\Project4\Data\monthly_NDVI4g\PKU_GIMMS_NDVI_updated_20230216\\'
+    def resample_GIMMS4g(self):
+        fdir_all = rf'D:\Project3\Data\LAI4g\GIMMS_LAI4g_updated_20230216\\'
 
-        outdir = rf'D:\Project4\Data\\monthly_NDVI4g\\resample\\'
+        outdir = rf'E:\Project3\Data\\LAI4g\\resample\\'
 
 
         T.mk_dir(outdir, force=True)
@@ -1755,18 +1759,37 @@ class data_processing():
     def resample_MODIS_LUCC(self):
         f=rf'D:\Project3\Data\Base_data\MODIS_LUCC\\MODIS_LUCC.tif'
 
-        outf = rf'D:\Project3\Data\\Base_data\MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        outf = rf'E:\Project3\Data\\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
 
         dataset = gdal.Open(f)
 
 
 
         try:
-            gdal.Warp(outf, dataset, xRes=0.25, yRes=0.25, dstSRS='EPSG:4326')
+            gdal.Warp(outf, dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
         # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
         # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
         except Exception as e:
             pass
+
+    def resample_glc_LUCC(self):
+        fpath=rf'E:\Project3\Data\Base_data\glc_025\\glc2000_025.tif'
+        outf=rf'E:\Project3\Data\Base_data\glc_025\\glc2000_05.tif'
+
+
+        dataset = gdal.Open(fpath)
+        # print(dataset.GetGeoTransform())
+
+        try:
+            gdal.Warp(outf, dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+        # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+        # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+        except Exception as e:
+            pass
+
+
+
+        pass
     def resample_inversion(self):
         fdir_all = rf'E:\Carbontracker\TIFF\\'
 
@@ -1790,6 +1813,7 @@ class data_processing():
 
 
             ToRaster().resample_reproj(fdir_all+f,outdir+f,0.25)
+
     def aggregate_GIMMS3g(self):  # aggregate biweekly data to monthly
 
         fdir_all =  rf'D:\Project4\Data\monthly_LAI4g\resample\\'
@@ -2050,18 +2074,19 @@ class data_processing():
 
     pass
     def scale_LAI(self):
-        fdir = rf'D:\Project4\Data\monthly_NDVI4g\resample\\'
-        outdir=rf'D:\Project4\Data\monthly_NDVI4g\\scales_NDVI4g\\'
+        fdir = rf'E:\Project3\Data\LAI4g\resample\\'
+        outdir=rf'E:\Project3\Data\LAI4g\scale\\'
         Tools().mk_dir(outdir, force=True)
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.tif'):
                 continue
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
             array = np.array(array, dtype=float)
-            # array[array >700] = np.nan
-            # array=array*0.01
-            array=array/10000
-            array[array >1] = np.nan
+
+            array=array*0.01
+            array[array >7] = np.nan
+            # array=array/10000
+
 
             array[array < -999] = np.nan
 
@@ -2070,6 +2095,32 @@ class data_processing():
 
 
 
+    def extract_dryland_tiff(self):
+        datadir=rf'E:\Project3\Data\\'
+        NDVI_mask_f = join(datadir, 'Base_data', 'dryland_mask05.tif')
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+        outdir = join(datadir,'tiff_dryland')
+        T.mk_dir(outdir,force=True)
+
+        fdir_all = join(datadir,'LAI4g','scale')
+
+        for fi in tqdm(T.listdir(fdir_all)):
+            fpath=join(fdir_all,fi)
+            if not fi.endswith('.tif'):
+                continue
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr[np.isnan(array_mask)] = np.nan
+            # plt.imshow(arr)
+            # plt.show()
+            outpath =join(outdir,fi)
+
+            ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
+
+
+
+        pass
 
 
 
@@ -17314,7 +17365,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -17339,7 +17390,7 @@ def main():
 
 
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()

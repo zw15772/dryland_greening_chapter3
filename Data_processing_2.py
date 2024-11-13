@@ -80,6 +80,7 @@ class Data_processing_2:
 
         # self.dryland_mask()
         self.test_histogram()
+
         pass
     def dryland_mask(self):
         ## here we extract dryland tif
@@ -118,12 +119,16 @@ class Data_processing_2:
 
 
 
+
+
+
     def run(self):
 
         self.dryland_mask()
     pass
 
-class seasonality():
+class Phenology():
+    ## this function is to see phenology of NH, SH and tropical
     def __init__(self):
         self.this_root = 'D:\Project3\\'
         self.data_root = 'D:/Project3/Data/'
@@ -131,13 +136,66 @@ class seasonality():
         pass
     def run(self):
 
-        self.seasonality()
+        self.phenology()
         pass
-    def seasonality(self):
+
+    def read_shp(self):
+        fpath = r"C:\Users\wenzhang1\Desktop\point2.shp"
+        df=T.read_point_shp(fpath, )
+        return df
+
+    def phenology(self):
+        fdir_all = rf'E:\Project3\Data\LAI4g\\dic\\'
+        spatial_dic=T.load_npy_dir(fdir_all)
+        result_dic={}
+        shp_df=self.read_shp()
+        print(shp_df)
+        lon_list=shp_df['point_x_pos'].to_list()
+        lat_list=shp_df['point_y_pos'].to_list()
+        pix_list=DIC_and_TIF().lon_lat_to_pix(lon_list, lat_list)
+
+
+        for pix in pix_list:
+            lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+            r,c=pix
+            # if r<60:
+            #     continu
+            val=spatial_dic[pix]
+            if T.is_all_nan(val):
+                continue
+
+            vals_reshape=val.reshape(-1,24)
+            # plt.imshow(vals_reshape, interpolation='nearest', cmap='jet')
+            # plt.colorbar()
+            # plt.show()
+            multiyear_mean = np.nanmean(vals_reshape, axis=0)
+            #
+            result_dic[pix]=multiyear_mean
+            x=np.arange(0,24)
+            xtick = [str(i) for i in x]
+            plt.plot(x, multiyear_mean)
+            plt.xticks(x, xtick)
+            plt.xlabel('biweekly')
+            plt.ylabel('LAI4g (m2/m2)')
+            plt.title(f'lat:{lat},lon:{lon}')
+            plt.show()
+        # array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
+        # plt.imshow(array, interpolation='nearest', cmap='jet')
+        # plt.colorbar()
+        #
+        # plt.show()
+            ## plt.plot(multiyear_mean)
+            ## plt.show()
+
+
+
+
+
         pass
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
+    Phenology().run()
 
 
 

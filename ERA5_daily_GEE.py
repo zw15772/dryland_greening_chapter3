@@ -27,7 +27,7 @@ class ERA5_daily:
         # self.download_images()
         # self.unzip()
         # self.resample_ERA5()
-        # self.tiff_to_dict()
+        self.tiff_to_dict()
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
@@ -73,7 +73,8 @@ class ERA5_daily:
             Image = ee.Image(dict_i['id'])
             # Image_product = Image.select('mean_2m_air_temperature')
             # Image_product = Image.select('maximum_2m_air_temperature')
-            Image_product = Image.select('minimum_2m_air_temperature')
+            # Image_product = Image.select('minimum_2m_air_temperature')
+            Image_product = Image.select('precipitable')
             exportOptions = {
                 'scale': 27830,
                 'maxPixels': 1e13,

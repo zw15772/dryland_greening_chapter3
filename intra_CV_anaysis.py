@@ -63,7 +63,7 @@ from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 from pprint import pprint
 T=Tools()
-D = DIC_and_TIF(pixelsize=0.25)
+D = DIC_and_TIF(pixelsize=0.5)
 
 
 
@@ -96,9 +96,9 @@ class extract_water_year():
         pass
 
     def extract_water_year_precip(self):
-        fdir_all = self.datadir + rf'CPC\transform\\'
+        fdir_all = self.datadir + rf'\CRU-JRA\Precip\transform\\'
 
-        outdir = self.datadir + rf'CPC\water_year\\'
+        outdir = self.datadir + rf'\CRU-JRA\Precip\\\water_year\\'
         Tools().mk_dir(outdir, force=True)
 
 
@@ -115,16 +115,32 @@ class extract_water_year():
             for pix in tqdm(spatial_dict):
                 r, c = pix
                 ## northern hemisphere and southern hemisphere and tropical
-
+                ## for NH, SH and Tropical
                 time_series = spatial_dict[pix]
                 ### from 1982 Nov to 2020 Oct
                 ##oct1 is  274 to next year 273
-                time_series=np.array(time_series)
+                time_series = np.array(time_series)
                 time_series_flatten = time_series.flatten()
-                time_series_flatten_watter_year=time_series_flatten[273:-(365-273)]
-                time_series_flatten_watter_year_reshape = time_series_flatten_watter_year.reshape(-1, 365)
+                if 60<= r <120:
+
+                    time_series_flatten_watter_year=time_series_flatten[273:-(365-273)]
+                    time_series_flatten_watter_year_reshape = time_series_flatten_watter_year.reshape(-1, 365)
+
+                elif 120 <= r < 240:
+                    ## whole year is extract
+                    time_series_flatten_watter_year = time_series_flatten[0:-(365-0)]
+                    time_series_flatten_watter_year_reshape = time_series_flatten_watter_year.reshape(-1, 365)
+                    # print(len(time_series_flatten_watter_year_reshape))
+
+                elif 240 <= r < 360:
+                    time_series_flatten_watter_year = time_series_flatten[182:-(365-182)]
+
+                    time_series_flatten_watter_year_reshape = time_series_flatten_watter_year.reshape(-1, 365)
+                    # print(len(time_series_flatten_watter_year_reshape))
 
                 water_spatial_dict[pix] = time_series_flatten_watter_year_reshape
+
+            np.save(outf, water_spatial_dict)
 
 
 
@@ -376,16 +392,17 @@ class extract_rainfall_annual_based_on_daily():
         # self.extract_rainfall_std()
         # self.extract_rainfall_mean()
         # self.extract_rainfall_sum()
-        self.dry_spell()
+        # self.dry_spell()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
         # self.extract_rainfall_frequency()
-        # self.extract_rainfall_seasonal_distribution()
+        # self.extract_rainfall_seasonality_all_year()
+
         # #
         # self.rainfall_extreme_wet_event()
 
         # self.extract_rainfall_seasonality()
-        # self.extract_rainfall_seasonality_all_year()
+
         # self.extract_seasonal_rainfall_intervals()
         # self.extract_seasonal_rainfall_seasonality()
 
@@ -482,8 +499,8 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_intensity(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\CRU-JRA\precip_transform\\'
-        outdir = rf'E:\Project3\Data\CRU-JRA\\extract_rainfall_annual\\rainfall_intensity\\'
+        fdir = data_root + rf'ERA5\\Precip\\water_year\\'
+        outdir = data_root+rf'ERA5\\Precip\\\extract_rainfall_annual\\rainfall_intensity\\'
         T.mk_dir(outdir, force=True)
         # f='E:\Project3\Data\CRU-JRA\Precip_transform\\per_pix_dic_028.npy'
         # spatial_dic = T.load_npy(f)
@@ -507,7 +524,7 @@ class extract_rainfall_annual_based_on_daily():
 
                 ## number of rainy days is when precip>1
 
-                val_rainy = val[val>1]
+                val_rainy = val[val>3]
                 total_precip = np.nansum(val_rainy)
 
                 stats = total_precip / len(val_rainy)
@@ -522,8 +539,8 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_frequency(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Project3\Data\ERA5_daily\dict\\extract_rainfall_annual\\rainfall_frequency\\'
+        fdir = data_root+rf'ERA5\\Precip\\water_year\\'
+        outdir_CV = data_root+rf'ERA5\\Precip\\\extract_rainfall_annual\\rainfall_frequency\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -545,7 +562,7 @@ class extract_rainfall_annual_based_on_daily():
 
                 ## number of rainy days is when precip>1
 
-                val_rainy = val[val > 1]
+                val_rainy = val[val > 3]
 
                 stats = len(val_rainy)
 
@@ -608,8 +625,8 @@ class extract_rainfall_annual_based_on_daily():
 
     def extract_rainfall_seasonality_all_year(self):  ## extract CV of rainfall ready for multiregression
         from scipy.stats import entropy
-        fdir = rf'E:\Project3\Data\CRU-JRA\precip_transform\\'
-        outdir_CV = rf'E:\Project3\Data\CRU-JRA\\extract_rainfall_annual\\rainfall_seasonality_all_year\\'
+        fdir = data_root+rf'ERA5\\Precip\\water_year\\'
+        outdir_CV = data_root+rf'\\ERA5\\Precip\\\extract_rainfall_annual\\extract_rainfall_seasonality_all_year\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -634,7 +651,7 @@ class extract_rainfall_annual_based_on_daily():
                 vals = np.array(val)
                 ## set vals <1 to 0
 
-                val[vals < 1] = 0
+                val[vals < 3] = 0
 
 
 
@@ -669,6 +686,7 @@ class extract_rainfall_annual_based_on_daily():
         outf = outdir_CV + 'rainfall_seasonality_all_year_new.npy'
 
         np.save(outf, result_dic)
+
 
 
 
@@ -744,8 +762,8 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_heavy_rainfall_days(self):  ##
-        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\heavy_rainfall_days\\'
+        fdir = data_root+'ERA5\\Precip\\water_year\\'
+        outdir_CV = data_root+rf'ERA5\\Precip\\\extract_rainfall_annual\\extract_heavy_rainfall_days\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -840,8 +858,8 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\CRU-JRA\Precip_transform\\'
-        outdir_CV = rf'E:\Project3\Data\CRU-JRA\\extract_rainfall_annual\\sum_rainfall\\'
+        fdir =data_root+'ERA5\\Precip\\water_year\\'
+        outdir_CV = data_root+rf'ERA5\\Precip\\\extract_rainfall_annual\\sum_rainfall\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -861,7 +879,7 @@ class extract_rainfall_annual_based_on_daily():
                 val = np.array(val)
                 # plt.plot(val)
                 # plt.show()
-                val_rainy=val[val>1]
+                val_rainy=val[val>3]
 
                 sum=np.sum(val_rainy)
 
@@ -926,13 +944,13 @@ class extract_rainfall_annual_based_on_daily():
 
     def dry_spell(self):
 
-        fdir = rf'E:\Project3\Data\CRU-JRA\precip_transform\\'
-        outdir = rf'E:\Project3\Data\CRU-JRA\\extract_rainfall_annual\\dry_spell\\'
+        fdir = data_root + rf'ERA5\\Precip\\water_year\\'
+        outdir = data_root+ rf'ERA5\\Precip\\\extract_rainfall_annual\\dry_spell\\'
         T.mk_dir(outdir, force=True)
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        array_mask[array_mask < 0] = np.nan
-        dic_dryland=DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        # NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        # array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        # array_mask[array_mask < 0] = np.nan
+        # dic_dryland=DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
 
         spatial_dic = T.load_npy_dir(fdir)
@@ -941,9 +959,9 @@ class extract_rainfall_annual_based_on_daily():
         maxmum_dry_spell_annual_dic = {}
 
         for pix in tqdm(spatial_dic):
-            val_dryland = dic_dryland[pix]
-            if np.isnan(val_dryland):
-                continue
+            # val_dryland = dic_dryland[pix]
+            # if np.isnan(val_dryland):
+            #     continue
 
             average_dry_spell_annual_list = []
             maxmum_dry_spell_annual_list = []
@@ -963,7 +981,7 @@ class extract_rainfall_annual_based_on_daily():
 
                 vals_wet = val.copy()
 
-                vals_wet[vals_wet >= 1] = np.nan
+                vals_wet[vals_wet >= 3] = np.nan
 
                 dry_index = np.where(~np.isnan(vals_wet))
                 if len(dry_index[0]) == 0:
@@ -1281,82 +1299,87 @@ class extract_rainfall_annual_based_on_daily():
 
     def trend_analysis(self):
 
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\dry_spell\\'
-        outdir = rf'E:\Project3\Data\CRU-JRA\extract_rainfall_annual\dry_spell\\\trend\\'
+        fdir_all = rf'E:\Project3\Data\CPC\extract_rainfall_annual\\'
+        outdir = rf'E:\Project3\Data\CPC\extract_rainfall_annual\\\annual_trend\\'
         Tools().mk_dir(outdir, force=True)
-
-        for f in os.listdir(fdir):
-
-
-            outf = outdir + f.split('.')[0]
-            # if os.path.isfile(outf + '_trend.tif'):
-            #     continue
-            print(outf)
-
-            if not f.endswith('.npy'):
+        for fdir in T.listdir(fdir_all):
+            if 'annual_trend' in fdir:
                 continue
-            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            if not 'wet_days' in fdir:
+                continue
 
-            trend_dic = {}
-            p_value_dic = {}
-            for pix in tqdm(dic):
-                r, c = pix
-                if r < 120:
+            for f in os.listdir(join(fdir_all,fdir)):
+
+
+                outf = outdir + f.split('.')[0]
+                # if os.path.isfile(outf + '_trend.tif'):
+                #     continue
+                print(outf)
+
+                if not f.endswith('.npy'):
                     continue
-                landcover_value = crop_mask[pix]
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
+                dic = np.load(join(fdir_all,fdir, f), allow_pickle=True, encoding='latin1').item()
 
-                    ## ignore the last one year
+                trend_dic = {}
+                p_value_dic = {}
+                for pix in tqdm(dic):
+                    r, c = pix
+                    # if r < 120:
+                    #     continue
+                    landcover_value = crop_mask[pix]
+                    if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                        continue
+                    if dic_modis_mask[pix] == 12:
+                        continue
 
-                # time_series = dic[pix][:-1]
-                time_series = dic[pix]
-                # print(time_series)
+                        ## ignore the last one year
 
-                if len(time_series) == 0:
-                    continue
-                # print(time_series)
-                ### if all valus are the same, then skip
-                if len(set(time_series)) == 1:
-                    continue
-                # print(time_series)
+                    # time_series = dic[pix][:-1]
+                    time_series = dic[pix]
+                    # print(time_series)
 
-                if np.nanstd(time_series) == 0:
-                    continue
-                try:
+                    if len(time_series) == 0:
+                        continue
+                    # print(time_series)
+                    ### if all valus are the same, then skip
+                    if len(set(time_series)) == 1:
+                        continue
+                    # print(time_series)
 
-                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
-                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
-                    trend_dic[pix] = slope
-                    p_value_dic[pix] = p_value
-                except:
-                    continue
+                    if np.nanstd(time_series) == 0:
+                        continue
+                    try:
+
+                        # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                        slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                        trend_dic[pix] = slope
+                        p_value_dic[pix] = p_value
+                    except:
+                        continue
 
 
-            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+                arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
 
 
-            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+                p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
 
-            plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
+                plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
 
-            plt.colorbar()
-            plt.title(f)
-            plt.show()
+                # plt.colorbar()
+                # plt.title(f)
+                # plt.show()
 
-            D.arr_to_tif(arr_trend, outf + '_trend.tif')
-            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+                D.arr_to_tif(arr_trend, outf + '_trend.tif')
+                D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
-            np.save(outf + '_trend', arr_trend)
-            np.save(outf + '_p_value', p_value_arr)
+                np.save(outf + '_trend', arr_trend)
+                np.save(outf + '_p_value', p_value_arr)
 
     pass
 
@@ -3470,7 +3493,8 @@ class PLOT():
         pass
     def run(self):
         # self.intra_inter_CV_boxplot()
-        self.intra_inter_CV_scatter()
+        # self.intra_inter_CV_scatter()
+        self.spatial_plot()
     def intra_inter_CV_boxplot(self):
         f_LAI_CV = result_root + rf'\extract_window\extract_detrend_original_window_CV\\LAI4g_CV_trend.tif'
         f_precip_CV = result_root + rf'intra_stats_annual\trend_analysis\\CV_precip_trend.tif'
@@ -3544,6 +3568,100 @@ class PLOT():
 
         pass
 
+    def spatial_plot(self):
+        fdir_all=result_root+rf'Rainfall_annual_trend_all_products\\'
+        outdir = result_root + rf'Rainfall_annual_trend_all_products\\spatial_plot\\'
+        T.mk_dir(outdir,force=True)
+        temp_root = result_root + rf'temp_root\\spatial_plot\\'
+        T.mk_dir(temp_root, force=True)
+
+
+        rainfall_characteristic_list = ['rainfall_intensity_trend.tif', 'heavy_rainfall_days_trend.tif'
+                                    , 'wet_days_trend.tif', 'rainfall_seasonality_all_year_new_trend.tif',
+                                   'sum_rainfall_trend.tif','maxmum_dry_spell_trend.tif']
+
+
+        for rainfall_characteristic in rainfall_characteristic_list:
+            count = 1
+            plt.figure(figsize=(11, 7))
+            for fdir in os.listdir(fdir_all):
+                product_name=fdir.split('_')[0]
+                if 'spatial_plot' in fdir:
+                    continue
+
+                fpath=join(fdir_all,fdir,rainfall_characteristic)
+                fpath_p = fpath.replace('_trend.tif', '_p_value.tif')
+                # print(isfile(fpath),isfile(fpath_p))
+                # print(fpath);exit()
+
+                ax = plt.subplot(2,2,count)
+                # print(count, f)
+                count = count + 1
+                # if not count == 9:
+                #     continue
+
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr = Tools().mask_999999_arr(arr, warning=False)
+                arr_m = ma.masked_where(np.isnan(arr), arr)
+                lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+                lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+                lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+                m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='i',ax=ax)
+                ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='RdBu', zorder=-1, vmin=-1, vmax=1)
+                coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+                plt.title(f'{product_name} ')
+                self.add_significance_scatter(m, fpath_p, temp_root,marker='x',linewidths=.3, s=10)
+                # plt.show()
+            cax = plt.axes([0.5-0.15, 0.1, 0.3, 0.02])
+            cb = plt.colorbar(ret, ax=ax,cax=cax, orientation='horizontal')
+            ## set_label position is top
+
+            cb.set_label(f'{rainfall_characteristic.replace("_trend.tif","")}', size=12, y=2)
+            plt.tight_layout()
+
+            # plt.subplots_adjust(wspace=0.029, hspace=0.)
+
+            # plt.suptitle(f'{rainfall_characteristic.replace("_trend.tif","")}', fontsize=12, y=0.95)
+
+            outf=outdir+rainfall_characteristic.replace('.tif','.pdf')
+            # plt.savefig(outf, dpi=600)
+            # plt.close()
+            plt.show()
+            # T.open_path_and_file(outdir)
+            # exit()
+
+    def add_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=20,
+                                        c='k', marker='x', zorder=101, res=1.5):
+
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        fpath_resample = fpath_p + 'resample.tif'
+        ToRaster().resample_reproj(fpath_p, fpath_resample, res=res)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon = lon + pixelWidth / 2
+            lat = lat + pixelHeight / 2
+            lon_projtran, lat_projtran = m.projtran(lon,lat)
+            lon_list.append(lon_projtran)
+            lat_list.append(lat_projtran)
+        m.scatter(lon_list,lat_list, latlon=False, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+        return m
+
 
 
 def main():
@@ -3555,12 +3673,12 @@ def main():
     # extract_rainfall_annual_based_on_daily().run()
     # TRENDY_model().run()
     # check_correlation().run()
-    extract_water_year().run()
+    # extract_water_year().run()
 
     # moving_window().run()
     # partial_correlation_CV().run()
 
-    # PLOT().run()
+    PLOT().run()
     # Check_data().run()
 
     pass
