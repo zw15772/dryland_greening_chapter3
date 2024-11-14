@@ -78,15 +78,17 @@ class Phenology:
         pass
 
     def run(self):
-        self.phenology_average()
+        # self.phenology_average()
 
         # self.GST()
+        # self.plot_4GST()
+        self.read_4GST_df()
 
 
         pass
 
     def phenology_average(self):
-        fdir_all = rf'E:\Project3\Data\LAI4g\\dic\\'
+        fdir_all = data_root + 'LAI4g\\phenology_average\\'
         spatial_dic=T.load_npy_dir(fdir_all)
         result_dic={}
 
@@ -98,107 +100,136 @@ class Phenology:
                 continue
 
             vals_reshape=val.reshape(-1,24)
+            # print(vals_reshape.shape)
             # plt.imshow(vals_reshape, interpolation='nearest', cmap='jet')
             # plt.colorbar()
             # plt.show()
             multiyear_mean = np.nanmean(vals_reshape, axis=0)
             #
             result_dic[pix]=multiyear_mean
-            x=np.arange(0,24)
-            xtick = [str(i) for i in x]
-            plt.plot(x, multiyear_mean)
-            plt.xticks(x, xtick)
-            plt.xlabel('biweekly')
-            plt.ylabel('LAI4g (m2/m2)')
+            # x=np.arange(0,24)
+            # xtick = [str(i) for i in x]
+            # plt.plot(x, multiyear_mean)
+            # plt.xticks(x, xtick)
+            # plt.xlabel('biweekly')
+            # plt.ylabel('LAI4g (m2/m2)')
+            #
+            # plt.show()
+        outdir='E:/Project3/Data/LAI4g//phenology_average//'
 
-            plt.show()
+        Tools().mk_dir(outdir, force=True)
 
-        np.save('E:/Project3/Data/phenology_average.npy',result_dic)
+        np.save(outdir+'phenology_average.npy', result_dic)
 
 #*****************************************
 # COMPUTE ONSET/OFFSET
 #*****************************************
 
     def GST(self):
-        fdir = data_root + f'\LAI\\'
+        fdir = data_root + 'LAI4g\\phenology_average\\'
+        outdir = join(result_root, 'LAI4g\\phenology_average\\')
+        T.mk_dir(outdir, force=True)
         spatial_dic = T.load_npy_dir(fdir)
-        for pix in spatial_dic:
+        spatial_dic_result = {}
+        for pix in tqdm(spatial_dic):
+            r,c=pix
+
+            if r<60:
+                continue
             LAI = spatial_dic[pix]
             if T.is_all_nan(LAI):
                 continue
-            LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1dr,days= self.divide_LAI_pieces(LAI)
-            self.compute_linear_regression_type_assign(LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4, knan,LAI1dr,days)
+            LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1d,days= self.divide_LAI_pieces(LAI)
+            if LAI1d_1 is None:
+                continue
+            SeasType,SeasClss=self.compute_linear_regression_type_assign(LAI, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4, knan,LAI1d)
+            SeasType, Onsets, Offsets = self.SOS_EOS(pix,LAI1d, SeasType,SeasClss,days)
+            # print(SeasType, Onsets, Offsets)
+            result_dict_i = {
+                'SeasType':SeasType,
+                'Onsets':Onsets,
+                'Offsets':Offsets,
+                'SeasClss':SeasClss
+            }
+
+            spatial_dic_result[pix] = result_dict_i
+
+        np.save(join(outdir, '4GST.npy'), spatial_dic_result)
+        df_result = T.dic_to_df(spatial_dic_result,'pix')
+        outf = join(outdir, '4GST.df')
+        T.save_df(df_result, outf)
+        T.df_to_excel(df_result, outf)
 
 
 
-
-    def divide_LAI_pieces(LAI1):
+    def divide_LAI_pieces(self,LAI1):
         # ********** Divide the LAI timeseries in 4 pieces *******
 
-            if np.mean(LAI1) > 0:
-                day = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300,
-                       315, 330, 345, 360]
-                LAI1dr = LAI1
-                knan = 0
-                # identify LAI maximum
-                for t in range(len(LAI1dr)):
-                    if np.isnan(LAI1dr[t]):
-                        LAI1dr[t] = 0
-                        knan = knan + 1
-                    if LAI1dr[t] == np.nanmax(LAI1dr):
-                        midPos = t
-                LAI1d = np.zeros(shape=(len(LAI1dr)))
-                days = np.zeros(shape=(len(day)))
-                # shift of time series to place maximum LAI in the time series center
-                if midPos == 11:
-                    LAI1d = LAI1dr
-                    days = day
-                elif midPos > 11:
-                    dMP = midPos - 11
-                    for l in range(len(LAI1dr) - dMP):
-                        LAI1d[l] = LAI1dr[l + dMP]
-                        days[l] = day[l + dMP]
-                    for l in range(dMP):
-                        LAI1d[len(LAI1dr) - dMP + l] = LAI1dr[l]
-                        days[len(day) - dMP + l] = day[l]
+        if np.mean(LAI1) > 0:
+            day = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300,
+                   315, 330, 345, 360]
+            LAI1dr = LAI1
+            knan = 0
+            # identify LAI maximum
+            for t in range(len(LAI1dr)):
+                if np.isnan(LAI1dr[t]):
+                    LAI1dr[t] = 0
+                    knan = knan + 1
+                if LAI1dr[t] == np.nanmax(LAI1dr):
+                    midPos = t
+            LAI1d = np.zeros(shape=(len(LAI1dr)))
+            days = np.zeros(shape=(len(day)))
+            # shift of time series to place maximum LAI in the time series center
+            if midPos == 11:
+                LAI1d = LAI1dr
+                days = day
+            elif midPos > 11:
+                dMP = midPos - 11
+                for l in range(len(LAI1dr) - dMP):
+                    LAI1d[l] = LAI1dr[l + dMP]
+                    days[l] = day[l + dMP]
+                for l in range(dMP):
+                    LAI1d[len(LAI1dr) - dMP + l] = LAI1dr[l]
+                    days[len(day) - dMP + l] = day[l]
+            else:
+                dMP = 11 - midPos
+                for l in range(dMP):
+                    LAI1d[l] = LAI1dr[len(LAI1dr) - dMP + l]
+                    days[l] = day[len(days) - dMP + l]
+                for l in range(len(LAI1dr) - dMP):
+                    LAI1d[dMP + l] = LAI1dr[l]
+                    days[dMP + l] = day[l]
+
+            LAI1d_1 = np.zeros(shape=(7))
+            LAI1d_2 = np.zeros(shape=(7))
+            LAI1d_3 = np.zeros(shape=(7))
+            LAI1d_4 = np.zeros(shape=(7))
+            for i1 in range(7):
+                i2 = i1 + 6
+                i3 = i1 + 12
+                i4 = i1 + 18
+                LAI1d_1[i1] = LAI1d[i1]
+                LAI1d_2[i1] = LAI1d[i2]
+                LAI1d_3[i1] = LAI1d[i3]
+                if i1 == 6:
+                    LAI1d_4[i1] = LAI1d[0]
                 else:
-                    dMP = 11 - midPos
-                    for l in range(dMP):
-                        LAI1d[l] = LAI1dr[len(LAI1dr) - dMP + l]
-                        days[l] = day[len(days) - dMP + l]
-                    for l in range(len(LAI1dr) - dMP):
-                        LAI1d[dMP + l] = LAI1dr[l]
-                        days[dMP + l] = day[l]
+                    LAI1d_4[i1] = LAI1d[i4]
 
-                LAI1d_1 = np.zeros(shape=(7))
-                LAI1d_2 = np.zeros(shape=(7))
-                LAI1d_3 = np.zeros(shape=(7))
-                LAI1d_4 = np.zeros(shape=(7))
-                for i1 in range(7):
-                    i2 = i1 + 6
-                    i3 = i1 + 12
-                    i4 = i1 + 18
-                    LAI1d_1[i1] = LAI1d[i1]
-                    LAI1d_2[i1] = LAI1d[i2]
-                    LAI1d_3[i1] = LAI1d[i3]
-                    if i1 == 6:
-                        LAI1d_4[i1] = LAI1d[0]
-                    else:
-                        LAI1d_4[i1] = LAI1d[i4]
-
-               # *** set to zero the nan points  *******
-                for i in range(7):
-                    if np.isnan(LAI1d_1[i]):
-                        LAI1d_1[i] = 0
-                    if np.isnan(LAI1d_2[i]):
-                        LAI1d_2[i] = 0
-                    if np.isnan(LAI1d_3[i]):
-                        LAI1d_3[i] = 0
-                    if np.isnan(LAI1d_4[i]):
-                        LAI1d_4[i] = 0
-
-                return LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1dr,days
-    def compute_linear_regression_type_assign(self, LAI1,LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1dr):
+       # *** set to zero the nan points  *******
+            for i in range(7):
+                if np.isnan(LAI1d_1[i]):
+                    LAI1d_1[i] = 0
+                if np.isnan(LAI1d_2[i]):
+                    LAI1d_2[i] = 0
+                if np.isnan(LAI1d_3[i]):
+                    LAI1d_3[i] = 0
+                if np.isnan(LAI1d_4[i]):
+                    LAI1d_4[i] = 0
+            return LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1d,days
+        else:
+            return [None] * 7
+    def compute_linear_regression_type_assign(self, LAI1, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1dr):
 
         # ********** Divide the time axis in 4 pieces *******
 
@@ -208,7 +239,7 @@ class Phenology:
         time4 = np.zeros(shape=(7))
 
         for i in range(7):
-            time1[i] = time[i]
+            time1[i] = i
             time2[i] = time1[i] + 6
             time3[i] = time1[i] + 12
             time4[i] = time1[i] + 18
@@ -260,7 +291,6 @@ class Phenology:
         # (positive or negative linear regression gradient) of the
         # four linear regressions
 
-
         # ******* compute time minimum ******
         LAImin = np.nanmin(LAI1, axis=0)
 
@@ -272,18 +302,23 @@ class Phenology:
 
         # ****** compute Seasonal Amplitude *****
         SeasAmpl = LAImax - LAImin
+        SeasClss = 0
+        SeasType = 0
+
 
         if SeasAmpl < 0.25 * LAImean:
             SeasType = 1
         else:
-            if linreg1[0] == 0.0:
+            if linreg1 == 0.0:
                 SeasType = 2
             elif knan >= len(LAI1dr) / 2:
                 SeasType = 2
-            elif linreg1[0] >= 0 and linreg2[0] <= 0 and linreg3[0] >= 0 and linreg4[0] <= 0:
+                ### two growing season in one year
+            elif linreg1 >= 0 and linreg2 <= 0 and linreg3 >= 0 and linreg4 <= 0:
                 SeasType= 3
                 SeasClss = 1
-            elif linreg1[0] <= 0 and linreg2[0] >= 0 and linreg3[0] <= 0 and linreg4[0] >= 0:
+                ## two growing season in two years
+            elif linreg1 <= 0 and linreg2 >= 0 and linreg3 <= 0 and linreg4 >= 0:
                 SeasType = 3
                 SeasClss = 4
             else:
@@ -292,6 +327,8 @@ class Phenology:
         return SeasType,SeasClss
 
     def SOS_EOS(self, pix,LAI1d, SeasType,SeasClss,days):
+
+        r,c = pix
         lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
         ## two demensional array for onsets and offsets
         Onsets = np.array([0.0, 0.0])
@@ -321,8 +358,6 @@ class Phenology:
                     kont = np.zeros(shape=(len(trar)))
                     for i in range(len(trar) - 1):
                         if trar[i + 1] - trar[i] <= 2:
-                            kont[i] = 1
-                        elif trar[i + 1] - trar[i] <= 2:
                             kont[i] = 1
                         else:
                             kont[i] = 0
@@ -529,7 +564,9 @@ class Phenology:
                     Onsets[1] = daysc2[int(Onset)]
                     Offsets[1] = daysc2[int(Offset)]
             # check on the order of cycles, in case invert them
-            if not np.isnan(Onsets[0]) and not np.isnan(Onsets[1, nlat, nlon]):
+            # lon, lat
+            # print(Onsets);exit()
+            if not np.isnan(Onsets[0]):
                 if Onsets[0] > Onsets[1]:
                     tmpN0 = Onsets[0]
                     tmpN1 = Onsets[1]
@@ -719,6 +756,67 @@ class Phenology:
             Onsets[1] = np.nan
             Offsets[0] = np.nan
             Offsets[1] = np.nan
+        # if Onsets > Offsets:
+        #     print([pix,SeasType, Onsets, Offsets])
+        return SeasType, Onsets, Offsets
+
+    def plot_4GST(self):
+        fpath = join(result_root, 'LAI4g\\phenology_average\\4GST.df')
+        df = T.load_df(fpath)
+        df_2 = df[df['SeasType'] == 1]
+        onset_list  = []
+        offset_list = []
+        for i, row in df_2.iterrows():
+            onset = row['Onsets']
+            offset = row['Offsets']
+            # print(onset)
+            try:
+                onset = float(onset)
+                offset = float(offset)
+                onset_list.append(onset)
+                offset_list.append(offset)
+
+            except:
+                onset_list.append(np.nan)
+                offset_list.append(np.nan)
+                continue
+        df_2['Onsets'] = onset_list
+        df_2['Offsets'] = offset_list
+        # T.print_head_n(df, 10);exit()
+        Onsets = T.df_to_spatial_dic(df_2, 'Onsets')
+        Offsets = T.df_to_spatial_dic(df_2, 'Offsets')
+        # pprint(Onsets);exit()
+        arr_onset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Onsets)
+        arr_offset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Offsets)
+        plt.imshow(arr_onset, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
+        plt.colorbar()
+        plt.title('onset')
+        plt.figure()
+        plt.imshow(arr_offset, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
+        plt.colorbar()
+        plt.title('offset')
+        plt.show()
+        pass
+    def read_4GST_df(self):
+        fpath= join(result_root, 'LAI4g\\4GST\\4GST.df')
+        df = T.load_df(fpath)
+        ## get seasonal type length
+        df_1 = df[df['SeasType'] == 1]
+
+        print('df_1',len(df_1))
+        T.print_head_n(df_1)
+        df_2 = df[df['SeasType'] == 2]
+        print('df_2',len(df_2))
+        T.print_head_n(df_2)
+        df_3 = df[df['SeasType'] == 3]
+        print('df_3',len(df_3))
+        T.print_head_n(df_3)
+
+
+
+
+
+
 
 def main():
 
