@@ -82,7 +82,8 @@ class Phenology:
 
         # self.GST()
         # self.plot_4GST()
-        self.read_4GST_df()
+        # self.read_4GST_df()
+        self.plot_4GST_npy()
 
 
         pass
@@ -760,7 +761,7 @@ class Phenology:
         #     print([pix,SeasType, Onsets, Offsets])
         return SeasType, Onsets, Offsets
 
-    def plot_4GST(self):
+    def plot_4GST_df(self):
         fpath = join(result_root, 'LAI4g\\phenology_average\\4GST.df')
         df = T.load_df(fpath)
         df_2 = df[df['SeasType'] == 1]
@@ -811,6 +812,29 @@ class Phenology:
         df_3 = df[df['SeasType'] == 3]
         print('df_3',len(df_3))
         T.print_head_n(df_3)
+
+    def plot_4GST_npy(self):
+        f=join(result_root, 'LAI4g\\4GST\\4GST.npy')
+        spatial_dic = T.load_npy(f)
+        result_dic = {}
+
+        for pix in spatial_dic:
+            val=spatial_dic[pix]['Onsets']
+            print(pix,val)
+            try:
+                val=float(val)
+            except:
+                continue
+
+
+            result_dic[pix]=val
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
+        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
+        plt.colorbar()
+        plt.show()
+
+
+        pass
 
 
 
