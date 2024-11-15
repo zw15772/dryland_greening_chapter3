@@ -10846,7 +10846,7 @@ class build_dataframe():
 
         self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_new.df'
+        self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
         pass
 
@@ -10854,7 +10854,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        # df=self.foo1(df)
+        df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -17365,7 +17365,7 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -17389,7 +17389,7 @@ def main():
     # fingerprint().run()
 
 
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()

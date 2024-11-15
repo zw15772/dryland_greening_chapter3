@@ -81,7 +81,7 @@ class Phenology:
         # self.phenology_average()
 
         # self.GST()
-        # self.plot_4GST()
+        # self.plot_4GST_df()
         # self.read_4GST_df()
         self.plot_4GST_npy()
 
@@ -762,7 +762,7 @@ class Phenology:
         return SeasType, Onsets, Offsets
 
     def plot_4GST_df(self):
-        fpath = join(result_root, 'LAI4g\\phenology_average\\4GST.df')
+        fpath = join(result_root,  rf'LAI4g_phenology\4GST\\4GST.df')
         df = T.load_df(fpath)
         df_2 = df[df['SeasType'] == 1]
         onset_list  = []
@@ -789,17 +789,17 @@ class Phenology:
         # pprint(Onsets);exit()
         arr_onset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Onsets)
         arr_offset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Offsets)
-        plt.imshow(arr_onset, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
-        plt.colorbar()
-        plt.title('onset')
-        plt.figure()
-        plt.imshow(arr_offset, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
-        plt.colorbar()
-        plt.title('offset')
+        plt.imshow(arr_onset, interpolation='nearest', cmap='jet',vmin=0,vmax=100)
+        # plt.colorbar()
+        # plt.title('onset')
+        # plt.figure()
+        # plt.imshow(arr_offset, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
+        # plt.colorbar()
+        # plt.title('offset')
         plt.show()
         pass
     def read_4GST_df(self):
-        fpath= join(result_root, 'LAI4g\\4GST\\4GST.df')
+        fpath= join(result_root, rf'LAI4g_phenology\4GST.df')
         df = T.load_df(fpath)
         ## get seasonal type length
         df_1 = df[df['SeasType'] == 1]
@@ -814,9 +814,10 @@ class Phenology:
         T.print_head_n(df_3)
 
     def plot_4GST_npy(self):
-        f=join(result_root, 'LAI4g\\4GST\\4GST.npy')
+        f=join(result_root, 'LAI4g_phenology\\4GST\\4GST.npy')
         spatial_dic = T.load_npy(f)
         result_dic = {}
+        vals_list = []
 
         for pix in spatial_dic:
             val=spatial_dic[pix]['Onsets']
@@ -825,11 +826,18 @@ class Phenology:
                 val=float(val)
             except:
                 continue
+            vals_list.append(val)
+
 
 
             result_dic[pix]=val
+        vals_list = np.array(vals_list)
+        ## get unique values
+        vals_list = np.unique(vals_list)
+        print(vals_list)
+
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=30,vmax=300)
+        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=10)
         plt.colorbar()
         plt.show()
 
