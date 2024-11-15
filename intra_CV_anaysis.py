@@ -1592,7 +1592,10 @@ class Extract_rainfall_phenology_daily():
     def run(self):
 
         # self.extract_rainfall_sum()
-        self.trend_analysis()
+        self.extract_rainfall_frequency()
+
+
+        # self.trend_analysis()
 
     def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
         fdir = data_root + '\CRU-JRA\Precip\phenology_year\\'
@@ -1730,6 +1733,125 @@ class Extract_rainfall_phenology_daily():
 
             np.save(outf + '_trend', arr_trend)
             np.save(outf + '_p_value', p_value_arr)
+
+    def extract_rainfall_intensity(self):  ## extract std of rainfall ready for multiregression
+        fdir = data_root + '\CRU-JRA\Precip\phenology_year\\'
+
+        outdir_CV = result_root + rf'extract_rainfall_annual\\CRU-JRA\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            ### annual year
+
+            vals = spatial_dic[pix]['ecosystem_year']
+            vals_growing_season = spatial_dic[pix]['growing_season']
+            vals_non_growing_season = spatial_dic[pix]['non_growing_season']
+
+            ecosystem_mean_list = []
+            growing_season_mean_list = []
+            non_growing_season_mean_list = []
+
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                total_precip_annual = np.nansum(val_rainy)
+                sum_annual = total_precip_annual / len(val_rainy)
+                ecosystem_mean_list.append(sum_annual)
+
+            for val in vals_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                total_precip_annual = np.nansum(val_rainy)
+                sum_growing_season = total_precip_annual / len(val_rainy)
+                growing_season_mean_list.append(sum_growing_season)
+
+            for val in vals_non_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                total_precip_annual = np.nansum(val_rainy)
+                sum_non_growing_season = total_precip_annual / len(val_rainy)
+                non_growing_season_mean_list.append(sum_non_growing_season)
+
+
+            result_dic[pix] = {'ecosystem_year':ecosystem_mean_list,
+                               'growing_season':growing_season_mean_list,
+                               'non_growing_season':non_growing_season_mean_list}
+
+        outf = outdir_CV + 'rainfall_intensity.npy'
+
+        np.save(outf, result_dic)
+
+    def extract_rainfall_frequency(self):  ## extract CV of rainfall ready for multiregression
+        fdir = data_root + '\CRU-JRA\Precip\phenology_year\\'
+
+        outdir_CV = result_root + rf'extract_rainfall_annual\\CRU-JRA\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            ### annual year
+
+            vals = spatial_dic[pix]['ecosystem_year']
+            vals_growing_season = spatial_dic[pix]['growing_season']
+            vals_non_growing_season = spatial_dic[pix]['non_growing_season']
+
+            ecosystem_mean_list = []
+            growing_season_mean_list = []
+            non_growing_season_mean_list = []
+
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                stats_annual = len(val_rainy)
+                ecosystem_mean_list.append(stats_annual)
+
+            for val in vals_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                stats_growing_season = len(val_rainy)
+                growing_season_mean_list.append(stats_growing_season)
+
+            for val in vals_non_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+                val_rainy = val[val > 3]
+                stats_non_growing_season = len(val_rainy)
+                non_growing_season_mean_list.append(stats_non_growing_season)
+
+            result_dic[pix] = {'ecosystem_year': ecosystem_mean_list,
+                               'growing_season': growing_season_mean_list,
+                               'non_growing_season': non_growing_season_mean_list}
+
+        outf = outdir_CV + 'rainfall_frenquency.npy'
+
+
+        np.save(outf, result_dic)
+
+
 
 
 
