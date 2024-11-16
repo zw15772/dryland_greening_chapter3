@@ -67,9 +67,9 @@ D = DIC_and_TIF(pixelsize=0.25)
 
 
 
-this_root = 'D:\Project3\\'
-data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+this_root = 'E:\Project3\\'
+data_root = 'E:/Project3/Data/'
+result_root = 'E:/Project3/Result/'
 
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
@@ -10874,7 +10874,7 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        df=self.add_AI_classfication(df)
+        # df=self.add_AI_classfication(df)
         #
         df=self.add_aridity_to_df(df)
 
@@ -11080,7 +11080,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\extraction_rainfall_chararistic\\CV_intraannual_rainfall.npy'
+        f = rf'E:\Project3\Result\extract_rainfall_phenology_year\CRU-JRA\extraction_rainfall_characteristic\\CV_intraannual_rainfall.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -11201,7 +11201,7 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\extraction_rainfall_chararistic\\'
+        fdir=rf'E:\Project3\Result\extract_rainfall_phenology_year\CRU-JRA\extraction_rainfall_characteristic\\'
         for f in os.listdir(fdir):
 
 
@@ -11421,7 +11421,7 @@ class build_dataframe():
 
     pass
     def add_lat_lon_to_df(self, df):
-        D=DIC_and_TIF(pixelsize=0.25)
+        D=DIC_and_TIF(pixelsize=0.5)
         df=T.add_lon_lat_to_df(df,D)
         return df
 
@@ -11855,7 +11855,7 @@ class build_dataframe():
         df[f_name] = val_list
         return df
     def add_MODIS_LUCC_to_df(self, df):
-        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -11877,7 +11877,7 @@ class build_dataframe():
 
     def add_landcover_data_to_df(self, df):
 
-        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_05.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -11926,7 +11926,7 @@ class build_dataframe():
         pass
     def add_maxmium_LC_change(self, df): ##
 
-        f = rf'E:\CCI_landcover\trend_analysis_LC\\LC_max.tif'
+        f = rf'E:\Project3\Data\Base_data\lc_trend\\max_trend.tif'
 
         array, origin, pixelWidth, pixelHeight, extent = ToRaster().raster2array(f)
         array[array <-99] = np.nan
@@ -11942,7 +11942,7 @@ class build_dataframe():
 
     def add_aridity_to_df(self,df):  ## here is original aridity index not classification
 
-        f=data_root+rf'Base_data\dryland_AI.tif\\dryland.tif'
+        f=data_root+rf'Base_data\aridity_index05.tif\\aridity_index.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -12084,16 +12084,16 @@ class build_dataframe():
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
+        self.this_class_arr = (rf'E:\Project3\Result\Dataframe\\moving_window\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_new.df'
+        self.dff = self.this_class_arr + 'moving_window.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
-        # df=self.foo1(df)
+        df=self.foo1(df)
         df=self.add_window_to_df(df)
         # self.show_field()
 
@@ -12203,7 +12203,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:Project3\Data\ERA5_daily\dict\moving_window_average_anaysis\\LAI4g_CV.npy'
+        f = rf'E:\Project3\Result\extract_LAI4g_phenology_year\moving_window_average_anaysis\\detrended_growing_season_LAI_mean_CV.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -12234,16 +12234,14 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['LAI4g_CV'] = change_rate_list
+        df['LAI4g_CV_growing_season'] = change_rate_list
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'E:\Project3\Data\CRU-JRA\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Result\extract_rainfall_phenology_year\CRU-JRA\moving_window_average_anaysis\non_growing_season\\'
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
 
-            if not 'detrended_annual_LAI4g_CV' in variable:
-                continue
 
             variable= f.split('.')[0]
 
@@ -12271,32 +12269,31 @@ class build_moving_window_dataframe():
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
-                print(len(vals))
 
-                # vals[vals<-500]=np.nan
-                # vals[vals>2000]=np.nan
-
-
-
-                # print(len(vals))
                 ##### if len vals is 38, the end of list add np.nan
 
-                if len(vals) == 23:
-                    vals=np.append(vals,np.nan)
-                    v1 = vals[y-0]
-                    NDVI_list.append(v1)
-                elif len(vals)==24:
-                    v1= vals[y-0]
-                    NDVI_list.append(v1)
-                else:
+                # if len(vals) == 23:
+                #     vals=np.append(vals,np.nan)
+                #     v1 = vals[y-0]
+                #     NDVI_list.append(v1)
+                # elif len(vals)==24:
+                #     v1= vals[y-0]
+                #     NDVI_list.append(v1)
+                # else:
+                #     NDVI_list.append(np.nan)
+                # # print(y)
+                # print(vals)
+
+                if  len(vals) != 23:
                     NDVI_list.append(np.nan)
-                # print(y)
+                    continue
+                NDVI_list.append(vals)
 
 
                 # print(v1,year,len(vals))
 
 
-            df[f'{variable}'] = NDVI_list
+            df[f'{variable}_non_growing_season'] = NDVI_list
         # exit()
         return df
     def append_attributes(self, df):  ## add attributes
@@ -17387,8 +17384,8 @@ def main():
     # fingerprint().run()
 
 
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()

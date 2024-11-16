@@ -1811,9 +1811,9 @@ class Extract_rainfall_phenology_daily():
         # self.trend_analysis()
 
     def extract_heatevent_frequency(self):  ## extract CV of rainfall ready for multiregression
-        fdir = data_root + '\CRU-JRA\Precip\phenology_year\\'
+        fdir = data_root + 'CRU-JRA\Tmax\phenology_year\\'
 
-        outdir_CV = result_root + rf'extract_rainfall_annual\\CRU-JRA\\'
+        outdir_CV = result_root + rf'extract_rainfall_phenology_year\\CRU-JRA\\extraction_rainfall_characteristic\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -2368,15 +2368,15 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        self.extract_annual_LAI_mean()
-        # self.detrend()
+        # self.extract_annual_LAI_mean()
+        self.detrend()
         # self.trend_analysis()
         pass
 
-    def extract_annual_LAI_mean(self):  ## extract LAI average
-        fdir = result_root + rf'LAI4g_phenology\LAI4g_extraction\\'
+    def extract_phenology_LAI_mean(self):  ## extract LAI average
+        fdir = data_root + rf'\LAI4g\phenology_year\\'
 
-        outdir_CV = result_root + rf'LAI4g_phenology\\extract_annual_LAI_mean\\'
+        outdir_CV = result_root + rf'extract_LAI4g_phenology_year\extraction_LAI4g\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -2424,14 +2424,14 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'annual_LAI_mean.npy'
+        outf = outdir_CV + 'phenology_LAI_mean.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = rf'E:\Project3\Result\LAI4g_phenology\extract_annual_LAI_mean\\annual_LAI_mean.npy'
-        outdir = rf'E:\Project3\Result\LAI4g_phenology\extract_annual_LAI_mean\\'
+        f = rf'E:\Project3\Result\extract_LAI4g_phenology_year\extraction_LAI4g\\phenology_LAI_mean.npy'
+        outdir = rf'E:\Project3\Result\extract_LAI4g_phenology_year\extraction_LAI4g\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         dict = T.load_npy(f)
@@ -2950,20 +2950,20 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis()
 
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.robinson()
 
         pass
     def moving_window_extraction(self):
 
-        fdir_all = result_root+ rf'LAI4g_phenology\extract_annual_LAI_mean\\'
-        outdir = result_root+ rf'extract_rainfall_annual\CRU-JRA\moving_window_extraction\\'
+        fdir_all = result_root+ rf'extract_rainfall_phenology_year\CRU-JRA\extraction_rainfall_characteristic\\'
+        outdir = result_root+ rf'extract_rainfall_phenology_year\CRU-JRA\moving_window_extraction\\growing_season\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'detrended_growing_season_LAI_mean' in f:
+            if  'detrended' in f:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -2977,7 +2977,7 @@ class moving_window():
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
 
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 time_series = np.array(time_series)
 
 
@@ -3093,8 +3093,8 @@ class moving_window():
 
     def moving_window_CV_extraction_anaysis(self):
         window_size=15
-        fdir = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\moving_window_extraction\\LAI4g\\'
-        outdir =  rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\moving_window_average_anaysis\\LAI4g\\'
+        fdir = rf'E:\Project3\Result\extract_LAI4g_phenology_year\moving_window_extraction\\'
+        outdir =  rf'E:\Project3\Result\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -3150,8 +3150,8 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
 
-        fdir=rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\moving_window_extraction\ecosystem_year\\'
-        outdir = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\\moving_window_average_anaysis\\ecosystem_year\\'
+        fdir=rf'E:\Project3\Result\extract_rainfall_phenology_year\CRU-JRA\moving_window_extraction\growing_season\\'
+        outdir = rf'E:\Project3\Result\extract_rainfall_phenology_year\CRU-JRA\\moving_window_average_anaysis\\growing_season\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -3316,8 +3316,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\moving_window_average_anaysis\LAI4g\\'
-        outdir = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\moving_window_average_anaysis\trend\\'
+        fdir = rf'E:\Project3\Result\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
+        outdir = rf'E:\Project3\Result\extract_LAI4g_phenology_year\moving_window_average_anaysis\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4726,13 +4726,13 @@ def main():
     # extract_heatevent().run()
     # extract_water_year().run()
     # extract_rainfall_annual_based_on_daily().run()
-    Extract_rainfall_phenology_daily().run()
+    # Extract_rainfall_phenology_daily().run()
     # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
 
 
-    # moving_window().run()
+    moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()

@@ -2271,7 +2271,8 @@ class CRU_JRA:
         # self.check_tiff()
         # self.extract_dryland_tiff()
         # self.tiff_to_dict()
-        self.transform()
+        # self.transform()
+        self.detrend_deseasonal()
         # self.extract_dryland_dic()
         # self.plot_spatial_map()
 
@@ -2498,8 +2499,8 @@ class CRU_JRA:
             np.save(outpath, result_dic)
 
     def detrend_deseasonal(self):
-        fdir_all = data_root + rf'\CRU_JRA_05\\Tmax\\transform\\'
-        outdir = data_root + rf'\CRU_JRA_05\\Tmax\\transform\\deseasonal\\'
+        fdir_all = data_root + rf'\CRU-JRA\Tmax\\transform\\'
+        outdir = data_root + rf'\CRU-JRA\Tmax\\deseasonal\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
@@ -2734,7 +2735,7 @@ class CPC():
 
 
 def main():
-    ERA5_daily().run()
+    # ERA5_daily().run()
 
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
@@ -2743,6 +2744,7 @@ def main():
     # Build_df().run()
 
     # plot_ERA_df().run()
+    CRU_JRA().run()
 
     # ERA5_hourly().run()
     pass
