@@ -10844,7 +10844,7 @@ class build_dataframe():
         # Tools().mk_dir(self.this_class_arr, force=True)
         # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
-        self.this_class_arr = (rf'E:Project3\\\Data\ERA5_daily\dict\\Dataframe\\')
+        self.this_class_arr = (rf'E:\Project3\Result\\Dataframe\\rainfall_seasonality_unpack\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
@@ -10864,7 +10864,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -10874,20 +10874,20 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        # df=self.add_AI_classfication(df)
-        # #
-        # df=self.add_aridity_to_df(df)
+        df=self.add_AI_classfication(df)
+        #
+        df=self.add_aridity_to_df(df)
 
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
-        # # #
-        df=self.add_rooting_depth_to_df(df)
+        # # # #
+        # df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -11080,7 +11080,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\CV_rainfall.npy'
+        f = rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\extraction_rainfall_chararistic\\CV_intraannual_rainfall.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -11093,7 +11093,7 @@ class build_dataframe():
         year = []
 
         for pix in tqdm(dic):
-            time_series = dic[pix]
+            time_series = dic[pix]['ecosystem_year']
 
             y = 1982
             for val in time_series:
@@ -11107,7 +11107,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['interannual_rainfall_CV'] = change_rate_list
+        df['intraannual_rainfall_CV'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -11201,15 +11201,13 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\'
+        fdir=rf'E:\Project3\Result\extract_rainfall_annual\CRU-JRA\extraction_rainfall_chararistic\\'
         for f in os.listdir(fdir):
-            if  not 'rainfall_intensity' in f:
-                continue
 
 
             variable= f.split('.')[0]
-            # if variable not in ['CRU','GLEAM_SMroot','VPD','tmax']:
-            #     continue
+            if variable not in ['rainfall_frenquency','rainfall_seasonality_all_year','heavy_rainfall_days','rainfall_intensity']:
+                continue
 
             print(variable)
 
@@ -11232,7 +11230,7 @@ class build_dataframe():
                     continue
 
 
-                vals = val_dic[pix]
+                vals = val_dic[pix]['ecosystem_year']
                 # print(len(vals))
                 if len(vals)<38:
 
