@@ -10844,9 +10844,9 @@ class build_dataframe():
         # Tools().mk_dir(self.this_class_arr, force=True)
         # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
-        self.this_class_arr = (rf'E:\Project3\Result\\Dataframe\\rainfall_seasonality_unpack\\')
+        self.this_class_arr = (rf'E:\Project3\Result\Dataframe\moving_window\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
+        self.dff = self.this_class_arr + 'moving_window.df'
 
         pass
 
@@ -10854,7 +10854,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -10864,7 +10864,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -10876,18 +10876,19 @@ class build_dataframe():
         # #
         # df=self.add_AI_classfication(df)
         #
-        df=self.add_aridity_to_df(df)
-
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        #
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
+        df=self.add_soil_texture_to_df(df)
+        df=self.add_SOC_to_df(df)
         # # # #
-        # df=self.add_rooting_depth_to_df(df)
+        df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -12093,7 +12094,7 @@ class build_moving_window_dataframe():
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         df=self.add_window_to_df(df)
         # self.show_field()
 
@@ -12250,6 +12251,10 @@ class build_moving_window_dataframe():
 
             if not f.endswith('.npy'):
                 continue
+            if not 'detrended' in f:
+                continue
+            if 'intra' in f:
+                continue
             val_dic = T.load_npy(fdir + f)
 
             NDVI_list = []
@@ -12287,7 +12292,9 @@ class build_moving_window_dataframe():
                 if  len(vals) != 23:
                     NDVI_list.append(np.nan)
                     continue
-                NDVI_list.append(vals)
+                v1= vals[y-0]
+                NDVI_list.append(v1)
+
 
 
                 # print(v1,year,len(vals))

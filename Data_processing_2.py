@@ -79,7 +79,8 @@ class Data_processing_2:
     def run(self):
 
         # self.dryland_mask()
-        self.test_histogram()
+        # self.test_histogram()
+        self.resampleSOC()
 
         pass
     def dryland_mask(self):
@@ -118,14 +119,26 @@ class Data_processing_2:
 
 
 
+    def resampleSOC(self):
+        f=rf'E:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth.tif'
+
+        outf = rf'E:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth_05.tif'
+
+        dataset = gdal.Open(f)
+
+
+
+        try:
+            gdal.Warp(outf, dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+        # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+        # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+        except Exception as e:
+            pass
 
 
 
 
-    def run(self):
 
-        self.dryland_mask()
-    pass
 
 class Phenology():
     ## this function is to see phenology of NH, SH and tropical
@@ -194,8 +207,8 @@ class Phenology():
         pass
 
 def main():
-    # Data_processing_2().run()
-    Phenology().run()
+    Data_processing_2().run()
+    # Phenology().run()
 
 
 

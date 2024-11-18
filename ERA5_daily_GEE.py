@@ -27,12 +27,13 @@ class ERA5_daily:
         # self.download_images()
         # self.unzip()
         # self.resample_ERA5()
-        self.tiff_to_dict()
+        # self.tiff_to_dict()
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
         # self.detrend_deseasonal()
         self.check_dic()
+
 
 
         # self.check()
@@ -334,8 +335,8 @@ class ERA5_daily:
             np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
             # print(result_dic)
     def detrend_deseasonal(self):
-        fdir_all = data_root + rf'\ERA5\\Tmax\\transform\\'
-        outdir = data_root+rf'\ERA5\\Tmax\\deseasonal_detrend\\'
+        fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
+        outdir = data_root+rf'CRU-JRA\Tmax\\\deseasonal_detrend\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
@@ -366,11 +367,14 @@ class ERA5_daily:
                 # #
                 # plt.bar(range(len(anomaly_detrend)),anomaly_detrend,color= 'b')
                 # plt.show()
+                anomaly_detrend_reshape = anomaly_detrend.reshape(-1, 365)
 
-                result_dic[pix] = anomaly_detrend
+                result_dic[pix] = anomaly_detrend_reshape
             np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
 
         pass
+
+
 
     def daily_climatology_anomaly(self, vals):
         '''
@@ -398,21 +402,22 @@ class ERA5_daily:
         return pix_anomaly
 
     def check_dic(self):
-        fdir = data_root + rf'\CPC\transform\\'
+        fdir = data_root + rf'ERA5\Tmax\transform\\'
         spatial_dic = T.load_npy_dir(fdir)
         results_dic = {}
         for pix in tqdm(spatial_dic.keys()):
-            print(len(spatial_dic[pix]))
+            # print(len(spatial_dic[pix]))
             average_list = []
 
             for vals in spatial_dic[pix]:
-                print(len(vals))
+                # print(len(vals))
 
                 if T.is_all_nan(vals):
                     continue
 
-                average = np.nansum(vals)
-                print(average)
+                average = np.nanmean(vals)
+
+                # print(average)
                 average_list.append(average)
             results_dic[pix] = np.average(average_list)
 
@@ -2272,7 +2277,7 @@ class CRU_JRA:
         # self.extract_dryland_tiff()
         # self.tiff_to_dict()
         # self.transform()
-        self.detrend_deseasonal()
+        # self.detrend_deseasonal()
         # self.extract_dryland_dic()
         # self.plot_spatial_map()
 
@@ -2732,6 +2737,172 @@ class CPC():
             np.save(outpath, result_dic)
 
 
+class MSWEP():
+    def __init__(self):
+        self.datadir = '/mnt/14T/wen/MSWEP'
+
+        pass
+
+    def run(self):
+
+        # self.nc_to_tif()
+        # self.resample()
+        # self.extract_dryland_tiff()
+        # self.tiff_to_dict()
+        self.transform()
+
+        pass
+
+    def nc_to_tif(self):
+        fdir_all = join(self.datadir,'nc')
+
+
+
+        for fdir in T.listdir(fdir_all):
+            outdir = join(self.datadir, 'tiff', fdir)
+
+            T.mk_dir(outdir, force=True)
+            for f in T.listdir(join(fdir_all,fdir)):
+
+
+
+
+                fpath = join(fdir_all,fdir,f)
+                outpath = join(outdir,f.replace('.nc','.tif'))
+                ncin = Dataset(fpath, 'r')
+                variables = ncin.variables
+                # print(variables.keys())
+                arrs = ncin.variables['precipitation'][:]
+
+                for i,arr in tqdm(enumerate(arrs),desc=f,total=len(arrs)):
+                    arr = arr
+
+
+                    newRasterfn = outpath
+                    longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.1, -0.1
+                    ToRaster().array2raster(newRasterfn, longitude_start, latitude_start, pixelWidth, pixelHeight, arr)
+
+    def resample(self):
+        fdir_all = join(self.datadir, 'tiff')
+        outdir = join(self.datadir, 'resample')
+        T.mk_dir(outdir, force=True)
+
+        for fdir in T.listdir(fdir_all):
+            outdir_i = join(outdir, fdir)
+            T.mk_dir(outdir_i, force=True)
+            for f in T.listdir(join(fdir_all, fdir)):
+                if not f.endswith('.tif'):
+                    continue
+
+                if f.startswith('._'):
+                    continue
+
+                print(f)
+                # exit()
+                date = f.split('.')[0]
+
+                # print(date)
+                # exit()
+                dataset = gdal.Open(join(fdir_all, fdir, f))
+                # print(dataset.GetGeoTransform())
+                original_x = dataset.GetGeoTransform()[1]
+                original_y = dataset.GetGeoTransform()[5]
+
+                # band = dataset.GetRasterBand(1)
+                # newRows = dataset.YSize * 2
+                # newCols = dataset.XSize * 2
+                try:
+                    gdal.Warp(join(outdir_i, f), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+                # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+                # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+                except Exception as e:
+                    pass
+
+        pass
+
+    def extract_dryland_tiff(self):
+        NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask05.tif')
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+        outdir = join(self.datadir, 'dryland_tiff')
+        T.mk_dir(outdir,force=True)
+
+        fdir_all = join(self.datadir,'resample')
+        for fdir in T.listdir(fdir_all):
+            fdir_i = join(fdir_all,fdir)
+            outdir_i = join(outdir,fdir)
+            T.mk_dir(outdir_i)
+            for fi in tqdm(T.listdir(fdir_i),desc=fdir):
+                if not fi.endswith('.tif'):
+                    continue
+                fpath = join(fdir_i,fi)
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr[np.isnan(array_mask)] = np.nan
+                # plt.imshow(arr)
+                # plt.show()
+                outpath = join(outdir_i,fi)
+
+                ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
+
+
+
+        pass
+
+    def tiff_to_dict(self):
+
+        fdir_all = join(self.datadir,'dryland_tiff')
+        outdir = join(self.datadir,'dict')
+        T.mk_dir(outdir, force=True)
+
+        year_list = list(range(1982, 2021))
+
+        # 作为筛选条件
+        for folder in os.listdir(fdir_all):
+
+            outdir_i = join(outdir, folder)
+            T.mk_dir(outdir_i, force=True)
+            fdir_i = join(fdir_all, folder)
+
+            Pre_Process().data_transform(fdir_i,outdir_i)
+
+    def transform(self):
+
+        fdir_all = join(self.datadir,'dict')
+        outdir = join(self.datadir,'transform')
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(106):
+            data_list.append(i)
+
+        for data in data_list:
+            dic_all_list = []
+            for fdir_i in T.listdir(fdir_all):
+
+                for f in T.listdir(join(fdir_all, fdir_i)):
+                    if not f.endswith('.npy'):
+                        continue
+                    if f.split('.')[0].split('_')[-1] != '%03d' % data:
+                        continue
+
+                    spatial_dic = np.load(join(fdir_all, fdir_i, f), allow_pickle=True).item()
+                    dic_all_list.append(spatial_dic)
+
+            result_dic = {}
+
+
+            for pix in tqdm(dic_all_list[0].keys()):
+                result_list = []
+                for i in range(len(dic_all_list)):
+                    if pix not in dic_all_list[i].keys():
+                        continue
+                    else:
+                        # print(dic_all_list[i][pix])
+                        result_list.append(dic_all_list[i][pix][0:365])
+                result_dic[pix] = result_list
+            outpath = join(outdir, f'per_pix_dic_%03d' % data)
+            ## save
+            np.save(outpath, result_dic)
 
 
 def main():
@@ -2744,7 +2915,7 @@ def main():
     # Build_df().run()
 
     # plot_ERA_df().run()
-    CRU_JRA().run()
+    # CRU_JRA().run()
 
     # ERA5_hourly().run()
     pass
