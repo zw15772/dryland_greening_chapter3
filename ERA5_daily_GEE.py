@@ -31,8 +31,9 @@ class ERA5_daily:
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
+        self.deseasonal()
         # self.detrend_deseasonal()
-        self.check_dic()
+        # self.check_dic()
 
 
 
@@ -334,6 +335,46 @@ class ERA5_daily:
             ## save
             np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
             # print(result_dic)
+
+    def deseasonal(self):  ## temperature does not need to detrend
+        fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
+        outdir = data_root + rf'CRU-JRA\Tmax\\\deseasonal\\'
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(106):
+            data_list.append(i)
+
+        for data in data_list:
+            dic_all = np.load(fdir_all + f'per_pix_dic_%03d.npy' % data, allow_pickle=True).item()
+            result_dic = {}
+            outf = outdir + f'per_pix_dic_%03d' % data + '.npy'
+            print(outf)
+            # if isfile(outf):
+            #     continue
+            for pix in tqdm(dic_all.keys()):
+                vals = dic_all[pix]
+                vals = np.array(vals)
+                vals_flatten = vals.flatten()
+                #
+                if T.is_all_nan(vals_flatten):
+                    continue
+
+                anomaly = self.daily_climatology_anomaly(vals_flatten)
+                # anomaly_detrend = T.detrend_vals(anomaly)
+                # plt.bar(range(len(anomaly)),anomaly,color='red')
+                #
+                #
+                # #
+                # plt.bar(range(len(anomaly_detrend)),anomaly_detrend,color= 'b')
+                # plt.show()
+                anomaly_detrend_reshape = anomaly.reshape(-1, 365)
+
+                result_dic[pix] = anomaly_detrend_reshape
+            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+
+        pass
+
     def detrend_deseasonal(self):
         fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
         outdir = data_root+rf'CRU-JRA\Tmax\\\deseasonal_detrend\\'
@@ -349,8 +390,8 @@ class ERA5_daily:
             result_dic = {}
             outf=outdir + f'per_pix_dic_%03d' % data+'.npy'
             print(outf)
-            if isfile(outf):
-                continue
+            # if isfile(outf):
+            #     continue
             for pix in tqdm(dic_all.keys()):
                 vals = dic_all[pix]
                 vals=np.array(vals)
@@ -402,14 +443,14 @@ class ERA5_daily:
         return pix_anomaly
 
     def check_dic(self):
-        fdir = data_root + rf'ERA5\Tmax\transform\\'
+        fdir = data_root + rf'\CRU-JRA\Tmax\phenology_year\\'
         spatial_dic = T.load_npy_dir(fdir)
         results_dic = {}
         for pix in tqdm(spatial_dic.keys()):
             # print(len(spatial_dic[pix]))
             average_list = []
 
-            for vals in spatial_dic[pix]:
+            for vals in spatial_dic[pix]['ecosystem_year']:
                 # print(len(vals))
 
                 if T.is_all_nan(vals):
@@ -419,7 +460,7 @@ class ERA5_daily:
 
                 # print(average)
                 average_list.append(average)
-            results_dic[pix] = np.average(average_list)
+            results_dic[pix] = np.nanmean(average_list)
 
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(results_dic)
         plt.imshow(arr)
@@ -2906,7 +2947,7 @@ class MSWEP():
 
 
 def main():
-    # ERA5_daily().run()
+    ERA5_daily().run()
 
     # extract_temperature().run()
     # extration_extreme_event_temperature_ENSO().run()
