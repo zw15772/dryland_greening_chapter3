@@ -27,6 +27,7 @@ class ERA5_daily:
         # self.download_images()
         # self.unzip()
         # self.resample_ERA5()
+        # self.extract_dryland_tiff()
         # self.tiff_to_dict()
         # self.reproj()
         # self.statistic()
@@ -176,14 +177,41 @@ class ERA5_daily:
                     # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
                     except Exception as e:
                         pass
-    def tiff_to_dict(self):
-        fdir_all=data_root+rf'ERA5\\Precip\\resample\\'
-        outdir = data_root+rf'\ERA5\\Precip\\dict\\'
-        T.mk_dir(outdir,force=True)
 
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask05.tif'
+    def extract_dryland_tiff(self):
+        NDVI_mask_f = rf'D:\Project3\Data\Base_data\dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\\extract_dryland_tiff\\'
+        T.mk_dir(outdir,force=True)
+
+        fdir_all = rf'C:\Users\wenzhang1\Desktop\unzip_precip\\'
+        for fdir in T.listdir(fdir_all):
+            fdir_i = join(fdir_all,fdir)
+            outdir_i = join(outdir,fdir)
+            T.mk_dir(outdir_i)
+            for fi in tqdm(T.listdir(fdir_all+fdir),desc=fdir):
+
+                fpath = join(fdir_i,fi,fi+'.total_precipitation.tif')
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr[np.isnan(array_mask)] = np.nan
+                arr=arr*1000  ## precipitation unit is m so we need to multiply 1000 to get mm
+                # arr=arr-273.15  ##  temperature unit is c so we need to subtract 273.15 to get K
+                # plt.imshow(arr)
+                # plt.show()
+                outpath = join(outdir_i,fi+'.tif')
+
+                ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
+
+
+
+        pass
+
+    def tiff_to_dict(self):
+        fdir_all=rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\extract_dryland_tiff\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\dic\\'
+        T.mk_dir(outdir,force=True)
+
 
         year_list = list(range(1982, 2021))
 
@@ -208,8 +236,8 @@ class ERA5_daily:
                     fpath)
                 array = np.array(array, dtype=float)
 
-                array_unify = array[:360][:360,
-                              :720]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                array_unify = array[:720][:720,
+                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
 
                 # array_unify[array_unify < -999] = np.nan
 
@@ -217,16 +245,15 @@ class ERA5_daily:
                 # array[array ==0] = np.nan
 
                 # array_unify[array_unify < 0] = np.nan
-                array_unify = array_unify * 1000  ## precipitation unit is m so we need to multiply 1000 to get mm
+                array_unify = array_unify
 
-                # array_unify = array_unify - 273.15  ## temperature unit is K so we need to minus 273.15 to get Celsius
 
                 # plt.imshow(array_unify)
                 # plt.show()
-                array_mask = np.array(array_mask, dtype=float)
+
                 # plt.imshow(array_mask)
                 # plt.show()
-                array_dryland = array_unify * array_mask
+                array_dryland = array_unify
                 # plt.imshow(array_dryland)
                 # plt.show()
 
@@ -296,13 +323,15 @@ class ERA5_daily:
 
     def transform_ERA(self):
 
-        fdir_all = data_root + rf'\ERA5\\Precip\\dict\\'
-        outdir = data_root + rf'\ERA5\\Precip\\transform\\'
+        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\dic\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\transform\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
         for i in range(106):
             data_list.append(i)
+
+
 
         for data in data_list:
 
@@ -336,9 +365,11 @@ class ERA5_daily:
             np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
             # print(result_dic)
 
+
+
     def deseasonal(self):  ## temperature does not need to detrend
-        fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
-        outdir = data_root + rf'CRU-JRA\Tmax\\\deseasonal\\'
+        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Tmax\transform\\'
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Tmax\deseasonal\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
@@ -443,26 +474,30 @@ class ERA5_daily:
         return pix_anomaly
 
     def check_dic(self):
-        fdir = data_root + rf'\CRU-JRA\Tmax\phenology_year\\'
+        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\transform\\'
         spatial_dic = T.load_npy_dir(fdir)
         results_dic = {}
+
         for pix in tqdm(spatial_dic.keys()):
             # print(len(spatial_dic[pix]))
             average_list = []
 
-            for vals in spatial_dic[pix]['ecosystem_year']:
+            for vals in spatial_dic[pix]:
                 # print(len(vals))
 
                 if T.is_all_nan(vals):
                     continue
 
-                average = np.nanmean(vals)
+                # if np.nansum(vals)==0:
+                #     continue
+
+                average = np.nansum(vals)
 
                 # print(average)
                 average_list.append(average)
-            results_dic[pix] = np.nanmean(average_list)
+            results_dic[pix] = average_list
 
-        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(results_dic)
+        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(results_dic)
         plt.imshow(arr)
         plt.colorbar()
         plt.show()

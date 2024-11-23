@@ -68,8 +68,8 @@ D = DIC_and_TIF(pixelsize=0.5)
 
 
 
-this_root = 'E:\Project3\\'
-data_root = 'E:/Project3/Data/'
+this_root = rf'E:\Project3\\'
+data_root = rf'E:/Project3/Data/'
 result_root = 'E:/Project3/Result/'
 
 class Phenology:
@@ -83,13 +83,13 @@ class Phenology:
         # self.GST()
         # self.plot_4GST_df()
         # self.read_4GST_df()
-        self.plot_4GST_npy()
+        self.plot_4GST_npy()  ### plot SOS and EOS
 
 
         pass
 
     def phenology_average(self):
-        fdir_all = data_root + 'LAI4g\\phenology_average\\'
+        fdir_all = rf'D:\Project3\Data\LAI4g\biweekly_dic\\'
         spatial_dic=T.load_npy_dir(fdir_all)
         result_dic={}
 
@@ -116,7 +116,7 @@ class Phenology:
             # plt.ylabel('LAI4g (m2/m2)')
             #
             # plt.show()
-        outdir='E:/Project3/Data/LAI4g//phenology_average//'
+        outdir=rf'D:\Project3\Data\LAI4g\phenology_average\\'
 
         Tools().mk_dir(outdir, force=True)
 
@@ -127,15 +127,15 @@ class Phenology:
 #*****************************************
 
     def GST(self):
-        fdir = data_root + 'LAI4g\\phenology_average\\'
-        outdir = join(result_root, 'LAI4g\\phenology_average\\')
+        fdir = rf'D:\Project3\Data\LAI4g\phenology_average\\'
+        outdir = rf'D:\Project3\Data\LAI4g\GST\\'
         T.mk_dir(outdir, force=True)
         spatial_dic = T.load_npy_dir(fdir)
         spatial_dic_result = {}
         for pix in tqdm(spatial_dic):
             r,c=pix
 
-            if r<60:
+            if r<120:
                 continue
             LAI = spatial_dic[pix]
             if T.is_all_nan(LAI):
@@ -762,7 +762,7 @@ class Phenology:
         return SeasType, Onsets, Offsets
 
     def plot_4GST_df(self):
-        fpath = join(result_root,  rf'LAI4g_phenology\4GST\\4GST.df')
+        fpath = rf'D:\Project3\Data\LAI4g\4GST\4GST.df'
         df = T.load_df(fpath)
         df_2 = df[df['SeasType'] == 1]
         onset_list  = []
@@ -787,8 +787,8 @@ class Phenology:
         Onsets = T.df_to_spatial_dic(df_2, 'Onsets')
         Offsets = T.df_to_spatial_dic(df_2, 'Offsets')
         # pprint(Onsets);exit()
-        arr_onset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Onsets)
-        arr_offset = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(Offsets)
+        arr_onset = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(Onsets)
+        arr_offset = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(Offsets)
         plt.imshow(arr_onset, interpolation='nearest', cmap='jet',vmin=0,vmax=100)
         # plt.colorbar()
         # plt.title('onset')
@@ -813,14 +813,14 @@ class Phenology:
         print('df_3',len(df_3))
         T.print_head_n(df_3)
 
-    def plot_4GST_npy(self):
-        f=join(result_root, 'LAI4g_phenology\\4GST\\4GST.npy')
+    def plot_4GST_npy(self):  ##
+        f= rf'D:\Project3\Data\LAI4g\4GST\\\4GST.npy'
         spatial_dic = T.load_npy(f)
         result_dic = {}
         vals_list = []
 
         for pix in spatial_dic:
-            val=spatial_dic[pix]['Onsets']
+            val=spatial_dic[pix]['Offsets']
             print(pix,val)
             try:
                 val=float(val)
@@ -828,17 +828,16 @@ class Phenology:
                 continue
             vals_list.append(val)
 
-
-
             result_dic[pix]=val
         vals_list = np.array(vals_list)
         ## get unique values
         vals_list = np.unique(vals_list)
         print(vals_list)
 
-        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=10)
+        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
+        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=365)
         plt.colorbar()
+        plt.title('leaf senescence')
         plt.show()
 
 
