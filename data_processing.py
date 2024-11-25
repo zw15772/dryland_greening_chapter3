@@ -97,14 +97,14 @@ class data_processing():
         # self.resample_trendy()
         # self.resample_AVHRR_LAI()
         # self.resample_GIMMS4g()
-        # self.resample_MODIS_LUCC()
+        self.resample_MODIS_LUCC()
         # self.resample_glc_LUCC()
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -1780,7 +1780,7 @@ class data_processing():
                     pass
 
     def resample_MODIS_LUCC(self):
-        f=rf'D:\Project3\Data\Base_data\MODIS_LUCC\\MODIS_LUCC.tif'
+        f=rf'D:\Project3\Data\Base_data\lc_trend\\max_trend.tif'
 
         outf = rf'E:\Project3\Data\\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
 
@@ -15060,7 +15060,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -15084,8 +15084,6 @@ def main():
     # fingerprint().run()
 
 
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()

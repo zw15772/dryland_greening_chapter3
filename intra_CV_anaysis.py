@@ -1807,14 +1807,14 @@ class Extract_rainfall_phenology_daily():
 
         # self.extract_heatevent_frequency()
         # self.extract_dry_spell()
-        # self.extract_rainfall_sum()
+        self.extract_rainfall_sum()
         # self.extract_rainfall_frequency()
         # self.extract_rainfall_seasonality_all_year()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
         # self.extract_rainfall_CV()
-        self.detrend_rainfall()
-        # self.trend_analysis()
+        # self.detrend_rainfall()
+        self.trend_analysis()
 
     def define_quantile_threshold(self):
         # 1) extract extreme wet event based on 90th percentile and calculate frequency and total duration
@@ -2559,7 +2559,7 @@ class Extract_rainfall_phenology_daily():
         annual_spatial_dict = {}
         dict = T.load_npy(f)
         for pix in tqdm(dict):
-            time_series = dict[pix]['growing_season']
+            time_series = dict[pix]['ecosystem_year']
             # time_series[time_series==65535]=np.nan
             if T.is_all_nan(time_series):
                 continue
@@ -2592,11 +2592,13 @@ class Extract_rainfall_phenology_daily():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir_all = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        outdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\trend\\'
+        fdir_all = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\1mm\ecosystem_year\\'
+        outdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\1mm\ecosystem_year\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(join(fdir_all)):
+
+
 
 
             outf = outdir + f.split('.')[0]
@@ -2623,7 +2625,7 @@ class Extract_rainfall_phenology_daily():
                     ## ignore the last one year
 
                 # time_series = dic[pix][:-1]
-                time_series = dic[pix]['ecosystem_year']
+                time_series = dic[pix]
                 # print(time_series)
 
                 if len(time_series) == 0:
@@ -3417,7 +3419,7 @@ class moving_window():
                     continue
 
                 dic = T.load_npy(fdir + f)
-                slides = 37-window_size   ## only ERA 37 year and other datasets 38
+                slides = 38-window_size   ## only ERA 37 year and other datasets 38
                 outf = outdir + f.split('.')[0] + f'_CV.npy'
                 print(outf)
 
@@ -3433,7 +3435,7 @@ class moving_window():
 
 
                     time_series_all = dic[pix]
-                    if len(time_series_all)<22:  ## only ERA5 22, others 23
+                    if len(time_series_all)<23:  ## only ERA5 22, others 23
                         continue
                     time_series_all = np.array(time_series_all)
                     for ss in range(slides):
@@ -3632,14 +3634,14 @@ class moving_window():
             np.save(outf, trend_dic)
     def trend_analysis(self):  ##each window average trend
 
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_025.tif'
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\\'
-        outdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\\trend\\'
+        fdir = rf'E:\Project3\Result\3mm\ERA5\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year\\'
+        outdir = rf'E:\Project3\Result\3mm\ERA5\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3663,8 +3665,8 @@ class moving_window():
             p_value_dic = {}
             for pix in tqdm(dic):
                 r, c = pix
-                if r < 120:
-                    continue
+                # if r < 120:
+                #     continue
                 landcover_value = crop_mask[pix]
                 if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
                     continue
@@ -3827,11 +3829,10 @@ class moving_window():
         f_p_value=fdir+variable+'_p_value.tif'
         fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 
+        m,ret=Plot().plot_Robinson(f_trend, ax=ax, vmin=-1, vmax=1, is_plot_colorbar=True, is_discrete=True,colormap_n=5)
 
-        m,ret=PLOT().Robinson(f_trend, vmin=-1,vmax=1,is_discrete=True,colormap_n=11,ax=ax)
-
-        self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=0.2)
-        cbar=m.colorbar(location='bottom',label='(LAI CV(%/window (15 years per window)))')
+        self.plot_Robinson_significance_scatter(m, f_p_value,temp_root,0.05,s=0.1)
+        # m.colorbar(location='bottom',label='(LAI CV(%/window (15 years per window)))')
         # cbar.set_label(fontsize=6, label='(LAI CV(%/window (15 years per window)))')
 
         # plt.title(f'{variable}_(%/yr2)')
@@ -3844,8 +3845,9 @@ class moving_window():
         # plt.show()
         ## save fig pdf
         #save pdf
-        plt.savefig(out_pdf_fdir+variable+'.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir+variable+'.png', dpi=900, bbox_inches='tight')
         plt.close()
+        T.open_path_and_file(out_pdf_fdir)
 
     def plot_Robinson(self, fpath, ax=None, cmap=None, vmin=None, vmax=None, is_plot_colorbar=True, is_reproj=True,res=25000,is_discrete=False,colormap_n=11):
         '''
@@ -5017,7 +5019,7 @@ class Check_data():
             plt.show()
 
 
-class PLOT():
+class Plot_intra_inter():
     def __init__(self):
         pass
     def run(self):

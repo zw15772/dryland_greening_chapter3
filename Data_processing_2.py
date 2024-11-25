@@ -208,17 +208,17 @@ class Phenology():  ### plot site based phenology curve
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_3mm\\')
+        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\LAI4g_CV_continent\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_3mm.df'
+        self.dff = self.this_class_arr + 'LAI4g_CV_continent.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        # df=self.build_df(df)
+        df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
-        df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.foo1(df)
+        # df=self.add_window_to_df(df)
         # self.show_field()
 
         T.save_df(df, self.dff)
@@ -245,7 +245,7 @@ class build_moving_window_dataframe():
         return df
         # return df_early,dff
 
-    def __df_to_excel(self, df, dff, n=1000, random=True):
+    def __df_to_excel(self, df, dff, n=1000, random=False):
         dff = dff.split('.')[0]
         if n == None:
             df.to_excel('{}.xlsx'.format(dff))
@@ -261,7 +261,7 @@ class build_moving_window_dataframe():
 
     def build_df(self, df):
 
-        fdir = result_root + rf'\\moving_window_extraction\dry_year_moving_window_extraction\\'
+        fdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\\'
         all_dic = {}
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
@@ -362,11 +362,18 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\3mm\ecosystem_year\\'
-
+        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\5mm\selected_variables\\'
+        variable_list = ['detrended_sum_rainfall_growing_season_CV', 'dry_spell_growing_season',
+                         'rainfall_frenquency_growing_season','rainfall_seasonality_all_year_ecosystem_year',
+                         'detrended_sum_rainfall_ecosystem_year','heat_event_frenquency_growing_season',]
 
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
+
+            if not variable in variable_list:
+                continue
+
+
 
             variable= f.split('.')[0]
 
@@ -427,7 +434,8 @@ class build_moving_window_dataframe():
                 # print(v1,year,len(vals))
 
 
-            df[f'{variable}_non_growing_season'] = NDVI_list
+            df[f'{variable}'] = NDVI_list
+            # df[f'{variable}_ecosystem_year'] = NDVI_list
         # exit()
         return df
     def append_attributes(self, df):  ## add attributes
@@ -489,9 +497,10 @@ class build_dataframe():
         # Tools().mk_dir(self.this_class_arr, force=True)
         # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
 
-        self.this_class_arr = (rf'E:\Project3\Result\CRU_JRA\Dataframe\moving_window\\')
+        # self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_5mm\\')
+        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\LAI4g_CV_continent\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window.df'
+        self.dff = self.this_class_arr + 'LAI4g_CV_continent.df'
 
         pass
 
@@ -522,18 +531,17 @@ class build_dataframe():
         # df=self.add_AI_classfication(df)
         #
         df=self.add_aridity_to_df(df)
-
         df=self.add_MODIS_LUCC_to_df(df)
         df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
+        # df=self.add_maxmium_LC_change(df)
         df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
+        df=self.add_continent_to_df(df)
         df=self.add_lat_lon_to_df(df)
-        df=self.add_soil_texture_to_df(df)
-        df=self.add_SOC_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
+        # df=self.add_SOC_to_df(df)
         # # # #
-        df=self.add_rooting_depth_to_df(df)
+        # df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -1067,7 +1075,7 @@ class build_dataframe():
 
     pass
     def add_lat_lon_to_df(self, df):
-        D=DIC_and_TIF(pixelsize=0.5)
+        D=DIC_and_TIF(pixelsize=0.25)
         df=T.add_lon_lat_to_df(df,D)
         return df
 
@@ -1097,7 +1105,7 @@ class build_dataframe():
         pass
 
     def add_soil_texture_to_df(self, df):
-        tiff=rf'E:\Project3\Data\Base_data\HWSD\tif\\S_SILT_05.tif'
+        tiff=rf'D:\Project3\Data\Base_data\HWSD\tif_025\\S_SILT.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1120,7 +1128,7 @@ class build_dataframe():
         pass
 
     def add_rooting_depth_to_df(self, df):
-        tiff=rf'E:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth_05.tif'
+        tiff=rf'D:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1501,7 +1509,7 @@ class build_dataframe():
         df[f_name] = val_list
         return df
     def add_MODIS_LUCC_to_df(self, df):
-        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_025.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1523,7 +1531,7 @@ class build_dataframe():
 
     def add_landcover_data_to_df(self, df):
 
-        f = data_root + rf'\Base_data\\glc_025\\glc2000_05.tif'
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -1588,7 +1596,7 @@ class build_dataframe():
 
     def add_aridity_to_df(self,df):  ## here is original aridity index not classification
 
-        f=data_root+rf'Base_data\aridity_index05.tif\\aridity_index.tif'
+        f=data_root+rf'Base_data\\aridity_index_025\\aridity_index.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -1725,10 +1733,167 @@ class build_dataframe():
             print(col)
         return df
         pass
+class PLOT():
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+        pass
+
+    def run(self):
+
+        self.plot_anomaly_LAI_based_on_cluster()
+        pass
+
+    def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
+
+        df = T.load_df(rf'D:\Project3\ERA5_025\Dataframe\LAI4g_CV_continent\\LAI4g_CV_continent.df')
+        print(len(df))
+        df=self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+
+
+
+        #create color list with one green and another 14 are grey
+
+        color_list=['grey']*16
+        color_list[0]='green'
+
+        color_list=['green','blue','red','orange','aqua','purple', 'black', 'yellow', 'purple', 'pink', 'grey', 'brown','lime','teal','magenta']
+        linewidth_list=[1]*16
+        linewidth_list[0]=2
+
+
+        fig = plt.figure()
+        i=1
+
+
+        variable_list=['detrended_growing_season_LAI_mean_CV']
+
+
+        for continent in ['Africa', 'Asia', 'Australia', 'South_America', 'North_America',  'global']:
+
+
+            if continent=='global':
+                df_continent=df
+            else:
+
+                df_continent = df[df['continent'] == continent]
+
+
+
+            for product in variable_list:
+                # print('=========')
+                # print(product)
+                # print(df_continent.columns.tolist())
+                # exit()
+                # T.print_head_n(df_continent)
+                # exit()
+
+
+                vals = df_continent[product].tolist()
+                # pixel_area_sum = df_continent['pixel_area'].sum()
+
+
+                # print(vals)
+
+                vals_nonnan=[]
+                for val in vals:
+
+
+                    if type(val)==float: ## only screening
+                        continue
+                    if len(val) ==0:
+                        continue
+                    # val[val<-99]=np.nan
+
+                    if not len(val) == 23:
+                        ## add nan to the end of the list
+                        for j in range(1):
+                            val=np.append(val,np.nan)
+                        # print(val)
+                        # print(len(val))
+
+
+                    vals_nonnan.append(list(val))
+
+                        # exit()
+                    # print(type(val))
+                    # print(len(val))
+                    # print(vals)
+
+                ###### calculate mean
+                vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+                vals_mean=np.nanmean(vals_mean,axis=0)
+                # vals_mean=vals_mean/pixel_area_sum
+
+                val_std=np.nanstd(vals_mean,axis=0)
+
+                # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+                plt.plot(vals_mean,label=continent,color=color_list[i],linewidth=linewidth_list[variable_list.index(product)])
+                i = i + 1
+                plt.legend()
+
+        plt.xticks(range(0, 23, 4))
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.xticks(range(0, 23, 3))
+
+
+
+        plt.xlabel('window')
+
+        plt.ylabel(f'LAI CV (%)')
+
+
+        plt.grid(which='major', alpha=0.5)
+
+        # plt.show()
+        out_pdf_fdir=rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\trend\\pdf\\'
+        plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 120]
+        df = df[df['Aridity'] < 0.65]
+        # df = df[df['LC_max'] < 20]
+
+        df = df[df['MODIS_LUCC'] != 12]
+
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
 
 def main():
     # Data_processing_2().run()
-    Phenology().run()
+    # Phenology().run()
+    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    PLOT().run()
 
 
 
