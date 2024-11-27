@@ -208,17 +208,17 @@ class Phenology():  ### plot site based phenology curve
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\LAI4g_CV_continent\\')
+        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_1mm\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'LAI4g_CV_continent.df'
+        self.dff = self.this_class_arr + 'moving_window_1mm.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        df=self.build_df(df)
+        # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # self.show_field()
 
         T.save_df(df, self.dff)
@@ -362,10 +362,13 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\5mm\selected_variables\\'
-        variable_list = ['detrended_sum_rainfall_growing_season_CV', 'dry_spell_growing_season',
+        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\1mm\selected_variables\\'
+        variable_list = [ 'detrended_sum_rainfall_growing_season_CV','dry_spell_growing_season',
                          'rainfall_frenquency_growing_season','rainfall_seasonality_all_year_ecosystem_year',
-                         'detrended_sum_rainfall_ecosystem_year','heat_event_frenquency_growing_season',]
+                       'heat_event_frenquency_growing_season',]
+
+
+        variable_list = ['detrended_sum_rainfall_ecosystem_year',]
 
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
@@ -405,7 +408,8 @@ class build_moving_window_dataframe():
                 vals = val_dic[pix]
                 vals=np.array(vals)
                 # print(vals)
-                vals[vals>150] = np.nan
+                # vals[vals>150] = np.nan
+                # vals[vals<-150] = np.nan
 
 
 
@@ -432,6 +436,8 @@ class build_moving_window_dataframe():
 
 
                 # print(v1,year,len(vals))
+            # plt.hist(NDVI_list)
+            # plt.show()
 
 
             df[f'{variable}'] = NDVI_list
@@ -493,14 +499,9 @@ class build_dataframe():
 
 
 
-        # self.this_class_arr = (rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\')
-        # Tools().mk_dir(self.this_class_arr, force=True)
-        # self.dff = self.this_class_arr + 'rainfall_seasonality_unpack.df'
-
-        # self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_5mm\\')
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\LAI4g_CV_continent\\')
+        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_3mm\\\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'LAI4g_CV_continent.df'
+        self.dff = self.this_class_arr + 'moving_window_3mm.df'
 
         pass
 
@@ -538,10 +539,10 @@ class build_dataframe():
         df=self.add_row(df)
         df=self.add_continent_to_df(df)
         df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        df=self.add_soil_texture_to_df(df)
         # df=self.add_SOC_to_df(df)
-        # # # #
-        # df=self.add_rooting_depth_to_df(df)
+        # # #
+        df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -1891,9 +1892,9 @@ class PLOT():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
     # build_dataframe().run()
-    PLOT().run()
+    # PLOT().run()
 
 
 

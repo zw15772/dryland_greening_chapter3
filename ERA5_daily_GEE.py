@@ -32,9 +32,10 @@ class ERA5_daily:
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
-        self.deseasonal()
+        # self.deseasonal()
         # self.detrend_deseasonal()
         # self.check_dic()
+        self.spatial_average()
 
 
 
@@ -501,6 +502,23 @@ class ERA5_daily:
         plt.imshow(arr)
         plt.colorbar()
         plt.show()
+
+    def spatial_average(self):
+
+        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\extract_dryland_tiff\1987\\'
+        tiff_list=[]
+        for f in T.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir, f))
+            tiff_list.append(arr)
+        tiff_list = np.array(tiff_list)
+        tiff_sum = np.sum(tiff_list, axis=0)
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\average\1987\\'
+        T.mk_dir(outdir,force=True)
+        # tiff_average = tiff_sum / len(tiff_list)
+        ToRaster().array2raster(join(outdir, 'average.tif'), originX, originY, pixelWidth, pixelHeight, tiff_sum)
+
 
 
 class extraction_extreme_event_rainfall_ENSO:
@@ -2656,13 +2674,21 @@ class CRU_JRA:
         plt.imshow(arr)
         plt.colorbar()
         plt.show()
+    def spatial_average(self):
 
-
-
-
-
-
-        pass
+        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\extract_dryland_tiff\1987\\'
+        tiff_list=[]
+        for f in T.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir, f))
+            tiff_list.append(arr)
+        tiff_list = np.array(tiff_list)
+        tiff_sum = np.sum(tiff_list, axis=0)
+        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\average\1987\\'
+        T.mk_dir(outdir,force=True)
+        # tiff_average = tiff_sum / len(tiff_list)
+        ToRaster().array2raster(join(outdir, 'average.tif'), originX, originY, pixelWidth, pixelHeight, tiff_sum)
 
 
 
