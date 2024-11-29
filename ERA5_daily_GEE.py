@@ -34,8 +34,8 @@ class ERA5_daily:
         # self.transform_ERA()
         # self.deseasonal()
         # self.detrend_deseasonal()
-        # self.check_dic()
-        self.spatial_average()
+        self.check_dic()
+        # self.spatial_average()
 
 
 
@@ -171,7 +171,6 @@ class ERA5_daily:
                     dataset = gdal.Open(fpath)
                     outpath = outdir + '{}.tif'.format(fdir)
 
-
                     try:
                         gdal.Warp(outpath, dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
                     # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
@@ -180,27 +179,31 @@ class ERA5_daily:
                         pass
 
     def extract_dryland_tiff(self):
-        NDVI_mask_f = rf'D:\Project3\Data\Base_data\dryland_mask.tif'
+        NDVI_mask_f = rf'D:\Project3\Data\Base_data\aridity_index05.tif\\dryland_mask05.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\\extract_dryland_tiff\\'
+        outdir = rf'E:\Project3\Data\ERA5\Precip\\extract_dryland_tiff\\'
         T.mk_dir(outdir,force=True)
 
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\unzip_precip\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Precip\resample\\'
         for fdir in T.listdir(fdir_all):
             fdir_i = join(fdir_all,fdir)
             outdir_i = join(outdir,fdir)
             T.mk_dir(outdir_i)
             for fi in tqdm(T.listdir(fdir_all+fdir),desc=fdir):
 
-                fpath = join(fdir_i,fi,fi+'.total_precipitation.tif')
+                if not fi.endswith('.tif'):
+                    continue
+
+                # fpath = join(fdir_i,fi,fi+'.total_precipitation.tif')
+                fpath = join(fdir_i, fi )
                 arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
                 arr[np.isnan(array_mask)] = np.nan
                 arr=arr*1000  ## precipitation unit is m so we need to multiply 1000 to get mm
                 # arr=arr-273.15  ##  temperature unit is c so we need to subtract 273.15 to get K
                 # plt.imshow(arr)
                 # plt.show()
-                outpath = join(outdir_i,fi+'.tif')
+                outpath = join(outdir_i,fi)
 
                 ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
 
@@ -209,8 +212,8 @@ class ERA5_daily:
         pass
 
     def tiff_to_dict(self):
-        fdir_all=rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\extract_dryland_tiff\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\dic\\'
+        fdir_all=rf'E:\Project3\Data\ERA5\Precip\\extract_dryland_tiff\\'
+        outdir = rf'E:\Project3\Data\ERA5\Precip\\tiff_to_dict\\'
         T.mk_dir(outdir,force=True)
 
 
@@ -237,9 +240,11 @@ class ERA5_daily:
                     fpath)
                 array = np.array(array, dtype=float)
 
-                array_unify = array[:720][:720,
-                              :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                # array_unify = array[:720][:720,
+                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
 
+                array_unify = array[:360][:360,
+                              :720]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
                 # array_unify[array_unify < -999] = np.nan
 
                 # array_unify[array_unify > 7] = np.nan
@@ -324,8 +329,8 @@ class ERA5_daily:
 
     def transform_ERA(self):
 
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\dic\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\transform\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Precip\tiff_to_dict\\'
+        outdir = rf'E:\Project3\Data\ERA5\Precip\transform\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
@@ -475,7 +480,7 @@ class ERA5_daily:
         return pix_anomaly
 
     def check_dic(self):
-        fdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\transform\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\transform\\'
         spatial_dic = T.load_npy_dir(fdir)
         results_dic = {}
 
@@ -496,10 +501,11 @@ class ERA5_daily:
 
                 # print(average)
                 average_list.append(average)
-            results_dic[pix] = average_list
+            annual_average = np.nanmean(average_list)
+            results_dic[pix] = annual_average
 
-        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(results_dic)
-        plt.imshow(arr)
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(results_dic)
+        plt.imshow(arr, interpolation='nearest', cmap='RdYlGn',vmin=200,vmax=1500)
         plt.colorbar()
         plt.show()
 

@@ -88,15 +88,15 @@ def global_get_gs(pix):
         return global_southern_hemi_gs
     else:
         raise ValueError('r not in range')
-class extract_water_year():
+class extract_water_year():  ## extract water year phenology year
     def __init__(self):
         self.datadir = data_root
 
     def run (self):
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
-        # self.extract_phenology_year_rainfall()
-        self.extract_phenology_year_temperature()
+        self.extract_phenology_year_rainfall()
+        # self.extract_phenology_year_temperature()
         # self.spatial_plot()
         pass
 
@@ -149,10 +149,10 @@ class extract_water_year():
 
     def extract_phenology_year_rainfall(self):
         # fdir_all = self.datadir + rf'\MSWEP\Precip\transform\\'
-        fdir_all=rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\transform\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Precip\phenology_year_extraction\\'
+        fdir_all=rf'E:\Project3\Data\ERA5\Precip\transform\\'
+        outdir = rf'E:\Project3\Data\ERA5\Precip\\\extract_phenology_year_rainfall\\'
         Tools().mk_dir(outdir, force=True)
-        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir_all):
 
@@ -708,7 +708,7 @@ class extract_rainfall_annual_based_on_daily():
         # self.extract_rainfall_CV()
         # self.extract_rainfall_std()
         # self.extract_rainfall_mean()
-        # self.extract_rainfall_sum()
+        self.extract_rainfall_sum()
         # # self.dry_spell()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
@@ -1173,9 +1173,9 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
-        fdir =data_root+'\CRU-JRA\Precip\phenology_year\\'
+        fdir =rf'E:\Project3\Data\ERA5\Precip\\\extract_phenology_year_rainfall\\'
 
-        outdir_CV = result_root+rf'extract_rainfall_annual\\CRU-JRA\\sum_rainfall\\'
+        outdir_CV = rf'E:\Project3\Result\3mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -2166,9 +2166,9 @@ class Extract_rainfall_phenology_daily():
 
 
     def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
-        outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir_CV = rf'E:\Project3\Result\3mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -2193,7 +2193,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 1]
+                val_rainy = val[val > 3]
                 sum_annual = np.sum(val_rainy)
                 ecosystem_mean_list.append(sum_annual)
 
@@ -2201,7 +2201,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 1]
+                val_rainy = val[val > 3]
                 sum_growing_season = np.sum(val_rainy)
                 growing_season_mean_list.append(sum_growing_season)
 
@@ -2209,7 +2209,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 1]
+                val_rainy = val[val > 3]
                 sum_non_growing_season = np.sum(val_rainy)
                 non_growing_season_mean_list.append(sum_non_growing_season)
 
@@ -2573,7 +2573,7 @@ class Extract_rainfall_phenology_daily():
             plt.plot(time_series)
 
 
-            detrended_annual_time_series = signal.detrend(time_series)
+            detrended_annual_time_series = signal.detrend(time_series)+np.nanmean(time_series)
             print((detrended_annual_time_series))
             plt.plot(detrended_annual_time_series)
             plt.show()
@@ -2588,9 +2588,9 @@ class Extract_rainfall_phenology_daily():
 
     def average_analysis(self):
 
-        landcover_f =  rf'D:\Project3\Data\/Base_data/glc_025\\glc2000_05.tif'
+        landcover_f =  rf'D:\Project3\Data\/Base_data/glc_025\\glc2000_025.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = rf'D:\Project3\Data\/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask_f = rf'D:\Project3\Data\/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_025.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
@@ -2600,8 +2600,12 @@ class Extract_rainfall_phenology_daily():
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(join(fdir_all)):
-            if not 'sum_rainfall.npy' in f:
+            print(f)
+            if not 'sum_rainfall' in f:
                 continue
+            if 'detrend' in f:
+                continue
+
 
             outf = outdir + f.split('.')[0]
             # if os.path.isfile(outf + '_trend.tif'):
@@ -2649,13 +2653,13 @@ class Extract_rainfall_phenology_daily():
 
 
 
-            plt.imshow(arr_trend, cmap='jet', vmin=0, vmax=500)
+            # plt.imshow(arr_trend, cmap='jet', vmin=0, vmax=500)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
 
-            plt.colorbar()
-            plt.title(f)
-            plt.show()
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend, outf + '_max.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend, outf + '_average.tif')
 
     def trend_analysis(self):
 

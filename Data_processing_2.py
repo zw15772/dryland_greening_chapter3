@@ -208,9 +208,9 @@ class Phenology():  ### plot site based phenology curve
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_1mm\\')
+        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_3mm\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_1mm.df'
+        self.dff = self.this_class_arr + 'moving_window_3mm.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -362,13 +362,15 @@ class build_moving_window_dataframe():
         return df
     def add_window_to_df(self, df):
 
-        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\1mm\selected_variables\\'
+        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\3mm\selected_variables\\'
         variable_list = [ 'detrended_sum_rainfall_growing_season_CV','dry_spell_growing_season',
                          'rainfall_frenquency_growing_season','rainfall_seasonality_all_year_ecosystem_year',
                        'heat_event_frenquency_growing_season',]
 
 
-        variable_list = ['detrended_sum_rainfall_ecosystem_year',]
+        variable_list = ['dry_spell_non_growing_season', 'dry_spell_growing_season',
+                          'rainfall_intensity_growing_season','rainfall_intensity_non_growing_season',]
+        variable_list = ['detrended_sum_rainfall_growing_season_CV', ]
 
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
@@ -408,8 +410,8 @@ class build_moving_window_dataframe():
                 vals = val_dic[pix]
                 vals=np.array(vals)
                 # print(vals)
-                # vals[vals>150] = np.nan
-                # vals[vals<-150] = np.nan
+                vals[vals>250] = np.nan
+                vals[vals<-250] = np.nan
 
 
 
@@ -1734,6 +1736,97 @@ class build_dataframe():
             print(col)
         return df
         pass
+class CO2_processing():  ## here CO2 processing
+
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+        pass
+    def run(self):
+
+        self.plot_CO2()
+        pass
+    def plot_CO2(self):
+        fdir=rf'D:\Project3\Data\CO2\dic\monthly_historic\\'
+        result_dic={}
+        len_dic = {}
+
+        dic = T.load_npy_dir(fdir)
+        for pix in dic:
+            vals = dic[pix]
+            if len(vals) == 0:
+                continue
+            vals = np.array(vals)
+            len_vals = len(vals)
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(range(len(vals)), vals)
+            result_dic[pix] = slope
+            len_dic[pix] = len_vals
+
+        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
+        plt.imshow(arr, interpolation='nearest', cmap='jet')
+        plt.colorbar()
+        plt.show()
+
+    def interpolate(self):
+
+        import numpy as np
+        import os
+        from scipy.interpolate import interp1d
+
+        # 设置数据路径
+        data_path = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
+        years = list(range(1982, 2021))
+        missing_year = 2014
+
+        # 读取所有年份的数据
+        raster_data = {}
+        profile = None  # 用于存储栅格文件的元数据
+        for year in years:
+            file_path = os.path.join(data_path, f"{year}.tif")
+            if year == missing_year:
+                raster_data[year] = None  # 缺失年份数据设置为 None
+            else:
+
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(file_path)
+
+
+                if array is not None:
+                    raster_data[year] = array
+
+                else:
+                    raster_data[year] = None
+
+
+        # 将数据堆叠成三维数组（time, row, col）
+        all_years = sorted(raster_data.keys())
+        stacked_data = np.array(
+            [raster_data[year] if raster_data[year] is not None else np.full_like(raster_data[1982], np.nan) for year in
+             all_years])
+
+        interpolated_2014 = self.interpolate_missing(stacked_data, all_years, missing_year)
+
+        # 保存插值结果为TIFF文件
+        output_path = os.path.join(data_path, f"{missing_year}.tif")
+        ToRaster().array2raster(output_path, originX, originY, pixelWidth, pixelHeight, interpolated_2014)
+
+        # 插值函数
+    def interpolate_missing(data, years, missing_year):
+        from scipy.interpolate import interp1d
+        """
+        对栅格数据的时间序列插值。
+        """
+        valid_years = [year for year in years if year != missing_year]
+        valid_data = np.stack([data[years.index(year)] for year in valid_years], axis=0)
+        interpolator = interp1d(valid_years, valid_data, kind='linear')
+        return interpolator(missing_year)
+
+    # 进行2014年的插值
+
+
+
 class PLOT():
     def __init__(self):
         self.this_root = 'D:\Project3\\'
@@ -1892,7 +1985,8 @@ class PLOT():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
+    CO2_processing().run()
     # build_dataframe().run()
     # PLOT().run()
 
