@@ -32,9 +32,9 @@ class ERA5_daily:
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
-        # self.deseasonal()
+        self.deseasonal()
         # self.detrend_deseasonal()
-        self.check_dic()
+        # self.check_dic()
         # self.spatial_average()
 
 
@@ -182,10 +182,10 @@ class ERA5_daily:
         NDVI_mask_f = rf'D:\Project3\Data\Base_data\aridity_index05.tif\\dryland_mask05.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
-        outdir = rf'E:\Project3\Data\ERA5\Precip\\extract_dryland_tiff\\'
+        outdir = rf'E:\Project3\Data\ERA5\Tmax\\extract_dryland_tiff\\'
         T.mk_dir(outdir,force=True)
 
-        fdir_all = rf'E:\Project3\Data\ERA5\Precip\resample\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Tmax\resample\\'
         for fdir in T.listdir(fdir_all):
             fdir_i = join(fdir_all,fdir)
             outdir_i = join(outdir,fdir)
@@ -199,8 +199,8 @@ class ERA5_daily:
                 fpath = join(fdir_i, fi )
                 arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
                 arr[np.isnan(array_mask)] = np.nan
-                arr=arr*1000  ## precipitation unit is m so we need to multiply 1000 to get mm
-                # arr=arr-273.15  ##  temperature unit is c so we need to subtract 273.15 to get K
+                # arr=arr*1000  ## precipitation unit is m so we need to multiply 1000 to get mm
+                arr=arr-273.15  ##  temperature unit is c so we need to subtract 273.15 to get K
                 # plt.imshow(arr)
                 # plt.show()
                 outpath = join(outdir_i,fi)
@@ -212,8 +212,8 @@ class ERA5_daily:
         pass
 
     def tiff_to_dict(self):
-        fdir_all=rf'E:\Project3\Data\ERA5\Precip\\extract_dryland_tiff\\'
-        outdir = rf'E:\Project3\Data\ERA5\Precip\\tiff_to_dict\\'
+        fdir_all=rf'E:\Project3\Data\ERA5\Tmax\\extract_dryland_tiff\\'
+        outdir = rf'E:\Project3\Data\ERA5\Tmax\\tiff_to_dict\\'
         T.mk_dir(outdir,force=True)
 
 
@@ -329,8 +329,8 @@ class ERA5_daily:
 
     def transform_ERA(self):
 
-        fdir_all = rf'E:\Project3\Data\ERA5\Precip\tiff_to_dict\\'
-        outdir = rf'E:\Project3\Data\ERA5\Precip\transform\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Tmax\tiff_to_dict\\'
+        outdir = rf'E:\Project3\Data\ERA5\Tmax\transform\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []
@@ -374,8 +374,8 @@ class ERA5_daily:
 
 
     def deseasonal(self):  ## temperature does not need to detrend
-        fdir_all = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Tmax\transform\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5_025_processing\Tmax\deseasonal\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Tmax\transform\\'
+        outdir = rf'E:\Project3\Data\ERA5\Tmax\deseasonal\\'
         T.mk_dir(outdir, force=True)
         # create_list from 000 t0 105
         data_list = []

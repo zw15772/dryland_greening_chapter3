@@ -219,7 +219,8 @@ class build_moving_window_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         df=self.add_window_to_df(df)
-        # self.show_field()
+        # df=self.add_columns(df)
+        #self.show_field()
 
         T.save_df(df, self.dff)
         self.__df_to_excel(df, self.dff)
@@ -342,12 +343,10 @@ class build_moving_window_dataframe():
             time_series = dic[pix]
             y = 0
 
-
-
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
-                window=rf'window_{y:02d}'
+                window=y
                 # print(window)
                 year.append(window)
                 y += 1
@@ -361,16 +360,23 @@ class build_moving_window_dataframe():
         df['LAI4g_CV_growing_season'] = change_rate_list
         return df
     def add_window_to_df(self, df):
+        threshold = '3mm'
 
-        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\3mm\selected_variables\\'
-        variable_list = [ 'detrended_sum_rainfall_growing_season_CV','dry_spell_growing_season',
-                         'rainfall_frenquency_growing_season','rainfall_seasonality_all_year_ecosystem_year',
-                       'heat_event_frenquency_growing_season',]
+        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\{threshold}\selected_variables\\'
+        print(fdir)
+        print(self.dff)
+        variable_list = [
+                         'rainfall_seasonality_all_year_ecosystem_year',
+                       'heat_event_frenquency_growing_season','rainfall_frenquency_non_growing_season', 'rainfall_frenquency_growing_season',
+                          'dry_spell_non_growing_season', 'dry_spell_growing_season',
+                         'rainfall_intensity_growing_season',
+                          'rainfall_intensity_non_growing_season',
 
+                        ]
 
-        variable_list = ['dry_spell_non_growing_season', 'dry_spell_growing_season',
-                          'rainfall_intensity_growing_season','rainfall_intensity_non_growing_season',]
         variable_list = ['detrended_sum_rainfall_growing_season_CV', ]
+        # variable_list = ['CO2_ecosystem_year', ]
+
 
         for f in os.listdir(fdir):
             variable = f.split('.')[0]
@@ -405,7 +411,7 @@ class build_moving_window_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                y = int(window[-2:])
+                y = window
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
@@ -462,7 +468,13 @@ class build_moving_window_dataframe():
             # T.print_head_n(df)
             df=T.add_spatial_dic_to_df(df,dic,key_name)
         return df
+    def add_columns(self, df):
+        df['window'] = df['window'].str.extract(r'(\d+)').astype(int)
 
+
+
+
+        return df
 
     def add_trend_to_df(self, df):
         fdir=result_root+rf'multi_regression_moving_window\window15_anomaly\\TIFF\\'
@@ -1745,7 +1757,12 @@ class CO2_processing():  ## here CO2 processing
         pass
     def run(self):
 
-        self.plot_CO2()
+        # self.plot_CO2()
+        # self.interpolate()
+        # self.per_pix()
+        self.interpolate1()
+
+        # self.rename()
         pass
     def plot_CO2(self):
         fdir=rf'D:\Project3\Data\CO2\dic\monthly_historic\\'
@@ -1778,52 +1795,147 @@ class CO2_processing():  ## here CO2 processing
         # 设置数据路径
         data_path = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
         years = list(range(1982, 2021))
-        missing_year = 2014
+        months=list(range(1,13))
+
+        # 获取所有缺失年月份
+
+        missing_year_month_date = [f'{year}{month:02d}01' for year in years for month in months if not os.path.exists(os.path.join(data_path, f'{year}{month:02d}01.tif'))]
+        valid_year_month_date = [f'{year}{month:02d}01' for year in years for month in months if os.path.exists(os.path.join(data_path, f'{year}{month:02d}01.tif'))]
 
         # 读取所有年份的数据
         raster_data = {}
         profile = None  # 用于存储栅格文件的元数据
         for year in years:
-            file_path = os.path.join(data_path, f"{year}.tif")
-            if year == missing_year:
-                raster_data[year] = None  # 缺失年份数据设置为 None
-            else:
-
-
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(file_path)
-
-
-                if array is not None:
-                    raster_data[year] = array
-
+            for month in months:
+                year_month_date = f"{year}{month}01"
+                month_format = '{:02d}'.format(month)
+                file_path = os.path.join(data_path, f"{year}{month_format}01.tif")
+                if not os.path.exists(file_path):
+                    ## create 720*1440 nan array
+                    array = np.full((720, 1440), np.nan)
+                    raster_data[year_month_date] = array
                 else:
-                    raster_data[year] = None
+
+                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(file_path)
+                    raster_data[f'{year}{month_format}01'] = array
+
 
 
         # 将数据堆叠成三维数组（time, row, col）
-        all_years = sorted(raster_data.keys())
-        stacked_data = np.array(
-            [raster_data[year] if raster_data[year] is not None else np.full_like(raster_data[1982], np.nan) for year in
-             all_years])
+        all_data = sorted(raster_data.keys())
+        stacked_data = np.stack([raster_data[date] for date in all_data], axis=0)
+        ## mask for valid data
 
-        interpolated_2014 = self.interpolate_missing(stacked_data, all_years, missing_year)
 
-        # 保存插值结果为TIFF文件
-        output_path = os.path.join(data_path, f"{missing_year}.tif")
-        ToRaster().array2raster(output_path, originX, originY, pixelWidth, pixelHeight, interpolated_2014)
 
-        # 插值函数
-    def interpolate_missing(data, years, missing_year):
-        from scipy.interpolate import interp1d
-        """
-        对栅格数据的时间序列插值。
-        """
-        valid_years = [year for year in years if year != missing_year]
-        valid_data = np.stack([data[years.index(year)] for year in valid_years], axis=0)
-        interpolator = interp1d(valid_years, valid_data, kind='linear')
-        return interpolator(missing_year)
+        # 创建插值函数
+        interp_func = interp1d(valid_year_month_date, valid_data, axis=0,kind='linear', fill_value='extrapolate')
 
-    # 进行2014年的插值
+
+        # 生成插值后的数据
+        interpolated_data = interp_func(missing_year_month_date)
+
+        # 将插值后的数据保存到磁盘
+
+    def per_pix(self):
+
+        # 设置数据路径
+        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
+        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_perpix\\'
+        T.mkdir(outdir)
+        Pre_Process().data_transform(tif_dir,outdir)
+
+    def interpolate1(self):
+        perpix_fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_perpix\\'
+        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
+        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_interpoolation\\'
+        T.mkdir(outdir)
+        year_list = []
+        for f in T.listdir(tif_dir):
+            if not f.endswith('.tif'):
+                continue
+            year = f.split('.')[0][0:4]
+            year = int(year) - 1982
+            year_list.append(year)
+        year_list = sorted(list(set(year_list)))
+        year_list = np.array(year_list)
+        # print(date_list);exit()
+        param_list = []
+
+        for f in T.listdir(perpix_fdir):
+            params = (perpix_fdir, outdir, f, year_list)
+            param_list.append(params)
+        MULTIPROCESS(self.kernel_interpolate1, param_list).run(process=16)
+
+
+    def kernel_interpolate1(self,params):
+        perpix_fdir,outdir,f,year_list = params
+        fpath = join(perpix_fdir, f)
+        outpath = join(outdir, f)
+        spatial_dict = T.load_npy(fpath)
+        K = KDE_plot()
+        spatial_dict_interp = {}
+
+        for pix in spatial_dict:
+            vals = spatial_dict[pix]
+            vals = np.array(vals)
+            vals_reshape = vals.reshape(-1, 12)
+            # print(len(vals_reshape))
+            vals_reshape_T = vals_reshape.T
+            vals_mon_interp = []
+            for mon in range(12):
+                vals_mon = vals_reshape_T[mon]
+                # interp = interpolate.interp1d(year_list, vals_mon, kind='linear')
+                # a,b,r,p = T.nan_line_fit(year_list, vals_mon)
+                a, b, r, p = K.linefit(year_list, vals_mon)
+                y = a * (2014 - 1982) + b
+                vals_mon_interp.append(y)
+
+                # KDE_plot().plot_fit_line(a, b, r, p, year_list)
+                # plt.scatter(year_list, vals_mon)
+                # vals_dict = T.dict_zip(year_list,vals_mon)
+                # pprint(vals_dict)
+                # print(interp(2014-1982))
+                # print((vals_dict[2015-1982]+vals_dict[2013-1982])/2)
+                # print(y)
+                # interpolate = interp1d.
+                # plt.show()
+            vals_reshape = np.insert(vals_reshape, (2014 - 1982), vals_mon_interp, axis=0)
+            vals_interp = vals_reshape.flatten()
+            spatial_dict_interp[pix] = vals_interp
+            # date_list = []
+            # for year in range(1982, 2021):
+            #     for mon in range(1, 13):
+            #         date = datetime.datetime(year, mon, 1)
+            #         date_list.append(date)
+            # plt.plot(date_list,vals_interp)
+            # plt.show
+        T.save_npy(spatial_dict_interp, outpath)
+
+        # 将插值后的数据保存到磁盘
+
+    def rename(self):
+        fdir=rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
+
+        for f in T.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            date=f.split('.')[0][6:]
+            if  date=='01':
+                continue
+            else:
+                # print(f)
+
+                ## replace other number with 01
+                fnew=join(f.split('.')[0][0:6]+'01.'+f.split('.')[1])
+                print(fnew)
+
+
+
+
+            os.rename(os.path.join(fdir, f), os.path.join(fdir, fnew))
+
+        pass
 
 
 
@@ -1985,8 +2097,8 @@ class PLOT():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_moving_window_dataframe().run()
-    CO2_processing().run()
+    build_moving_window_dataframe().run()
+    # CO2_processing().run()
     # build_dataframe().run()
     # PLOT().run()
 

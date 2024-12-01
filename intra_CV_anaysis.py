@@ -95,8 +95,9 @@ class extract_water_year():  ## extract water year phenology year
     def run (self):
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
-        self.extract_phenology_year_rainfall()
-        # self.extract_phenology_year_temperature()
+        # self.extract_phenology_year_CO2()
+        # self.extract_phenology_year_rainfall()
+        self.extract_phenology_year_temperature()
         # self.spatial_plot()
         pass
 
@@ -237,8 +238,8 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_year_temperature(self):
-        fdir_all = rf'E:\Project3\Data\ERA5\Tmax\deseasonal\\'
-        outdir = rf'E:\Project3\Data\ERA5\Tmax\Tmax\extract_phenology_year_temperature\\'
+        fdir_all = rf'E:\Project3\Data\ERA5\Precip\transform\\'
+        outdir = rf'E:\Project3\Data\ERA5\Tmax\extract_phenology_year_temperature\\'
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
@@ -442,18 +443,135 @@ class extract_water_year():  ## extract water year phenology year
 
             np.save(outf, result_dic)
 
+    def extract_phenology_year_CO2(self):
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_interpoolation\\'
+
+        outdir= rf'D:\Project3\Data\CO2\CO2_TIFF\unify\\phenology_year_extraction\\'
+
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        for f in T.listdir(fdir):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
+            dic_DOY={15: 0,
+                     30: 0,
+                     45: 1,
+                     60: 1,
+                     75: 2,
+                     90: 2,
+                     105: 3,
+                     120: 3,
+                     135: 4,
+                     150: 4,
+                     165: 5,
+                     180: 5,
+                     195: 6,
+                     210: 6,
+                     225: 7,
+                     240: 7,
+                     255: 8,
+                     270: 8,
+                     285: 9,
+                     300: 9,
+                     315: 10,
+                     330: 10,
+                     345: 11,
+                     360: 11,}
+
+
+            result_dic = {}
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
+                    continue
+
+                r, c = pix
+
+                SeasType=phenology_dic[pix]['SeasType']
+                if SeasType==2:
+
+                    SOS=phenology_dic[pix]['Onsets']
+                    try:
+                        SOS=float(SOS)
+
+                    except:
+                        continue
+
+                    SOS=int(SOS)
+                    SOS_biweekly=dic_DOY[SOS]
+
+                    EOS=phenology_dic[pix]['Offsets']
+                    EOS=int(EOS)
+                    EOS_biweekly=dic_DOY[EOS]
+
+
+                    time_series = spatial_dict[pix]
+
+
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(12 - EOS_biweekly - 1)]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                    non_growing_season_list = []
+                    growing_season_list = []
+                    for vals in time_series_flatten_extraction_reshape:
+                        if T.is_all_nan(vals):
+                            continue
+                        ## non-growing season +growing season is 365
+
+                        non_growing_season = vals[0:SOS_biweekly]
+                        growing_season = vals[SOS_biweekly:]
+                        # print(growing_season)
+                        non_growing_season_list.append(non_growing_season)
+                        growing_season_list.append(growing_season)
+                    # print(len(growing_season_list))
+                    non_growing_season_list = np.array(non_growing_season_list)
+                    growing_season_list = np.array(growing_season_list)
+
+
+                elif SeasType==3:
+                    # SeasClass=phenology_dic[pix]['SeasClss']
+                    # ## whole year is growing season
+                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+                    # print(lat,lon)
+                    # print(SeasType)
+                    # print(SeasClass)
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[12:]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                    non_growing_season_list = []
+                    growing_season_list = time_series_flatten_extraction_reshape
+
+                else:
+                    SeasClss=phenology_dic[pix]['SeasClss']
+                    print(SeasType,SeasClss)
+                    continue
+
+                result_dic[pix]={'SeasType':SeasType,
+                    'non_growing_season':non_growing_season_list,
+                              'growing_season':growing_season_list,
+                              'ecosystem_year':time_series_flatten_extraction_reshape}
+
+            np.save(outf, result_dic)
 
     def spatial_plot(self):
-        fdir=rf'D:\Project3\Data\LAI4g\phenology_year_extraction\\'
+        fdir=rf'D:\Project3\Data\CO2\CO2_TIFF\unify\phenology_year_extraction\\'
         spatial_dict = T.load_npy_dir(fdir)
         result_dic={}
         for pix in spatial_dict:
-            vals=spatial_dict[pix]
+            vals=spatial_dict[pix]['ecosystem_year']
             # length=len(vals)
-            average_num=np.nansum(vals)
+            average_num=np.nanmean(vals)
             result_dic[pix]=average_num
         array=D.pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(array,interpolation='nearest',cmap='jet',vmin=0,vmax=3)
+        plt.imshow(array,interpolation='nearest',cmap='jet',vmin=320,vmax=380)
 
         plt.colorbar()
         plt.show()
@@ -1143,8 +1261,8 @@ class extract_rainfall_annual_based_on_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_mean(self):  ## extract std of rainfall ready for multiregression
-        fdir = rf'E:\Data\ERA5_daily\dict\precip_transform\\'
-        outdir_CV = rf'E:\Data\\ERA5_daily\dict\\extract_rainfall_annual\\mean_rainfall\\'
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\phenology_year_extraction\\'
+        outdir_CV = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -1168,7 +1286,7 @@ class extract_rainfall_annual_based_on_daily():
                 mean_list.append(mean)
             result_dic[pix] = mean_list
 
-        outf = outdir_CV + 'mean_rainfall.npy'
+        outf = outdir_CV + 'mean_CO2.npy'
 
         np.save(outf, result_dic)
 
@@ -1802,16 +1920,18 @@ class Extract_rainfall_phenology_daily():
         pass
 
     def run(self):
+        # self.extract_CO2()
         # self.define_quantile_threshold()
         # self.extract_heatevent_frequency()
         # self.extract_dry_spell()
         # self.extract_rainfall_sum()
+
         # self.extract_rainfall_frequency()
         # self.extract_rainfall_seasonality_all_year()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
-        # self.extract_rainfall_CV()
-        self.average_analysis()
+        self.extract_rainfall_CV()
+        # self.average_analysis()
         # self.detrend_rainfall()
         # self.trend_analysis()
 
@@ -1859,6 +1979,62 @@ class Extract_rainfall_phenology_daily():
                 result_dic[pix] = dic_i
             outf = outdir + f
             np.save(outf, result_dic)
+    def extract_CO2(self):
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\phenology_year_extraction\\'
+        outdir_CV = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            ### annual year
+
+            vals = spatial_dic[pix]['ecosystem_year']
+            vals_growing_season = spatial_dic[pix]['growing_season']
+            vals_non_growing_season = spatial_dic[pix]['non_growing_season']
+
+            ecosystem_mean_list = []
+            growing_season_mean_list = []
+            non_growing_season_mean_list = []
+
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+
+                sum_annual = np.nanmean(val)
+                ecosystem_mean_list.append(sum_annual)
+
+            for val in vals_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+
+                sum_growing_season = np.nanmean(val)
+                growing_season_mean_list.append(sum_growing_season)
+
+            for val in vals_non_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+
+                sum_non_growing_season = np.nanmean(val)
+                non_growing_season_mean_list.append(sum_non_growing_season)
+
+
+            result_dic[pix] = {'ecosystem_year':ecosystem_mean_list,
+                               'growing_season':growing_season_mean_list,
+                               'non_growing_season':non_growing_season_mean_list}
+
+        outf = outdir_CV + 'CO2.npy'
+
+        np.save(outf, result_dic)
 
 
     def extract_heatevent_frequency(self):  ## extract CV of rainfall ready for multiregression
@@ -2499,9 +2675,9 @@ class Extract_rainfall_phenology_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_CV(self):  ## extract std of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'D:\Project3\ERA5_025\phenology_year_extraction_rainfall\\'
 
-        outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir_CV = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\1mm\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3321,34 +3497,35 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
 
         # self.moving_window_CV_extraction_anaysis()
 
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
         # self.trend_analysis()
-        self.robinson()
+        # self.robinson()
 
         pass
     def moving_window_extraction(self):
 
-        fdir_all = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\extract_phenology_LAI_mean\\'
+        fdir_all = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\3mm\\'
 
         growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
+        # growing_season_mode_list = [ 'ecosystem_year', ]
+
 
         for mode in growing_season_mode_list:
 
 
-            outdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction\\{mode}\\'
+            outdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_extraction\\3mm\\{mode}\\'
+
             T.mk_dir(outdir, force=True)
             for f in os.listdir(fdir_all):
-                if  not 'detrend' in f:
+                if not 'CV_intraannual_rainfall' in f:
                     continue
-                # if 'trend' in f:
-                #     continue
 
 
                 outf = outdir + f.split('.')[0] + '.npy'
@@ -3362,7 +3539,7 @@ class moving_window():
                 new_x_extraction_by_window = {}
                 for pix in tqdm(dic):
 
-                    time_series = dic[pix]
+                    time_series = dic[pix][mode]
 
                     time_series = np.array(time_series)
                     # if T.is_all_nan(time_series):
@@ -3549,14 +3726,16 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
         growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
+        # growing_season_mode_list = ['ecosystem_year', ]
 
 
         for mode in growing_season_mode_list:
-            fdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_extraction\5mm\\{mode}\\'
-            outdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\\5mm\{mode}\\'
+            fdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_extraction\3mm\\{mode}\\'
+            outdir = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\\3mm\{mode}\\'
             T.mk_dir(outdir, force=True)
             for f in os.listdir(fdir):
-
+                if not 'CV_intraannual_rainfall' in f:
+                    continue
                 dic = T.load_npy(fdir + f)
 
                 slides = 37 - window_size   ## revise!!
@@ -5283,9 +5462,9 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     #extract_heatevent().run()
-    # extract_water_year().run()  ## extract water year and phenology year
+    extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
-    Extract_rainfall_phenology_daily().run()
+    # Extract_rainfall_phenology_daily().run()
     # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
