@@ -95,9 +95,9 @@ class extract_water_year():  ## extract water year phenology year
     def run (self):
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
-        self.extract_phenology_year_CO2()
+        # self.extract_phenology_year_CO2()
         # self.extract_phenology_year_rainfall()
-        # self.extract_phenology_year_temperature()
+        self.extract_phenology_year_temperature()
         # self.spatial_plot()
         pass
 
@@ -241,7 +241,7 @@ class extract_water_year():  ## extract water year phenology year
         fdir_all = rf'E:\Project3\Data\ERA5\Precip\transform\\'
         outdir = rf'E:\Project3\Data\ERA5\Tmax\extract_phenology_year_temperature\\'
         Tools().mk_dir(outdir, force=True)
-        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir_all):
 
@@ -1920,15 +1920,15 @@ class Extract_rainfall_phenology_daily():
         pass
 
     def run(self):
-        # self.extract_CO2()
+        self.extract_CO2()
         self.define_quantile_threshold()
-        # self.extract_heatevent_frequency()
-        # self.extract_dry_spell()
-        # self.extract_rainfall_sum()
+        self.extract_heatevent_frequency()
+        self.extract_dry_spell()
+        self.extract_rainfall_sum()
 
-        # self.extract_rainfall_frequency()
-        # self.extract_rainfall_seasonality_all_year()
-        # self.extract_rainfall_intensity()
+        self.extract_rainfall_frequency()
+        self.extract_rainfall_seasonality_all_year()
+        self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
         # self.extract_rainfall_CV()
         # self.average_analysis()
@@ -1980,8 +1980,8 @@ class Extract_rainfall_phenology_daily():
             outf = outdir + f
             np.save(outf, result_dic)
     def extract_CO2(self):
-        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\phenology_year_extraction\\'
-        outdir_CV = rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
+        outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
 
         T.mk_dir(outdir_CV, force=True)
@@ -2038,18 +2038,20 @@ class Extract_rainfall_phenology_daily():
 
 
     def extract_heatevent_frequency(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Tmax\Tmax\extract_phenology_year_temperature\\'
+        fdir = rf'E:\Project3\Data\ERA5\Tmax\extract_phenology_year_temperature\\'
 
         outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
         T.mk_dir(outdir_CV, force=True)
 
         spatial_dic = T.load_npy_dir(fdir)
         result_dic = {}
-        threhold_dic = T.load_npy_dir(rf'D:\Project3\ERA5_025\phenology_year_extraction_Tmax\define_quantile_threshold\\')
+        threhold_dic = T.load_npy_dir(rf'E:\Project3\Data\ERA5\Tmax\define_quantile_threshold\\')
 
         for pix in tqdm(spatial_dic):
             ### ui==if northern hemisphere
             r, c = pix
+            # if pix not in threhold_dic:
+            #     continue
             threhold=threhold_dic[pix]['90th']
 
             ### annual year
@@ -2187,7 +2189,7 @@ class Extract_rainfall_phenology_daily():
         np.save(outf, result_dic)
 
     def extract_dry_spell(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
         outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
@@ -2344,7 +2346,7 @@ class Extract_rainfall_phenology_daily():
     def extract_rainfall_sum(self):  ## extract std of rainfall ready for multiregression
         fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
-        outdir_CV = rf'E:\Project3\Result\3mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -2369,7 +2371,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 3]
+                val_rainy = val[val > 1]
                 sum_annual = np.sum(val_rainy)
                 ecosystem_mean_list.append(sum_annual)
 
@@ -2377,7 +2379,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 3]
+                val_rainy = val[val > 1]
                 sum_growing_season = np.sum(val_rainy)
                 growing_season_mean_list.append(sum_growing_season)
 
@@ -2385,7 +2387,7 @@ class Extract_rainfall_phenology_daily():
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
-                val_rainy = val[val > 3]
+                val_rainy = val[val > 1]
                 sum_non_growing_season = np.sum(val_rainy)
                 non_growing_season_mean_list.append(sum_non_growing_season)
 
@@ -2400,7 +2402,7 @@ class Extract_rainfall_phenology_daily():
 
 
     def extract_rainfall_intensity(self):  ## extract std of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
         outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
@@ -2460,7 +2462,7 @@ class Extract_rainfall_phenology_daily():
         np.save(outf, result_dic)
 
     def extract_rainfall_frequency(self):  ## extract CV of rainfall ready for multiregression
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
         outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
@@ -2518,7 +2520,7 @@ class Extract_rainfall_phenology_daily():
 
     def extract_rainfall_seasonality_all_year(self):  ## extract CV of rainfall ready for multiregression
         from scipy.stats import entropy
-        fdir = rf'E:\Project3\Data\ERA5\Precip\phenology_year\\'
+        fdir = rf'E:\Project3\Data\ERA5\Precip\extract_phenology_year_rainfall\\'
 
         outdir_CV = rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
@@ -5462,9 +5464,9 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     #extract_heatevent().run()
-    extract_water_year().run()  ## extract water year and phenology year
+    # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
-    # Extract_rainfall_phenology_daily().run()
+    Extract_rainfall_phenology_daily().run()
     # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
