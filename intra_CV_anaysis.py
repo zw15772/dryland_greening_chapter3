@@ -95,9 +95,9 @@ class extract_water_year():  ## extract water year phenology year
     def run (self):
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
-        # self.extract_phenology_year_CO2()
+        self.extract_phenology_year_CO2()
         # self.extract_phenology_year_rainfall()
-        self.extract_phenology_year_temperature()
+        # self.extract_phenology_year_temperature()
         # self.spatial_plot()
         pass
 
@@ -444,9 +444,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_year_CO2(self):
-        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_interpoolation\\'
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245_interpoolation\\'
 
-        outdir= rf'D:\Project3\Data\CO2\CO2_TIFF\unify\\phenology_year_extraction\\'
+        outdir= rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -1921,7 +1921,7 @@ class Extract_rainfall_phenology_daily():
 
     def run(self):
         # self.extract_CO2()
-        # self.define_quantile_threshold()
+        self.define_quantile_threshold()
         # self.extract_heatevent_frequency()
         # self.extract_dry_spell()
         # self.extract_rainfall_sum()
@@ -1930,7 +1930,7 @@ class Extract_rainfall_phenology_daily():
         # self.extract_rainfall_seasonality_all_year()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
-        self.extract_rainfall_CV()
+        # self.extract_rainfall_CV()
         # self.average_analysis()
         # self.detrend_rainfall()
         # self.trend_analysis()

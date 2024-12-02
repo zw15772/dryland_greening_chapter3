@@ -1661,9 +1661,9 @@ class data_processing():
                 except Exception as e:
                     pass
     def resample_AVHRR_LAI(self):
-        fdir_all = data_root + rf'deposition\noy_TIFF\\'
+        fdir_all = rf'D:\Project3\Data\CO2\CO2_TIFF\original\\'
 
-        outdir = data_root + rf'deposition\noy_resample\\'
+        outdir =rf'D:\Project3\Data\CO2\CO2_TIFF\original\\'
 
 
         T.mk_dir(outdir, force=True)

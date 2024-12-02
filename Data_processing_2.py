@@ -1757,13 +1757,83 @@ class CO2_processing():  ## here CO2 processing
         pass
     def run(self):
 
+        # self.resample_CO2()
+        # self.unify_TIFF()
+
         # self.plot_CO2()
-        # self.interpolate()
-        # self.per_pix()
+
+        self.per_pix()
         self.interpolate1()
 
         # self.rename()
         pass
+
+    def resample_CO2(self):
+        fdir_all = rf'D:\Project3\Data\CO2\CO2_TIFF\original\\'
+
+        outdir_all = rf'D:\Project3\Data\CO2\CO2_TIFF\resample_05\\'
+
+
+        year = list(range(1982, 2021))
+        # print(year)
+        # exit()
+        for fdir in tqdm(os.listdir(fdir_all)):
+            outdir = outdir_all + fdir + '\\'
+            T.mk_dir(outdir, force=True)
+            for f in os.listdir(fdir_all + fdir):
+                if not f.endswith('.tif'):
+                    continue
+                outf = outdir + f
+                if os.path.isfile(outf):
+                    continue
+
+                if f.startswith('._'):
+                    continue
+
+
+                print(f)
+                # exit()
+                date = f.split('.')[0]
+
+                # print(date)
+                # exit()
+                dataset = gdal.Open(fdir_all + fdir + '/' + f)
+                # print(dataset.GetGeoTransform())
+                original_x = dataset.GetGeoTransform()[1]
+                original_y = dataset.GetGeoTransform()[5]
+
+                # band = dataset.GetRasterBand(1)
+                # newRows = dataset.YSize * 2
+                # newCols = dataset.XSize * 2
+                try:
+                    gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+                # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+                # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+                except Exception as e:
+                    pass
+    def unify_TIFF(self):
+        fdir_all=rf'D:\Project3\Data\CO2\CO2_TIFF\\resample_05\\'
+        outdir_all=rf'D:\Project3\Data\CO2\CO2_TIFF\\unify_05\\'
+
+        T.mk_dir(outdir_all, force=True)
+
+
+        for fdir in os.listdir(fdir_all):
+            outdir = outdir_all + fdir + '\\'
+            Tools().mk_dir(outdir, force=True)
+
+            for f in tqdm(os.listdir(fdir_all+fdir)):
+                fpath=join(fdir_all,fdir,f)
+
+                outpath=join(outdir,f)
+
+                if not f.endswith('.tif'):
+                    continue
+                if f.startswith('._'):
+                    continue
+                unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.5)
+
+
     def plot_CO2(self):
         fdir=rf'D:\Project3\Data\CO2\dic\monthly_historic\\'
         result_dic={}
@@ -1786,69 +1856,19 @@ class CO2_processing():  ## here CO2 processing
         plt.colorbar()
         plt.show()
 
-    def interpolate(self):
-
-        import numpy as np
-        import os
-        from scipy.interpolate import interp1d
-
-        # 设置数据路径
-        data_path = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
-        years = list(range(1982, 2021))
-        months=list(range(1,13))
-
-        # 获取所有缺失年月份
-
-        missing_year_month_date = [f'{year}{month:02d}01' for year in years for month in months if not os.path.exists(os.path.join(data_path, f'{year}{month:02d}01.tif'))]
-        valid_year_month_date = [f'{year}{month:02d}01' for year in years for month in months if os.path.exists(os.path.join(data_path, f'{year}{month:02d}01.tif'))]
-
-        # 读取所有年份的数据
-        raster_data = {}
-        profile = None  # 用于存储栅格文件的元数据
-        for year in years:
-            for month in months:
-                year_month_date = f"{year}{month}01"
-                month_format = '{:02d}'.format(month)
-                file_path = os.path.join(data_path, f"{year}{month_format}01.tif")
-                if not os.path.exists(file_path):
-                    ## create 720*1440 nan array
-                    array = np.full((720, 1440), np.nan)
-                    raster_data[year_month_date] = array
-                else:
-
-                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(file_path)
-                    raster_data[f'{year}{month_format}01'] = array
-
-
-
-        # 将数据堆叠成三维数组（time, row, col）
-        all_data = sorted(raster_data.keys())
-        stacked_data = np.stack([raster_data[date] for date in all_data], axis=0)
-        ## mask for valid data
-
-
-
-        # 创建插值函数
-        interp_func = interp1d(valid_year_month_date, valid_data, axis=0,kind='linear', fill_value='extrapolate')
-
-
-        # 生成插值后的数据
-        interpolated_data = interp_func(missing_year_month_date)
-
-        # 将插值后的数据保存到磁盘
 
     def per_pix(self):
 
         # 设置数据路径
-        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
-        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_perpix\\'
+        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245\\'
+        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245_perpix\\'
         T.mkdir(outdir)
         Pre_Process().data_transform(tif_dir,outdir)
 
     def interpolate1(self):
-        perpix_fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_perpix\\'
-        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
-        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245_interpoolation\\'
+        perpix_fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245_perpix\\'
+        tif_dir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245\\'
+        outdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245_interpoolation\\'
         T.mkdir(outdir)
         year_list = []
         for f in T.listdir(tif_dir):
@@ -1865,6 +1885,7 @@ class CO2_processing():  ## here CO2 processing
         for f in T.listdir(perpix_fdir):
             params = (perpix_fdir, outdir, f, year_list)
             param_list.append(params)
+            # self.kernel_interpolate1(params)
         MULTIPROCESS(self.kernel_interpolate1, param_list).run(process=16)
 
 
@@ -1879,14 +1900,26 @@ class CO2_processing():  ## here CO2 processing
         for pix in spatial_dict:
             vals = spatial_dict[pix]
             vals = np.array(vals)
+            vals[vals<-999] = np.nan
+            if np.isnan(np.nanmean(vals)):
+                continue
+            if len(vals) == 0:
+                continue
+
+
+
             vals_reshape = vals.reshape(-1, 12)
             # print(len(vals_reshape))
             vals_reshape_T = vals_reshape.T
             vals_mon_interp = []
             for mon in range(12):
                 vals_mon = vals_reshape_T[mon]
+                # print(len(vals_mon))
                 # interp = interpolate.interp1d(year_list, vals_mon, kind='linear')
                 # a,b,r,p = T.nan_line_fit(year_list, vals_mon)
+                # print(year_list)
+                # print(len(year_list))
+                # print(len(vals_mon));exit()
                 a, b, r, p = K.linefit(year_list, vals_mon)
                 y = a * (2014 - 1982) + b
                 vals_mon_interp.append(y)
@@ -2097,8 +2130,8 @@ class PLOT():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_moving_window_dataframe().run()
-    # CO2_processing().run()
+    # build_moving_window_dataframe().run()
+    CO2_processing().run()
     # build_dataframe().run()
     # PLOT().run()
 
