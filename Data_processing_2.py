@@ -208,16 +208,17 @@ class Phenology():  ### plot site based phenology curve
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_3mm\\')
+        self.threshold = '5mm'
+        self.this_class_arr = (rf'E:\Project3\Result\{self.threshold}\ERA5\extract_rainfall_phenology_year\\Dataframe\\moving_window\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_3mm.df'
+        self.dff = self.this_class_arr + rf'moving_window_{self.threshold}.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
-        # df=self.foo1(df)
+        df=self.foo1(df)
         df=self.add_window_to_df(df)
         # df=self.add_columns(df)
         #self.show_field()
@@ -328,7 +329,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\\detrended_growing_season_LAI_mean_CV.npy'
+        f = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\detrended_growing_season_LAI_mean_CV.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -360,22 +361,21 @@ class build_moving_window_dataframe():
         df['LAI4g_CV_growing_season'] = change_rate_list
         return df
     def add_window_to_df(self, df):
-        threshold = '3mm'
+        threshold = self.threshold
 
-        fdir=rf'D:\Project3\ERA5_025\extract_rainfall_phenology_year\moving_window_average_anaysis\{threshold}\selected_variables\\'
+        fdir=rf'E:\Project3\Result\{threshold}\ERA5\extract_rainfall_phenology_year\moving_window_average_anaysis\selected_variables\\'
         print(fdir)
         print(self.dff)
         variable_list = [
                          'rainfall_seasonality_all_year_ecosystem_year',
                        'heat_event_frenquency_growing_season','rainfall_frenquency_non_growing_season', 'rainfall_frenquency_growing_season',
-                          'dry_spell_non_growing_season', 'dry_spell_growing_season',
+
                          'rainfall_intensity_growing_season',
-                          'rainfall_intensity_non_growing_season',
+                          'rainfall_intensity_non_growing_season','detrended_sum_rainfall_growing_season_CV'
 
                         ]
 
-        variable_list = ['detrended_sum_rainfall_growing_season_CV', ]
-        # variable_list = ['CO2_ecosystem_year', ]
+        variable_list = ['CO2_ecosystem_year', ]
 
 
         for f in os.listdir(fdir):
@@ -416,8 +416,8 @@ class build_moving_window_dataframe():
                 vals = val_dic[pix]
                 vals=np.array(vals)
                 # print(vals)
-                vals[vals>250] = np.nan
-                vals[vals<-250] = np.nan
+                # vals[vals>250] = np.nan
+                # vals[vals<-250] = np.nan
 
 
 
@@ -513,9 +513,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (rf'D:\Project3\ERA5_025\Dataframe\moving_window_3mm\\\\')
+        self.this_class_arr = (rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\Dataframe\moving_window\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_3mm.df'
+        self.dff = self.this_class_arr + 'moving_window_1mm.df'
 
         pass
 
@@ -551,7 +551,7 @@ class build_dataframe():
         df=self.add_landcover_classfication_to_df(df)
         # df=self.add_maxmium_LC_change(df)
         df=self.add_row(df)
-        df=self.add_continent_to_df(df)
+        # df=self.add_continent_to_df(df)
         df=self.add_lat_lon_to_df(df)
         df=self.add_soil_texture_to_df(df)
         # df=self.add_SOC_to_df(df)
@@ -1090,7 +1090,7 @@ class build_dataframe():
 
     pass
     def add_lat_lon_to_df(self, df):
-        D=DIC_and_TIF(pixelsize=0.25)
+        D=DIC_and_TIF(pixelsize=0.5)
         df=T.add_lon_lat_to_df(df,D)
         return df
 
@@ -1120,7 +1120,7 @@ class build_dataframe():
         pass
 
     def add_soil_texture_to_df(self, df):
-        tiff=rf'D:\Project3\Data\Base_data\HWSD\tif_025\\S_SILT.tif'
+        tiff=rf'D:\Project3\Data\Base_data\HWSD\tif_025\\S_SILT_05.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1143,7 +1143,7 @@ class build_dataframe():
         pass
 
     def add_rooting_depth_to_df(self, df):
-        tiff=rf'D:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth.tif'
+        tiff=rf'D:\Project3\Data\Base_data\Rooting_Depth\tif_025_unify_merge\\rooting_depth_05.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1524,7 +1524,7 @@ class build_dataframe():
         df[f_name] = val_list
         return df
     def add_MODIS_LUCC_to_df(self, df):
-        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_025.tif'
+        f = data_root + rf'\Base_data\MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1546,7 +1546,7 @@ class build_dataframe():
 
     def add_landcover_data_to_df(self, df):
 
-        f = data_root + rf'\Base_data\\glc_025\\glc2000_025.tif'
+        f = data_root + rf'\Base_data\\glc_025\\glc2000_05.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -1611,7 +1611,7 @@ class build_dataframe():
 
     def add_aridity_to_df(self,df):  ## here is original aridity index not classification
 
-        f=data_root+rf'Base_data\\aridity_index_025\\aridity_index.tif'
+        f=data_root+rf'Base_data\\aridity_index_05\\aridity_index.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -1990,6 +1990,65 @@ class CO2_processing():  ## here CO2 processing
         pass
 
 
+class visualize_SHAP():
+
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+
+        self.spatial_dic = {0: 'CO2_ecosystem_year_shap',
+                       1: 'detrended_sum_rainfall_growing_season_CV_shap',
+                       2: 'heat_event_frenquency_growing_season_shap',
+                       3: 'rainfall_frenquency_growing_season_shap',
+                       4: 'rainfall_frenquency_non_growing_season_shap',
+                       5: 'rainfall_intensity_growing_season_shap',
+                       6: 'rainfall_intensity_non_growing_season_shap',
+                       7: 'rainfall_seasonality_all_year_ecosystem_year_shap',
+                       8: 'rooting_depth_shap',
+                       9: 'silt_shap'}
+
+        self.regroup_dic = {0: 'CO2',
+                       1: 'Interanual_rainfall_CV',
+                       2: 'Heat_event_frenquency',
+                       3: 'Intraanual_rainfall',
+                       4: 'Intraanual_rainfall',
+                       5: 'Intraanual_rainfall',
+                       6: 'Intraanual_rainfall',
+                       7: 'Intraanual_rainfall',
+                       8: 'Rooting_depth',
+                       9: 'Silt'}
+
+        pass
+
+    def run(self):
+
+        self.important_bar_ploting()
+        pass
+    def important_bar_ploting(self):  ##### plot for 4 clusters
+        pass
+    def SHAP_ploting(self):
+        pass
+
+    def spatial_importance_factor(self):  ##### plot for 4 clusters
+        pass
+
+    def dominant_factor_shifting(self):
+        ## dominant factor spatial map regroup in 4 groups 1 interannual rainfall CV
+        ## 2 intraannual rainfall 3 silt 5 root depth
+
+
+
+
+
+
+
+
+        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
+
+        pass
+
+
 
 class PLOT():
     def __init__(self):
@@ -2150,8 +2209,8 @@ def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_moving_window_dataframe().run()
-    CO2_processing().run()
-    # build_dataframe().run()
+    # CO2_processing().run()
+    build_dataframe().run()
     # PLOT().run()
 
 
