@@ -1762,8 +1762,9 @@ class CO2_processing():  ## here CO2 processing
 
         # self.plot_CO2()
 
-        self.per_pix()
-        self.interpolate1()
+        # self.per_pix()
+        # self.interpolate1()
+        self.check_spatial()
 
         # self.rename()
         pass
@@ -1946,6 +1947,24 @@ class CO2_processing():  ## here CO2 processing
         T.save_npy(spatial_dict_interp, outpath)
 
         # 将插值后的数据保存到磁盘
+    def check_spatial(self):
+        fdir=rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
+
+        dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in dic:
+            vals = dic[pix]['ecosystem_year']
+            if np.isnan(np.nanmean(vals)):
+                print(pix)
+            average = np.nanmean(vals)
+            result_dic[pix] = average
+        array=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
+        plt.imshow(array)
+        plt.colorbar()
+        plt.show()
+
+
 
     def rename(self):
         fdir=rf'D:\Project3\Data\CO2\CO2_TIFF\unify\historic_SSP245\\'
