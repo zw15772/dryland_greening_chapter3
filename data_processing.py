@@ -97,14 +97,14 @@ class data_processing():
         # self.resample_trendy()
         # self.resample_AVHRR_LAI()
         # self.resample_GIMMS4g()
-        self.resample_MODIS_LUCC()
+        # self.resample_MODIS_LUCC()
         # self.resample_glc_LUCC()
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        # self.tif_to_dic()
+        self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -839,13 +839,20 @@ class data_processing():
         NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask05.tif')
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
-        outdir = rf'D:\Project3\TRENDY\\dryland_tiff\\'
-        T.mk_dir(outdir, force=True)
 
-        fdir_all = rf'D:\Project3\TRENDY\unify\\'
+
+
+        fdir_all = rf'E:\Project3\Data\CRU_monthly\\VPD\\'
+
         for fdir in T.listdir(fdir_all):
+            if not 'unify' in fdir:
+                continue
+
+
             fdir_i = join(fdir_all, fdir)
-            outdir_i = join(outdir, fdir)
+
+            outdir_i = join(fdir_all, 'dryland_tiff')
+
             T.mk_dir(outdir_i)
             for fi in tqdm(T.listdir(fdir_i), desc=fdir):
                 if not fi.endswith('.tif'):
@@ -861,105 +868,93 @@ class data_processing():
 
         pass
 
-        self.tif_to_dic()
 
-
-        # self.extract_GS()
-        # self.extract_GS_return_monthly_data()
-        # self.extract_GS_return_monthly_data_yang()
-        # self.extract_seasonality()
-        #
-        # self.extend_GS() ## for SDGVM， it has 37 year GS, to align with other models, we add one more year
-        # self.extend_nan()  ##  南北半球的数据不一样，需要后面加nan
-        # self.scales_GPP_Trendy()
-        # self.split_data()
-        # self.weighted_LAI()
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\TRENDY\dryland_tiff\\'
-
-
+        fdir_all = rf'E:\Project3\Data\CRU_monthly\\'
 
         year_list = list(range(1982, 2021))
 
-
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-
-
-            outdir=rf'D:\Project3\TRENDY\dic\\{fdir}\\'
-            # if os.path.isdir(outdir):
-            #     pass
-
-            T.mk_dir(outdir, force=True)
-            all_array = []  #### so important  it should be go with T.mk_dic
-
-            for f in os.listdir(fdir_all+ fdir):
-                if not f.endswith('.tif'):
-                    continue
-                if int(f.split('.')[0][0:4]) not in year_list:
+            for fdir_ii in os.listdir(fdir_all+fdir):
+                if not 'dryland' in fdir_ii:
                     continue
 
 
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir_all + fdir + '\\' + f)
-                array = np.array(array, dtype=float)
+                outdir=rf'E:\Project3\Data\CRU_monthly\\\\{fdir}\\dic\\'
+                # if os.path.isdir(outdir):
+                    #     pass
+
+                T.mk_dir(outdir, force=True)
+                all_array = []  #### so important  it should be go with T.mk_dic
+
+                for f in os.listdir(fdir_all+fdir+'\\'+fdir_ii):
+                    if not f.endswith('.tif'):
+                        continue
+                    if int(f.split('.')[0][0:4]) not in year_list:
+                        continue
 
 
-                # array_unify = array[:720][:720,
-                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
-                array_unify = array[:360][:360,
-                              :720]
-                array_unify[array_unify < -999] = np.nan
-                # array_unify[array_unify > 7] = np.nan
-                # array[array ==0] = np.nan
+                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir,fdir_ii, f))
+                    array = np.array(array, dtype=float)
 
-                # array_unify[array_unify < 0] = np.nan
 
-                #
-                #
-                # plt.imshow(array_unify)
-                # plt.show()
-                # array_mask = np.array(array_mask, dtype=float)
-                # plt.imshow(array_mask)
-                # plt.show()
+                    # array_unify = array[:720][:720,
+                    #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                    array_unify = array[:360][:360,
+                                  :720]
+                    array_unify[array_unify < -999] = np.nan
+                    # array_unify[array_unify > 7] = np.nan
+                    # array[array ==0] = np.nan
 
-                array_dryland = array_unify
-                # plt.imshow(array_dryland)
-                # plt.show()
+                    # array_unify[array_unify < 0] = np.nan
 
-                all_array.append(array_dryland)
+                    #
+                    #
+                    # plt.imshow(array_unify)
+                    # plt.show()
+                    # array_mask = np.array(array_mask, dtype=float)
+                    # plt.imshow(array_mask)
+                    # plt.show()
 
-            row = len(all_array[0])
-            col = len(all_array[0][0])
-            key_list = []
-            dic = {}
+                    array_dryland = array_unify
+                    # plt.imshow(array_dryland)
+                    # plt.show()
 
-            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
-                for c in range(col):
-                    dic[(r, c)] = []
-                    key_list.append((r, c))
-            # print(dic_key_list)
+                    all_array.append(array_dryland)
 
-            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
-                for c in range(col):
-                    for arr in all_array:
-                        value = arr[r][c]
-                        dic[(r, c)].append(value)
-                    # print(dic)
-            time_series = []
-            flag = 0
-            temp_dic = {}
-            for key in tqdm(key_list, desc='output...'):  # 存数据
-                flag = flag + 1
-                time_series = dic[key]
-                time_series = np.array(time_series)
-                temp_dic[key] = time_series
-                if flag % 10000 == 0:
-                    # print(flag)
-                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
-                    temp_dic = {}
-            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+                row = len(all_array[0])
+                col = len(all_array[0][0])
+                key_list = []
+                dic = {}
+
+                for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                    for c in range(col):
+                        dic[(r, c)] = []
+                        key_list.append((r, c))
+                # print(dic_key_list)
+
+                for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                    for c in range(col):
+                        for arr in all_array:
+                            value = arr[r][c]
+                            dic[(r, c)].append(value)
+                        # print(dic)
+                time_series = []
+                flag = 0
+                temp_dic = {}
+                for key in tqdm(key_list, desc='output...'):  # 存数据
+                    flag = flag + 1
+                    time_series = dic[key]
+                    time_series = np.array(time_series)
+                    temp_dic[key] = time_series
+                    if flag % 10000 == 0:
+                        # print(flag)
+                        np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                        temp_dic = {}
+                np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
 
 
 
@@ -1955,23 +1950,26 @@ class data_processing():
 
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_average, outdir + '{}{:02d}.tif'.format(year, month))
     def unify_TIFF(self):
-        fdir_all=rf'D:\Project3\TRENDY\resample\\'
-
+        fdir_all=rf'E:\Project3\Data\CRU_monthly\\'
 
         for fdir in os.listdir(fdir_all):
-            outdir = rf'D:\Project3\TRENDY\unify\\{fdir}\\'
+
+            outdir = rf'E:\Project3\Data\CRU_monthly\\{fdir}\\unify\\'
             Tools().mk_dir(outdir, force=True)
 
-            for f in tqdm(os.listdir(fdir_all+fdir)):
-                fpath=join(fdir_all,fdir,f)
-
-                outpath=join(outdir,f)
-
-                if not f.endswith('.tif'):
+            for fdir_ii in tqdm(os.listdir(join(fdir_all,fdir))):
+                if not 'tif' in fdir_ii:
                     continue
-                if f.startswith('._'):
-                    continue
-                unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.5)
+                for f in os.listdir(join(fdir_all,fdir,fdir_ii)):
+                    fpath=join(fdir_all,fdir,fdir_ii,f)
+
+                    outpath=join(outdir,f)
+
+                    if not f.endswith('.tif'):
+                        continue
+                    if f.startswith('._'):
+                        continue
+                    unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.5)
 
 
     def aggreate_CO2(self):  # aggregate biweekly data to monthly
@@ -3776,7 +3774,7 @@ class statistic_analysis():
 
         # self.detrend()  ##original
         # self.detrend_zscore_monthly()
-        # self.relative_change()
+        self.relative_change()
         # self.normalised_variables()
         # self.calculate_CV()
         # self.zscore()
@@ -3806,15 +3804,14 @@ class statistic_analysis():
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir=result_root + rf'growth_rate\extend_nan\\'
-        outdir=result_root + rf'growth_rate\detrend\\'
+        fdir=result_root + rf'\relative_change_growing_season\\'
+        outdir=result_root + rf'\detrend_growing_season\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'LAI' in f:
+                continue
             print(f)
-
-
-
 
             outf=outdir+f.split('.')[0]+'.npy'
             # if isfile(outf):
@@ -3833,7 +3830,8 @@ class statistic_analysis():
 
                 # print(len(dic[pix]))
                 time_series = dic[pix]
-                # print(len(time_series))
+                print(len(time_series))
+
                 # print(time_series)
 
                 time_series=np.array(time_series)
@@ -3864,7 +3862,6 @@ class statistic_analysis():
                     time_series=T.interp_nan(time_series)
                     # print(np.nanmean(time_series))
                     # plt.plot(time_series)
-
 
 
                     detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
@@ -4005,21 +4002,20 @@ class statistic_analysis():
             np.save(outf, detrend_zscore_dic)
 
     def relative_change(self):
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-
-        fdir = result_root+'extract_GS\OBS_LAI_extend\\\\'
-        outdir=result_root + rf'relative_change\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        outdir=result_root + rf'relative_change_growing_season\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'carbontracker' in f:
+            if not 'phenology_LAI_mean' in f:
                 continue
 
             outf=outdir+f.split('.')[0]+'.npy'
-            if isfile(outf):
-                continue
+            # if isfile(outf):
+            #     continue
             print(outf)
 
 
@@ -4033,11 +4029,11 @@ class statistic_analysis():
                     continue
 
                 # print(len(dic[pix]))
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 # print(len(time_series))
 
                 time_series = np.array(time_series)
-                time_series[time_series < -999] = np.nan
+                # time_series[time_series < -999] = np.nan
 
                 if np.isnan(np.nanmean(time_series)):
                     continue
@@ -4047,12 +4043,12 @@ class statistic_analysis():
                 relative_change=(time_series-mean)/abs(mean) *100
 
                 zscore_dic[pix] = relative_change
-                ## plot
-                # plt.plot(time_series)
-                # plt.show()
+                # plot
+                plt.plot(time_series)
+
                 # plt.plot(relative_change)
                 # plt.legend(['original','relative_change'])
-                plt.show()
+                # plt.show()
 
                 ## save
             np.save(outf, zscore_dic)
@@ -4562,26 +4558,25 @@ class statistic_analysis():
         np.save(outf + '_trend', arr_trend_dryland)
         np.save(outf + '_p_value', p_value_arr_dryland)
 
-
-
         pass
 
-
     def trend_analysis(self):
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_025/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_025.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'growth_rate\growth_rate_raw\\'
-        outdir = result_root + rf'growth_rate\\growth_rate_raw\\trend_analysis\\'
+        fdir = result_root+rf'\growth_rate\growth_rate_raw\\'
+        outdir = result_root + rf'growth_rate\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'LAI' in f:
+                continue
             if not f.endswith('.npy'):
                 continue
 
@@ -13432,7 +13427,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'D:\Project3\Data\monthly_data\GPCC\dic\\'
+        fdir = rf'E:\Project3\Data\CRU_monthly\Precip\dic\\'
 
 
         # dic=T.load_npy(fdir)
@@ -13457,6 +13452,7 @@ class check_data():
             # if r<480:
             #     continue
             vals=dic[pix]
+
             # date_list = []
             # date_base = datetime.datetime(1982, 1, 1)
             # for i in range(len(vals)):
@@ -13478,10 +13474,10 @@ class check_data():
 
 
 
-            if len(vals)<1:
-                continue
-            if np.isnan(np.nanmean(vals)):
-                continue
+            # if len(vals)<1:
+            #     continue
+            # if np.isnan(np.nanmean(vals)):
+            #     continue
 
 
             # plt.plot(vals)
@@ -13495,7 +13491,8 @@ class check_data():
             vals=vals[~np.isnan(vals)]
 
             len_dic[pix] = len(vals)
-        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(len_dic)
+            len_dic[pix] = np.nanmean(vals)
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
 
 
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=460,vmax=468)
@@ -13613,27 +13610,32 @@ class check_data():
 class growth_rate:
     from scipy import stats, linalg
     def run(self):
-        # self.calculate_annual_growth_rate()
+        self.calculate_annual_growth_rate()
 
-        self.plot_growth_rate()
+        # self.plot_growth_rate()
         # self.bar_plot()
     pass
 
     def calculate_annual_growth_rate(self):
-        fdir=result_root + rf'\extract_GS\OBS_LAI_extend\\'
+        fdir=result_root + rf'ERA5_025\extract_LAI4g_phenology_year\extract_phenology_LAI_mean\\'
         outdir=result_root + rf'growth_rate\\growth_rate_raw\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if f.split('.')[0] not in ['LAI4g','CO2','CRU','GPCC','VPD','tmax']:
+            if 'detrend' in f:
                 continue
+
 
             dict=np.load(fdir+f,allow_pickle=True).item()
             growth_rate_dic={}
             for pix in tqdm(dict):
-                time_series=dict[pix]
-                print(len(time_series))
+                time_series=dict[pix]['growing_season']
+                # print(len(time_series))
+                if len(time_series)==0:
+                    continue
+                # print(time_series)
                 growth_rate_time_series=np.zeros(len(time_series)-1)
                 for i in range(len(time_series)-1):
+
                     growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/time_series[i]*100
                 growth_rate_dic[pix]=growth_rate_time_series
             np.save(outdir+f,growth_rate_dic)
@@ -15060,8 +15062,8 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
-    # statistic_analysis().run()
+    # data_processing().run()
+    statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()

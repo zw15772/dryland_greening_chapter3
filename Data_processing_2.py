@@ -63,13 +63,13 @@ from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 from pprint import pprint
 T=Tools()
-D = DIC_and_TIF(pixelsize=0.25)
+D = DIC_and_TIF(pixelsize=0.5)
 
 
 
-this_root = 'D:\Project3\\'
-data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+this_root = 'E:\Project3\\'
+data_root = 'E:/Project3/Data/'
+result_root = 'E:/Project3/Result/'
 class Data_processing_2:
 
     def __init__(self):
@@ -135,9 +135,68 @@ class Data_processing_2:
         except Exception as e:
             pass
 
+    def nc_to_tif(self):
 
+        f=rf'D:\Project3\Data\Base_data\HWSD\nc\\S_SAND.nc'
+        outdir=rf'D:\Project3\Data\Base_data\HWSD\nc\\tif\\'
+        Tools().mk_dir(outdir,force=True)
 
+        nc = Dataset(fdir + f, 'r')
 
+        print(nc)
+        print(nc.variables.keys())
+        # t = nc['time']
+        # print(t)
+        # start_year = int(t.units.split(' ')[-1].split('-')[0])
+
+        # basetime = datetime.datetime(start_year, 1, 1)  # 告诉起始时间
+        lat_list = nc['lat']
+        lon_list = nc['lon']
+        # lat_list=lat_list[::-1]  #取反
+        print(lat_list[:])
+        print(lon_list[:])
+
+        origin_x = lon_list[0]  # 要为负数-180
+        origin_y = lat_list[0]  # 要为正数90
+        pix_width = lon_list[1] - lon_list[0]  # 经度0.5
+        pix_height = lat_list[1] - lat_list[0]  # 纬度-0.5
+        print(origin_x)
+        print(origin_y)
+        print(pix_width)
+        print(pix_height)
+        # SIF_arr_list = nc['SIF']
+        SPEI_arr_list = nc['tmin']
+        print(SPEI_arr_list.shape)
+        print(SPEI_arr_list[0])
+        # plt.imshow(SPEI_arr_list[5])
+        # # plt.imshow(SPEI_arr_list[::])
+        # plt.show()
+
+        year = int(f.split('.')[-3][0:4])
+        month = int(f.split('.')[-3][4:6])
+
+        fname = '{}{:02d}.tif'.format(year, month)
+        print(fname)
+        newRasterfn = outdir + fname
+        print(newRasterfn)
+        longitude_start = origin_x
+        latitude_start = origin_y
+        pixelWidth = pix_width
+        pixelHeight = pix_height
+        # array = val
+        # array=SPEI_arr_list[::-1]
+        array = SPEI_arr_list
+
+        array = np.array(array)
+        # method 2
+        array = array.T
+        array = array * 0.001  ### GPP need scale factor
+        array[array < 0] = np.nan
+
+        # plt.imshow(array)
+        # plt.colorbar()
+        # plt.show()
+        ToRaster().array2raster(newRasterfn, longitude_start, latitude_start, pixelWidth, pixelHeight, array, )
 
 
 class Phenology():  ### plot site based phenology curve
@@ -2023,7 +2082,7 @@ class visualize_SHAP():
 
     def run(self):
 
-        self.important_bar_ploting()
+        self.dominant_factor_shifting()
         pass
     def important_bar_ploting(self):  ##### plot for 4 clusters
         pass
@@ -2036,6 +2095,52 @@ class visualize_SHAP():
     def dominant_factor_shifting(self):
         ## dominant factor spatial map regroup in 4 groups 1 interannual rainfall CV
         ## 2 intraannual rainfall 3 silt 5 root depth
+
+        regroup_dic = {}
+
+        period_list = ['first', 'second']
+        result_period={}
+        for period in period_list:
+            dic = {}
+            fpath=rf'D:\Project3\Result\ERA5_025\1mm\SHAP_CO2_{period}_Decade\png\pdp_shap_CV\shapely_contribution\\max_variable.tif'
+
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+
+
+            dic['CO2']=0
+            dic['Interanual_rainfall_CV']=0
+            dic['Heat_event_frenquency']=0
+            dic['Intraanual_rainfall']=0
+            dic['Silt']=0
+            dic['Rooting_depth']=0
+
+            array = np.array(array)
+
+            val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+
+            for pix in val_dic:
+                vals = val_dic[pix]
+                if vals<-99:
+                    continue
+                result_dic = self.regroup_dic[vals]
+
+                dic[result_dic] = dic[result_dic] + 1
+
+            result_period[period]=dic
+
+        ## dic to df
+        df=pd.DataFrame(result_period)
+        ##
+
+        df.plot.barh()
+
+        plt.show()
+
+
+
+
 
 
 
@@ -2203,6 +2308,250 @@ class PLOT():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+class greening_analysis():
+    def __init__(self):
+        pass
+
+    def run(self):
+
+        # self.relative_change()
+        # self.annual_growth_rate()
+        # self.trend_analysis()
+        self.heatmap()
+
+        pass
+
+    def relative_change(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        outdir = result_root + rf'relative_change_growing_season\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not 'phenology_LAI_mean' in f:
+                continue
+
+            outf = outdir + f.split('.')[0] + '.npy'
+            # if isfile(outf):
+            #     continue
+            print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+                delta_time_series_list = []
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+                # print(len(time_series))
+
+                time_series = np.array(time_series)
+                # time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                relative_change = (time_series - mean) / mean * 100
+
+                zscore_dic[pix] = relative_change
+                # plot
+                plt.plot(time_series)
+
+                # plt.plot(relative_change)
+                # plt.legend(['original','relative_change'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+    def annual_growth_rate(self):
+        ## input raw data becuase time2-time1
+        fdir=result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        outdir=result_root + rf'annual_growth_rate\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if 'detrend' in f:
+                continue
+
+            dict=np.load(fdir+f,allow_pickle=True).item()
+            growth_rate_dic={}
+            for pix in tqdm(dict):
+                time_series=dict[pix]['growing_season']
+                # print(len(time_series))
+                if len(time_series)==0:
+                    continue
+                # print(time_series)
+                growth_rate_time_series=np.zeros(len(time_series)-1)
+                for i in range(len(time_series)-1):
+
+                    growth_rate_time_series[i]=(time_series[i+1]-time_series[i])/time_series[i]*100
+                growth_rate_dic[pix]=growth_rate_time_series
+            np.save(outdir+f,growth_rate_dic)
+
+        pass
+
+    def trend_analysis(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+
+        fdir = result_root+rf'3mm\relative_change_growing_season\\'
+        outdir = result_root + rf'\3mm\relative_change_growing_season\trend\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+            # if not f.endswith('.npy'):
+            #     continue
+
+
+            outf=outdir+f.split('.')[0]
+            # if os.path.isfile(outf+'_trend.tif'):
+            #     continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r,c=pix
+                # if r<120:
+                #     continue
+                landcover_value=crop_mask[pix]
+                if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                    continue
+                if dic_modis_mask[pix]==12:
+                    continue
+
+                time_series=dic[pix]
+                # print(time_series)
+
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                if len(set(time_series))==1:
+                    continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                        # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+            arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
+            arr_trend_dryland = arr_trend * array_mask
+            p_value_arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
+            p_value_arr_dryland = p_value_arr * array_mask
+
+
+            plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
+
+            plt.colorbar()
+            plt.title(f)
+            plt.show()
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(p_value_arr_dryland, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend_dryland)
+            np.save(outf + '_p_value', p_value_arr_dryland)
+    def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        f_LAI_trend = result_root + rf'3mm\relative_change_growing_season\trend\\phenology_LAI_mean_trend.npy'
+        f_inter_precipitation_CV_trend=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year_trend\detrended_sum_rainfall_trend.npy'
+        f_intra_precipitation_CV_trend=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year_trend\CV_intraannual_rainfall_trend.npy'
+
+        dic_LAI_trend = np.load(f_LAI_trend)
+        dic_inter_precipitation_CV_trend = np.load(f_inter_precipitation_CV_trend)
+        dic_intra_precipitation_CV_trend = np.load(f_intra_precipitation_CV_trend)
+
+        result_dic={
+            'LAI_trend':dic_LAI_trend,
+            'inter_Preci_CV_trend':dic_inter_precipitation_CV_trend,
+            'intra_Preci_CV_trend':dic_intra_precipitation_CV_trend
+        }
+
+        df=T.spatial_dics_to_df(result_dic)
+        ## histogram
+        ## plot histogram
+        inter_CV_value=df['inter_Preci_CV_trend'].values
+        plt.hist(inter_CV_value)
+        plt.show()
+        intra_CV_value=df['intra_Preci_CV_trend'].values
+        plt.hist(intra_CV_value)
+        plt.show()
+
+
+
+
+
+
+        SM_p1_bin_list=np.linspace(-1.5,1.5,15)
+        SM_p2_bin_list=np.linspace(-1.5,1.5,15)
+        df_group1, bins_list_str1=T.df_bin(df,'GLEAM_SMroot_1982_2001_trend',SM_p1_bin_list)
+        matrix=[]
+        y_labels=[]
+        for name1,df_group_i1 in df_group1:
+            df_group2, bins_list_str2=T.df_bin(df_group_i1,'GLEAM_SMroot_2002_2020_trend',SM_p2_bin_list)
+            name1_=name1[0].left
+
+            matrix_i=[]
+            x_labels = []
+
+            for name2,df_group_i2 in df_group2:
+                name2_=name2[0].left
+                x_labels.append(name2_)
+                # print(name1,name2)
+                # print(len(df_group_i2))
+                val1=np.nanmean(df_group_i2['LAI_p1_trend'])
+                val2=np.nanmean(df_group_i2['LAI_p2_trend'])
+                val=val2-val1
+                matrix_i.append(val)
+
+                # count=len(df_group_i2)
+                # matrix_i.append(count)
+
+                # matrix_i.append(val)
+            matrix.append(matrix_i)
+            y_labels.append(name1_)
+        matrix=np.array(matrix)
+        matrix=matrix[::-1,:]
+        plt.imshow(matrix,cmap='RdBu',vmin=-1.5,vmax=1.5)
+        # plt.imshow(matrix,cmap='RdBu')
+        plt.xticks(np.arange(len(SM_p2_bin_list)-1), x_labels, rotation=45)
+        plt.yticks(np.arange(len(SM_p1_bin_list)-1), y_labels[::-1])
+        plt.xlabel('SM_p2_trend')
+        plt.ylabel('SM_p1_trend')
+        ## draw 1:1 line
+        # plt.plot([20, 0], [0, 20], 'k-', lw=2)
+
+        plt.colorbar()
+        plt.show()
+
+
 
 
 def main():
@@ -2210,7 +2559,9 @@ def main():
     # Phenology().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    build_dataframe().run()
+    greening_analysis().run()
+    # build_dataframe().run()
+    # visualize_SHAP().run()
     # PLOT().run()
 
 
