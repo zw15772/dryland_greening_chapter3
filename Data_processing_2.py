@@ -572,9 +572,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (rf'E:\Project3\Result\1mm\ERA5\extract_rainfall_phenology_year\Dataframe\moving_window\\')
+        self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\\relative_change_growing_season\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_1mm.df'
+        self.dff = self.this_class_arr + 'relative_change_growing_season.df'
 
         pass
 
@@ -585,7 +585,7 @@ class build_dataframe():
         # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
-        # df=self.build_df(df)
+        df=self.build_df(df)
         # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)  ## 加属性
         # df=self.append_cluster(df)  ## 加属性
@@ -608,14 +608,14 @@ class build_dataframe():
         df=self.add_MODIS_LUCC_to_df(df)
         df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
+        df=self.add_maxmium_LC_change(df)
         df=self.add_row(df)
         # df=self.add_continent_to_df(df)
         df=self.add_lat_lon_to_df(df)
-        df=self.add_soil_texture_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
         # df=self.add_SOC_to_df(df)
         # # #
-        df=self.add_rooting_depth_to_df(df)
+        # df=self.add_rooting_depth_to_df(df)
         #
         # df=self.add_area_to_df(df)
 
@@ -659,14 +659,12 @@ class build_dataframe():
         pass
     def build_df(self, df):
 
-
-        fdir=rf'E:\Project3\Data\ERA5_daily\dict\extract_rainfall_annual\rainfall_seasonality_unpack\\'
+        fdir=rf'E:\Project3\Result\3mm\relative_change_growing_season\\'
         all_dic= {}
         for f in os.listdir(fdir):
 
-
             fname= f.split('.')[0]
-            if 'CV' not in fname:
+            if 'LAI' not in fname:
                 continue
             fpath=fdir+f
 
@@ -1697,22 +1695,6 @@ class build_dataframe():
 
         return df
 
-    def add_wetting_drying_transition_to_df(self, df):
-        f=result_root+rf'classification\classification.npy'
-        val_dic = T.load_npy(f)
-        f_name = f.split('.')[0]
-        print(f_name)
-        val_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            pix = row['pix']
-            if not pix in val_dic:
-                val_list.append(np.nan)
-                continue
-            val = val_dic[pix]
-            print(val)
-            val_list.append(val)
-        df['wetting_drying_transition'] = val_list
-        return df
 
 
 
@@ -1754,53 +1736,7 @@ class build_dataframe():
         df['AI_classfication'] = val_list
         return df
 
-    def classfy_greening_browning(self):
 
-
-        df=T.load_df(result_root + rf'Dataframe\relative_changes\\relative_changes.df')
-
-            ## sig greeing, browning
-        for i, row in df.iterrows():
-            if row[rf'LAI4g_trend'] > 0 and row[rf'LAI4g_p_value'] < 0.05:
-                df.at[i, rf'LAI4g_trend_class'] = 'sig_greening'
-            elif row[rf'LAI4g_trend'] < 0 and row[rf'LAI4g_p_value'] < 0.05:
-                df.at[i, rf'LAI4g_trend_class'] = 'sig_browning'
-                ## non sig greening, browning
-            elif row[rf'LAI4g_trend'] > 0 and row[rf'LAI4g_p_value'] > 0.05:
-                df.at[i, rf'LAI4g_trend_class'] = 'non_sig_greening'
-            elif row[rf'LAI4g_trend'] < 0 and row[rf'LAI4g_p_value'] > 0.05:
-                df.at[i, rf'LAI4g_trend_class'] = 'non_sig_browning'
-            else:
-                df.at[i, 'LAI4g_trend_class'] = 'other'
-
-        T.save_df(df, result_root + rf'Dataframe\relative_changes\\relative_changes.df')
-        T.df_to_excel(df, result_root + rf'Dataframe\relative_changes\\relative_changes')
-
-
-    def add_SM_trend_label(self, df):
-
-        f = data_root + rf'\\Base_data\GLEAM_SMroot_trend_label_mark.npy'
-
-
-        val_dic = T.load_npy(f)
-
-
-        f_name = f.split('.')[0]
-        print(f_name)
-
-        val_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-
-            pix = row['pix']
-            if not pix in val_dic:
-                val_list.append(np.nan)
-                continue
-            val = val_dic[pix]
-
-            val_list.append(val)
-
-        df['wetting_drying_trend'] = val_list
-        return df
 
     def show_field(self, df):
         for col in df.columns:
@@ -2153,6 +2089,111 @@ class visualize_SHAP():
 
         pass
 
+class PLOT_dataframe():
+
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+        pass
+
+    def run(self):
+
+        self.plot_anomaly_LAI_based_on_cluster()
+        pass
+
+    def plot_anomaly_LAI_based_on_cluster(self):  ##### plot for 4 clusters
+
+        df = T.load_df(result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season.df')
+        print(len(df))
+        df=self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        #create color list with one green and another 14 are grey
+
+        color_list=['grey']*16
+        color_list[0]='green'
+
+        color_list=['green','blue','red','orange','aqua','purple', 'black', 'yellow', 'purple', 'pink', 'grey', 'brown','lime','teal','magenta']
+        linewidth_list=[1]*16
+        linewidth_list[0]=2
+
+
+        fig = plt.figure()
+        i=1
+
+
+        variable_list=['phenology_LAI_mean']
+
+        for product in variable_list:
+            # print('=========')
+            # print(product)
+            # print(df_continent.columns.tolist())
+            # exit()
+            # T.print_head_n(df_continent)
+            # exit()
+
+
+            vals = df[product].tolist()
+            # pixel_area_sum = df_continent['pixel_area'].sum()
+
+
+            # print(vals)
+
+            vals_nonnan=[]
+            for val in vals:
+
+                if type(val)==float: ## only screening
+                    continue
+                if len(val) ==0:
+                    continue
+
+
+                vals_nonnan.append(list(val))
+
+
+            ###### calculate mean
+            vals_mean=np.array(vals_nonnan)## axis=0, mean of each row  竖着加
+            vals_mean=np.nanmean(vals_mean,axis=0)
+            # vals_mean=vals_mean/pixel_area_sum
+
+            val_std=np.nanstd(vals_mean,axis=0)
+
+            # plt.plot(vals_mean,label=product,color=color_list[self.product_list.index(product)],linewidth=linewidth_list[self.product_list.index(product)])
+            plt.plot(vals_mean,color=color_list[i],linewidth=linewidth_list[variable_list.index(product)])
+            i = i + 1
+            plt.legend()
+
+
+        year_range = range(1983, 2021)
+        xticks=range(0,len(year_range),4)
+        plt.xticks(xticks,year_range[::4])
+        plt.ylim(-8, 8)
+        plt.xlabel('year')
+        plt.ylabel(f'relative change (%)')
+        plt.grid(which='major', alpha=0.5)
+        plt.show()
+        # out_pdf_fdir=rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\trend\\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
 
 
 class PLOT_data():
@@ -2315,10 +2356,11 @@ class greening_analysis():
     def run(self):
 
         # self.relative_change()
+        self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis()
         # self.heatmap()
-        self.heatmap2()
+        # self.heatmap2()
         # self.testrobinson()
 
         pass
@@ -2373,6 +2415,38 @@ class greening_analysis():
 
                 ## save
             np.save(outf, zscore_dic)
+
+    def plot_time_series_spatial(self):
+        fdir = result_root + rf'3mm\relative_change_growing_season\\'
+
+        for f in os.listdir(fdir):
+            if not 'LAI' in f:
+                continue
+            outf = fdir + f
+            print(outf)
+            dic = np.load(outf, allow_pickle=True).item()
+            all_data = []
+
+
+            for pix in dic:
+                time_series = dic[pix]
+                # print(time_series)
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                all_data.append(time_series)
+
+            all_data = np.array(all_data)
+            average_data = np.nanmean(all_data, axis=0)
+
+
+            plt.plot(average_data)
+            plt.show()
+
+
+
+
+
     def annual_growth_rate(self):
         ## input raw data becuase time2-time1
         fdir=result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
@@ -2972,37 +3046,35 @@ class bivariate_analysis():
         print(outf)
 class multi_regression_window():
     def __init__(self):
-        self.this_root = 'D:\Project3\\'
-        self.data_root = 'D:/Project3/Data/'
-        self.result_root = 'D:/Project3/Result/'
+        self.this_root = 'E:\Project3\\'
+        self.data_root = 'E:/Project3/Data/'
+        self.result_root = 'E:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'extract_window\extract_anomaly_window\\'
-        self.fdir_Y=self.result_root+rf'extract_window\extract_anomaly_window\\'
+        self.fdirX=self.result_root+rf'3mm\moving_window_multi_regression\window_trend_growing_season\\\\'
+        self.fdir_Y=self.result_root+rf'3mm\moving_window_multi_regression\window_trend_growing_season\\'
 
-        self.xvar_list = ['CO2','CRU']
-        self.y_var = ['LAI4g']
+        self.xvar_list = ['precip','rainfall_frenquency','Tmax','VPD']
+        self.y_var = ['phenology_LAI_mean']
         pass
 
     def run(self):
         # self.detrend()
-
+        # self.moving_window_extraction()
         self.window = 38-15+1
-        outdir = self.result_root + rf'multi_regression_moving_window\\window15_anomaly_GPCC\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multi_regression_result\\'
         T.mk_dir(outdir, force=True)
 
-        # step 1 build dataframe
-        # for i in range(self.window):
+        # ####step 1 build dataframe
+        for i in range(self.window):
+
+            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
+            outf= outdir+rf'\\window{i:02d}.npy'
+            if os.path.isfile(outf):
+                continue
+            print(outf)
         #
-        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-        #
-        #
-        #     outf= outdir+rf'\\window{i:02d}.npy'
-        #     if os.path.isfile(outf):
-        #         continue
-        #     print(outf)
-        # #
-        #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        # step 2 crate individial files
+            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        # ###step 2 crate individial files
         # self.plt_multi_regression_result(outdir,self.y_var)
         #
         # step 3 covert to time series
@@ -3104,46 +3176,44 @@ class multi_regression_window():
     def moving_window_extraction(self):
 
         # fdir_all = self.result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        fdir_all = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        fdir_all = self.result_root + rf'3mm\CRU_JRA_monthly\extract_rainfall_phenology_year\\'
 
-        growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
-        # growing_season_mode_list = [ 'ecosystem_year', ]
+        # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
 
+        growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
         for mode in growing_season_mode_list:
 
-            outdir = self.result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\\moving_window_extraction2\\{mode}\\'
+            outdir = self.result_root  + rf'3mm\CRU_JRA_monthly\\\\moving_window_extraction\\{mode}\\'
+            T.mk_dir(outdir, force=True)
             # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
             T.mk_dir(outdir, force=True)
             for f in os.listdir(fdir_all):
-                if not 'detrend' in f:
-                    continue
+
                 if not f.endswith('.npy'):
                     continue
 
                 outf = outdir + f.split('.')[0] + '.npy'
                 print(outf)
 
-
                 # if os.path.isfile(outf):
                 #     continue
                 # if os.path.isfile(outf):
                 #     continue
 
-                dic = T.load_npy(fdir_all+f)
+                dic = T.load_npy(fdir_all + f)
                 window = 15
 
                 new_x_extraction_by_window = {}
                 for pix in tqdm(dic):
 
-                    # time_series = dic[pix][mode]
-                    time_series = dic[pix]
+                    time_series = dic[pix][mode]
+                    # time_series = dic[pix]
 
                     time_series = np.array(time_series)
                     # if T.is_all_nan(time_series):
                     #     continue
                     if len(time_series) == 0:
                         continue
-
 
                     # time_series[time_series < -999] = np.nan
                     if np.isnan(np.nanmean(time_series)):
@@ -3158,6 +3228,53 @@ class multi_regression_window():
                     new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
 
                 T.save_npy(new_x_extraction_by_window, outf)
+
+
+
+
+    def forward_window_extraction(self, x, window):
+        # 前窗滤波
+        # window = window-1
+        # 不改变数据长度
+
+        if window < 0:
+            raise IOError('window must be greater than 0')
+        elif window == 0:
+            return x
+        else:
+            pass
+
+        x = np.array(x)
+
+        # new_x = np.array([])
+        # plt.plot(x)
+        # plt.show()
+        new_x_extraction_by_window=[]
+        for i in range(len(x)+1):
+            if i + window >= len(x)+1:
+                continue
+            else:
+                anomaly = []
+                relative_change_list=[]
+                x_vals=[]
+                for w in range(window):
+                    x_val=(x[i + w])
+                    x_vals.append(x_val)
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+
+                # x_mean=np.nanmean(x_vals)
+
+                # for i in range(len(x_vals)):
+                #     if x_vals[0]==None:
+                #         continue
+                    # x_anomaly=(x_vals[i]-x_mean)
+                    # relative_change = (x_vals[i] - x_mean) / x_mean
+
+                    # relative_change_list.append(x_vals)
+                new_x_extraction_by_window.append(x_vals)
+        return new_x_extraction_by_window
+
 
 
 
@@ -3180,8 +3297,10 @@ class multi_regression_window():
             if len(vals) == 0:
                 continue
             vals = np.array(vals)
-            vals[vals>999] = np.nan
-            vals[vals<-999] = np.nan
+            vals = np.array(vals,dtype=float)
+
+            vals[vals>999.0] = np.nan
+            vals[vals<-999.0] = np.nan
 
             pix_list.append(pix)
             y_val_list.append(vals)
@@ -3206,6 +3325,7 @@ class multi_regression_window():
                     continue
                 vals = x_arr[pix][w]
                 vals = np.array(vals)
+                vals = np.array(vals, dtype=float)
                 vals[vals > 999] = np.nan
                 vals[vals < -999] = np.nan
                 if len(vals) == 0:
@@ -3579,10 +3699,14 @@ def main():
     # Phenology().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    greening_analysis().run()
+    # build_dataframe().run()
+
+    # greening_analysis().run()
+    # multi_regression_window().run()
     # bivariate_analysis().run()
     # build_dataframe().run()
     # visualize_SHAP().run()
+    PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
     # plt.show()
 
