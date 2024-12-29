@@ -64,7 +64,7 @@ from sklearn.inspection import permutation_importance
 from pprint import pprint
 T=Tools()
 D = DIC_and_TIF(pixelsize=0.5)
-
+centimeter_factor = 1/2.54
 
 
 this_root = 'E:\Project3\\'
@@ -2155,7 +2155,7 @@ class visualize_SHAP():
 
 
 
-class PLOT():
+class PLOT_data():
     def __init__(self):
         self.this_root = 'D:\Project3\\'
         self.data_root = 'D:/Project3/Data/'
@@ -2316,8 +2316,10 @@ class greening_analysis():
 
         # self.relative_change()
         # self.annual_growth_rate()
-        # self.trend_analysis()
-        self.heatmap()
+        self.trend_analysis()
+        # self.heatmap()
+        self.heatmap2()
+        # self.testrobinson()
 
         pass
 
@@ -2407,15 +2409,15 @@ class greening_analysis():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'3mm\relative_change_growing_season\\'
-        outdir = result_root + rf'\3mm\relative_change_growing_season\trend\\'
+        fdir = result_root+rf'\3mm\annual_growth_rate\\'
+        outdir = result_root + rf'\3mm\annual_growth_rate\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
 
-            # if not f.endswith('.npy'):
-            #     continue
 
+            if not f.endswith('.npy'):
+                continue
 
             outf=outdir+f.split('.')[0]
             # if os.path.isfile(outf+'_trend.tif'):
@@ -2430,8 +2432,8 @@ class greening_analysis():
             p_value_dic = {}
             for pix in tqdm(dic):
                 r,c=pix
-                # if r<120:
-                #     continue
+                if r<60:
+                    continue
                 landcover_value=crop_mask[pix]
                 if landcover_value==16 or landcover_value==17 or landcover_value==18:
                     continue
@@ -2463,30 +2465,80 @@ class greening_analysis():
 
             arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
             arr_trend_dryland = arr_trend * array_mask
+
             p_value_arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
             p_value_arr_dryland = p_value_arr * array_mask
 
 
-            plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
-
-            plt.colorbar()
-            plt.title(f)
-            plt.show()
+            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+            # exit()
 
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(p_value_arr_dryland, outf + '_p_value.tif')
 
             np.save(outf + '_trend', arr_trend_dryland)
             np.save(outf + '_p_value', p_value_arr_dryland)
+
+    def gen_robinson_template(self):
+        pass
+    def testrobinson(self):
+
+        fdir_trend = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend\\'
+        temp_root = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend\\'
+        outdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend_plot\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+            if not 'trend' in f:
+                continue
+
+            fname = f.split('.')[0]
+            fname_p_value = fname.replace('trend', 'p_value')
+            print(fname_p_value)
+            fpath = fdir_trend + f
+            p_value_f = fdir_trend + fname_p_value+'.tif'
+            print(p_value_f)
+            # exit()
+            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-0.2, vmax=0.2, is_discrete=True, colormap_n=7,)
+
+            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
+            plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + f+'2.pdf'
+            plt.savefig(outf)
+            plt.close()
+
     def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
         f_LAI_trend = result_root + rf'3mm\relative_change_growing_season\trend\\phenology_LAI_mean_trend.npy'
         f_inter_precipitation_CV_trend=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year_trend\detrended_sum_rainfall_trend.npy'
         f_intra_precipitation_CV_trend=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\ecosystem_year_trend\CV_intraannual_rainfall_trend.npy'
 
-        dic_LAI_trend = np.load(f_LAI_trend)
-        dic_inter_precipitation_CV_trend = np.load(f_inter_precipitation_CV_trend)
-        dic_intra_precipitation_CV_trend = np.load(f_intra_precipitation_CV_trend)
+        arr_LAI_trend = np.load(f_LAI_trend)
+
+
+        arr_LAI_trend[arr_LAI_trend<-999]=np.nan
+
+        arr_inter_precipitation_CV_trend = np.load(f_inter_precipitation_CV_trend)
+        arr_intra_precipitation_CV_trend = np.load(f_intra_precipitation_CV_trend)
+        # plt.imshow(arr_inter_precipitation_CV_trend)
+        # plt.show()
+        arr_intra_precipitation_CV_trend[arr_intra_precipitation_CV_trend<-999]=np.nan
+        arr_inter_precipitation_CV_trend[arr_inter_precipitation_CV_trend<-999]=np.nan
+
+        dic_LAI_trend=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(arr_LAI_trend)
+        dic_inter_precipitation_CV_trend=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(arr_inter_precipitation_CV_trend)
+        dic_intra_precipitation_CV_trend=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(arr_intra_precipitation_CV_trend)
+
 
         result_dic={
             'LAI_trend':dic_LAI_trend,
@@ -2495,58 +2547,83 @@ class greening_analysis():
         }
 
         df=T.spatial_dics_to_df(result_dic)
-        ## histogram
-        ## plot histogram
-        inter_CV_value=df['inter_Preci_CV_trend'].values
-        plt.hist(inter_CV_value)
+        T.print_head_n(df)
+        x_var = 'inter_Preci_CV_trend'
+        y_var = 'intra_Preci_CV_trend'
+        z_var = 'LAI_trend'
+        bin_x = [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5]
+        bin_y = [-0.025, -0.02, -0.015, -0.01, -0.005, 0, 0.005, 0.01, 0.015, 0.02, 0.025]
+        percentile_list=np.linspace(0,100,7)
+        bin_x=np.percentile(df[x_var],percentile_list)
+        print(bin_x)
+        bin_y=np.percentile(df[y_var],percentile_list)
+
+        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
+                    col_name_x=x_var,
+                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y)
+
+        T.plot_df_bin_2d_matrix(matrix_dict,-.1,.1,x_ticks_list,y_ticks_list,cmap='RdBu',
+                              is_only_return_matrix=False)
+
+        plt.colorbar()
         plt.show()
-        intra_CV_value=df['intra_Preci_CV_trend'].values
-        plt.hist(intra_CV_value)
+
+
+    #     plt.savefig(result_root + rf'Data_frame\\Frequency\\Trendy_{region}.pdf', dpi=300, )
+    #     plt.close()
+
+    def heatmap2(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        f_LAI_trend = result_root + rf'\3mm\relative_change_growing_season\trend\\phenology_LAI_mean_trend.tif'
+        f_aridity=data_root+rf'Base_data\aridity_index_05\dryland_mask05.tif'
+        f_precip_trend=result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\trend_ecosystem_year\\sum_rainfall_trend.tif'
+
+        arr_LAI_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_LAI_trend)
+
+        arr_LAI_trend[arr_LAI_trend<-999]=np.nan
+        plt.imshow(arr_LAI_trend)
+        plt.show()
+
+        aridity, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_aridity)
+        aridity[aridity<-999]=np.nan
+        aridity[aridity>999]=np.nan
+        plt.imshow(aridity)
+        plt.show()
+
+        precip_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_precip_trend)
+        precip_trend[precip_trend<-999]=np.nan
+        precip_trend[precip_trend>999]=np.nan
+        plt.imshow(precip_trend)
         plt.show()
 
 
+        dic_LAI_trend=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(arr_LAI_trend)
+        aridty_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(aridity)
+        precip_trend_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(precip_trend)
 
+        result_dic={
+            'LAI_trend':dic_LAI_trend,
+            'aridity':aridty_dic,
+            'precip_trend':precip_trend_dic
+        }
+        df=T.spatial_dics_to_df(result_dic)
+        T.print_head_n(df)
+        x_var = 'aridity'
+        y_var = 'precip_trend'
+        z_var = 'LAI_trend'
+        # bin_x = [-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5]
+        # bin_y = [-0.025, -0.02, -0.015, -0.01, -0.005, 0, 0.005, 0.01, 0.015, 0.02, 0.025]
+        percentile_list=np.linspace(0,100,5)
+        bin_x=np.percentile(df[x_var],percentile_list)
+        print(bin_x)
+        bin_y=np.percentile(df[y_var],percentile_list)
 
+        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
+                    col_name_x=x_var,
+                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y)
 
-
-        SM_p1_bin_list=np.linspace(-1.5,1.5,15)
-        SM_p2_bin_list=np.linspace(-1.5,1.5,15)
-        df_group1, bins_list_str1=T.df_bin(df,'GLEAM_SMroot_1982_2001_trend',SM_p1_bin_list)
-        matrix=[]
-        y_labels=[]
-        for name1,df_group_i1 in df_group1:
-            df_group2, bins_list_str2=T.df_bin(df_group_i1,'GLEAM_SMroot_2002_2020_trend',SM_p2_bin_list)
-            name1_=name1[0].left
-
-            matrix_i=[]
-            x_labels = []
-
-            for name2,df_group_i2 in df_group2:
-                name2_=name2[0].left
-                x_labels.append(name2_)
-                # print(name1,name2)
-                # print(len(df_group_i2))
-                val1=np.nanmean(df_group_i2['LAI_p1_trend'])
-                val2=np.nanmean(df_group_i2['LAI_p2_trend'])
-                val=val2-val1
-                matrix_i.append(val)
-
-                # count=len(df_group_i2)
-                # matrix_i.append(count)
-
-                # matrix_i.append(val)
-            matrix.append(matrix_i)
-            y_labels.append(name1_)
-        matrix=np.array(matrix)
-        matrix=matrix[::-1,:]
-        plt.imshow(matrix,cmap='RdBu',vmin=-1.5,vmax=1.5)
-        # plt.imshow(matrix,cmap='RdBu')
-        plt.xticks(np.arange(len(SM_p2_bin_list)-1), x_labels, rotation=45)
-        plt.yticks(np.arange(len(SM_p1_bin_list)-1), y_labels[::-1])
-        plt.xlabel('SM_p2_trend')
-        plt.ylabel('SM_p1_trend')
-        ## draw 1:1 line
-        # plt.plot([20, 0], [0, 20], 'k-', lw=2)
+        T.plot_df_bin_2d_matrix(matrix_dict,-.1,.1,x_ticks_list,y_ticks_list,cmap='RdBu',
+                              is_only_return_matrix=False)
 
         plt.colorbar()
         plt.show()
@@ -2554,15 +2631,313 @@ class greening_analysis():
 
 
 
+class Plot_Robinson:
+    def __init__(self):
+        # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+
+    def robinson_template(self):
+        '''
+                :param fpath: tif file
+                :param is_reproj: if True, reproject file from 4326 to Robinson
+                :param res: resolution, meter
+                '''
+        color_list = [
+            '#844000',
+            '#fc9831',
+            '#fffbd4',
+            '#86b9d2',
+            '#064c6c',
+        ]
+        # Blue represents high values, and red represents low values.
+        plt.figure(figsize=(self.map_width, self.map_height))
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
+
+        m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=20,
+                                           c='k', marker='x',
+                                           zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 100000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample_ortho)
+
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample_ortho)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        lon_list = lon_list - originX
+        lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=False, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+
+    def plot_Robinson(self, fpath, ax=None, cmap=None, vmin=None, vmax=None, is_plot_colorbar=True, is_reproj=True,
+                      res=25000, is_discrete=False, colormap_n=11):
+        '''
+        :param fpath: tif file
+        :param is_reproj: if True, reproject file from 4326 to Robinson
+        :param res: resolution, meter
+        '''
+        color_list = [
+            '#844000',
+            '#fc9831',
+            '#fffbd4',
+            '#86b9d2',
+            '#064c6c',
+        ]
+        # Blue represents high values, and red represents low values.
+        if ax == None:
+            # plt.figure(figsize=(10, 10))
+            ax = plt.subplot(1, 1, 1)
+        if cmap is None:
+            cmap = Tools().cmap_blend(color_list)
+        if not is_reproj:
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        else:
+            fpath_robinson = self.Robinson_reproj(fpath, fpath + '_robinson-reproj.tif', res=res)
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_robinson)
+            os.remove(fpath_robinson)
+        originY1 = copy.copy(originY)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr_m = ma.masked_where(np.isnan(arr), arr)
+        originX = 0
+        originY = originY * 2
+        lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
+        ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+        if is_plot_colorbar:
+            if is_discrete:
+                bounds = np.linspace(vmin, vmax, colormap_n)
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
+                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+                cax, kw = mpl.colorbar.make_axes(ax, location='bottom', pad=0.05, shrink=0.5)
+                cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, boundaries=bounds, ticks=bounds,
+                                                 orientation='horizontal')
+            else:
+                cbar = plt.colorbar(ret, ax=ax, shrink=0.5, location='bottom', pad=0.05)
+        return m, ret
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+class bivariate_analysis():
+    def __init__(self):
+        pass
+    def run(self):
+        self.bivariate_plot()
+        # self.xy_map_growth_rate()  ## growth rate, rainfall seasonal distribution use the same  color scale
+        # self.xy_map_heat_event()
+
+
+        pass
+    def bivariate_plot(self):
+        result_root = rf'E:\Project3\Result\\'
+        # print(result_root)
+
+        import xymap
+        tif_long_term= result_root+rf'\3mm\annual_growth_rate\trend\\phenology_LAI_mean_trend.tif'
+        tif_window=result_root+rf'\3mm\relative_change_growing_season\trend\\phenology_LAI_mean_trend.tif'
+        # print(isfile(tif_CRU_trend))
+        # print(isfile(tif_CRU_CV))
+        # exit()
+        outdir=result_root + rf'3mm\\\bivariate_analysis\\'
+        T.mk_dir(outdir, force=True)
+        outtif=outdir+rf'\\relative_change_growth_rate.tif'
+        T.mk_dir(result_root + rf'bivariate_analysis\\')
+        tif1=tif_long_term
+        tif2=   tif_window
+
+        tif1_label='Relative_change (%/year)'
+        tif2_label='growing rate (%)/year'
+        min1=-0.3
+        max1=0.3
+        min2=-0.02
+        max2=0.02
+        outf=outtif
+        upper_right_color = [143, 196, 34],  #
+        upper_left_color = [156, 65, 148],  #
+        lower_right_color = [29, 46, 97],  #
+        lower_left_color = [238, 233, 57],  #
+        center_color = [240, 240, 240],  #
+        # print(xymap.Bivariate_plot_1().upper_left_color)
+        # xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
+        Biv = xymap.Bivariate_plot_1(upper_right_color =[64, 224, 208],
+                                      upper_left_color = [248,222,126],
+                                      lower_right_color = [0,100,0],
+                                      lower_left_color = [255,0,0],
+                                      center_color = [240, 240, 240])
+        # Biv.upper_left_color = upper_left_color
+        # Biv.upper_right_color = upper_right_color
+        # Biv.lower_left_color = lower_left_color
+        # Biv.lower_right_color = lower_right_color
+        # Biv.center_color = center_color
+
+        # print(Biv.lower_right_color);exit()
+        Biv.plot_bivariate(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
+        print(outf)
+        plt.show()
+
+    def xy_map_growth_rate(self):
+
+
+        import xymap
+
+
+        fdir_CV = rf'E:\Project3\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
+        fdir_trend = rf'D:\Project3\Result\trend_analysis\relative_change\OBS_extend\\'
+        outdir = rf'D:\Project3\Result\bivariate\\\LAI_trend_vs_CV\\'
+        T.mk_dir(outdir,force=True)
+
+        tif_LAI4g_trend = fdir_CV+'LAI4g_CV_trend.tif'
+        tif_LAI4g_trend_growth_rate_trend = fdir_trend+'LAI4g_trend.tif'
+
+        outf = join(outdir,f'LAI_trend_vs_CV.tif')
+        x_label = 'LAI4g_CV_trend(%/year)'
+        y_label = 'LAI4g_trend (%//year)'
+        min1 = -1
+        max1 = 1
+        min2 = -.05
+        max2 = .05
+        xymap.Bivariate_plot_1(alpha = 255,upper_left_color = (255,202, 202), #
+                 upper_right_color = (148, 202, 112), #
+                 lower_left_color = (110,0, 0), #
+                 lower_right_color = (0, 0, 110), #
+                 center_color = (240,240, 240), ).plot_bivariate(
+            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
+            x_label, y_label, min1, max1, min2, max2, outf)
+        print(outf)
+
+
+    def xy_map_heat_event(self): ##
+
+        import xymap
+
+        fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
+        outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
+        T.mk_dir(outdir,force=True)
+
+        tif_LAI4g_trend = join(fdir,'heat_event_frequency_trend.tif')
+        tif_LAI4g_trend_growth_rate_trend = join(fdir,'detrended_annual_LAI4g_CV_trend.tif')
+
+        outf = join(outdir,f'heat_event_frequency_trend.tif')
+        x_label = 'heat_event_frequency_trend(unitless/year)'
+        y_label = 'CV trend (%/year)'
+        min1 = -0.1
+        max1 = 0.1
+        min2 = -.5
+        max2 = .5
+        xymap.Bivariate_plot_1(alpha = 255,upper_right_color = (255,202, 202), #
+                 upper_left_color = (148, 202, 112), #
+                 lower_right_color = (110,0, 0), #
+                 lower_left_color = (0, 0, 110), #
+                 center_color = (240,240, 240), ).plot_bivariate(
+            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
+            x_label, y_label, min1, max1, min2, max2, outf)
+        print(outf)
+
+
 def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
+    bivariate_analysis().run()
     # build_dataframe().run()
     # visualize_SHAP().run()
-    # PLOT().run()
+    # Plot_Robinson().robinson_template()
+    # plt.show()
 
 
 
