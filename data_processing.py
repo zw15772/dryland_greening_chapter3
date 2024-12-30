@@ -13427,11 +13427,11 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'E:\Project3\Data\CRU_monthly\Precip\dic\\'
+        fdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\\phenology_LAI_mean_detrend.npy'
 
 
-        # dic=T.load_npy(fdir)
-        dic=T.load_npy_dir(fdir)
+        dic=T.load_npy(fdir)
+        # dic=T.load_npy_dir(f)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -15063,7 +15063,7 @@ class moving_window():
 
 def main():
     # data_processing().run()
-    statistic_analysis().run()
+    # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
@@ -15089,7 +15089,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    # check_data().run()
+    check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 
