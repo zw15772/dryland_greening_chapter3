@@ -620,7 +620,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         df = self.drop_field_df(df)
         df=self.show_field(df)
 
@@ -1535,7 +1535,7 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'GPCC_LAI4g_p_value': 'GPCC_LAI4g_p_value_mm_unit',
+        df = df.rename(columns={'weighted_avg_LAI_x': 'weighted_avg_LAI',
 
 
                             }
@@ -1549,7 +1549,7 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=[rf'weighted_avg_lai',
+        df = df.drop(columns=[rf'weighted_avg_LAI_y',
 
                               ])
         return df
@@ -2425,7 +2425,7 @@ class greening_analysis():
         # print(len(df_clean))
 
         # 去除异常值（根据业务需求设定阈值）
-        df_clean_ii = df_clean[(df_clean['LAI_relative_change'] > -20) & (df_clean['LAI_relative_change'] < 20)]
+        df_clean_ii = df_clean[(df_clean['LAI_relative_change'] > -50) & (df_clean['LAI_relative_change'] < 50)]
         # print(len(df_clean_ii));exit()
         # Step 1: 计算纬度权重
         df_clean_ii['latitude_weight'] = np.cos(np.radians(df_clean_ii['lat']))
@@ -2451,9 +2451,7 @@ class greening_analysis():
         # T.print_head_n(df_clean_ii);exit()
         outf=result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df'
         T.save_df(df_clean_ii,outf)
-        T.df_to_excel(df_clean_ii, outf.replace('.df', '.xlsx'))
-
-
+        T.df_to_excel(df_clean_ii, outf)
 
         pass
     def df_clean(self, df):
@@ -2481,7 +2479,19 @@ class greening_analysis():
             vals = df_i['weighted_avg_LAI'].tolist()
             result_dic[year] = np.nanmean(vals)
 
-        plt.plot(result_dic.keys(), result_dic.values())
+
+        plt.plot(result_dic.values(),'g')
+        year_range = range(1983, 2021)
+        xticks = range(0, len(year_range), 4)
+        plt.xticks(xticks, year_range[::4], fontsize=10, rotation=45)
+        plt.ylim(-4, 4)
+        plt.yticks([-4, -3, -2, -1, 0, 1, 2, 3, 4], fontsize=10)
+        plt.xlabel('year', fontsize=10)
+        plt.ylabel(f'Relative change (%)', fontsize=10)
+        ##add line
+        # plt.axhline(y=0, color='grey', linestyle='-',alpha=0.2)
+        plt.grid(which='major', alpha=0.2)
+
         plt.show()
 
 
@@ -3745,10 +3755,10 @@ class multi_regression_window():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
 
