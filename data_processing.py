@@ -82,7 +82,9 @@ class data_processing():
         # self.download_CCI_landcover()
         # self.download_ERA_precip()
         # self.download_CCI_ozone()
-        # self.nc_to_tif_fire()
+
+        # self.nc_to_tif()
+        self.resample_soil_texture()
 
         # self.nc_to_tif_NIRv()
         # self.nc_to_tif_Terraclimate()
@@ -104,7 +106,7 @@ class data_processing():
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -269,7 +271,52 @@ class data_processing():
 
 
         pass
-    def nc_to_tif(self):
+    def nc_to_tif_soil_texture(self):  ## no time series
+        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\S_OC.nc4"  # 替换为你的 .nc 文件路径
+        variable_name = "S_OC"  # 替换为你需要转换的变量名
+        outdir=rf"E:\Project3\Data\Base_data\HWSD\\tif\\"
+        T.mk_dir(outdir,force=True)
+        output_tif = outdir + rf"\\S_OC.tif"  # 替换为输出 .tif 文件路径
+        nc = Dataset(nc_file, 'r')
+        #
+        # print(nc)
+        # print(nc.variables.keys())
+        # exit()
+        # 使用 GDAL 进行转换
+        gdal.Translate(
+            destName=output_tif,  # 输出文件路径
+            srcDS=f'NETCDF:"{nc_file}":{variable_name}',  # 指定 NetCDF 文件和变量
+            format='GTiff',  # 输出格式为 GeoTIFF
+        )
+
+        print(f"GeoTIFF 文件已保存到: {output_tif}")
+        pass
+    def resample_soil_texture(self):
+        fdir=rf'E:\Project3\Data\Base_data\HWSD\tif\025\\'
+        outdir=rf'E:\Project3\Data\Base_data\HWSD\tif\\05\\'
+        T.mk_dir(outdir,force=True)
+        for f in os.listdir(fdir):
+            if not  f.endswith('.tif'):
+                continue
+
+            date = f.split('.')[0]
+
+            dataset = gdal.Open(fdir + f)
+            # print(dataset.GetGeoTransform())
+            original_x = dataset.GetGeoTransform()[1]
+            original_y = dataset.GetGeoTransform()[5]
+    
+            # band = dataset.GetRasterBand(1)
+            # newRows = dataset.YSize * 2
+            # newCols = dataset.XSize * 2
+            try:
+                gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+            # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+            # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+            except Exception as e:
+                pass
+            pass
+    def nc_to_tif_time_series(self):
 
         # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
         fdir=rf'D:\Project3\Data\deposition\\'
@@ -298,7 +345,6 @@ class data_processing():
         Tools().mk_dir(outdir,force=True)
         # print(isfile(f))
         # exit()
-
 
         yearlist = list(range(1982, 2021))
         for f in os.listdir(fdir):
@@ -3774,19 +3820,19 @@ class statistic_analysis():
 
         # self.detrend()  ##original
         # self.detrend_zscore_monthly()
-        self.relative_change()
+        # self.relative_change()
         # self.normalised_variables()
         # self.calculate_CV()
         # self.zscore()
         # self.detrend()
         # self.LAI_baseline()
 
-        # self.anomaly_GS()
+        self.anomaly_GS()
         # self.growth_rate_GS()
         # self.anomaly_GS_ensemble()
         # self.zscore_GS()
 
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.trend_analysis_for_event()
         # self.trend_differences()
         # self.trend_average_TRENDY()
@@ -4236,14 +4282,11 @@ class statistic_analysis():
 
 
     def anomaly_GS(self):  ### anomaly GS
-        dryland_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(dryland_mask_f)
 
-        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir = result_root + '\split_original\\'
+        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\original\\'
 
-        outdir = result_root + f'\split_anomaly\\'
+        outdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\\anomaly\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4262,15 +4305,9 @@ class statistic_analysis():
             for pix in tqdm(dic):
 
 
-                classval=dic_dryland_mask[pix]
-                if np.isnan(classval):
-                    continue
-
                 r, c = pix
-                # if not 240 < r < 480:
-                #     continue
 
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 print(len(time_series))
 
                 time_series = np.array(time_series)
@@ -13427,7 +13464,7 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\\phenology_LAI_mean_detrend.npy'
+        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\anomaly\\VPD.npy'
 
 
         dic=T.load_npy(fdir)
@@ -13488,12 +13525,11 @@ class check_data():
             # len_dic[pix]=np.nanstd(vals)
             vals=np.array(vals)
 
-            vals=vals[~np.isnan(vals)]
+            # vals=vals[~np.isnan(vals)]
 
             len_dic[pix] = len(vals)
-            len_dic[pix] = np.nanmean(vals)
+            # len_dic[pix] = np.nanmean(vals)
         arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
-
 
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=460,vmax=468)
         plt.colorbar()
@@ -15062,7 +15098,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -15089,7 +15125,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 
