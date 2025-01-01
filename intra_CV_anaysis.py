@@ -3746,7 +3746,8 @@ class moving_window():
     def run(self):
         # self.moving_window_extraction()
 
-        # self.moving_window_CV_extraction_anaysis()
+        # self.moving_window_CV_extraction_anaysis_LAI()
+        # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
@@ -3908,65 +3909,65 @@ class moving_window():
         return new_x_extraction_by_window
     def moving_window_CV_extraction_anaysis_rainfall(self):
         window_size=15
-        # growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
-        # for mode in growing_season_mode_list:
+        growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
+        for mode in growing_season_mode_list:
 
-        fdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\\moving_window_extraction\\'
-        outdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
-        T.mk_dir(outdir, force=True)
+            fdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\\{mode}\\'
+            outdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\\{mode}\\'
+            T.mk_dir(outdir, force=True)
 
-        for f in os.listdir(fdir):
-            if not 'detrended' in f:
-                continue
-
-            dic = T.load_npy(fdir + f)
-            slides = 38-window_size+1  ## other datasets 38
-            outf = outdir + f.split('.')[0] + f'_CV.npy'
-            print(outf)
-
-            # if os.path.isfile(outf):
-            #     continue
-
-            new_x_extraction_by_window = {}
-            trend_dic={}
-            p_value_dic={}
-
-            for pix in tqdm(dic):
-                trend_list = []
-                time_series_all = dic[pix]
-                if len(time_series_all)<24:  ##
+            for f in os.listdir(fdir):
+                if not 'detrended_sum_rainfall' in f:
                     continue
-                time_series_all = np.array(time_series_all)
-                for ss in range(slides):
-                    if np.isnan(np.nanmean(time_series_all)):
-                        print('error')
+
+                dic = T.load_npy(fdir + f)
+                slides = 38-window_size+1  ## other datasets 38
+                outf = outdir + f.split('.')[0] + f'_CV.npy'
+                print(outf)
+
+                # if os.path.isfile(outf):
+                #     continue
+
+                new_x_extraction_by_window = {}
+                trend_dic={}
+                p_value_dic={}
+
+                for pix in tqdm(dic):
+                    trend_list = []
+                    time_series_all = dic[pix]
+                    if len(time_series_all)<24:  ##
                         continue
-                    # print((len(time_series)))
+                    time_series_all = np.array(time_series_all)
+                    for ss in range(slides):
+                        if np.isnan(np.nanmean(time_series_all)):
+                            print('error')
+                            continue
+                        # print((len(time_series)))
 
-                    ### if all values are identical, then continue
-                    time_series=time_series_all[ss]
-                    if np.nanmax(time_series) == np.nanmin(time_series):
-                        continue
-                    # print(len(time_series))
+                        ### if all values are identical, then continue
+                        time_series=time_series_all[ss]
+                        if np.nanmax(time_series) == np.nanmin(time_series):
+                            continue
+                        # print(len(time_series))
 
-                    if np.nanmean(time_series)==0:
-                        continue
-                    cv=np.nanstd(time_series)/np.nanmean(time_series)*100
+                        if np.nanmean(time_series)==0:
+                            continue
+                        cv=np.nanstd(time_series)/np.nanmean(time_series)*100
 
-                    trend_list.append(cv)
-                    # print(trend_list)
+                        trend_list.append(cv)
+                        # print(trend_list)
 
-                trend_dic[pix]=trend_list
+                    trend_dic[pix]=trend_list
 
-            np.save(outf, trend_dic)
-            T.open_path_and_file(outdir)
+                np.save(outf, trend_dic)
+                T.open_path_and_file(outdir)
 
-            ##tiff
-            # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
-            #
-            # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
+                ##tiff
+                # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
+                #
+                # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
+                # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
+                # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
 
     def moving_window_CV_extraction_anaysis_LAI(self):
@@ -4037,12 +4038,12 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
         growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
-        # growing_season_mode_list = ['ecosystem_year', ]
+        growing_season_mode_list = ['ecosystem_year', ]
 
 
         for mode in growing_season_mode_list:
             fdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\\{mode}\\'
-            outdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\\{mode}\\'
+            outdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\\{mode}\\'
             T.mk_dir(outdir, force=True)
             for f in os.listdir(fdir):
 
@@ -4206,13 +4207,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\\ecosystem_year\\'
-        outdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis\\ecosystem_year\\trend\\'
+        fdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\\ecosystem_year\\'
+        outdir = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\\ecosystem_year\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            # if not 'heat' in f:
-            #     continue
+            if not 'Tmax' in f:
+                continue
 
 
             # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',
