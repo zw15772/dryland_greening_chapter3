@@ -83,10 +83,10 @@ class data_processing():
         # self.download_ERA_precip()
         # self.download_CCI_ozone()
 
-        # self.nc_to_tif()
-        self.resample_soil_texture()
+        # # self.nc_to_tif_soil_texture()
+        # self.resample_soil_texture()
 
-        # self.nc_to_tif_NIRv()
+        self.nc_to_tif_NIRv()
         # self.nc_to_tif_Terraclimate()
         # self.nc_to_tif_TRMM()
         # self.nc_to_tif_LUCC()
@@ -272,11 +272,11 @@ class data_processing():
 
         pass
     def nc_to_tif_soil_texture(self):  ## no time series
-        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\S_OC.nc4"  # 替换为你的 .nc 文件路径
-        variable_name = "S_OC"  # 替换为你需要转换的变量名
+        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\T_CLAY.nc4"  # 替换为你的 .nc 文件路径
+        variable_name = "T_CLAY"  # 替换为你需要转换的变量名
         outdir=rf"E:\Project3\Data\Base_data\HWSD\\tif\\"
         T.mk_dir(outdir,force=True)
-        output_tif = outdir + rf"\\S_OC.tif"  # 替换为输出 .tif 文件路径
+        output_tif = outdir + rf"\\T_CLAY.tif"  # 替换为输出 .tif 文件路径
         nc = Dataset(nc_file, 'r')
         #
         # print(nc)

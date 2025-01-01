@@ -3826,143 +3826,31 @@ class multi_regression():  ###linaer regression for CO2 effects.
         self.data_root = 'E:/Project3/Data/'
         self.result_root = 'E:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_trend_growing_season\\'
+        self.fdirX=self.result_root+rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_trend_growing_season\\'
 
-        self.xvar_list = ['sum_rainfall','Tmax','VPD']
-        self.y_var = ['phenology_LAI_mean_relative_change']
+        self.xvar_list = ['CO2','detrended_sum_rainfall','Tmax',]
+        self.y_var = ['detrended_growing_season_LAI_mean_CV']
         pass
 
     def run(self):
-        # self.detrend()
-        # self.moving_window_extraction()
 
-        self.window = 38-15+1
         outdir = self.result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
-        # for i in range(self.window):
-        #
-        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-        #     outf= outdir+rf'\\window{i:02d}.npy'
-        #     if os.path.isfile(outf):
-        #         continue
-        #     print(outf)
-        # #
-        #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+
+
+        df= self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var)
+
+        self.cal_multi_regression_beta(df,self.xvar_list)  # 修改参数
         # ###step 2 crate individial files
         # self.plt_multi_regression_result(outdir,self.y_var)
 #
-        # ##step 3 covert to time series
-
-        # self.convert_files_to_time_series(outdir,self.y_var)
-        ### step 4 build dataframe using build Dataframe function and then plot here
-        # self.plot_moving_window_time_series()
-        ## spatial trends of sensitivity
-        self.calculate_trend_trend()
-        # self.plot_sensitivity_preicipation_trend()
-
-    def moving_window_extraction(self):
-
-        fdir_all = self.result_root + rf'3mm\moving_window_multi_regression\anomaly_growing_season\\detrend\\'
-
-        outdir = self.result_root  + rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\'
-        T.mk_dir(outdir, force=True)
-        # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
-        T.mk_dir(outdir, force=True)
-        for f in os.listdir(fdir_all):
-
-            if not f.endswith('.npy'):
-                continue
-
-            outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
-
-            # if os.path.isfile(outf):
-            #     continue
-            # if os.path.isfile(outf):
-            #     continue
-
-            dic = T.load_npy(fdir_all + f)
-            window = 15
-
-            new_x_extraction_by_window = {}
-            for pix in tqdm(dic):
-
-                time_series = dic[pix]
-                # time_series = dic[pix]
-
-                time_series = np.array(time_series)
-                # if T.is_all_nan(time_series):
-                #     continue
-                if len(time_series) == 0:
-                    continue
-
-                # time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    print('error')
-                    continue
-                # print((len(time_series)))
-                ## if all values are identical, then continue
-                if np.nanmax(time_series) == np.nanmin(time_series):
-                    continue
-
-                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
-                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
-
-            T.save_npy(new_x_extraction_by_window, outf)
 
 
 
-
-    def forward_window_extraction(self, x, window):
-        # 前窗滤波
-        # window = window-1
-        # 不改变数据长度
-
-        if window < 0:
-            raise IOError('window must be greater than 0')
-        elif window == 0:
-            return x
-        else:
-            pass
-
-        x = np.array(x)
-
-        # new_x = np.array([])
-        # plt.plot(x)
-        # plt.show()
-        new_x_extraction_by_window=[]
-        for i in range(len(x)+1):
-            if i + window >= len(x)+1:  ####revise  here!!
-                continue
-            else:
-                anomaly = []
-                relative_change_list=[]
-                x_vals=[]
-                for w in range(window):
-                    x_val=(x[i + w])
-                    x_vals.append(x_val)
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                # x_mean=np.nanmean(x_vals)
-
-                # for i in range(len(x_vals)):
-                #     if x_vals[0]==None:
-                #         continue
-                    # x_anomaly=(x_vals[i]-x_mean)
-                    # relative_change = (x_vals[i] - x_mean) / x_mean
-
-                    # relative_change_list.append(x_vals)
-                new_x_extraction_by_window.append(x_vals)
-        return new_x_extraction_by_window
-
-
-
-
-    def build_df(self, fdir_X, fdir_Y, xvar_list,y_var,w):
+    def build_df(self, fdir_X, fdir_Y, xvar_list,y_var):
 
         df = pd.DataFrame()
         dic_y=T.load_npy(fdir_Y+y_var[0]+'.npy')
@@ -3975,7 +3863,7 @@ class multi_regression():  ###linaer regression for CO2 effects.
 
             if len(dic_y[pix]) == 0:
                 continue
-            vals = dic_y[pix][w]
+            vals = dic_y[pix]
             # print(vals)
             # exit()
             if len(vals) == 0:
@@ -3994,9 +3882,6 @@ class multi_regression():  ###linaer regression for CO2 effects.
         df['y'] = y_val_list
 
         ##df histogram
-
-
-
         # build x
 
         for xvar in xvar_list:
@@ -4013,7 +3898,7 @@ class multi_regression():  ###linaer regression for CO2 effects.
                 if len(x_arr[pix]) < self.window:
                     x_val_list.append([])
                     continue
-                vals = x_arr[pix][w]
+                vals = x_arr[pix]
                 vals = np.array(vals)
                 vals = np.array(vals, dtype=float)
                 vals[vals > 999] = np.nan
@@ -4024,6 +3909,9 @@ class multi_regression():  ###linaer regression for CO2 effects.
                 x_val_list.append(vals)
 
             df[xvar] = x_val_list
+            df['CO2_precip'] = df['sum_rainfall']*df['CO2']
+
+
 
 
         return df
@@ -4051,7 +3939,7 @@ class multi_regression():  ###linaer regression for CO2 effects.
         return a, b, r
 
 
-    def cal_multi_regression_beta(self, df, x_var_list, outf):
+    def cal_multi_regression_beta(self, df, x_var_list):
 
         multi_derivative = {}
         multi_pvalue = {}
@@ -4186,262 +4074,11 @@ class multi_regression():  ###linaer regression for CO2 effects.
                 # plt.colorbar()
 
             # plt.show()
-    def convert_files_to_time_series(self, multi_regression_result_dir,y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        # average_LAI_f = self.result_root + rf'state_variables\LAI4g_1982_2020.npy'
-        # average_LAI_dic = T.load_npy(average_LAI_f)  ### normalized Co2 effect
 
 
-        fdir = multi_regression_result_dir+'\\'+'TIFF\\'
-
-
-
-        variable_list = ['sum_rainfall']
-
-
-
-        for variable in variable_list:
-            array_list = []
-
-            for f in os.listdir(fdir):
-
-                if not variable in f:
-                    continue
-                if not f.endswith('.tif'):
-                    continue
-                if 'pvalue' in f:
-                    continue
-                print(f)
-
-                array= ToRaster().raster2array(fdir+f)[0]
-                array = np.array(array)
-
-
-                array_list.append(array)
-            array_list=np.array(array_list)
-
-            ## array_list to dic
-            dic=DIC_and_TIF(pixelsize=0.5).void_spatial_dic()
-            result_dic = {}
-            for pix in dic:
-                r, c = pix
-
-                if r < 60:
-                    continue
-                landcover_value = crop_mask[pix]
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-
-                dic[pix]=array_list[:,r,c] ## extract time series
-
-
-
-
-                time_series=dic[pix]
-                time_series = np.array(time_series)
-                time_series = time_series*100  ###currently no multiply %/100mm
-                result_dic[pix]=time_series
-                if np.nanmean(dic[pix])<=5:
-                    continue
-                # print(len(dic[pix]))
-                # exit()
-            outdir=multi_regression_result_dir+'\\'+'npy_time_series\\'
-            print(outdir)
-            # exit()
-            T.mk_dir(outdir,force=True)
-            outf=outdir+rf'\\{variable}.npy'
-            np.save(outf,result_dic)
-
-        pass
-
-    def plot_moving_window_time_series(self):
-        df= T.load_df(result_root + rf'\3mm\Dataframe\moving_window_multi_regression\\phenology_LAI_mean_trend.df')
-
-        # variable_list = ['precip_detrend','rainfall_frenquency_detrend']
-        variable_list = ['precip', 'rainfall_frenquency','rainfall_seasonality_all_year','rainfall_intensity']
-
-        df=df.dropna()
-        df=self.df_clean(df)
-
-        fig = plt.figure()
-        i = 1
-
-        for variable in variable_list:
-
-            ax = fig.add_subplot(2, 2, i)
-
-            vals = df[f'{variable}'].tolist()
-
-            vals_nonnan = []
-
-            for val in vals:
-                if type(val) == float:  ## only screening
-                    continue
-                if np.isnan(np.nanmean(val)):
-                    continue
-                if np.nanmean(val) <=-999:
-                    continue
-
-                vals_nonnan.append(val)
-            ###### calculate mean
-            vals_mean = np.array(vals_nonnan)  ## axis=0, mean of each row  竖着加
-            vals_mean = np.nanmean(vals_mean, axis=0)
-            vals_mean = vals_mean.tolist()
-            plt.plot(vals_mean, label=variable)
-
-            i = i + 1
-
-        plt.xlabel('year')
-
-        plt.ylabel(f'{variable}_LAI4g')
-        # plt.legend()
-
-        plt.show()
-
-    def plot_sensitivity_preicipation_trend(self):
-        ### plot heamap of sensitivity of precipitation to LAI as function of  mean precipitaiton and precipitation trends
-
-        dff = rf'D:\Project3\Result\Dataframe\relative_changes\relative_changes.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        # T.print_head_n(df)
-        df = df.dropna(subset=['LAI4g_trend'])
-
-        ## x is CRU, y CO2, z is LAI4g
-        x = df['GPCC_LAI4g_trend_100mm_unit']
-        y = df['GPCC_trend'].tolist()
-
-        z=df['LAI4g_trend'].tolist()
-        plt.hist(x, bins=50)
-        plt.show()
-        # plt.hist(y, bins=50)
-        # plt.show()
-        # plt.hist(z, bins=50)
-        # plt.show()
-
-        x_list = np.linspace(-10, 10, 21)
-        y_list = np.linspace(-2, 2, 21)
-        df_group1, bins_list_str1 = T.df_bin(df, 'GPCC_LAI4g_trend_100mm_unit',x_list)
-
-        for name1, df_group_i1 in df_group1:
-            df_group2, bins_list_str2 = T.df_bin(df_group_i1, 'GPCC_trend', y_list)
-            name1_ = name1[0].left
-            # print(name1_);exit()
-            matrix_i = []
-            matrix_ii = []
-            x_labels = []
-            # print(len(df_group2))
-            # print(len(CO2_bin_list)-1)
-            # print('---')
-
-            for name2, df_group_i2 in df_group2:
-                name2_ = name2[0].left
-                x_labels.append(name2_)
-                # print(name1,name2)
-                # print(len(df_group_i2))
-                vals = df_group_i2['LAI4g_trend'].tolist()
-                vals = np.array(vals)
-                vals[vals < -999] = np.nan
-                vals[vals > 999] = np.nan
-                val = np.nanmean(vals)
-
-
-                count = len(df_group_i2)
-
-                x_pos = name1_
-                y_pos = name2_
-                plt.scatter(x_pos, y_pos, s=100,c=val,cmap='RdBu',vmin=-1,vmax=1,marker='s')
-                ### add text of the value
-                plt.text(x_pos, y_pos, count, ha='center', va='center', fontsize=6)
-                plt.xlabel('Trends in LAI sensitivity to precipitation (%/100mm/year)')
-                plt.ylabel('Precipitaiton_trend (%/year)')
-                # plt.title('Trends in LAI sensitivity to precipitation (%/mm/year)')
-
-        ## colorbars has text
-        cbar = plt.colorbar()
-        cbar.ax.set_ylabel('LAI trend (%/year)')
-        plt.show()
 
     pass
 
-    def calculate_trend_trend(self):  ## calculate the trend of trend
-
-    ## here input is the npy file
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        fdir=rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\\'
-        outdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\\trend\\'
-
-        T.mkdir(outdir)
-
-        for f in os.listdir(fdir):
-            if not f.endswith('npy'):
-                continue
-
-            if 'p_value' in f:
-                continue
-
-
-            dic = T.load_npy(fdir + f)
-
-            outf = outdir + f.split('.')[0] + f'_trend.npy'
-            print(outf)
-
-
-
-            trend_dic={}
-            p_value_dic={}
-
-            for pix in tqdm(dic):
-
-                time_series_all = dic[pix]
-                dryland_value=dic_dryland_mask[pix]
-                if np.isnan(dryland_value):
-                    continue
-                time_series_all = np.array(time_series_all)
-
-                if len(time_series_all) < 24:
-                    continue
-                time_series_all[time_series_all < -999] = np.nan
-
-                if np.isnan(np.nanmean(time_series_all)):
-                    print('error')
-                    continue
-                slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series_all)), time_series_all)
-
-                trend_dic[pix]=slope
-                p_value_dic[pix]=p_value
-
-            arr_trend=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
-            arr_p_value = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
-            plt.imshow(arr_trend)
-            plt.colorbar()
-            plt.show()
-            outf = outdir + f.split('.')[0] + '_trend.tif'
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend,outf)
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_p_value, outf + '_p_value.tif')
-                ## save
-            # np.save(outf, trend_dic)
-            # np.save(outf+'_p_value', p_value_dic)
-
-            ##tiff
 
     def df_clean(self,df):
         T.print_head_n(df)
@@ -4455,6 +4092,157 @@ class multi_regression():  ###linaer regression for CO2 effects.
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+class TRENDY_preprocessing:
+
+    def run(self):
+        pass
+
+    def nc_to_tif_time_series(self):
+
+        # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
+        fdir=rf'D:\Project3\Data\deposition\\'
+        outdir=rf'D:\Project3\Data\deposition\\TIFF\\'
+        Tools().mk_dir(outdir,force=True)
+        for f in os.listdir(fdir):
+
+            outdir_name = f.split('.')[0]
+            print(outdir_name)
+
+            yearlist = list(range(1982, 2021))
+
+
+            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+            try:
+                self.nc_to_tif_template(fdir+f, var_name='GPP', outdir=outdir, yearlist=yearlist)
+            except Exception as e:
+                print(e)
+                continue
+    def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
+        try:
+            ncin = Dataset(fname, 'r')
+            print(ncin.variables.keys())
+            time=ncin.variables['time'][:]
+
+        except:
+            raise UserWarning('File not supported: ' + fname)
+        # lon,lat = np.nan,np.nan
+        try:
+            lat = ncin.variables['lat'][:]
+            lon = ncin.variables['lon'][:]
+        except:
+            try:
+                lat = ncin.variables['latitude'][:]
+                lon = ncin.variables['longitude'][:]
+            except:
+                try:
+                    lat = ncin.variables['lat_FULL'][:]
+                    lon = ncin.variables['lon_FULL'][:]
+                except:
+                    raise UserWarning('lat or lon not found')
+        shape = np.shape(lat)
+        try:
+            time = ncin.variables['time_counter'][:]
+            basetime_str = ncin.variables['time_counter'].units
+        except:
+            time = ncin.variables['time'][:]
+            basetime_str = ncin.variables['time'].units
+
+        basetime_unit = basetime_str.split('since')[0]
+        basetime_unit = basetime_unit.strip()
+        print(basetime_unit)
+        print(basetime_str)
+        if basetime_unit == 'days':
+            timedelta_unit = 'days'
+        elif basetime_unit == 'years':
+            timedelta_unit = 'years'
+        elif basetime_unit == 'month':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'months':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'seconds':
+            timedelta_unit = 'seconds'
+        elif basetime_unit == 'hours':
+            timedelta_unit = 'hours'
+        else:
+            raise Exception('basetime unit not supported')
+        basetime = basetime_str.strip(f'{timedelta_unit} since ')
+        try:
+            basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d')
+        except:
+            try:
+                basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S')
+            except:
+                try:
+                    basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S.%f')
+                except:
+                    try:
+                        basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M')
+                    except:
+                        try:
+                            basetime = datetime.datetime.strptime(basetime, '%Y-%m')
+                        except:
+                            try:
+                                basetime_ = basetime.split('T')[0]
+                                # print(basetime_)
+                                basetime = datetime.datetime.strptime(basetime_, '%Y-%m-%d')
+                                # print(basetime)
+                            except:
+
+                                raise UserWarning('basetime format not supported')
+        data = ncin.variables[var_name]
+        if len(shape) == 2:
+            xx, yy = lon, lat
+        else:
+            xx, yy = np.meshgrid(lon, lat)
+        for time_i in tqdm(range(len(time))):
+            if basetime_unit == 'days':
+                date = basetime + datetime.timedelta(days=int(time[time_i]))
+            elif basetime_unit == 'years':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                date2 = f'{int(base_year + time[time_i])}-01-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'month' or basetime_unit == 'months':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                base_month = basetime.month
+                date2 = f'{int(base_year + time[time_i] // 12)}-{int(base_month + time[time_i] % 12)}-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'seconds':
+                date = basetime + datetime.timedelta(seconds=int(time[time_i]))
+            elif basetime_unit == 'hours':
+                date = basetime + datetime.timedelta(hours=int(time[time_i]))
+            else:
+                raise Exception('basetime unit not supported')
+            time_str = time[time_i]
+            mon = date.month
+            year = date.year
+            if year not in yearlist:
+                continue
+            day = date.day
+            outf_name = f'{year}{mon:02d}{day:02d}.tif'
+            outpath = join(outdir, outf_name)
+            if isfile(outpath):
+                continue
+            arr = data[time_i]
+            arr = np.array(arr)
+            lon_list = []
+            lat_list = []
+            value_list = []
+            for i in range(len(arr)):
+                for j in range(len(arr[i])):
+                    lon_i = xx[i][j]
+                    if lon_i > 180:
+                        lon_i -= 360
+                    lat_i = yy[i][j]
+                    value_i = arr[i][j]
+                    lon_list.append(lon_i)
+                    lat_list.append(lat_i)
+                    value_list.append(value_i)
+            DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
+
 
 
 def main():
