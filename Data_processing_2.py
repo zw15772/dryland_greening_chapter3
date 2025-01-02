@@ -4095,28 +4095,45 @@ class multi_regression():  ###linaer regression for CO2 effects.
 class TRENDY_preprocessing:
 
     def run(self):
+        # self.unzip()
         # self.nc_to_tif_SNU_NIRV_NDVI()
+        # self.scale_GOSIF()
         # self.resample()
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
+        self.extract_phenology_year()
         pass
 
     def unzip(self):
-        fdir = rf'C:\Users\wenzhang1\Desktop\max_temp_05\raw\\'
-        outdir = rf'E:\Project3\ERA5\\Tmax\\unzip\\'
+        import gzip
+        dic={'M01':'01','M02':'02','M03':'03',
+             'M04':'04','M05':'05','M06':'06',
+             'M07':'07','M08':'08','M09':'09',
+             'M10':'10','M11':'11','M12':'12'}
+
+
+
+        fdir = data_root+rf'\GOSIF\monthly\\'
+        outdir = data_root+rf'\GOSIF\unzip\\'
         T.mk_dir(outdir)
-        for folder in T.listdir(fdir):
-            print(folder)
-
-            fdir_i = join(fdir,folder)
+        for f in T.listdir(fdir):
 
 
-            outdir_i = join(outdir,folder)
-            if isdir(outdir_i):
-                continue
-            T.unzip(fdir_i,outdir_i)
-        pass
+            f_in = join(fdir,f)
+            year = f.split('_')[1][0:4]
+            month=f.split('.')[1]
+            month_conv = dic[month]
+            foutname = f'{year}{month_conv}.tif'
+            # print(foutname)
+            # exit()
+            f_out = join(outdir,foutname)
+
+            ## ungz
+
+            with gzip.open(f_in, 'rb') as f_in:
+                with open(f_out, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
 
 
     def nc_to_tif_time_series(self):
@@ -4138,6 +4155,26 @@ class TRENDY_preprocessing:
             except Exception as e:
                 print(e)
                 continue
+
+    def scale_GOSIF(self):
+        fdir = rf'E:\Project3\Data\GOSIF\unzip\\'
+        outdir = rf'E:\Project3\Data\GOSIF\\scale\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in tqdm(os.listdir(fdir)):
+            if not f.endswith('.tif'):
+                continue
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
+            array = np.array(array, dtype=float)
+            array[array == 32767] = np.nan
+            array[array == 32766] = np.nan
+            array = array * 0.0001
+
+            array[array < 0] = np.nan
+
+
+            outf = outdir + f
+            ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, array)
+
     def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
         try:
             ncin = Dataset(fname, 'r')
@@ -4329,6 +4366,8 @@ class TRENDY_preprocessing:
     def resample(self):
         fdir_all = data_root + rf'TRENDY\\S2\\TIFF\\'
         for fdir in tqdm(os.listdir(fdir_all)):
+            if not 'GOSIF' in fdir:
+                continue
 
 
             outdir = data_root+rf'TRENDY\S2\\resample\\{fdir}\\'
@@ -4375,6 +4414,8 @@ class TRENDY_preprocessing:
     def unify_TIFF(self):
         fdir_all=data_root+rf'TRENDY\\\S2\resample\\'
         for fdir in os.listdir(fdir_all):
+            if not 'GOSIF' in fdir:
+                continue
 
             outdir = data_root + rf'TRENDY\\\S2\\TIFF_unify\\{fdir}\\'
             Tools().mk_dir(outdir, force=True)
@@ -4400,8 +4441,8 @@ class TRENDY_preprocessing:
         for fdir in T.listdir(fdir_all):
             outdir=data_root+rf'TRENDY\S2\dryland\\{fdir}\\'
             T.mk_dir(outdir, force=True)
-            # if not 'ISBA-CTRIP_S2_lai' in fdir:
-            #     continue
+            if not 'GOSIF' in fdir:
+                continue
 
 
             fdir_i = join(fdir_all, fdir)
@@ -4435,8 +4476,11 @@ class TRENDY_preprocessing:
         fdir_all =data_root+rf'TRENDY\S2\dryland\\'
         year_list = list(range(1982, 2021))
 
+
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
+            if not 'GOSIF' in fdir:
+                continue
             outdir = data_root+rf'TRENDY\S2\\dic\\{fdir}\\'
             T.mk_dir(outdir, force=True)
             all_array = []
@@ -4506,6 +4550,179 @@ class TRENDY_preprocessing:
                     np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
                     temp_dic = {}
             np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+
+    def extract_phenology_year(self):
+        fdir_all = data_root+rf'TRENDY\S2\dic\\'
+        for fdir in T.listdir(fdir_all):
+
+            outfdir = data_root+rf'TRENDY\S2\extract_phenology_year\\{fdir}\\'
+            T.mk_dir(outfdir, force=True)
+
+
+            f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
+            phenology_dic = T.load_npy(f_phenology)
+            for f in T.listdir(fdir_all+fdir):
+
+                outf = join(outfdir, f)
+                #
+                # if os.path.isfile(outf):
+                #     continue
+                # print(outf)
+                spatial_dict = dict(np.load(join(fdir_all, fdir, f), allow_pickle=True, encoding='latin1').item())
+                dic_DOY={15: 0,
+                         30: 0,
+                         45: 1,
+                         60: 1,
+                         75: 2,
+                         90: 2,
+                         105: 3,
+                         120: 3,
+                         135: 4,
+                         150: 4,
+                         165: 5,
+                         180: 5,
+                         195: 6,
+                         210: 6,
+                         225: 7,
+                         240: 7,
+                         255: 8,
+                         270: 8,
+                         285: 9,
+                         300: 9,
+                         315: 10,
+                         330: 10,
+                         345: 11,
+                         360: 11,}
+
+
+                result_dic = {}
+                for pix in tqdm(spatial_dict):
+                    if not pix in phenology_dic:
+                        continue
+
+                    r, c = pix
+
+                    SeasType=phenology_dic[pix]['SeasType']
+                    if SeasType==2:
+
+                        SOS=phenology_dic[pix]['Onsets']
+                        try:
+                            SOS=float(SOS)
+
+                        except:
+                            continue
+
+                        SOS=int(SOS)
+                        SOS_biweekly=dic_DOY[SOS]
+
+                        EOS=phenology_dic[pix]['Offsets']
+                        EOS=int(EOS)
+                        EOS_biweekly=dic_DOY[EOS]
+
+
+                        time_series = spatial_dict[pix]
+
+
+                        time_series = np.array(time_series)
+                        time_series_flatten = time_series.flatten()
+                        time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(12 - EOS_biweekly - 1)]
+                        time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                        non_growing_season_list = []
+                        growing_season_list = []
+                        for vals in time_series_flatten_extraction_reshape:
+                            if T.is_all_nan(vals):
+                                continue
+                            ## non-growing season +growing season is 365
+
+                            non_growing_season = vals[0:SOS_biweekly]
+                            growing_season = vals[SOS_biweekly:]
+                            # print(growing_season)
+                            non_growing_season_list.append(non_growing_season)
+                            growing_season_list.append(growing_season)
+                        # print(len(growing_season_list))
+                        non_growing_season_list = np.array(non_growing_season_list)
+                        growing_season_list = np.array(growing_season_list)
+
+
+                    elif SeasType==3:
+                        # SeasClass=phenology_dic[pix]['SeasClss']
+                        # ## whole year is growing season
+                        # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+                        # print(lat,lon)
+                        # print(SeasType)
+                        # print(SeasClass)
+                        time_series = spatial_dict[pix]
+                        time_series = np.array(time_series)
+                        time_series_flatten = time_series.flatten()
+                        time_series_flatten_extraction = time_series_flatten[12:]
+                        time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                        non_growing_season_list = []
+                        growing_season_list = time_series_flatten_extraction_reshape
+
+                    else:
+                        SeasClss=phenology_dic[pix]['SeasClss']
+                        print(SeasType,SeasClss)
+                        continue
+
+                    result_dic[pix]={'SeasType':SeasType,
+                        'non_growing_season':non_growing_season_list,
+                                  'growing_season':growing_season_list,
+                                  'ecosystem_year':time_series_flatten_extraction_reshape}
+
+                np.save(outf, result_dic)
+
+    def relative_change(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        outdir = result_root + rf'\3mm\\relative_change_growing_season\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not 'phenology_LAI_mean' in f:
+                continue
+
+            outf = outdir + f.split('.')[0] + '.npy'
+            # if isfile(outf):
+            #     continue
+            print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+                delta_time_series_list = []
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+                # print(len(time_series))
+
+                time_series = np.array(time_series)
+                # time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                relative_change = (time_series - mean) / mean * 100
+
+                zscore_dic[pix] = relative_change
+                # plot
+                plt.plot(time_series)
+
+                # plt.plot(relative_change)
+                # plt.legend(['original','relative_change'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
+
 
 
 

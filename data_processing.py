@@ -13464,11 +13464,11 @@ class check_data():
         pass
     def plot_sptial(self):
 
-        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\anomaly\\VPD.npy'
+        fdir = rf'E:\Project3\Data\TRENDY\S2\dic\GOSIF\\'
 
 
-        dic=T.load_npy(fdir)
-        # dic=T.load_npy_dir(f)
+        # dic=T.load_npy(fdir)
+        dic=T.load_npy_dir(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -13528,7 +13528,7 @@ class check_data():
             # vals=vals[~np.isnan(vals)]
 
             len_dic[pix] = len(vals)
-            # len_dic[pix] = np.nanmean(vals)
+            len_dic[pix] = np.nanmean(vals)
         arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
 
         plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=460,vmax=468)
@@ -15098,7 +15098,7 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -15125,7 +15125,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    # check_data().run()
+    check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 
