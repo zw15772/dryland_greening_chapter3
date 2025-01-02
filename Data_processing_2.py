@@ -4095,13 +4095,35 @@ class multi_regression():  ###linaer regression for CO2 effects.
 class TRENDY_preprocessing:
 
     def run(self):
+        # self.nc_to_tif_SNU_NIRV_NDVI()
+        # self.resample()
+        # self.unify_TIFF()
+        # self.extract_dryland_tiff()
+        self.tif_to_dic()
         pass
+
+    def unzip(self):
+        fdir = rf'C:\Users\wenzhang1\Desktop\max_temp_05\raw\\'
+        outdir = rf'E:\Project3\ERA5\\Tmax\\unzip\\'
+        T.mk_dir(outdir)
+        for folder in T.listdir(fdir):
+            print(folder)
+
+            fdir_i = join(fdir,folder)
+
+
+            outdir_i = join(outdir,folder)
+            if isdir(outdir_i):
+                continue
+            T.unzip(fdir_i,outdir_i)
+        pass
+
 
     def nc_to_tif_time_series(self):
 
-        # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
-        fdir=rf'D:\Project3\Data\deposition\\'
-        outdir=rf'D:\Project3\Data\deposition\\TIFF\\'
+
+        fdir=data_root+rf'NDVI_SNU\SNU_NDVI_v1-20250101T033602Z-001\SNU_NDVI_v1\nc\\'
+        outdir=data_root+rf'NDVI_SNU\SNU_NDVI_v1-20250101T033602Z-001\SNU_NDVI_v1\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
 
@@ -4111,9 +4133,8 @@ class TRENDY_preprocessing:
             yearlist = list(range(1982, 2021))
 
 
-            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
             try:
-                self.nc_to_tif_template(fdir+f, var_name='GPP', outdir=outdir, yearlist=yearlist)
+                self.nc_to_tif_template(fdir+f, var_name='NDVI', outdir=outdir, yearlist=yearlist)
             except Exception as e:
                 print(e)
                 continue
@@ -4121,6 +4142,7 @@ class TRENDY_preprocessing:
         try:
             ncin = Dataset(fname, 'r')
             print(ncin.variables.keys())
+            # exit()
             time=ncin.variables['time'][:]
 
         except:
@@ -4243,15 +4265,259 @@ class TRENDY_preprocessing:
                     value_list.append(value_i)
             DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
 
+    def nc_to_tif_SNU_NIRV_NDVI(self):  ##
+
+        fdir = data_root + rf'NDVI_SNU\SNU_NDVI_v1\nc\\'
+        outdir = data_root + rf'NDVI_SNU\SNU_NDVI_v1\TIFF\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.nc'):
+                continue
+
+            outf=outdir+f.split('.')[0]+'.tif'
+            if os.path.isfile(outf):
+                continue
+
+            nc = Dataset(fdir + f, 'r')
+
+            print(nc)
+            print(nc.variables.keys())
+
+            # lat_list = nc['x']
+            # lon_list = nc['y']
+            # # lat_list=lat_list[::-1]  #取反
+            # print(lat_list[:])
+            # print(lon_list[:])
+            #
+            origin_x = -180  # 要为负数180
+            origin_y = 90
+            pix_width = 0.05 ##  分辨率
+            pix_height = -0.05
+
+
+            SPEI_arr_list = nc['NDVI']
+            print(SPEI_arr_list.shape)
+            print(SPEI_arr_list[0])
+            # plt.imshow(SPEI_arr_list[5])
+            # plt.imshow(SPEI_arr_list[::])
+            # plt.show()
+
+            year=int(f.split('_')[3][0:4])
+            month=int(f.split('_')[3][4:6])
+
+            fname = '{}{:02d}.tif'.format(year, month)
+            print(fname)
+            newRasterfn = outdir + fname
+            print(newRasterfn)
+
+            # array = val
+            # array=SPEI_arr_list[::-1]
+            array = SPEI_arr_list
+
+            array = np.array(array)
+            # method 2
+            array = array.T
+            # array=array* 0.001  ### GPP need scale factor
+            array[array < 0] = np.nan
+
+            # plt.imshow(array,vmin=0,vmax=1)
+            # plt.colorbar()
+            # plt.show()
+
+            ToRaster().array2raster(newRasterfn, origin_x, origin_y, pix_width, pix_height, array)
+
+    def resample(self):
+        fdir_all = data_root + rf'TRENDY\\S2\\TIFF\\'
+        for fdir in tqdm(os.listdir(fdir_all)):
+
+
+            outdir = data_root+rf'TRENDY\S2\\resample\\{fdir}\\'
+            if os.path.isdir(outdir):
+                continue
+
+            T.mk_dir(outdir, force=True)
+            year = list(range(1982, 2021))
+            # print(year)
+            # exit()
+            for f in tqdm(os.listdir(fdir_all + fdir + '\\'), ):
+                if not f.endswith('.tif'):
+                    continue
+
+                if f.startswith('._'):
+                    continue
+
+
+                print(f)
+                # exit()
+                date = f.split('.')[0]
+                date_2 = date.split('_')[-1]
+                print(date_2)
+
+                # print(date)
+                # exit()
+                dataset = gdal.Open(fdir_all + fdir + '\\' + f)
+                # print(dataset.GetGeoTransform())
+                original_x = dataset.GetGeoTransform()[1]
+                original_y = dataset.GetGeoTransform()[5]
+
+                # band = dataset.GetRasterBand(1)
+                # newRows = dataset.YSize * 2
+                # newCols = dataset.XSize * 2
+                try:
+                    gdal.Warp(outdir + '{}.tif'.format(date_2), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+                # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+                # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+                except Exception as e:
+                    pass
+
+
+
+    def unify_TIFF(self):
+        fdir_all=data_root+rf'TRENDY\\\S2\resample\\'
+        for fdir in os.listdir(fdir_all):
+
+            outdir = data_root + rf'TRENDY\\\S2\\TIFF_unify\\{fdir}\\'
+            Tools().mk_dir(outdir, force=True)
+
+            for f in os.listdir(join(fdir_all,fdir)):
+                fpath=join(fdir_all,fdir,f)
+
+                outpath=join(outdir,f)
+                print(outpath)
+
+                if not f.endswith('.tif'):
+                    continue
+                if f.startswith('._'):
+                    continue
+                unify_tiff=DIC_and_TIF().unify_raster(fpath,outpath)
+    def extract_dryland_tiff(self):
+        self.datadir=data_root
+        NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask05.tif')
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        array_mask[array_mask < 0] = np.nan
+        fdir_all =data_root + rf'TRENDY\S2\TIFF_unify\\'
+
+        for fdir in T.listdir(fdir_all):
+            outdir=data_root+rf'TRENDY\S2\dryland\\{fdir}\\'
+            T.mk_dir(outdir, force=True)
+            # if not 'ISBA-CTRIP_S2_lai' in fdir:
+            #     continue
+
+
+            fdir_i = join(fdir_all, fdir)
+
+
+            for fi in tqdm(T.listdir(fdir_i), desc=fdir):
+                if not fi.endswith('.tif'):
+                    continue
+                fpath = join(fdir_i, fi)
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+
+                arr = arr[:360][:360,
+                              :720]
+
+
+                arr[arr<0]=np.nan
+                arr[arr>7]=np.nan
+                arr[np.isnan(array_mask)] = np.nan
+                # plt.imshow(arr)
+                # plt.show()
+                outpath = join(outdir, fi)
+                if os.path.exists(outpath):
+                    continue
+
+                ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
+
+        pass
+
+    def tif_to_dic(self):
+
+        fdir_all =data_root+rf'TRENDY\S2\dryland\\'
+        year_list = list(range(1982, 2021))
+
+        # 作为筛选条件
+        for fdir in os.listdir(fdir_all):
+            outdir = data_root+rf'TRENDY\S2\\dic\\{fdir}\\'
+            T.mk_dir(outdir, force=True)
+            all_array = []
+            for f in os.listdir(join(fdir_all,fdir)):
+
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:
+                    continue
+
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir, f))
+                array = np.array(array, dtype=float)
+
+
+                # array_unify = array[:720][:720,
+                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                array_unify = array[:360][:360,
+                              :720]
+                # array_unify[array_unify < -999] = np.nan
+                # array_unify[array_unify > 7] = np.nan
+                # array[array ==0] = np.nan
+
+                array_unify[array_unify < 0] = np.nan
+
+                #
+
+                # plt.imshow(array_unify)
+                # plt.show()
+                # array_mask = np.array(array_mask, dtype=float)
+                # plt.imshow(array_mask)
+                # plt.show()
+
+                array_dryland = array_unify
+                # plt.imshow(array_dryland)
+                # plt.show()
+
+                all_array.append(array_dryland)
+
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
+
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
+
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+
+
 
 
 def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
+    TRENDY_preprocessing().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
 
