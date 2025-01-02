@@ -13463,78 +13463,82 @@ class check_data():
 
         pass
     def plot_sptial(self):
+        ##['CABLE-POP_S2_lai',
 
-        fdir = rf'E:\Project3\Data\TRENDY\S2\dic\GOSIF\\'
-
-
-        # dic=T.load_npy(fdir)
-        dic=T.load_npy_dir(fdir)
-
-            # for f in os.listdir(fdir):
-            #     if not f.endswith(('.npy')):
-            #         continue
-            #
-            #     dic_i=T.load_npy(fdir+f)
-            #     dic.update(dic_i)
-
-        len_dic={}
-
-        for pix in dic:
-            r,c=pix
-            # (r,c)=(817,444)
-            # if not r==444:
-            #     continue
-            # if not c==817:
-            #     continue
-            # if r<480:
-            #     continue
-            vals=dic[pix]
-
-            # date_list = []
-            # date_base = datetime.datetime(1982, 1, 1)
-            # for i in range(len(vals)):
-            #     # date_list.append(date_base + datetime.timedelta(months=i))
-            #     date_obj = T.month_index_to_date_obj(i, date_base,)
-            #     date_list.append(date_obj)
-            # # exit()
-            #
-            # plt.plot(date_list,vals)
-            # plt.title(pix)
-            # plt.figure()
-            # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
-            # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
-            # arr[arr>999999] = np.nan
-            # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
-            # plt.colorbar()
-            # plt.scatter(pix[1],pix[0],c='k',s=200)
-            # plt.show()
+        fdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\TRENDY\\'
+        for f in os.listdir(fdir):
+            if not 'LPJ-GUESS' in f:
+                continue
 
 
+            # dic=T.load_npy(fdir)
+            dic=T.load_npy(fdir+f)
 
-            # if len(vals)<1:
-            #     continue
-            # if np.isnan(np.nanmean(vals)):
-            #     continue
+                # for f in os.listdir(fdir):
+                #     if not f.endswith(('.npy')):
+                #         continue
+                #
+                #     dic_i=T.load_npy(fdir+f)
+                #     dic.update(dic_i)
+
+            len_dic={}
+
+            for pix in dic:
+                r,c=pix
+                # (r,c)=(817,444)
+                # if not r==444:
+                #     continue
+                # if not c==817:
+                #     continue
+                # if r<480:
+                #     continue
+                vals=dic[pix]
+
+                # date_list = []
+                # date_base = datetime.datetime(1982, 1, 1)
+                # for i in range(len(vals)):
+                #     # date_list.append(date_base + datetime.timedelta(months=i))
+                #     date_obj = T.month_index_to_date_obj(i, date_base,)
+                #     date_list.append(date_obj)
+                # # exit()
+                #
+                # plt.plot(date_list,vals)
+                # plt.title(pix)
+                # plt.figure()
+                # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
+                # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
+                # arr[arr>999999] = np.nan
+                # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
+                # plt.colorbar()
+                # plt.scatter(pix[1],pix[0],c='k',s=200)
+                # plt.show()
 
 
-            # plt.plot(vals)
-            # plt.show()
+
+                # if len(vals)<1:
+                #     continue
+                # if np.isnan(np.nanmean(vals)):
+                #     continue
 
 
-            # len_dic[pix]=np.nanmean(vals)
-            # len_dic[pix]=np.nanstd(vals)
-            vals=np.array(vals)
+                # plt.plot(vals)
+                # plt.show()
 
-            # vals=vals[~np.isnan(vals)]
 
-            len_dic[pix] = len(vals)
-            len_dic[pix] = np.nanmean(vals)
-        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+                # len_dic[pix]=np.nanmean(vals)
+                # len_dic[pix]=np.nanstd(vals)
+                vals=np.array(vals)
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=460,vmax=468)
-        plt.colorbar()
-        plt.title(fdir)
-        plt.show()
+                # vals=vals[~np.isnan(vals)]
+
+                len_dic[pix] = len(vals)
+
+            arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+
+            plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=38)
+            plt.colorbar()
+            plt.title(f)
+            plt.show()
     def testrobinson(self):
         fdir=rf'D:\Project3\Result\multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\100mm_unit\\'
         period='1982_2020'
