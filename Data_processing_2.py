@@ -572,7 +572,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -591,19 +591,19 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        df=self.add_AI_classfication(df)
-        df=self.add_aridity_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        df=self.add_continent_to_df(df)
-        df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
-        #
-        # df=self.add_rooting_depth_to_df(df)
-        #
+        # df=self.add_AI_classfication(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_lat_lon_to_df(df)
+        # # df=self.add_soil_texture_to_df(df)
+        # #
+        # # df=self.add_rooting_depth_to_df(df)
+        # #
         # df=self.add_area_to_df(df)
 
 
@@ -848,13 +848,13 @@ class build_dataframe():
         return df
 
     def add_multiregression_to_df(self, df):
-        fdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\trend_analysis\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
 
-            # print(f.split('.')[0])
-            # exit()
+            print(f.split('.')[0])
+
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
             array = np.array(array, dtype=float)
@@ -2436,7 +2436,7 @@ class greening_analysis():
         year_range = range(1983, 2021)
         result_dic = {}
         variable_list=['LAI4g','NDVI','NIRv','GOSIF']
-        linewidth_list=[2,2,2,2]
+        linewidth_list=[1,1,1,1]
         color_list=['green','brown','blue','orange']
         alpha_list=[1,0.8,0.8,0.8]
 
@@ -2461,23 +2461,30 @@ class greening_analysis():
 
         for var in variable_list:
             if var=='GOSIF':
-                year_range = range(2002, 2021)
+                year_range_temp = range(2002, 2021)
                 vals=df_new[var].tolist()
                 vals=vals[19:]
 
             else:
+                year_range_temp = range(1983, 2021)
                 vals=df_new[var].tolist()
 
-            slope, intercept, r_value, p_value, std_err = stats.linregress(year_range, vals)
-            stats_dic[var]=[slope]
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_range_temp, vals)
+            slope = round(slope, 2)
+            stats_dic[var]=slope
         #     print(slope,intercept)
         # exit()
 
-
         plt.figure(figsize=(self.map_width, self.map_height))
+        flag=0
 
-        df_new.plot(kind='line', legend=True, ax=plt.gca(), color=color_list,)
-        ##add text from stats_dic
+        for var in variable_list:
+            plt.plot(year_range, result_dic[var].values(), label='Y1', marker='o', markersize=3, linestyle='-', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
+            flag=flag+1
+
+
+
+
         plt.text(0, 1, f'{stats_dic}', transform=plt.gca().transAxes, fontsize=10)
 
 
@@ -2491,10 +2498,10 @@ class greening_analysis():
 
 
         plt.show()
-        outdir = result_root + rf'3mm\relative_change_growing_season\\'
-        outf = outdir + f'relative_change_growing_season_yearly.pdf'
-        plt.savefig(outf)
-        plt.close()
+        # outdir = result_root + rf'3mm\relative_change_growing_season\\'
+        # outf = outdir + f'relative_change_growing_season_yearly.pdf'
+        # plt.savefig(outf)
+        # plt.close()
 
 
 
@@ -5195,10 +5202,10 @@ class TRENDY_CV:
 
     def run(self):
 
-        self.detrend()
+        # self.detrend()
         # self.moving_window_extraction()
-        # self.moving_window_CV_anaysis()
-        # self.trend_analysis()
+        self.moving_window_CV_anaysis()
+        self.trend_analysis()
         # self.plt_basemap()
 
         pass
@@ -5238,8 +5245,8 @@ class TRENDY_CV:
 
     def moving_window_extraction(self):
 
-        fdir = rf'E:\Project3\Data\TRENDY_LAI\detrend\\'
-        outdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\detrend_TRENDY\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\\\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -5290,8 +5297,8 @@ class TRENDY_CV:
         # plt.plot(x)
         # plt.show()
         new_x_extraction_by_window=[]
-        for i in range(len(x)):
-            if i + window >= len(x):
+        for i in range(len(x)+1):
+            if i + window >= len(x)+1:
                 continue
             else:
                 anomaly = []
@@ -5316,14 +5323,14 @@ class TRENDY_CV:
         return new_x_extraction_by_window
     def moving_window_CV_anaysis(self):
         window_size=15
-        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
-        outdir =  rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
             dic = T.load_npy(fdir + f)
             slides = 39-window_size
-            outf = outdir + f.split('.')[0] + f'.npy'
+            outf = outdir + f.split('.')[0] + f'_CV.npy'
             print(outf)
 
             if os.path.isfile(outf):
@@ -5337,7 +5344,7 @@ class TRENDY_CV:
                 trend_list = []
 
                 time_series_all = dic[pix]
-                if len(time_series_all)<23:
+                if len(time_series_all)<24:
                     continue
                 time_series_all = np.array(time_series_all)
                 # print(time_series_all)
@@ -5371,14 +5378,16 @@ class TRENDY_CV:
 
     def trend_analysis(self):  ##each window average trend
 
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
-        outdir = rf'E:\Project3\Data\TRENDY_LAI\trend_analysis\moving_window_CV\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -5398,7 +5407,7 @@ class TRENDY_CV:
             p_value_dic = {}
             for pix in tqdm(dic):
                 r, c = pix
-                if r < 120:
+                if r < 60:
                     continue
                 landcover_value = crop_mask[pix]
                 if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
@@ -5538,9 +5547,9 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
 
