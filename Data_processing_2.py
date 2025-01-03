@@ -561,9 +561,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\relative_change_growing_season\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\Trend\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'relative_change_growing_season_yearly.df'
+        self.dff = self.this_class_arr + 'Trend.df'
 
         pass
 
@@ -572,8 +572,8 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
-        # df=self.add_multiregression_to_df(df)
+        df=self.foo2(df)
+        df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)  ## 加属性
@@ -598,7 +598,7 @@ class build_dataframe():
         df=self.add_landcover_classfication_to_df(df)
         df=self.add_maxmium_LC_change(df)
         df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
+        df=self.add_continent_to_df(df)
         df=self.add_lat_lon_to_df(df)
         # df=self.add_soil_texture_to_df(df)
         #
@@ -816,12 +816,12 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI_relative_change'] = change_rate_list
+        df['LAI4g'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'Result\monte_carlo_trend\difference\\monte_carlo_cold_dry_year_LAI_diff.tif'
+        f = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\LAI4g_trend.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -848,13 +848,13 @@ class build_dataframe():
         return df
 
     def add_multiregression_to_df(self, df):
-        fdir = result_root + rf'multi_regression\1982_2020\\'
+        fdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'CO2' in f:
-                continue
-            print(f.split('.')[0])
+
+            # print(f.split('.')[0])
+            # exit()
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
             array = np.array(array, dtype=float)
@@ -914,10 +914,9 @@ class build_dataframe():
         for f in os.listdir(fdir):
 
             variable= f.split('.')[0]
-            if  'GOSIF' in variable:
+            if not  'GOSIF' in variable:
                 continue
-            if   'SDGVM_S2_lai' in variable:
-                continue
+
 
             print(variable)
 
@@ -942,7 +941,7 @@ class build_dataframe():
 
                 vals = val_dic[pix]
                 print(len(vals))
-                if len(vals) != 38:
+                if len(vals) != 19:
                     NDVI_list.append(np.nan)
                     continue
 
@@ -953,13 +952,13 @@ class build_dataframe():
                 #     vals=np.append(vals,np.nan)
                 #     v1 = vals[year - 1983]
                 #     NDVI_list.append(v1)
-                # if len(vals) == 19:
-                #     ##creast 19 nan
-                #     nan_list = [np.nan] * 19
-                #     vals=np.append(nan_list,vals)
-                #
-                #     v1 = vals[year - 1983]
-                #     NDVI_list.append(v1)
+                if len(vals) == 19:
+                    ##creast 19 nan
+                    nan_list = [np.nan] * 19
+                    vals=np.append(nan_list,vals)
+
+                    v1 = vals[year - 1983]
+                    NDVI_list.append(v1)
 
 
                 v1= vals[year - 1983]
@@ -2313,18 +2312,20 @@ class PLOT_data():
         return df
 class greening_analysis():
     def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
 
     def run(self):
 
         # self.relative_change()
-        self.weighted_average_LAI()
-        # self.plot_time_series()
+        # self.weighted_average_LAI()
+        self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis()
         # self.heatmap()
-        self.heatmap()
+        # self.heatmap()
         # self.testrobinson()
 
         pass
@@ -2431,15 +2432,74 @@ class greening_analysis():
     def plot_time_series(self):
         df=T.load_df(rf'E:\Project3\Result\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df')
         df=self.df_clean(df)
-        weight_effect = df['normalized_weight'].mean()
-        # print(f"Average Weight Effect: {weight_effect}")
-        # exit()
+
         year_range = range(1983, 2021)
         result_dic = {}
-        for year in year_range:
-            df_i = df[df['year'] == year]
-            vals = df_i['weighted_avg_LAI'].tolist()
-            result_dic[year] = np.nanmean(vals)
+        variable_list=['LAI4g','NDVI','NIRv','GOSIF']
+        linewidth_list=[2,2,2,2]
+        color_list=['green','brown','blue','orange']
+        alpha_list=[1,0.8,0.8,0.8]
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+            data_dic = {}
+
+            for year in year_range:
+                df_i = df[df['year'] == year]
+                # vals = df_i[f'weighted_avg_{var}'].tolist()
+                vals = df_i[f'{var}'].tolist()
+                data_dic[year] = np.nanmean(vals)
+            result_dic[var] = data_dic
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+
+        T.print_head_n(df_new)
+        ##calculate slope and intercept
+        stats_dic={}
+
+        for var in variable_list:
+            if var=='GOSIF':
+                year_range = range(2002, 2021)
+                vals=df_new[var].tolist()
+                vals=vals[19:]
+
+            else:
+                vals=df_new[var].tolist()
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_range, vals)
+            stats_dic[var]=[slope]
+        #     print(slope,intercept)
+        # exit()
+
+
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        df_new.plot(kind='line', legend=True, ax=plt.gca(), color=color_list,)
+        ##add text from stats_dic
+        plt.text(0, 1, f'{stats_dic}', transform=plt.gca().transAxes, fontsize=10)
+
+
+        plt.ylabel(f'Relative change (%)', fontsize=10,font='Arial')
+        plt.xticks(font='Arial', fontsize=10)
+        plt.yticks(font='Arial', fontsize=10)
+        plt.ylim(-12, 12)
+        ##add line
+        plt.axhline(y=0, color='grey', linestyle='--',alpha=0.2)
+        # plt.grid(which='major', alpha=0.2)
+
+
+        plt.show()
+        outdir = result_root + rf'3mm\relative_change_growing_season\\'
+        outf = outdir + f'relative_change_growing_season_yearly.pdf'
+        plt.savefig(outf)
+        plt.close()
+
+
+
+
+
 
 
         plt.plot(result_dic.values(),'g')
@@ -4084,7 +4144,7 @@ class multi_regression():  ###linaer regression for CO2 effects.
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
-class TRENDY_preprocessing:
+class TRENDY_trend:
 
     def run(self):
         # self.unzip()
@@ -4097,7 +4157,10 @@ class TRENDY_preprocessing:
         # self.extract_phenology_year()
         # self.extract_phenology_LAI_mean()
         # self.relative_change()
-        self.weighted_average_LAI()
+        # self.weighted_average_LAI()
+        # self.trend_analysis()
+        # self.plt_basemap()
+        self.plot_bar_trend()
 
         pass
 
@@ -4788,12 +4851,16 @@ class TRENDY_preprocessing:
 
         variable_list = ['LAI4g', 'GOSIF', 'NDVI', 'NIRv', ]
 
-        # 去除异常值（根据业务需求设定阈值）
+
+
 
         for var in variable_list:
-            df_clean_ii = df_clean[(df_clean[var] > -50) & (df_clean[var] < 50)]
+
+            # df_clean_ii = df_clean[(df_clean[var] > -50) & (df_clean[var] < 50)]
             # print(len(df_clean_ii));exit()
             # Step 1: 计算纬度权重
+            df_clean_ii = df_clean
+
             df_clean_ii[f'latitude_weight'] = np.cos(np.radians(df_clean_ii['lat']))
             # Step 2: 按年份对权重进行归一化
             # 确保每一年干旱区的权重总和为1
@@ -4810,14 +4877,14 @@ class TRENDY_preprocessing:
                 df_clean_ii.groupby('year')[f'weighted_avg_contribution_{var}'].sum().reset_index(name=f'weighted_avg_{var}')
             )
 
-            df_clean_ii[f'weighted_avg_{var}'] = weighted_avg_lai_per_year[f'weighted_avg_{var}']
+            df_clean[f'weighted_avg_{var}'] = weighted_avg_lai_per_year[f'weighted_avg_{var}']
             # T.print_head_n(df_clean_ii)
 
         # exit()
         # T.print_head_n(df_clean_ii);exit()
         outf=result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df'
-        T.save_df(df_clean_ii, outf)
-        T.df_to_excel(df_clean_ii, outf)
+        T.save_df(df_clean, outf)
+        T.df_to_excel(df_clean, outf)
 
         pass
     def df_clean(self, df):
@@ -4832,6 +4899,475 @@ class TRENDY_preprocessing:
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+    def trend_analysis(self):  ##each window average trend
+
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = result_root+rf'3mm\relative_change_growing_season\TRENDY\\'
+        outdir = result_root+rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+
+            outf = outdir + f.split('.')[0]
+            # if os.path.isfile(outf + '_trend.tif'):
+            #     continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                    ## ignore the last one year
+
+                # time_series = dic[pix][:-1]
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+                # print(time_series)
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                # if len(set(time_series)) == 1:
+                #     continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+
+            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
+
+            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+
+            # plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
+
+    def plt_basemap(self):
+        fdir = result_root+rf'3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+
+        count = 1
+        fig = plt.figure(figsize=(10, 16))
+        variables_list = ['LAI4g_trend', 'CABLE-POP_S2_lai_trend', 'CLASSIC_S2_lai_trend',
+                     'CLM5_trend', 'DLEM_S2_lai_trend', 'IBIS_S2_lai_trend', 'ISAM_S2_lai_trend',
+                     'ISBA-CTRIP_S2_lai_trend', 'JSBACH_S2_lai_trend',
+                     'JULES_S2_lai_trend', 'LPJ-GUESS_S2_lai_trend', 'LPX-Bern_S2_lai_trend',
+                     'ORCHIDEE_S2_lai_trend',
+                     'SDGVM_S2_lai_trend',
+                     'YIBs_S2_Monthly_lai_trend']
+        for variable in variables_list:
+            # print(f.split('.')[0]); exit()
+            f=fdir+variable+'.tif'
+
+            print(f)
+
+            outf = fdir + f.split('.')[0]
+            if os.path.isfile(outf + '_trend.tif'):
+                continue
+            # print(outf)
+
+            fpath = join(fdir, f )
+
+            ax = plt.subplot(4, 4, count)
+            count = count + 1
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr = Tools().mask_999999_arr(arr, warning=False)
+            # plt.imshow(arr, cmap='PiYG', interpolation='nearest', vmin=-50, vmax=50)
+            # plt.show()
+            arr = arr[:60]
+            # arr_m = ma.masked_where(np.isnan(arr), arr)
+            lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            # plt.imshow(arr,interpolation='nearest', cmap='PiYG', vmin=-.1, vmax=.1)
+            # plt.show()
+            # print(lat_list);exit()
+            # plt.show()
+            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='i',
+                        ax=ax)
+
+            ret = m.pcolormesh(lon_list, lat_list, arr, cmap='RdBu', zorder=1, vmin=-1, vmax=1)
+            coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+            ## set basemap size
+
+            plt.title(variable)
+            plt.imshow(arr, cmap='RdBu', interpolation='nearest', vmin=-1, vmax=1)
+            # m.pcolormesh(lon_list, lat_list, arr_m, cmap='PiYG', zorder=-1, vmin=-1, vmax=1)
+            #
+            plt.tight_layout()
+
+
+            # cax = plt.axes([0.5 - 0.3 / 2, 0.1, 0.3, 0.02])
+            # plt.colorbar(mappable=ret, ax=ax, orientation='horizontal')
+            ## set colorbar (CV %/year)
+            # colorbar = plt.colorbar(mappable=ret, ax=ax, orientation='horizontal')
+
+            ## set name of colorbar
+            # colorbar.set_label('CV %/year', fontsize=12)
+
+
+
+            # plt.colorbar(ax=ax, cax=cax, orientation='horizontal', extend='both')
+        outdir=result_root+rf'3mm\relative_change_growing_season\TRENDY\fig\\'
+        T.mk_dir(outdir, force=True)
+
+        outf = join(outdir, 'trend_analysis.pdf')
+
+        plt.savefig(outf, dpi=300, bbox_inches='tight')
+        plt.subplots_adjust(wspace=0, hspace=0, left=0, right=1, bottom=0, top=1)
+
+        plt.show()
+
+    def plot_bar_trend(self): ### all models comparision
+        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        variables_list = ['LAI4g_trend', 'CABLE-POP_S2_lai_trend', 'CLASSIC_S2_lai_trend',
+                     'CLM5_trend', 'DLEM_S2_lai_trend', 'IBIS_S2_lai_trend', 'ISAM_S2_lai_trend',
+                     'ISBA-CTRIP_S2_lai_trend', 'JSBACH_S2_lai_trend',
+                     'JULES_S2_lai_trend', 'LPJ-GUESS_S2_lai_trend', 'LPX-Bern_S2_lai_trend',
+                     'ORCHIDEE_S2_lai_trend',
+                     'SDGVM_S2_lai_trend',
+                     'YIBs_S2_Monthly_lai_trend']
+        result_dict = {}
+        boxlist=[]
+        for variable in variables_list:
+            val_list=df[variable].values
+            val_array=np.array(val_list)
+            val_array[val_array<-9999]=np.nan
+            val_array[val_array>9999]=np.nan
+            val_array = val_array[~np.isnan(val_array)]
+            boxlist.append(val_array)
+        plt.boxplot(boxlist,showfliers=False,labels=variables_list)
+        plt.xticks(rotation=90)
+        plt.ylabel('Trend (%) per year')
+        plt.show()
+        exit()
+
+        for variable in variables_list:
+            val_list = df[variable].values
+            val_array = np.array(val_list)
+            val_array[val_array < -9999] = np.nan
+            val_array[val_array > 9999] = np.nan
+
+            result_dict[variable]=val_array
+        df_new=pd.DataFrame(result_dict)
+        df_new.boxplot()
+        # sns.violinplot(x='variable', y='value', data=pd.melt(df_new))
+
+        plt.xticks(rotation=90)
+        plt.ylabel('Trend (%) per year')
+        plt.show()
+
+
+        pass
+
+    def detrend(self):
+        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir = result_root + rf'\relative_change_growing_season\\TRENDY\\'
+        outdir = result_root + rf'\TRENDY\\detrend_growing_season\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not '.npy' in f:
+                continue
+
+
+            outf = outdir + f.split('.')[0] + '.npy'
+            # if isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+            dic = dict(np.load(fdir + f, allow_pickle=True, ).item())
+
+            detrend_zscore_dic = {}
+
+            for pix in tqdm(dic):
+                dryland_values = dic_dryland_mask[pix]
+                if np.isnan(dryland_values):
+                    continue
+                r, c = pix
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]
+                print(len(time_series))
+
+                # print(time_series)
+
+                time_series = np.array(time_series)
+                # plt.plot(time_series)
+                # plt.show()
+
+                time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.std(time_series) == 0:
+                    continue
+                ##### if count of nan is more than 50%, then skip
+                if np.sum(np.isnan(time_series)) / len(time_series) > 0.5:
+                    continue
+
+                # mean = np.nanmean(time_series)
+                # std=np.nanstd(time_series)
+                # if std == 0:
+                #     continue
+                # delta_time_series = (time_series - mean) / std
+                # if np.isnan(time_series).any():
+                #     continue
+                if r < 480:
+                    # print(time_series)
+                    ### interpolate
+                    time_series = T.interp_nan(time_series)
+                    # print(np.nanmean(time_series))
+                    # plt.plot(time_series)
+
+                    detrend_delta_time_series = signal.detrend(time_series) + np.nanmean(time_series)
+                    # plt.plot(detrend_delta_time_series)
+                    # plt.show()
+
+                    detrend_zscore_dic[pix] = detrend_delta_time_series
+                else:
+                    time_series = time_series[0:38]
+                    print(time_series)
+
+                    if np.isnan(time_series).any():
+                        continue
+                    # print(time_series)
+                    detrend_delta_time_series = signal.detrend(time_series) + np.nanmean(time_series)
+                    ###add nan to the end if length is less than time_series
+                    if len(detrend_delta_time_series) < 38:
+                        detrend_delta_time_series = np.append(detrend_delta_time_series,
+                                                              [np.nan] * (38 - len(detrend_delta_time_series)))
+
+                        detrend_zscore_dic[pix] = detrend_delta_time_series
+
+            np.save(outf, detrend_zscore_dic)
+
+
+class TRENDY_CV:
+    ## 1)
+
+    def __init__(self):
+        pass
+
+    def run(self):
+
+        self.detrend()
+        # self.moving_window_extraction()
+        # self.moving_window_CV_anaysis()
+        # self.trend_analysis()
+        # self.plt_basemap()
+
+        pass
+
+
+    def detrend(self): ## detrend LAI4g
+
+        fdir = data_root+rf'TRENDY\S2\extract_phenology_LAI_mean\\'
+        outdir = result_root+rf'3mm\extract_LAI4g_phenology_year\\'
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            dict = T.load_npy(fdir + f)
+            annual_spatial_dict = {}
+            for pix in tqdm(dict):
+                time_series = dict[pix]['growing_season']
+
+                if T.is_all_nan(time_series):
+                    continue
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                plt.plot(time_series)
+
+
+                detrended_annual_time_series = signal.detrend(time_series)+np.mean(time_series)
+                # print((detrended_annual_time_series))
+                # plt.plot(detrended_annual_time_series)
+                # plt.show()
+
+                annual_spatial_dict[pix] = detrended_annual_time_series
+            outf=outdir +f'{f.split(".")[0]}_detrend.npy'
+            np.save(outf, annual_spatial_dict)
+
+
+
+        pass
+
+    def moving_window_extraction(self):
+
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\detrend\\'
+        outdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+
+            outf = outdir + f
+            print(outf)
+            if os.path.isfile(outf):
+                continue
+
+            dic = T.load_npy(fdir + f)
+            window = 15
+
+            new_x_extraction_by_window = {}
+            for pix in tqdm(dic):
+
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+
+                # time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    print('error')
+                    continue
+                # print((len(time_series)))
+                ### if all values are identical, then continue
+                if np.nanmax(time_series) == np.nanmin(time_series):
+                    continue
+
+                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
+                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
+
+            T.save_npy(new_x_extraction_by_window, outf)
+
+    def forward_window_extraction(self, x, window):
+        # 前窗滤波
+        # window = window-1
+        # 不改变数据长度
+
+        if window < 0:
+            raise IOError('window must be greater than 0')
+        elif window == 0:
+            return x
+        else:
+            pass
+
+        x = np.array(x)
+
+        # new_x = np.array([])
+        # plt.plot(x)
+        # plt.show()
+        new_x_extraction_by_window=[]
+        for i in range(len(x)):
+            if i + window >= len(x):
+                continue
+            else:
+                anomaly = []
+                relative_change_list=[]
+                x_vals=[]
+                for w in range(window):
+                    x_val=(x[i + w])
+                    x_vals.append(x_val)
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+
+                # x_mean=np.nanmean(x_vals)
+
+                # for i in range(len(x_vals)):
+                #     if x_vals[0]==None:
+                #         continue
+                    # x_anomaly=(x_vals[i]-x_mean)
+                    # relative_change = (x_vals[i] - x_mean) / x_mean
+
+                    # relative_change_list.append(x_vals)
+                new_x_extraction_by_window.append(x_vals)
+        return new_x_extraction_by_window
+    def moving_window_CV_anaysis(self):
+        window_size=15
+        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_extraction\\'
+        outdir =  rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+            dic = T.load_npy(fdir + f)
+            slides = 39-window_size
+            outf = outdir + f.split('.')[0] + f'.npy'
+            print(outf)
+
+            if os.path.isfile(outf):
+                continue
+
+            new_x_extraction_by_window = {}
+            trend_dic={}
+            p_value_dic={}
+
+            for pix in tqdm(dic):
+                trend_list = []
+
+                time_series_all = dic[pix]
+                if len(time_series_all)<23:
+                    continue
+                time_series_all = np.array(time_series_all)
+                # print(time_series_all)
+                for ss in range(slides):
+                    if np.isnan(np.nanmean(time_series_all)):
+                        print('error')
+                        continue
+                    # print((len(time_series)))
+                    ### if all values are identical, then continue
+                    time_series=time_series_all[ss]
+                    # print(time_series)
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
+                    # print(len(time_series))
+
+                    if np.nanmean(time_series)==0:
+                        continue
+                    cv=np.nanstd(time_series)/np.nanmean(time_series)*100
+                    trend_list.append(cv)
+
+                trend_dic[pix]=trend_list
+
+            np.save(outf, trend_dic)
+
+            ##tiff
+            # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
+            #
+            # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
+            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
     def trend_analysis(self):  ##each window average trend
 
@@ -4914,6 +5450,7 @@ class TRENDY_preprocessing:
             np.save(outf + '_trend', arr_trend)
             np.save(outf + '_p_value', p_value_arr)
 
+    pass
     def plt_basemap(self):
         fdir = rf'E:\Project3\Data\TRENDY_LAI\trend_analysis\moving_window_CV\\'
 
@@ -4992,13 +5529,7 @@ class TRENDY_preprocessing:
 
         plt.show()
 
-
-
-
-
-
-
-
+    pass
 
 
 def main():
@@ -5008,7 +5539,8 @@ def main():
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
-    TRENDY_preprocessing().run()
+    # TRENDY_trend().run()
+    TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
 
