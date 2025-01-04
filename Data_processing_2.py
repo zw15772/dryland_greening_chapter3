@@ -2329,7 +2329,10 @@ class greening_analysis():
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
-        self.plot_histogram()
+        # self.plot_spatial_histogram()
+        self.plot_spatial_histogram_period()
+
+
 
         pass
 
@@ -2879,7 +2882,7 @@ class greening_analysis():
         x_ticks_list.sort()
         return matrix_dict,x_ticks_list,y_ticks_list
 
-    def plot_histogram(self):
+    def plot_spatial_histogram(self):
 
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
@@ -2931,6 +2934,60 @@ class greening_analysis():
         plt.ylabel('Percentage (%)')
 
         plt.show()
+
+    def plot_spatial_histogram_period(self):
+
+        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df=df[df['LAI4g_trend']<30]
+        df=df[df['LAI4g_trend']>-30]
+
+
+        vals_p_value = df['LAI4g_p_value'].values
+        significant_browning_count = 0
+        non_significant_browning_count = 0
+        significant_greening_count = 0
+        non_significant_greening_count = 0
+
+        for i in range(len(vals_p_value)):
+            if vals_p_value[i] < 0.05:
+                if df['LAI4g_trend'].values[i] > 0:
+                    significant_greening_count = significant_greening_count + 1
+                else:
+                    significant_browning_count = significant_browning_count + 1
+            else:
+                if df['LAI4g_trend'].values[i] > 0:
+                    non_significant_browning_count = non_significant_browning_count + 1
+                else:
+                    non_significant_greening_count = non_significant_greening_count + 1
+            ## plot bar
+        ##calculate percentage
+        significant_greening_percentage = significant_greening_count / len(vals_p_value)*100
+        non_significant_greening_percentage = non_significant_greening_count / len(vals_p_value)*100
+        significant_browning_percentage = significant_browning_count / len(vals_p_value)*100
+        non_significant_browning_percentage = non_significant_browning_count / len(vals_p_value)*100
+
+        count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
+
+                 non_significant_greening_percentage]
+        print(count)
+        labels = ['non_significant_browning','significant_browning', 'significant_greening',
+                  'non_significant_greening']
+        color_list=['chocolate','navajowhite','lightblue','navy']
+        ##gap = 0.1
+
+        bar_width = 0.1
+        gap = 0.1
+        x = np.arange(len(labels))* (bar_width + gap)
+        plt.bar(x, count, color=color_list, edgecolor='black', width=bar_width,alpha=0.8)
+
+        plt.xticks(x, labels,rotation=45)
+        plt.ylabel('Percentage (%)')
+
+        plt.show()
+
 
 
 class Plot_Robinson:
@@ -3119,7 +3176,8 @@ class bivariate_analysis():
     def run(self):
 
 
-        self.xy_map()
+        # self.xy_map()
+        self.plot_histogram()
 
 
         pass
@@ -3165,6 +3223,51 @@ class bivariate_analysis():
         df['label']=label_list
         result_dic=T.df_to_spatial_dic(df,'label')
         DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic,outtif)
+    def plot_histogram(self):
+        tiff=result_root + rf'3mm\bivariate_analysis\\rainfall_sensitivity_trend.tif'
+        dic=DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tiff)
+
+        positive_positive = 0
+        positive_negative = 0
+        negative_positive = 0
+        negative_negative = 0
+        flag=0
+
+        for pix in dic:
+            r,c=pix
+            if r<60:
+                continue
+            vals=dic[pix]
+            if np.isnan(vals):
+                continue
+            if vals==1:
+                positive_positive+=1
+            elif vals==2:
+                positive_negative+=1
+            elif vals==3:
+                negative_positive+=1
+            else:
+                negative_negative+=1
+            flag=flag+1
+        plt.figure(figsize=(4,2.5))
+        label=['positive_positive','positive_negative','negative_positive','negative_negative']
+        positive_positive_percentage = positive_positive / flag *100
+        positive_negative_percentage = positive_negative / flag*100
+        negative_positive_percentage = negative_positive / flag *100
+        negative_negative_percentage = negative_negative / flag*100
+        plt.bar(label,[positive_positive_percentage,positive_negative_percentage,negative_positive_percentage,negative_negative_percentage],
+                color=['r','y','g','b'],width=0.5)
+        plt.ylabel('percentage')
+        plt.show()
+
+
+
+
+
+
+
+
+
 
 
 
