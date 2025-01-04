@@ -852,6 +852,8 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
+            if not 'SDGVM' in f:
+                continue
 
             print(f.split('.')[0])
 
@@ -2320,13 +2322,14 @@ class greening_analysis():
 
         # self.relative_change()
         # self.weighted_average_LAI()
-        self.plot_time_series()
+        # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis()
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
+        self.plot_histogram()
 
         pass
 
@@ -2876,8 +2879,58 @@ class greening_analysis():
         x_ticks_list.sort()
         return matrix_dict,x_ticks_list,y_ticks_list
 
+    def plot_histogram(self):
+
+        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df=df[df['LAI4g_trend']<30]
+        df=df[df['LAI4g_trend']>-30]
 
 
+        vals_p_value = df['LAI4g_p_value'].values
+        significant_browning_count = 0
+        non_significant_browning_count = 0
+        significant_greening_count = 0
+        non_significant_greening_count = 0
+
+        for i in range(len(vals_p_value)):
+            if vals_p_value[i] < 0.05:
+                if df['LAI4g_trend'].values[i] > 0:
+                    significant_greening_count = significant_greening_count + 1
+                else:
+                    significant_browning_count = significant_browning_count + 1
+            else:
+                if df['LAI4g_trend'].values[i] > 0:
+                    non_significant_browning_count = non_significant_browning_count + 1
+                else:
+                    non_significant_greening_count = non_significant_greening_count + 1
+            ## plot bar
+        ##calculate percentage
+        significant_greening_percentage = significant_greening_count / len(vals_p_value)*100
+        non_significant_greening_percentage = non_significant_greening_count / len(vals_p_value)*100
+        significant_browning_percentage = significant_browning_count / len(vals_p_value)*100
+        non_significant_browning_percentage = non_significant_browning_count / len(vals_p_value)*100
+
+        count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
+
+                 non_significant_greening_percentage]
+        print(count)
+        labels = ['non_significant_browning','significant_browning', 'significant_greening',
+                  'non_significant_greening']
+        color_list=['chocolate','navajowhite','lightblue','navy']
+        ##gap = 0.1
+
+        bar_width = 0.1
+        gap = 0.1
+        x = np.arange(len(labels))* (bar_width + gap)
+        plt.bar(x, count, color=color_list, edgecolor='black', width=bar_width,alpha=0.8)
+
+        plt.xticks(x, labels,rotation=45)
+        plt.ylabel('Percentage (%)')
+
+        plt.show()
 
 
 class Plot_Robinson:
@@ -3064,116 +3117,58 @@ class bivariate_analysis():
     def __init__(self):
         pass
     def run(self):
-        self.bivariate_plot()
-        # self.xy_map_growth_rate()  ## growth rate, rainfall seasonal distribution use the same  color scale
-        # self.xy_map_heat_event()
+
+
+        self.xy_map()
 
 
         pass
-    def bivariate_plot(self):
-        result_root = rf'E:\Project3\Result\\'
-        # print(result_root)
+
+
+
+    def xy_map(self): ##
 
         import xymap
-        tif_long_term= result_root+rf'\3mm\annual_growth_rate\trend\\phenology_LAI_mean_trend.tif'
-        tif_window=result_root+rf'\3mm\relative_change_growing_season\trend\\phenology_LAI_mean_trend.tif'
+
+        tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\trend\\sum_rainfall_trend.tif'
+        tif_trends = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\trend_ecosystem_year\\sum_rainfall_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
-        outdir=result_root + rf'3mm\\\bivariate_analysis\\'
+        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
         T.mk_dir(outdir, force=True)
-        outtif=outdir+rf'\\relative_change_growth_rate.tif'
+        outtif = outdir + rf'\\rainfall_sensitivity_trend.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
-        tif1=tif_long_term
-        tif2=   tif_window
+        tif1 = tif_trends
+        tif2 = tif_sensitivity
 
-        tif1_label='Relative_change (%/year)'
-        tif2_label='growing rate (%)/year'
-        min1=-0.3
-        max1=0.3
-        min2=-0.02
-        max2=0.02
-        outf=outtif
-        upper_right_color = [143, 196, 34],  #
-        upper_left_color = [156, 65, 148],  #
-        lower_right_color = [29, 46, 97],  #
-        lower_left_color = [238, 233, 57],  #
-        center_color = [240, 240, 240],  #
-        # print(xymap.Bivariate_plot_1().upper_left_color)
-        # xymap.Bivariate_plot().plot_bivariate_map(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
-        Biv = xymap.Bivariate_plot_1(upper_right_color =[64, 224, 208],
-                                      upper_left_color = [248,222,126],
-                                      lower_right_color = [0,100,0],
-                                      lower_left_color = [255,0,0],
-                                      center_color = [240, 240, 240])
-        # Biv.upper_left_color = upper_left_color
-        # Biv.upper_right_color = upper_right_color
-        # Biv.lower_left_color = lower_left_color
-        # Biv.lower_right_color = lower_right_color
-        # Biv.center_color = center_color
+        dic1=DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
+        dic2=DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
+        dics={'rainfall_trends':dic1,
+        'rainfall_sensitivity':dic2}
+        df=T.spatial_dics_to_df(dics)
+        # print(df)
+        df['is_rainfall_trend_positive'] = df['rainfall_trends'] > 0
+        df['is_rainfall_sensitivity_positive'] = df['rainfall_sensitivity'] > 0
+        print(df)
+        label_list=[]
+        for i ,row in df.iterrows():
+            if row['is_rainfall_trend_positive'] and row['is_rainfall_sensitivity_positive']:
+                label_list.append(1)
+            elif row['is_rainfall_trend_positive'] and not row['is_rainfall_sensitivity_positive']:
+                label_list.append(2)
+            elif not row['is_rainfall_trend_positive'] and row['is_rainfall_sensitivity_positive']:
+                label_list.append(3)
+            else:
+                label_list.append(4)
 
-        # print(Biv.lower_right_color);exit()
-        Biv.plot_bivariate(tif1, tif2, tif1_label, tif2_label, min1, max1, min2, max2, outf)
-        print(outf)
-        plt.show()
-
-    def xy_map_growth_rate(self):
+        df['label']=label_list
+        result_dic=T.df_to_spatial_dic(df,'label')
+        DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic,outtif)
 
 
-        import xymap
 
 
-        fdir_CV = rf'E:\Project3\Data\ERA5_daily\dict\trend_analysis_moving_window\\'
-        fdir_trend = rf'D:\Project3\Result\trend_analysis\relative_change\OBS_extend\\'
-        outdir = rf'D:\Project3\Result\bivariate\\\LAI_trend_vs_CV\\'
-        T.mk_dir(outdir,force=True)
-
-        tif_LAI4g_trend = fdir_CV+'LAI4g_CV_trend.tif'
-        tif_LAI4g_trend_growth_rate_trend = fdir_trend+'LAI4g_trend.tif'
-
-        outf = join(outdir,f'LAI_trend_vs_CV.tif')
-        x_label = 'LAI4g_CV_trend(%/year)'
-        y_label = 'LAI4g_trend (%//year)'
-        min1 = -1
-        max1 = 1
-        min2 = -.05
-        max2 = .05
-        xymap.Bivariate_plot_1(alpha = 255,upper_left_color = (255,202, 202), #
-                 upper_right_color = (148, 202, 112), #
-                 lower_left_color = (110,0, 0), #
-                 lower_right_color = (0, 0, 110), #
-                 center_color = (240,240, 240), ).plot_bivariate(
-            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
-            x_label, y_label, min1, max1, min2, max2, outf)
-        print(outf)
-
-
-    def xy_map_heat_event(self): ##
-
-        import xymap
-
-        fdir = rf'D:\Project3\Result\bivariate\\seasonality_rainfall_LAI_CV\\'
-        outdir = rf'D:\Project3\Result\bivariate\results\Bivariate_plot\\\tif\\seasonality_rainfall_LAI_CV\\'
-        T.mk_dir(outdir,force=True)
-
-        tif_LAI4g_trend = join(fdir,'heat_event_frequency_trend.tif')
-        tif_LAI4g_trend_growth_rate_trend = join(fdir,'detrended_annual_LAI4g_CV_trend.tif')
-
-        outf = join(outdir,f'heat_event_frequency_trend.tif')
-        x_label = 'heat_event_frequency_trend(unitless/year)'
-        y_label = 'CV trend (%/year)'
-        min1 = -0.1
-        max1 = 0.1
-        min2 = -.5
-        max2 = .5
-        xymap.Bivariate_plot_1(alpha = 255,upper_right_color = (255,202, 202), #
-                 upper_left_color = (148, 202, 112), #
-                 lower_right_color = (110,0, 0), #
-                 lower_left_color = (0, 0, 110), #
-                 center_color = (240,240, 240), ).plot_bivariate(
-            tif_LAI4g_trend, tif_LAI4g_trend_growth_rate_trend,
-            x_label, y_label, min1, max1, min2, max2, outf)
-        print(outf)
 class multi_regression_window():
     def __init__(self):
         self.this_root = 'E:\Project3\\'
@@ -5065,6 +5060,16 @@ class TRENDY_trend:
 
         plt.show()
 
+
+
+
+
+
+
+
+
+    pass
+
     def plot_bar_trend(self): ### all models comparision
         dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
         df=T.load_df(dff)
@@ -5204,9 +5209,11 @@ class TRENDY_CV:
 
         # self.detrend()
         # self.moving_window_extraction()
-        self.moving_window_CV_anaysis()
-        self.trend_analysis()
+        # self.moving_window_CV_anaysis()
+        # self.trend_analysis()
         # self.plt_basemap()
+        # self.plot_CV_trend()
+        self.bar_plot()
 
         pass
 
@@ -5327,12 +5334,14 @@ class TRENDY_CV:
         outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'SDGVM' in f:
+                continue
 
             dic = T.load_npy(fdir + f)
-            slides = 39-window_size
+            slides = 38-window_size
             outf = outdir + f.split('.')[0] + f'_CV.npy'
             print(outf)
-
+            #
             if os.path.isfile(outf):
                 continue
 
@@ -5344,7 +5353,7 @@ class TRENDY_CV:
                 trend_list = []
 
                 time_series_all = dic[pix]
-                if len(time_series_all)<24:
+                if len(time_series_all)<23:
                     continue
                 time_series_all = np.array(time_series_all)
                 # print(time_series_all)
@@ -5391,9 +5400,8 @@ class TRENDY_CV:
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            # if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
-            #                            'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
-
+            if not 'SDGVM' in f:
+                continue
             outf = outdir + f.split('.')[0]
             # if os.path.isfile(outf + '_trend.tif'):
             #     continue
@@ -5539,6 +5547,83 @@ class TRENDY_CV:
         plt.show()
 
     pass
+    def bar_plot(self):
+        ## here I plot sififinicant trends
+
+        pass
+    def plot_CV_trend(self):  ##plot CV and trend
+
+        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        T.print_head_n(df)
+        marker_list=['^','s', 'P','D','X']*4
+        color_list=['mediumorchid', 'yellow', 'lightseagreen','salmon','greenyellow', 'navy','red','darkorange', ]*3
+        variables_list = ['LAI4g', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+                          'SDGVM_S2_lai',
+                          'YIBs_S2_Monthly_lai']
+        vals_trend_list = []
+        vals_CV_list = []
+        err_trend_list = []
+        err_CV_list = []
+        for variable in variables_list:
+            vals_trend=df[f'{variable}_trend'].values
+            vals_CV = df[f'{variable}_detrend_CV_trend'].values
+            vals_trend[vals_trend>999] = np.nan
+            vals_CV[vals_CV>999] = np.nan
+            vals_trend[vals_trend < -999] = np.nan
+            vals_CV[vals_CV < -999] = np.nan
+
+            vals_trend = vals_trend[~np.isnan(vals_trend)]
+            vals_CV = vals_CV[~np.isnan(vals_CV)]
+            vals_trend_list.append(np.nanmean(vals_trend))
+            vals_CV_list.append(np.nanmean(vals_CV))
+            err_trend_list.append(np.nanstd(vals_trend) / np.sqrt(len(vals_trend)))
+            err_CV_list.append(np.nanstd(vals_CV) / np.sqrt(len(vals_CV)))
+        # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
+        # plt.show()
+        ##plot error bar
+        plt.figure(figsize=(13*centimeter_factor, 8.2*centimeter_factor))
+
+        # self.map_width = 13 * centimeter_factor
+        # self.map_height = 8.2 * centimeter_factor
+
+
+        for i, (x, y, marker,color,var) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list)):
+            plt.scatter(x, y, marker=marker,color=color, label=var, s=100, alpha=0.7,edgecolors='black',)
+            plt.errorbar(x, y, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
+
+            ##markerborderwidth=1
+
+            plt.xlabel('Trend (%/year)')
+            plt.ylabel('CV (%/15 year)')
+            plt.xlim(-0.4, 0.8)
+            plt.ylim(-0.5, 0.5)
+            plt.legend()
+
+        plt.show()
+
+
+
+
+        pass
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
 
 
 def main():
@@ -5547,11 +5632,11 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
 
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
