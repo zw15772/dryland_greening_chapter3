@@ -2334,9 +2334,10 @@ class greening_analysis():
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
-        # self.plot_spatial_histogram()
+        self.plot_spatial_histogram()
         # self.plot_spatial_barplot_period()
-        self.plot_spatial_histgram_period()
+        # self.plot_spatial_histgram_period()
+        # self.stacked_bar_plot()
 
 
 
@@ -2879,11 +2880,11 @@ class greening_analysis():
         df = T.load_df(dff)
         df = self.df_clean(df)
         ##plt histogram of LAI
-        df=df[df['LAI4g_trend']<30]
-        df=df[df['LAI4g_trend']>-30]
+        df=df[df['LAI4g_1983_2020_trend']<30]
+        df=df[df['LAI4g_1983_2020_trend']>-30]
 
 
-        vals_p_value = df['LAI4g_p_value'].values
+        vals_p_value = df['LAI4g_1983_2020_p_value'].values
         significant_browning_count = 0
         non_significant_browning_count = 0
         significant_greening_count = 0
@@ -2891,12 +2892,12 @@ class greening_analysis():
 
         for i in range(len(vals_p_value)):
             if vals_p_value[i] < 0.05:
-                if df['LAI4g_trend'].values[i] > 0:
+                if df['LAI4g_1983_2020_trend'].values[i] > 0:
                     significant_greening_count = significant_greening_count + 1
                 else:
                     significant_browning_count = significant_browning_count + 1
             else:
-                if df['LAI4g_trend'].values[i] > 0:
+                if df['LAI4g_1983_2020_trend'].values[i] > 0:
                     non_significant_browning_count = non_significant_browning_count + 1
                 else:
                     non_significant_greening_count = non_significant_greening_count + 1
@@ -2993,8 +2994,8 @@ class greening_analysis():
         df=T.load_df(dff)
         df = self.df_clean(df)
         ##plt histogram of LAI
-        df=df[df['LAI4g_trend']<30]
-        df=df[df['LAI4g_trend']>-30]
+        df=df[df['LAI4g_1983_2020_trend']<30]
+        df=df[df['LAI4g_1983_2020_trend']>-30]
         first_period=df['LAI4g_1983_2001_trend'].values
         first_period_vals=np.array(first_period)
         first_period_vals[first_period_vals<-99]=np.nan
@@ -3013,22 +3014,89 @@ class greening_analysis():
         # plt.plot(density_1999_2015, color='green', label='2002–2020',  linewidth=2)
         # x1, y1 = Plot().plot_hist_smooth(first_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
         # x2, y2 = Plot().plot_hist_smooth(second_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
-        sns.kdeplot(first_period_vals, shade=True, color='red', label='1983–2001')
-        sns.kdeplot(second_period_vals, shade=True, color='green', label='2002–2020')
+        first_period_vals_df = pd.DataFrame()
+        second_period_vals_df = pd.DataFrame()
+        first_period_vals_df['x'] = first_period_vals
+        second_period_vals_df['x'] = second_period_vals
+        first_period_vals_df['weight'] = np.ones_like(first_period_vals) / len(first_period_vals)
+        second_period_vals_df['weight'] = np.ones_like(second_period_vals) / len(second_period_vals)
+        sns.kdeplot(data=first_period_vals_df, x='x', weights=first_period_vals_df.weight, shade=True, color='red', label='1983–2001')
+        sns.kdeplot(data=second_period_vals_df, x='x', weights=second_period_vals_df.weight, shade=True, color='green', label='2002–2020')
         # plt.plot(x1, y1, color='red', label='1983–2001', linewidth=2)
         # plt.plot(x2, y2, color='green', label='2002–2020', linewidth=2)
 
         plt.xlabel('LAI trend ( %/year)')
-        plt.ylabel('Percentage (%)')
+        plt.ylabel('Probability')
         plt.legend()
-        plt.grid(True, linestyle='--', alpha=0.5)
-        # plt.xlim(-1.5, 1.5)
+        # plt.grid(True, linestyle='--', alpha=0.5)
+        plt.xlim(-1., 1.)
+        outdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend_plot\\'
+        outf = join(outdir, 'LAI_trend_2_periods_hist.pdf')
+        plt.savefig(outf)
+        plt.close()
+        T.open_path_and_file(outdir)
 
-        plt.show()
+        # plt.show()
 
         pass
 
+    def stacked_bar_plot(self):
+        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df = df[df['LAI4g_1983_2020_trend'] < 30]
+        df = df[df['LAI4g_1983_2020_trend'] > -30]
+        T.print_head_n(df)
+        period_list = ['1983_2001', '2002_2020', '1983_2020']
+        result_dict = {}
+        for period in period_list:
 
+            significant_browning_count = 0
+            non_significant_browning_count = 0
+            significant_greening_count = 0
+            non_significant_greening_count = 0
+
+            for i, row in df.iterrows():
+
+                vals_p_value = row[f'LAI4g_{period}_p_value']
+                if vals_p_value < 0.01:
+                    if row[f'LAI4g_{period}_trend'] > 0:
+                        significant_greening_count = significant_greening_count + 1
+                    else:
+                        significant_browning_count = significant_browning_count + 1
+                else:
+                    if row[f'LAI4g_{period}_trend'] < 0:
+                        non_significant_browning_count = non_significant_browning_count + 1
+                    else:
+                        non_significant_greening_count = non_significant_greening_count + 1
+                ## plot bar
+            ##calculate percentage
+            significant_greening_percentage = significant_greening_count / len(df) * 100
+            non_significant_greening_percentage = non_significant_greening_count / len(df) * 100
+            significant_browning_percentage = significant_browning_count / len(df) * 100
+            non_significant_browning_percentage = non_significant_browning_count / len(df) * 100
+
+            count = [non_significant_browning_percentage, significant_browning_percentage,
+                     significant_greening_percentage,
+
+                     non_significant_greening_percentage]
+            result_dict[period] = count
+        print(result_dict)
+
+        labels = ['non_significant_browning', 'significant_browning', 'significant_greening',
+                  'non_significant_greening']
+        color_list = ['chocolate', 'navajowhite', 'lightblue', 'navy']
+        ##gap = 0.1
+
+        df_new = pd.DataFrame(result_dict)
+
+        df_new.plot(kind='bar', stacked=False, color=color_list, edgecolor='black', figsize=(3, 3), legend=True)
+        plt.ylabel('Percentage (%)')
+        plt.xticks(np.arange(0, 4), labels)
+        plt.tight_layout()
+
+        plt.show()
 
 
 class Plot_Robinson:
@@ -3135,6 +3203,8 @@ class Plot_Robinson:
             ax = plt.subplot(1, 1, 1)
         if cmap is None:
             cmap = Tools().cmap_blend(color_list)
+        elif type(cmap) == str:
+            cmap = plt.get_cmap(cmap)
         if not is_reproj:
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
         else:
@@ -3216,9 +3286,9 @@ class bivariate_analysis():
         pass
     def run(self):
 
-
         # self.xy_map()
-        self.plot_histogram()
+        # self.plot_histogram()
+        self.plot_robinson()
 
 
         pass
@@ -3300,6 +3370,34 @@ class bivariate_analysis():
         plt.ylabel('percentage')
         plt.show()
 
+    def plot_robinson(self):
+
+        fdir_trend = result_root+rf'\3mm\bivariate_analysis\\'
+        temp_root = result_root+rf'\3mm\bivariate_analysis\\temp\\'
+        outdir = result_root+rf'\3mm\bivariate_analysis\\\trend_plot\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+
+            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=4, is_discrete=True, colormap_n=4, cmap='RdYlBu',)
+
+
+            plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + f+'.pdf'
+            plt.savefig(outf)
+            plt.close()
+
+
 
 
 
@@ -3350,10 +3448,11 @@ class multi_regression_window():
 
         # self.convert_files_to_time_series(outdir,self.y_var)
         ### step 4 build dataframe using build Dataframe function and then plot here
-        self.plot_moving_window_time_series()
+        # self.plot_moving_window_time_series()
         ## spatial trends of sensitivity
         # self.calculate_trend_trend()
-        # self.
+        # plot robinson'
+        self.plot_robinson()
         # self.plot_sensitivity_preicipation_trend()
     def detrend(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -3941,9 +4040,9 @@ class multi_regression_window():
 
     def plot_robinson(self):
 
-        fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        temp_root = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        outdir = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend_plot\\'
+        fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\trend\\'
+        temp_root = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\trend\\'
+        outdir = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\trend_plot\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -3962,7 +4061,7 @@ class multi_regression_window():
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-2, vmax=2, is_discrete=True, colormap_n=7,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-2, vmax=2, is_discrete=True, colormap_n=7, cmap='RdBu')
 
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
             plt.title(f'{fname}')
@@ -5745,10 +5844,10 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
-    multi_regression_window().run()
+    # multi_regression_window().run()
     # bivariate_analysis().run()
 
     # visualize_SHAP().run()
