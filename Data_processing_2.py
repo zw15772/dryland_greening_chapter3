@@ -2334,7 +2334,7 @@ class greening_analysis():
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
-        self.plot_spatial_histogram()
+        self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
         # self.stacked_bar_plot()
@@ -2874,7 +2874,7 @@ class greening_analysis():
         x_ticks_list.sort()
         return matrix_dict,x_ticks_list,y_ticks_list
 
-    def plot_spatial_histogram(self):
+    def plot_significant_percentage_area(self):  ### insert bar plot for all spatial map to calculate percentage
 
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
@@ -2914,15 +2914,16 @@ class greening_analysis():
         print(count)
         labels = ['non_significant_browning','significant_browning', 'significant_greening',
                   'non_significant_greening']
-        color_list=['chocolate','navajowhite','lightblue','navy']
+        color_list=['navajowhite','chocolate','navy','lightblue',]
         ##gap = 0.1
+        df_new=pd.DataFrame({'count':count})
+        df_new_T=df_new.T
 
-        bar_width = 0.1
-        gap = 0.1
-        x = np.arange(len(labels))* (bar_width + gap)
-        plt.bar(x, count, color=color_list, edgecolor='black', width=bar_width,alpha=0.8)
 
-        plt.xticks(x, labels,rotation=45)
+        df_new_T.plot.barh( stacked=True, color=color_list,legend=False,width=0.1,)
+        ## add legend
+        plt.legend(labels)
+
         plt.ylabel('Percentage (%)')
         plt.tight_layout()
 
@@ -3388,7 +3389,7 @@ class bivariate_analysis():
             fpath = fdir_trend + f
 
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=4, is_discrete=True, colormap_n=4, cmap='RdYlBu',)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=4, is_discrete=True, colormap_n=4, cmap='RdYlBu_r',)
 
 
             plt.title(f'{fname}')
@@ -3396,17 +3397,6 @@ class bivariate_analysis():
             outf = outdir + f+'.pdf'
             plt.savefig(outf)
             plt.close()
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4085,6 +4075,60 @@ class multi_regression_window():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+    def plot_significant_percentage_area(self):  ### insert bar plot for all spatial map to calculate percentage
+
+        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df=df[df['LAI4g_1983_2020_trend']<30]
+        df=df[df['LAI4g_1983_2020_trend']>-30]
+
+        vals_p_value = df['LAI4g_1983_2020_p_value'].values
+        significant_browning_count = 0
+        non_significant_browning_count = 0
+        significant_greening_count = 0
+        non_significant_greening_count = 0
+
+        for i in range(len(vals_p_value)):
+            if vals_p_value[i] < 0.05:
+                if df['LAI4g_1983_2020_trend'].values[i] > 0:
+                    significant_greening_count = significant_greening_count + 1
+                else:
+                    significant_browning_count = significant_browning_count + 1
+            else:
+                if df['LAI4g_1983_2020_trend'].values[i] > 0:
+                    non_significant_browning_count = non_significant_browning_count + 1
+                else:
+                    non_significant_greening_count = non_significant_greening_count + 1
+            ## plot bar
+        ##calculate percentage
+        significant_greening_percentage = significant_greening_count / len(vals_p_value)*100
+        non_significant_greening_percentage = non_significant_greening_count / len(vals_p_value)*100
+        significant_browning_percentage = significant_browning_count / len(vals_p_value)*100
+        non_significant_browning_percentage = non_significant_browning_count / len(vals_p_value)*100
+
+        count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
+
+                 non_significant_greening_percentage]
+        print(count)
+        labels = ['non_significant_browning','significant_browning', 'significant_greening',
+                  'non_significant_greening']
+        color_list=['navajowhite','chocolate','navy','lightblue',]
+        ##gap = 0.1
+        df_new=pd.DataFrame({'count':count})
+        df_new_T=df_new.T
+
+
+        df_new_T.plot.barh( stacked=True, color=color_list,legend=False,width=0.1,)
+        ## add legend
+        plt.legend(labels)
+
+        plt.ylabel('Percentage (%)')
+        plt.tight_layout()
+
+        plt.show()
+
 
 class multi_regression():  ###linaer regression for CO2 effects.
     def __init__(self):
@@ -5844,10 +5888,10 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
-    # multi_regression_window().run()
+    multi_regression_window().run()
     # bivariate_analysis().run()
 
     # visualize_SHAP().run()
