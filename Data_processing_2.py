@@ -268,17 +268,17 @@ class Phenology():  ### plot site based phenology curve
 class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '5mm'
-        self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\\moving_window_CV\\')
+        self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\moving_window_multi_regression\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_CV.df'
+        self.dff = self.this_class_arr + rf'phenology_LAI_mean_detrend.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        # df=self.build_df(df)
+        df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
         # df=self.add_columns(df)
         #self.show_field()
 
@@ -322,7 +322,7 @@ class build_moving_window_dataframe():
 
     def build_df(self, df):
 
-        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\with_trend\multi_regression_result\npy_time_series\\'
+        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\\'
         all_dic = {}
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
@@ -333,6 +333,7 @@ class build_moving_window_dataframe():
 
             dic = T.load_npy(fpath)
             key_name = fname
+            key_name='LAI_sensitivity_rainfall_detrend'
             all_dic[key_name] = dic
         # print(all_dic.keys())
         df = T.spatial_dics_to_df(all_dic)
@@ -422,7 +423,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_trend\npy_time_series\\sum_rainfall.npy'
         print(fdir)
         print(self.dff)
         # variable_list = [
@@ -438,8 +439,7 @@ class build_moving_window_dataframe():
             if not 'sum_rainfall' in f:
 
                 continue
-            if 'detrended' in f:
-                continue
+
 
             variable= f.split('.')[0]
 
@@ -496,7 +496,7 @@ class build_moving_window_dataframe():
         # plt.show()
 
 
-            df[f'{variable}'] = NDVI_list
+            df[f'{variable}_sensitivity'] = NDVI_list
         # df[f'{variable}_ecosystem_year'] = NDVI_list
         # exit()
         return df
@@ -561,9 +561,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\Trend\\')
+        self.this_class_arr = (result_root+rf'3mm\Dataframe\moving_window_multi_regression\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'Trend.df'
+        self.dff = self.this_class_arr + 'phenology_LAI_mean_detrend.df'
 
         pass
 
@@ -573,7 +573,7 @@ class build_dataframe():
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
         # df=self.foo2(df)
-        df=self.add_multiregression_to_df(df)
+        # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
         # df=self.append_attributes(df)  ## 加属性
@@ -591,15 +591,15 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        # df=self.add_AI_classfication(df)
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_AI_classfication(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
         # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # # df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
@@ -607,9 +607,9 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
-        # df = self.drop_field_df(df)
-        df=self.show_field(df)
+        # df=self.rename_columns(df)
+        # # df = self.drop_field_df(df)
+        # df=self.show_field(df)
 
 
         T.save_df(df, self.dff)
@@ -848,11 +848,11 @@ class build_dataframe():
         return df
 
     def add_multiregression_to_df(self, df):
-        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\trend_analysis\\'
+        fdir = result_root + rf'\3mm\relative_change_growing_season\trend_analysis\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'SDGVM' in f:
+            if not '2020' in f:
                 continue
 
             print(f.split('.')[0])
@@ -1498,7 +1498,11 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'LAI_relative_change': 'LAI4g',
+        df = df.rename(columns={'NIRv_trend': 'NIRv_1983_2020_trend',
+                                'NIRv_p_value':'NIRv_1983_2020_p_value',
+                                'NDVI_trend':'NDVI_1983_2020_trend',
+
+                                'NDVI_p_value':'NDVI_1983_2020_p_value',
 
 
                             }
@@ -1512,7 +1516,8 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=[rf'weighted_avg_LAI_y',
+        df = df.drop(columns=[rf'NDVI_2001_2020_p_value',
+                              'NDVI_2001_2020_trend',
 
                               ])
         return df
@@ -2330,7 +2335,8 @@ class greening_analysis():
         # self.heatmap()
         # self.testrobinson()
         # self.plot_spatial_histogram()
-        self.plot_spatial_histogram_period()
+        # self.plot_spatial_barplot_period()
+        self.plot_spatial_histgram_period()
 
 
 
@@ -2344,11 +2350,12 @@ class greening_analysis():
         outdir = result_root + rf'\3mm\\relative_change_growing_season\\'
         Tools().mk_dir(outdir, force=True)
 
+
         for f in os.listdir(fdir):
-            if not 'phenology_LAI_mean' in f:
+            if not 'NIR' in f:
                 continue
 
-            outf = outdir + f.split('.')[0] + '.npy'
+            outf = outdir + f.split('.')[0] + '_1983_2001.npy'
             # if isfile(outf):
             #     continue
             print(outf)
@@ -2358,16 +2365,19 @@ class greening_analysis():
             zscore_dic = {}
 
             for pix in tqdm(dic):
-                delta_time_series_list = []
+
                 if pix not in dic_dryland_mask:
                     continue
 
                 # print(len(dic[pix]))
                 time_series = dic[pix]['growing_season']
-                # print(len(time_series))
+
 
                 time_series = np.array(time_series)
-                # time_series[time_series < -999] = np.nan
+                time_series = time_series[0:19]
+
+                # time_series=time_series[19:]
+                print(len(time_series))
 
                 if np.isnan(np.nanmean(time_series)):
                     continue
@@ -2378,8 +2388,8 @@ class greening_analysis():
 
                 zscore_dic[pix] = relative_change
                 # plot
-                plt.plot(time_series)
-
+                # plt.plot(time_series)
+                #
                 # plt.plot(relative_change)
                 # plt.legend(['original','relative_change'])
                 # plt.show()
@@ -2481,15 +2491,12 @@ class greening_analysis():
         #     print(slope,intercept)
         # exit()
 
-        plt.figure(figsize=(self.map_width, self.map_height))
+        plt.figure(figsize=(self.map_width, self.map_height/2))
         flag=0
 
         for var in variable_list:
-            plt.plot(year_range, result_dic[var].values(), label='Y1', marker='o', markersize=3, linestyle='-', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
+            plt.plot(year_range, result_dic[var].values(), label=var, marker='o', markersize=3, linestyle='-', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
             flag=flag+1
-
-
-
 
         plt.text(0, 1, f'{stats_dic}', transform=plt.gca().transAxes, fontsize=10)
 
@@ -2501,37 +2508,17 @@ class greening_analysis():
         ##add line
         plt.axhline(y=0, color='grey', linestyle='--',alpha=0.2)
         # plt.grid(which='major', alpha=0.2)
+        plt.legend()
 
 
-        plt.show()
-        # outdir = result_root + rf'3mm\relative_change_growing_season\\'
+        # plt.show()
+        outdir = result_root + rf'3mm\relative_change_growing_season\\pdf\\'
+        T.mk_dir(outdir)
         # outf = outdir + f'relative_change_growing_season_yearly.pdf'
-        # plt.savefig(outf)
-        # plt.close()
-
-
-
-
-
-
-
-        plt.plot(result_dic.values(),'g')
-        year_range = range(1983, 2021)
-        xticks = range(0, len(year_range), 4)
-        plt.xticks(xticks, year_range[::4], fontsize=10, rotation=45)
-        plt.ylim(-4, 4)
-        plt.yticks([-4, -3, -2, -1, 0, 1, 2, 3, 4], fontsize=10)
-        plt.xlabel('year', fontsize=10)
-        plt.ylabel(f'Relative change (%)', fontsize=10)
-        ##add line
-        # plt.axhline(y=0, color='grey', linestyle='-',alpha=0.2)
-        plt.grid(which='major', alpha=0.2)
-
-        plt.show()
-
-
-
-
+        outf = outdir + f'legend.pdf'
+        plt.savefig(outf)
+        plt.close()
+        T.open_path_and_file(outdir)
         pass
 
 
@@ -2602,11 +2589,15 @@ class greening_analysis():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root+rf'\3mm\CRU_JRA_monthly\extract_rainfall_phenology_year\\'
-        outdir = result_root + rf'\3mm\CRU_JRA_monthly\extract_rainfall_phenology_year\\trend_analysis\\'
+        fdir = result_root+rf'3mm\relative_change_growing_season\\'
+        outdir = result_root + rf'\3mm\relative_change_growing_season\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not  'NIR' in f:
+                continue
+            if not '2020' in f:
+                continue
 
 
             if not f.endswith('.npy'):
@@ -2633,7 +2624,7 @@ class greening_analysis():
                 if dic_modis_mask[pix]==12:
                     continue
 
-                time_series=dic[pix]['growing_season']
+                time_series=dic[pix]
                 # print(time_series)
 
 
@@ -2678,7 +2669,7 @@ class greening_analysis():
 
     def gen_robinson_template(self):
         pass
-    def testrobinson(self):
+    def plot_robinson(self):
 
         fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
         temp_root = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
@@ -2932,10 +2923,11 @@ class greening_analysis():
 
         plt.xticks(x, labels,rotation=45)
         plt.ylabel('Percentage (%)')
+        plt.tight_layout()
 
         plt.show()
 
-    def plot_spatial_histogram_period(self):
+    def plot_spatial_barplot_period(self):
 
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
@@ -2943,50 +2935,99 @@ class greening_analysis():
         ##plt histogram of LAI
         df=df[df['LAI4g_trend']<30]
         df=df[df['LAI4g_trend']>-30]
+        period_list=['1983_2001','2001_2020',]
+        result_dict = {}
+        for period in period_list:
 
+            significant_browning_count = 0
+            non_significant_browning_count = 0
+            significant_greening_count = 0
+            non_significant_greening_count = 0
 
-        vals_p_value = df['LAI4g_p_value'].values
-        significant_browning_count = 0
-        non_significant_browning_count = 0
-        significant_greening_count = 0
-        non_significant_greening_count = 0
+            for i,row in df.iterrows():
 
-        for i in range(len(vals_p_value)):
-            if vals_p_value[i] < 0.05:
-                if df['LAI4g_trend'].values[i] > 0:
-                    significant_greening_count = significant_greening_count + 1
+                vals_p_value = row[f'LAI4g_{period}_p_value']
+                if vals_p_value < 0.05:
+                    if row[f'LAI4g_{period}_trend'] > 0:
+                        significant_greening_count = significant_greening_count + 1
+                    else:
+                        significant_browning_count = significant_browning_count + 1
                 else:
-                    significant_browning_count = significant_browning_count + 1
-            else:
-                if df['LAI4g_trend'].values[i] > 0:
-                    non_significant_browning_count = non_significant_browning_count + 1
-                else:
-                    non_significant_greening_count = non_significant_greening_count + 1
-            ## plot bar
-        ##calculate percentage
-        significant_greening_percentage = significant_greening_count / len(vals_p_value)*100
-        non_significant_greening_percentage = non_significant_greening_count / len(vals_p_value)*100
-        significant_browning_percentage = significant_browning_count / len(vals_p_value)*100
-        non_significant_browning_percentage = non_significant_browning_count / len(vals_p_value)*100
+                    if row[f'LAI4g_{period}_trend'] < 0:
+                        non_significant_browning_count = non_significant_browning_count + 1
+                    else:
+                        non_significant_greening_count = non_significant_greening_count + 1
+                ## plot bar
+            ##calculate percentage
+            significant_greening_percentage = significant_greening_count / len(df)*100
+            non_significant_greening_percentage = non_significant_greening_count / len(df)*100
+            significant_browning_percentage = significant_browning_count / len(df)*100
+            non_significant_browning_percentage = non_significant_browning_count / len(df)*100
 
-        count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
+            count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
 
-                 non_significant_greening_percentage]
-        print(count)
+                     non_significant_greening_percentage]
+            result_dict[period]=count
+        print(result_dict)
+
         labels = ['non_significant_browning','significant_browning', 'significant_greening',
                   'non_significant_greening']
         color_list=['chocolate','navajowhite','lightblue','navy']
         ##gap = 0.1
 
-        bar_width = 0.1
-        gap = 0.1
-        x = np.arange(len(labels))* (bar_width + gap)
-        plt.bar(x, count, color=color_list, edgecolor='black', width=bar_width,alpha=0.8)
+        df_new=pd.DataFrame(result_dict)
 
-        plt.xticks(x, labels,rotation=45)
+        df_new.plot(kind='bar', stacked=False, color=color_list, edgecolor='black', figsize=(3, 3),legend=True)
         plt.ylabel('Percentage (%)')
+        plt.xticks(np.arange(0,4),labels)
+        plt.tight_layout()
+
 
         plt.show()
+
+
+
+    def plot_spatial_histgram_period(self):
+        from scipy.stats import gaussian_kde
+        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
+        df=T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df=df[df['LAI4g_trend']<30]
+        df=df[df['LAI4g_trend']>-30]
+        first_period=df['LAI4g_1983_2001_trend'].values
+        first_period_vals=np.array(first_period)
+        first_period_vals[first_period_vals<-99]=np.nan
+        first_period_vals[first_period_vals > 99] = np.nan
+        first_period_vals=first_period_vals[~np.isnan(first_period_vals)]
+
+        second_period=df['LAI4g_2002_2020_trend'].values
+        second_period_vals=np.array(second_period)
+        second_period_vals[second_period_vals<-99]=np.nan
+        second_period_vals[second_period_vals > 99] = np.nan
+        second_period_vals = second_period_vals[~np.isnan(second_period_vals)]
+
+
+        # ax, fig = plt.subplots(1, 1,figsize=(6 * centimeter_factor, 4 * centimeter_factor))
+        # plt.plot(density_1982_1998, color='red', label='1983–2001',  linewidth=2)
+        # plt.plot(density_1999_2015, color='green', label='2002–2020',  linewidth=2)
+        # x1, y1 = Plot().plot_hist_smooth(first_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
+        # x2, y2 = Plot().plot_hist_smooth(second_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
+        sns.kdeplot(first_period_vals, shade=True, color='red', label='1983–2001')
+        sns.kdeplot(second_period_vals, shade=True, color='green', label='2002–2020')
+        # plt.plot(x1, y1, color='red', label='1983–2001', linewidth=2)
+        # plt.plot(x2, y2, color='green', label='2002–2020', linewidth=2)
+
+        plt.xlabel('LAI trend ( %/year)')
+        plt.ylabel('Percentage (%)')
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.5)
+        # plt.xlim(-1.5, 1.5)
+
+        plt.show()
+
+        pass
+
 
 
 
@@ -3187,7 +3228,6 @@ class bivariate_analysis():
     def xy_map(self): ##
 
         import xymap
-
         tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend\npy_time_series\trend\\sum_rainfall_trend.tif'
         tif_trends = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\trend_ecosystem_year\\sum_rainfall_trend.tif'
         # print(isfile(tif_CRU_trend))
@@ -3310,9 +3350,10 @@ class multi_regression_window():
 
         # self.convert_files_to_time_series(outdir,self.y_var)
         ### step 4 build dataframe using build Dataframe function and then plot here
-        # self.plot_moving_window_time_series()
+        self.plot_moving_window_time_series()
         ## spatial trends of sensitivity
-        self.calculate_trend_trend()
+        # self.calculate_trend_trend()
+        # self.
         # self.plot_sensitivity_preicipation_trend()
     def detrend(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -3828,73 +3869,6 @@ class multi_regression_window():
         # plt.legend()
 
         plt.show()
-
-    def plot_sensitivity_preicipation_trend(self):
-        ### plot heamap of sensitivity of precipitation to LAI as function of  mean precipitaiton and precipitation trends
-
-        dff = rf'D:\Project3\Result\Dataframe\relative_changes\relative_changes.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        # T.print_head_n(df)
-        df = df.dropna(subset=['LAI4g_trend'])
-
-        ## x is CRU, y CO2, z is LAI4g
-        x = df['GPCC_LAI4g_trend_100mm_unit']
-        y = df['GPCC_trend'].tolist()
-
-        z=df['LAI4g_trend'].tolist()
-        plt.hist(x, bins=50)
-        plt.show()
-        # plt.hist(y, bins=50)
-        # plt.show()
-        # plt.hist(z, bins=50)
-        # plt.show()
-
-        x_list = np.linspace(-10, 10, 21)
-        y_list = np.linspace(-2, 2, 21)
-        df_group1, bins_list_str1 = T.df_bin(df, 'GPCC_LAI4g_trend_100mm_unit',x_list)
-
-        for name1, df_group_i1 in df_group1:
-            df_group2, bins_list_str2 = T.df_bin(df_group_i1, 'GPCC_trend', y_list)
-            name1_ = name1[0].left
-            # print(name1_);exit()
-            matrix_i = []
-            matrix_ii = []
-            x_labels = []
-            # print(len(df_group2))
-            # print(len(CO2_bin_list)-1)
-            # print('---')
-
-            for name2, df_group_i2 in df_group2:
-                name2_ = name2[0].left
-                x_labels.append(name2_)
-                # print(name1,name2)
-                # print(len(df_group_i2))
-                vals = df_group_i2['LAI4g_trend'].tolist()
-                vals = np.array(vals)
-                vals[vals < -999] = np.nan
-                vals[vals > 999] = np.nan
-                val = np.nanmean(vals)
-
-
-                count = len(df_group_i2)
-
-                x_pos = name1_
-                y_pos = name2_
-                plt.scatter(x_pos, y_pos, s=100,c=val,cmap='RdBu',vmin=-1,vmax=1,marker='s')
-                ### add text of the value
-                plt.text(x_pos, y_pos, count, ha='center', va='center', fontsize=6)
-                plt.xlabel('Trends in LAI sensitivity to precipitation (%/100mm/year)')
-                plt.ylabel('Precipitaiton_trend (%/year)')
-                # plt.title('Trends in LAI sensitivity to precipitation (%/mm/year)')
-
-        ## colorbars has text
-        cbar = plt.colorbar()
-        cbar.ax.set_ylabel('LAI trend (%/year)')
-        plt.show()
-
-    pass
-
     def calculate_trend_trend(self):  ## calculate the trend of trend
 
     ## here input is the npy file
@@ -3963,6 +3937,42 @@ class multi_regression_window():
             # np.save(outf+'_p_value', p_value_dic)
 
             ##tiff
+
+
+    def plot_robinson(self):
+
+        fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
+        temp_root = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
+        outdir = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend_plot\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+            if not 'trend' in f:
+                continue
+
+            fname = f.split('.')[0]
+            fname_p_value = fname.replace('trend', 'p_value')
+            print(fname_p_value)
+            fpath = fdir_trend + f
+            p_value_f = fdir_trend + fname_p_value+'.tif'
+            print(p_value_f)
+            # exit()
+            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-2, vmax=2, is_discrete=True, colormap_n=7,)
+
+            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
+            plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + f+'2.pdf'
+            plt.savefig(outf)
+            plt.close()
+
+    pass
+
 
     def df_clean(self,df):
         T.print_head_n(df)
@@ -5738,8 +5748,8 @@ def main():
     # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
-    # multi_regression_window().run()
-    bivariate_analysis().run()
+    multi_regression_window().run()
+    # bivariate_analysis().run()
 
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
