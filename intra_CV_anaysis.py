@@ -2041,7 +2041,7 @@ class Extract_rainfall_phenology_daily():
 
     def run(self):
         # self.extract_CO2()
-        self.extract_monthly_climate_variables()
+        # self.extract_monthly_climate_variables()
         # self.extract_maximum_temperature_average()
         # self.define_quantile_threshold()
         # self.extract_heatevent_frequency()
@@ -2055,7 +2055,7 @@ class Extract_rainfall_phenology_daily():
         # self.extract_rainfall_CV()
         # self.average_analysis()
         # self.detrend_rainfall()
-        # self.trend_analysis()
+        self.trend_analysis()
 
     def define_quantile_threshold(self):
         # 1) extract extreme wet event based on 90th percentile and calculate frequency and total duration
@@ -5787,13 +5787,13 @@ def main():
     #extract_heatevent().run()
     # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
-    # Extract_rainfall_phenology_daily().run()
+    Extract_rainfall_phenology_daily().run()
     # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
 
 
-    moving_window().run()
+    # moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()
