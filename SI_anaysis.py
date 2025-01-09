@@ -76,6 +76,55 @@ class greening_analysis():
     def __init__(self):
 
         pass
+    def run(self):
+        pass
+    def greening_products_basemap(self):
+        ## three products 3 time periods comparison
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.basemap import Basemap
+        import numpy as np
+
+        # Create synthetic data (replace with actual data as needed)
+        nrows, ncols = 100, 100
+        data_dict = {
+            'LAI': [np.random.rand(nrows, ncols) for _ in range(3)],
+            'NDVI': [np.random.rand(nrows, ncols) for _ in range(3)],
+            'NIRv': [np.random.rand(nrows, ncols) for _ in range(3)],
+        }
+
+        products = ['LAI', 'NDVI', 'NIRv']
+        periods = ['Period 1', 'Period 2', 'Period 3']
+
+        fig, axes = plt.subplots(3, 3, figsize=(15, 15))
+        fig.subplots_adjust(hspace=0.3, wspace=0.3)
+
+        # Loop through products and periods to create subplots
+        for i, product in enumerate(products):
+            for j, period in enumerate(periods):
+                ax = axes[i, j]
+                m = Basemap(projection='cyl', resolution='l', ax=ax)
+                m.drawcoastlines()
+                m.drawcountries()
+                m.drawparallels(np.arange(-90., 91., 30.), labels=[1, 0, 0, 0])
+                m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 1])
+
+                # Get the data for this subplot
+                data = data_dict[product][j]
+                lon = np.linspace(-180, 180, ncols)
+                lat = np.linspace(-90, 90, nrows)
+                lon, lat = np.meshgrid(lon, lat)
+
+                # Plot the data using pcolormesh
+                im = m.pcolormesh(lon, lat, data, shading='auto', cmap='viridis')
+
+                # Add title and colorbar
+                ax.set_title(f'{product} - {period}')
+                cbar = m.colorbar(im, location='right', pad='5%')
+
+        plt.suptitle('3x3 Subplot of LAI, NDVI, and NIRv for Three Periods')
+        plt.show()
+
+        pass
 
 class Rainfall_product_comparison():
     pass
