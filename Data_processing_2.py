@@ -2335,7 +2335,8 @@ class greening_analysis():
         # self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
-        self.stacked_bar_plot()
+        # self.stacked_bar_plot()
+        self.statistic_analysis()
 
 
 
@@ -3111,6 +3112,26 @@ class greening_analysis():
 
 
         plt.show()
+    def statistic_analysis(self):  ##calculate spatial average trends for three decades
+        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        T.print_head_n(df)
+
+        df_first_decade = df[df[f'LAI4g_2002_2020_trend']>-99]
+        df_second_decade = df[df[f'LAI4g_1983_2001_trend']>-99]
+        trend_first = df_first_decade[f'LAI4g_2002_2020_trend'].tolist()
+        trend_second = df_second_decade[f'LAI4g_1983_2001_trend'].tolist()
+        trend_first = np.array(trend_first)
+        trend_second = np.array(trend_second)
+        # trend_first = trend_first[~np.isnan(trend_first)]
+        # trend_second = trend_second[~np.isnan(trend_second)]
+        trend_first=np.nanmean(trend_first)
+        trend_second=np.nanmean(trend_second)
+        print(trend_first,trend_second)
+
+        pass
 
 
 class Plot_basemap:
@@ -3309,9 +3330,10 @@ class bivariate_analysis():
 
         # self.xy_map()
         # self.plot_histogram()
-        self.plot_robinson()
-        # self.plot_three_dimension()
+        # self.plot_robinson()
+
         # self.generate_category_map()
+        self.plot_three_dimension()
 
 
         pass
