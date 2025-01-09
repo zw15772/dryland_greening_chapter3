@@ -6088,12 +6088,12 @@ def main():
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
 
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
-    # plt.show()
+    plt.show()
 
 
 

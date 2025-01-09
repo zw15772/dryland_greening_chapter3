@@ -70,3 +70,42 @@ centimeter_factor = 1/2.54
 this_root = 'E:\Project3\\'
 data_root = 'E:/Project3/Data/'
 result_root = 'E:/Project3/Result/'
+
+class greening_analysis():
+
+    def __init__(self):
+
+        pass
+
+class Rainfall_product_comparison():
+    pass
+
+class TRENDY_trend():
+    pass
+
+class TRENDY_CV():
+    pass
+
+def main():
+    # Data_processing_2().run()
+    # Phenology().run()
+    # build_dataframe().run()
+    # build_moving_window_dataframe().run()
+    # CO2_processing().run()
+    # greening_analysis().run()
+    # TRENDY_trend().run()
+    # TRENDY_CV().run()
+    # multi_regression_window().run()
+    # bivariate_analysis().run()
+
+    # visualize_SHAP().run()
+    # PLOT_dataframe().run()
+    # Plot_Robinson().robinson_template()
+    plt.show()
+
+
+
+    pass
+
+if __name__ == '__main__':
+    main()
