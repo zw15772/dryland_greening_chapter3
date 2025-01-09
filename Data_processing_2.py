@@ -2323,7 +2323,7 @@ class greening_analysis():
 
     def run(self):
 
-        self.relative_change()
+        # self.relative_change()
         # self.weighted_average_LAI()
         # self.plot_time_series()
         # self.plot_time_series_spatial()
@@ -2335,7 +2335,7 @@ class greening_analysis():
         # self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
-        # self.stacked_bar_plot()
+        self.stacked_bar_plot()
 
 
 
@@ -3038,40 +3038,79 @@ class greening_analysis():
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
+
         ##plt histogram of LAI
 
         T.print_head_n(df)
-        period_list = ['1983_2001', '2002_2020', ]
+        period_list = [ '2002_2020','1983_2001', ]
         result_dict = {}
         trend_bins = [-20,-1.2,-0.8,-0.4,0,0.4,0.8,1.2,20]
-        for period in period_list:
-            df_group, df_group_str=T.df_bin(df, f'LAI4g_{period}_trend', trend_bins,)
-            val_list = []
-            name_list = []
-            df=df[df[f'LAI4g_{period}_trend'] > -20]
-            df=df[df[f'LAI4g_{period}_trend'] < 20]
+        color_list=[  'orange','red','brown','limegreen', 'green', 'deepskyblue', 'blue','navy']
+        result_dict_browning = {}
+        result_dict_greening = {}
+        bin_labels = [(trend_bins[i], trend_bins[i + 1]) for i in range(len(trend_bins) - 1)]
 
-            for name,df_group_i in df_group:
+        for period in period_list:
+            df=df[df[f'LAI4g_{period}_p_value']<0.05]
+
+
+
+            browning_vals = []
+            greening_vals = []
+            name_list = []
+            df=df[df[f'LAI4g_{period}_trend'] > -30]
+            df=df[df[f'LAI4g_{period}_trend'] < 30]
+
+            for bin in bin_labels:
+                name = bin
+                df_group_i = df[df[f'LAI4g_{period}_trend']>bin[0]]
+                df_group_i = df_group_i[df_group_i[f'LAI4g_{period}_trend']<=bin[1]]
 
                 vals = len(df_group_i)/len(df)*100
-                val_list.append(vals)
+                print(bin,vals)
+
+                if bin[1] < 0:  # Browning bins (left of 0)
+                    browning_vals.append(-vals)
+                    greening_vals.append(0)
+                else:  # Greening bins (right of 0)
+                    browning_vals.append(0)
+                    greening_vals.append(vals)
+                # 使用正值表示 greening
                 name_list.append(name)
 
-            result_dict[period] = val_list
-        df_new = pd.DataFrame(result_dict, index=name_list)
-        df_new_T = df_new.T
-        print(df_new_T)
-        df_new_T.plot(kind='barh', stacked=True,width=0.1, figsize=(3, 3))
+            sorted_first_three = sorted(browning_vals[:3])
+            browning_vals=sorted_first_three+browning_vals[3:]
+
+
+
+            result_dict_browning[period] = browning_vals
+            result_dict_greening[period] = greening_vals
+
+    # Create new DataFrames for browning and greening
+
+        df_browning = pd.DataFrame(result_dict_browning, index=name_list)
+        df_greening = pd.DataFrame(result_dict_greening, index=name_list)
+
+        # Transpose for horizontal bar plotting
+        df_browning_T = df_browning.T
+        df_greening_T = df_greening.T
+
+        # Plot the stacked bar chart
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        df_browning_T.plot(kind='barh', stacked=True, width=0.3, ax=ax, color=color_list, legend=False,alpha=0.7)
+        df_greening_T.plot(kind='barh', stacked=True, width=0.3, ax=ax, color=color_list, legend=False,alpha=0.7)
+
+        # Add a vertical line at 0 to separate browning and greening
+        plt.axvline(x=0, color='black', linestyle='-', linewidth=1)
+        plt.xlim(-5, 100)
+
+        # Add labels and title
+        plt.xlabel("Percentage")
+        plt.ylabel("Period")
+
 
         plt.show()
-
-
-
-
-
-
-
-
 
 
 class Plot_basemap:
@@ -3270,9 +3309,9 @@ class bivariate_analysis():
 
         # self.xy_map()
         # self.plot_histogram()
-        # self.plot_robinson()
-        # self.plot_greening_sensitivity_rainfall()
-        self.generate_category_map()
+        self.plot_robinson()
+        # self.plot_three_dimension()
+        # self.generate_category_map()
 
 
         pass
@@ -3372,7 +3411,7 @@ class bivariate_analysis():
             fpath = fdir_trend + f
 
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=4, is_discrete=True, colormap_n=4, cmap='RdYlBu_r',)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
 
 
             plt.title(f'{fname}')
@@ -3381,55 +3420,62 @@ class bivariate_analysis():
             plt.savefig(outf)
             plt.close()
 
-    def plot_greening_sensitivity_rainfall(self):
+    def plot_three_dimension(self):
 
         dff=result_root+rf'\3mm\Dataframe\Trend\\Trend.df'
         df=T.load_df(dff)
         # T.print_head_n(df);exit()
+        outer_label_list = ['positive_postive','positive_negative','negative_positive','negative_negative',
+                            'positive_postive','positive_negative','negative_positive','negative_negative']
 
         # Classify greening and browning trends
         df=df[df['LAI4g_1983_2020_trend'] <30]
         df=df[df['LAI4g_1983_2020_trend'] >-30]
         print(len(df))
-        label_list = ['positive_postive','positive_negative','negative_positive','negative_negative',]
+
         df=df[df['LAI4g_1983_2020_p_value']<0.05]
-        print(len(df))
+        # T.print_head_n(df);exit()
+        greening_counts = len(df[df['greening_label']=='greening'])
+        browning_counts = len(df[df['greening_label']=='browning'])
 
+        # Prepare data for pie chart with two layers
+        grouped = df.groupby(["greening_label", "bivariate"]).size()  # Inner layer: greening and browning
+        proportions = grouped.unstack(level=0).fillna(0)  # Fill missing groups with 0
+        proportions["greening proportion"] = proportions['greening'] / greening_counts
+        proportions["browning proportion"] = proportions['browning'] / browning_counts
+        T.print_head_n(proportions)
+        browning_size_list = proportions["browning"].tolist()
+        greening_size_list = proportions["greening"].tolist()
+        size_list = browning_size_list + greening_size_list
+        browning_labels_list = proportions["browning proportion"].tolist()
+        greening_labels_list = proportions["greening proportion"].tolist()
+        labels_list = browning_labels_list + greening_labels_list
+        labels_list = np.array(labels_list) * 100
+        labels_list = np.round(labels_list, 1)
+        outer_colors = ['#e7f4cb','#b7dee3', '#75b1d3', '#2c7bb6', '#d7191c', '#ed6e43','#fdba6e', '#fee8a4',   ][::-1]
 
-    # Sample DataFrame with numeric trend values and bivariate group
-    data = {
-        "trend": [-0.4, 0.1, -0.5, 0.3, -0.2, 0.5, 0.0, -0.1],
-        "bivar_group": [1, 2, 3, 4, 1, 2, 3, 4]
-    }
-    df = pd.DataFrame(data)
+        plt.pie(size_list, labels=labels_list,colors=outer_colors,radius=1.3,
+                wedgeprops=dict(width=0.3, edgecolor='w'),)
+        greening_total_size = proportions["greening"].sum()
+        browning_total_size = proportions["browning"].sum()
+        plt.pie([browning_total_size, greening_total_size],
 
-    # Create a new column 'label' based on the value of 'trend'
-    df["label"] = df["trend"].apply(lambda x: "greening label" if x >= 0 else "browning label")
+                colors=['brown', 'lightgreen'],
+                radius=1,
+                wedgeprops=dict(width=.3, edgecolor='w'))
+        plt.show()
+        exit(99)
+        # print(proportions.columns);exit()
+        # labels_list = proportions['greening_label']
+        # plt.pie(proportions["greening proportion"], labels=, autopct='%1.1f%%')
+        # plt.show()
+        # outer_colors = ['#A3E4D7', '#76D7C4', '#48C9B0', '#1ABC9C', '#F7DC6F', '#F4D03F', '#F1C40F', '#D4AC0D']
 
-    # Create a new column 'category' based on 'trend' and 'bivar_group'
-    df["category"] = df.apply(
-        lambda row: f"{'Greening' if row['trend'] >= 0 else 'Browning'} * {row['bivar_group']}",
-        axis=1
-    )
+        # Inner pie chart data
+        # inner_counts = [greening_counts, browning_counts]
+        # inner_labels = ["Greening", "Browning"]
+        # inner_colors = ['lightgreen', 'brown']
 
-    # Prepare data for pie chart with two layers
-    inner_counts = df["label"].value_counts()  # Inner layer: greening and browning
-    outer_counts = df["category"].value_counts()  # Outer layer: 8 categories
-
-    # Colors for the inner and outer layers
-    colors_inner = ['lightgreen', 'brown']
-    colors_outer = ['#A3E4D7', '#76D7C4', '#48C9B0', '#1ABC9C', '#F7DC6F', '#F4D03F', '#F1C40F', '#D4AC0D']
-
-    # Plot the pie chart with two layers
-    fig, ax = plt.subplots()
-    ax.pie(inner_counts, radius=1, labels=inner_counts.index, colors=colors_inner, autopct='%1.1f%%',
-           wedgeprops=dict(width=0.3, edgecolor='w'))
-
-    ax.pie(outer_counts, radius=1.3, labels=outer_counts.index, colors=colors_outer, autopct='%1.1f%%',
-           wedgeprops=dict(width=0.3, edgecolor='w'))
-
-    plt.title("Nested Pie Chart: Greening & Browning with Bivariate Categories")
-    plt.show()
 
     def generate_category_map(self):
         ##first map is greening map and second map is bivariate map
@@ -3458,14 +3504,22 @@ class bivariate_analysis():
         }
 
         # Apply the mapping to create a new column 'new_category'
-        df["greening_rainfall_sensitivity"] = df.apply(lambda row: category_mapping[(row["greening_label"], row["bivariate"])], axis=1)
+        df["three_dimension"] = df.apply(lambda row: category_mapping[(row["greening_label"], row["bivariate"])], axis=1)
+        T.save_df(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.df')
+        T.df_to_excel(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.xlsx')
 
         # Display the result
         print(df)
-        outf=result_root+rf'\3mm\bivariate_analysis\\three_dimension.tif'
+        outdir=result_root+rf'\3mm\Dataframe\bivariate_analysis\\'
+        outf=outdir+rf'\\three_dimension.tif'
 
-        spatial_dic=T.df_to_spatial_dic(df, 'greening_rainfall_sensitivity')
+        spatial_dic=T.df_to_spatial_dic(df, 'three_dimension')
         DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic,outf)
+        ##save pdf
+        # outf = outdir + rf'\\three_dimension.pdf'
+        # plt.savefig(outf)
+        # plt.close()
+
 
 
         pass
