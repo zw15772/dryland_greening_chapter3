@@ -77,6 +77,8 @@ class greening_analysis():
 
         pass
     def run(self):
+
+        self.greening_products_basemap()
         pass
     def greening_products_basemap(self):
         ## three products 3 time periods comparison
@@ -85,46 +87,111 @@ class greening_analysis():
         import numpy as np
 
         # Create synthetic data (replace with actual data as needed)
-        nrows, ncols = 100, 100
-        data_dict = {
-            'LAI': [np.random.rand(nrows, ncols) for _ in range(3)],
-            'NDVI': [np.random.rand(nrows, ncols) for _ in range(3)],
-            'NIRv': [np.random.rand(nrows, ncols) for _ in range(3)],
-        }
+        fdir=result_root+rf'\3mm\relative_change_growing_season\trend_analysis\\'
 
-        products = ['LAI', 'NDVI', 'NIRv']
-        periods = ['Period 1', 'Period 2', 'Period 3']
+        products = ['LAI4g', 'NDVI', 'NIRv']
+        period_list = ['all','1983_2001', '2002_2020', ]
 
-        fig, axes = plt.subplots(3, 3, figsize=(15, 15))
-        fig.subplots_adjust(hspace=0.3, wspace=0.3)
+        fig, axes = plt.subplots(3, 3, figsize=(12, 9))
+        fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.92, bottom=0.08, left=0.05, right=0.95)
 
         # Loop through products and periods to create subplots
-        for i, product in enumerate(products):
-            for j, period in enumerate(periods):
-                ax = axes[i, j]
-                m = Basemap(projection='cyl', resolution='l', ax=ax)
-                m.drawcoastlines()
-                m.drawcountries()
-                m.drawparallels(np.arange(-90., 91., 30.), labels=[1, 0, 0, 0])
-                m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 1])
 
-                # Get the data for this subplot
-                data = data_dict[product][j]
-                lon = np.linspace(-180, 180, ncols)
-                lat = np.linspace(-90, 90, nrows)
-                lon, lat = np.meshgrid(lon, lat)
+        for period in period_list:
+            for product in products:
+                if period == 'all':
+                    f_trend = fdir + rf'\{product}_trend.tif'
+                    f_p_value = fdir + rf'\{product}_p_value.tif'
+                else:
+                    f_trend=fdir+rf'\{product}_{period}_trend.tif'
+                    f_p_value=fdir+rf'\{product}_{period}_p_value.tif'
+                array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
+                array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
+                array_trend[array_trend<-999]=np.nan
+
+
+                ax = axes[products.index(product), period_list.index(period)]
+
+                m = Basemap(projection='cyl', resolution='l', ax=ax)
+                ##不显示经纬度
+                m.drawcoastlines()
+                # m.drawcountries()
+                # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
+                # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
 
                 # Plot the data using pcolormesh
-                im = m.pcolormesh(lon, lat, data, shading='auto', cmap='viridis')
+                arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
 
-                # Add title and colorbar
+                # arr_trend = array_trend[:60]
+
+                lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
+                lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
+                lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+                ## create the basemap instance
+
+                m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
+                            resolution='i', ax=ax)
+                m.drawcoastlines(linewidth=0.1,color='grey',zorder=0)
+                # m.drawcountries()
+                # Plot the data using pcolormesh
+                ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap='RdBu', vmin=-0.3, vmax=0.3)
+                # plt.show()
+
+                # Set title
                 ax.set_title(f'{product} - {period}')
-                cbar = m.colorbar(im, location='right', pad='5%')
+        cbar = fig.colorbar(ret, ax=axes, orientation='horizontal', fraction=0.05, pad=0.08)
+        cbar.set_label('Trend Value')
 
-        plt.suptitle('3x3 Subplot of LAI, NDVI, and NIRv for Three Periods')
         plt.show()
 
-        pass
+    def plot_spatial_histgram_period(self):
+        from scipy.stats import gaussian_kde
+        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
+        df=T.load_df(dff)
+        df = self.df_clean(df)
+        ##plt histogram of LAI
+        df=df[df['LAI4g_1983_2020_trend']<30]
+        df=df[df['LAI4g_1983_2020_trend']>-30]
+        first_period=df['LAI4g_1983_2001_trend'].values
+        first_period_vals=np.array(first_period)
+        first_period_vals[first_period_vals<-99]=np.nan
+        first_period_vals[first_period_vals > 99] = np.nan
+        first_period_vals=first_period_vals[~np.isnan(first_period_vals)]
+
+        second_period=df['LAI4g_2002_2020_trend'].values
+        second_period_vals=np.array(second_period)
+        second_period_vals[second_period_vals<-99]=np.nan
+        second_period_vals[second_period_vals > 99] = np.nan
+        second_period_vals = second_period_vals[~np.isnan(second_period_vals)]
+
+
+        # ax, fig = plt.subplots(1, 1,figsize=(6 * centimeter_factor, 4 * centimeter_factor))
+        # plt.plot(density_1982_1998, color='red', label='1983–2001',  linewidth=2)
+        # plt.plot(density_1999_2015, color='green', label='2002–2020',  linewidth=2)
+        # x1, y1 = Plot().plot_hist_smooth(first_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
+        # x2, y2 = Plot().plot_hist_smooth(second_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
+        first_period_vals_df = pd.DataFrame()
+        second_period_vals_df = pd.DataFrame()
+        first_period_vals_df['x'] = first_period_vals
+        second_period_vals_df['x'] = second_period_vals
+        first_period_vals_df['weight'] = np.ones_like(first_period_vals) / len(first_period_vals)
+        second_period_vals_df['weight'] = np.ones_like(second_period_vals) / len(second_period_vals)
+        sns.kdeplot(data=first_period_vals_df, x='x', weights=first_period_vals_df.weight, shade=True, color='red', label='1983–2001')
+        sns.kdeplot(data=second_period_vals_df, x='x', weights=second_period_vals_df.weight, shade=True, color='green', label='2002–2020')
+        # plt.plot(x1, y1, color='red', label='1983–2001', linewidth=2)
+        # plt.plot(x2, y2, color='green', label='2002–2020', linewidth=2)
+
+        plt.xlabel('LAI trend ( %/year)')
+        plt.ylabel('Probability')
+        plt.legend()
+        # plt.grid(True, linestyle='--', alpha=0.5)
+        plt.xlim(-1., 1.)
+        outdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend_plot\\'
+        outf = join(outdir, 'LAI_trend_2_periods_hist.pdf')
+        plt.savefig(outf)
+        plt.close()
+        T.open_path_and_file(outdir)
+
 
 class Rainfall_product_comparison():
     pass
@@ -136,21 +203,7 @@ class TRENDY_CV():
     pass
 
 def main():
-    # Data_processing_2().run()
-    # Phenology().run()
-    # build_dataframe().run()
-    # build_moving_window_dataframe().run()
-    # CO2_processing().run()
-    # greening_analysis().run()
-    # TRENDY_trend().run()
-    # TRENDY_CV().run()
-    # multi_regression_window().run()
-    # bivariate_analysis().run()
-
-    # visualize_SHAP().run()
-    # PLOT_dataframe().run()
-    # Plot_Robinson().robinson_template()
-    plt.show()
+    greening_analysis().run()
 
 
 

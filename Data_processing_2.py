@@ -4612,9 +4612,9 @@ class TRENDY_trend:
         # self.extract_phenology_LAI_mean()
         # self.relative_change()
         # self.weighted_average_LAI()
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.plt_basemap()
-        self.plot_bar_trend()
+        # self.plot_bar_trend()
 
         pass
 
@@ -5247,16 +5247,18 @@ class TRENDY_trend:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
         fdir = data_root + rf'TRENDY\S2\extract_phenology_LAI_mean\\'
-        outdir=result_root+rf'3mm\relative_change_growing_season\\TRENDY\\'
+        outdir=result_root+rf'3mm\relative_change_growing_season\\'
 
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-
-            outf=outdir+f
+            if not f.split('.')[0] in ['NIRv','NDVI']:
+                continue
+            outf = outdir + f.split('.')[0] + f'_2002_2020.npy'
 
             print(outf)
-            # exit()
+
+
 
             dic = T.load_npy(fdir+f)
             zscore_dic = {}
@@ -5269,6 +5271,10 @@ class TRENDY_trend:
                 # print(len(dic[pix]))
                 time_series = dic[pix]['growing_season']
                 # print(len(time_series))
+                time_series=time_series[19:]
+
+
+                # exit()
 
                 time_series = np.array(time_series)
                 # time_series[time_series < -999] = np.nan
@@ -5364,11 +5370,13 @@ class TRENDY_trend:
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'3mm\relative_change_growing_season\TRENDY\\'
-        outdir = result_root+rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\'
+        fdir = result_root+rf'3mm\relative_change_growing_season\\'
+        outdir = result_root+rf'\3mm\relative_change_growing_season\\trend_analysis2\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'NIRv_2002_2020' in f:
+                continue
 
 
             outf = outdir + f.split('.')[0]
@@ -6085,7 +6093,7 @@ def main():
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
-    # TRENDY_trend().run()
+    TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
