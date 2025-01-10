@@ -561,9 +561,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\Trend\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'Trend.df'
+        self.dff = self.this_class_arr + 'moving_window_CV.df'
 
         pass
 
@@ -600,14 +600,14 @@ class build_dataframe():
         # df=self.add_row(df)
         # # df=self.add_continent_to_df(df)
         # df=self.add_lat_lon_to_df(df)
-        # # df=self.add_soil_texture_to_df(df)
+        df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
         # #
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         df=self.show_field(df)
 
@@ -1146,7 +1146,7 @@ class build_dataframe():
             array = np.array(array, dtype=float)
             val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
             fname=f.split('.')[0]
-            # print(fname)
+            print(fname)
             # exit()
             val_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -6089,11 +6089,11 @@ class TRENDY_CV:
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
-    TRENDY_trend().run()
+    # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
@@ -6101,7 +6101,7 @@ def main():
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
-    plt.show()
+
 
 
 

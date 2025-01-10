@@ -83,10 +83,14 @@ class data_processing():
         # self.download_ERA_precip()
         # self.download_CCI_ozone()
 
-        # # self.nc_to_tif_soil_texture()
-        # self.resample_soil_texture()
+        # self.nc_to_tif_soil_texture()
+        self.resample_soil_texture()
+        # self.resample_majority_ly()
+        # self.resample_majority_gdal()
 
-        self.nc_to_tif_NIRv()
+
+
+        # self.nc_to_tif_NIRv()
         # self.nc_to_tif_Terraclimate()
         # self.nc_to_tif_TRMM()
         # self.nc_to_tif_LUCC()
@@ -272,11 +276,11 @@ class data_processing():
 
         pass
     def nc_to_tif_soil_texture(self):  ## no time series
-        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\T_CLAY.nc4"  # 替换为你的 .nc 文件路径
-        variable_name = "T_CLAY"  # 替换为你需要转换的变量名
+        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\S_CEC_CLAY.nc4"  # 替换为你的 .nc 文件路径
+        variable_name = "S_CEC_CLAY"  # 替换为你需要转换的变量名
         outdir=rf"E:\Project3\Data\Base_data\HWSD\\tif\\"
         T.mk_dir(outdir,force=True)
-        output_tif = outdir + rf"\\T_CLAY.tif"  # 替换为输出 .tif 文件路径
+        output_tif = outdir + rf"\\S_CEC_CLAY.tif"  # 替换为输出 .tif 文件路径
         nc = Dataset(nc_file, 'r')
         #
         # print(nc)
@@ -298,6 +302,8 @@ class data_processing():
         for f in os.listdir(fdir):
             if not  f.endswith('.tif'):
                 continue
+            if not 'S_CEC_CLAY' in f:
+                continue
 
             date = f.split('.')[0]
 
@@ -316,6 +322,53 @@ class data_processing():
             except Exception as e:
                 pass
             pass
+
+    def resample_majority_gdal(self):
+        fdir = rf'E:\Project3\Data\Base_data\HWSD\tif\025\\'
+        outdir = rf'E:\Project3\Data\Base_data\HWSD\tif\\05\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            if not 'AWC_CLASS' in f:
+                continue
+
+            date = f.split('.')[0]
+
+            dataset = gdal.Open(fdir + f)
+            # print(dataset.GetGeoTransform())
+            original_x = dataset.GetGeoTransform()[1]
+            original_y = dataset.GetGeoTransform()[5]
+
+            # band = dataset.GetRasterBand(1)
+            # newRows = dataset.YSize * 2
+            # newCols = dataset.XSize * 2
+            try:
+                gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326',
+                          resampleAlg='mode')
+            # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
+            # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
+            except Exception as e:
+                pass
+            pass
+    def resample_majority_ly(self):  ##
+        fdir = rf'E:\Project3\Data\Base_data\HWSD\tif\025\\'
+        outdir = rf'E:\Project3\Data\Base_data\HWSD\tif\\05\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            if not 'AWC_CLASS' in f:
+                continue
+
+
+            infile = fdir + f
+            outfile = outdir + f+'_2.tif'
+            resample_majority(infile, outfile,0.5)
+
+
+
+
     def nc_to_tif_time_series(self):
 
         # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
@@ -15102,7 +15155,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()

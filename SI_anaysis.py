@@ -78,7 +78,8 @@ class greening_analysis():
         pass
     def run(self):
 
-        self.greening_products_basemap()
+        # self.greening_products_basemap()
+        self.plot_spatial_histgram_period()
         pass
     def greening_products_basemap(self):
         ## three products 3 time periods comparison
@@ -138,7 +139,7 @@ class greening_analysis():
                 # plt.show()
 
                 # Set title
-                ax.set_title(f'{product} - {period}')
+                # ax.set_title(f'{product} - {period}')
         cbar = fig.colorbar(ret, ax=axes, orientation='horizontal', fraction=0.05, pad=0.08)
         cbar.set_label('Trend Value')
 
@@ -149,48 +150,60 @@ class greening_analysis():
         dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
         df=T.load_df(dff)
         df = self.df_clean(df)
+        period_list=['1983_2001','2002_2020']
+        print(df.columns)
         ##plt histogram of LAI
         df=df[df['LAI4g_1983_2020_trend']<30]
         df=df[df['LAI4g_1983_2020_trend']>-30]
-        first_period=df['LAI4g_1983_2001_trend'].values
-        first_period_vals=np.array(first_period)
-        first_period_vals[first_period_vals<-99]=np.nan
-        first_period_vals[first_period_vals > 99] = np.nan
-        first_period_vals=first_period_vals[~np.isnan(first_period_vals)]
+        product_list=['LAI4g','NDVI','NIRv']
+        result_dict={}
 
-        second_period=df['LAI4g_2002_2020_trend'].values
-        second_period_vals=np.array(second_period)
-        second_period_vals[second_period_vals<-99]=np.nan
-        second_period_vals[second_period_vals > 99] = np.nan
-        second_period_vals = second_period_vals[~np.isnan(second_period_vals)]
+        for period in period_list:
+            product_dict={}
 
+            for product in product_list:
+                value=df[f'{product}_{period}_trend'].values
+                value=np.array(value)
+                value[value<-99]=np.nan
+                value[value > 99] = np.nan
+                value = value[~np.isnan(value)]
 
-        # ax, fig = plt.subplots(1, 1,figsize=(6 * centimeter_factor, 4 * centimeter_factor))
-        # plt.plot(density_1982_1998, color='red', label='1983–2001',  linewidth=2)
-        # plt.plot(density_1999_2015, color='green', label='2002–2020',  linewidth=2)
-        # x1, y1 = Plot().plot_hist_smooth(first_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
-        # x2, y2 = Plot().plot_hist_smooth(second_period_vals,bins=20,alpha=0,range=(-1.5,1.5))
-        first_period_vals_df = pd.DataFrame()
-        second_period_vals_df = pd.DataFrame()
-        first_period_vals_df['x'] = first_period_vals
-        second_period_vals_df['x'] = second_period_vals
-        first_period_vals_df['weight'] = np.ones_like(first_period_vals) / len(first_period_vals)
-        second_period_vals_df['weight'] = np.ones_like(second_period_vals) / len(second_period_vals)
-        sns.kdeplot(data=first_period_vals_df, x='x', weights=first_period_vals_df.weight, shade=True, color='red', label='1983–2001')
-        sns.kdeplot(data=second_period_vals_df, x='x', weights=second_period_vals_df.weight, shade=True, color='green', label='2002–2020')
-        # plt.plot(x1, y1, color='red', label='1983–2001', linewidth=2)
-        # plt.plot(x2, y2, color='green', label='2002–2020', linewidth=2)
+                product_dict[product]=value
+            result_dict[period]=product_dict
 
-        plt.xlabel('LAI trend ( %/year)')
-        plt.ylabel('Probability')
-        plt.legend()
-        # plt.grid(True, linestyle='--', alpha=0.5)
-        plt.xlim(-1., 1.)
-        outdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend_plot\\'
-        outf = join(outdir, 'LAI_trend_2_periods_hist.pdf')
-        plt.savefig(outf)
-        plt.close()
-        T.open_path_and_file(outdir)
+        fig, axes = plt.subplots(1, 3, figsize=(9, 3))
+        for ax, product in zip(axes, product_list):
+            color_list = ['red', 'green', ]
+            flag = 0
+            for period in period_list:
+
+                value = result_dict[period][product]
+                value = np.array(value)
+                value = value[~np.isnan(value)]
+                sns.kdeplot(data=value, shade=True, color=color_list[flag], label=period,ax=ax,legend=True)
+                ax.set_xlim(-1.5,1.5)
+                ax.set_ylabel('')
+                ax.set_yticks([])
+                ax.set_title(product)
+                flag+=1
+
+            #
+
+        plt.show()  #
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
 
 
 class Rainfall_product_comparison():
