@@ -2328,7 +2328,7 @@ class greening_analysis():
         # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
@@ -2551,13 +2551,12 @@ class greening_analysis():
 
     def annual_growth_rate(self):
         ## input raw data becuase time2-time1
-        fdir=result_root + rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
-        outdir=result_root + rf'annual_growth_rate\\'
+        fdir=data_root + rf'\TRENDY\S2\extract_phenology_LAI_mean\\'
+        outdir=result_root + rf'\3mm\annual_growth_rate\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if 'detrend' in f:
+            if not 'NIRv' in f:
                 continue
-
             dict=np.load(fdir+f,allow_pickle=True).item()
             growth_rate_dic={}
             for pix in tqdm(dict):
@@ -2584,13 +2583,12 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        outdir = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\\\trend_analysis_non_growing_season\\'
+        fdir = result_root+rf'\3mm\annual_growth_rate\\'
+        outdir = result_root + rf'3mm\annual_growth_rate\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'sum_rainfall' in f:
-                continue
+
             if 'detrend' in f:
                 continue
 
@@ -2619,7 +2617,7 @@ class greening_analysis():
                 if dic_modis_mask[pix]==12:
                     continue
 
-                time_series=dic[pix]['non_growing_season']
+                time_series=dic[pix]
                 # print(time_series)
 
 
@@ -6089,10 +6087,10 @@ class TRENDY_CV:
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
