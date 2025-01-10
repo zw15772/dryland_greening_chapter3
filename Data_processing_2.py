@@ -561,9 +561,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\Trend\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_CV.df'
+        self.dff = self.this_class_arr + 'Trend.df'
 
         pass
 
@@ -588,7 +588,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
         # df=self.add_AI_classfication(df)
@@ -600,7 +600,7 @@ class build_dataframe():
         # df=self.add_row(df)
         # # df=self.add_continent_to_df(df)
         # df=self.add_lat_lon_to_df(df)
-        df=self.add_soil_texture_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
         # #
@@ -1414,11 +1414,11 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'D:\Project3\Result\extract_window\extract_detrend_original_window_CV\\'
+        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\trend_ecosystem_year\\'
         for f in os.listdir(fdir):
             # print(f)
             # exit()
-            if not 'LAI4g_CV' in f:
+            if not 'sum_rainfall_trend' in f:
                 continue
 
 
@@ -1453,6 +1453,8 @@ class build_dataframe():
                     val_list.append(np.nan)
                     continue
                 val_list.append(val)
+
+
             df[f'{f_name}'] = val_list
 
 
@@ -2328,7 +2330,7 @@ class greening_analysis():
         # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.heatmap()
         # self.heatmap()
         # self.testrobinson()
@@ -3330,8 +3332,10 @@ class bivariate_analysis():
         # self.plot_histogram()
         # self.plot_robinson()
 
-        # self.generate_category_map()
-        self.plot_three_dimension()
+        # self.generate_three_dimension_sensitivity_rainfall_greening() ##rainfall_trend +sensitivity+ greening
+        # self.generate_three_dimension_growth_rate_greening_rainfall()
+        self.plot_three_dimension_pie2()
+
 
 
         pass
@@ -3440,7 +3444,146 @@ class bivariate_analysis():
             plt.savefig(outf)
             plt.close()
 
-    def plot_three_dimension(self):
+
+
+    def generate_three_dimension_sensitivity_rainfall_greening(self):
+        ##rainfall_trend +sensitivity+ greening
+        dff=result_root+rf'\3mm\Dataframe\Trend\\Trend.df'
+
+        df=T.load_df(dff)
+        df = pd.DataFrame(df)
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['bivariate']>0]
+        df=df[df['LAI4g_1983_2020_p_value']<0.05]
+
+
+        # Create a new column 'label' with the values 'greening' or 'browning' based on the 'trend' column
+        df["greening_label"] = df["LAI4g_1983_2020_trend"].apply(lambda x: "greening" if x >= 0 else "browning")
+
+        category_mapping = {
+            ("greening", 1): 1,
+            ("greening", 2): 2,
+            ("greening", 3): 3,
+            ("greening", 4): 4,
+            ("browning", 1): 5,
+            ("browning", 2): 6,
+            ("browning", 3): 7,
+            ("browning", 4): 8,
+        }
+
+        # Apply the mapping to create a new column 'new_category'
+        df["three_dimension"] = df.apply(lambda row: category_mapping[(row["greening_label"], row["bivariate"])], axis=1)
+        T.save_df(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.df')
+        T.df_to_excel(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.xlsx')
+
+        # Display the result
+        print(df)
+        outdir=result_root+rf'\3mm\Dataframe\bivariate_analysis\\'
+        outf=outdir+rf'\\three_dimension.tif'
+
+        spatial_dic=T.df_to_spatial_dic(df, 'three_dimension')
+        DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic,outf)
+        ##save pdf
+        # outf = outdir + rf'\\three_dimension.pdf'
+        # plt.savefig(outf)
+        # plt.close()
+
+    def generate_three_dimension_growth_rate_greening_rainfall(self):
+        ##first map is greening map vs growth rate vs rainfall
+        dff=result_root+rf'\3mm\Dataframe\Trend\\Trend.df'
+
+        df=T.load_df(dff)
+        df = pd.DataFrame(df)
+        T.print_head_n(df)
+        # exit()
+        df=df[df['greening_growth_rate_LAI4g']>0]
+        df=df[df['LAI4g_1983_2020_p_value']<0.05]
+
+        # Create a new column 'label' with the values 'greening' or 'browning' based on the 'trend' column
+        df["sum_rainfall_trend_label"] = df["sum_rainfall_trend"].apply(lambda x: "wetting" if x >= 0 else "drying")
+
+        category_mapping = {
+            ("wetting", 1): 1,
+            ("wetting", 2): 2,
+            ("wetting", 3): 3,
+            ("wetting", 4): 4,
+            ("drying", 1): 5,
+            ("drying", 2): 6,
+            ("drying", 3): 7,
+            ("drying", 4): 8,
+        }
+
+        # Apply the mapping to create a new column 'new_category'
+        df["growth_rate_rainfall_greening"] = df.apply(lambda row: category_mapping[(row["sum_rainfall_trend_label"], row["greening_growth_rate_LAI4g"])], axis=1)
+        T.save_df(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.df')
+        T.df_to_excel(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.xlsx')
+
+        # Display the result
+        print(df)
+        outdir=result_root+rf'\3mm\bivariate_analysis\\'
+        outf=outdir+rf'\\growth_rate_rainfall_greening.tif'
+        print(outf)
+
+        spatial_dic=T.df_to_spatial_dic(df, 'growth_rate_rainfall_greening')
+        arr=DIC_and_TIF(pixelsize=.5).pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr)
+        plt.colorbar()
+        plt.show()
+        DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic,outf)
+        ### label list=[1,2,3,4,5,6,7,8]
+        ## dic_label = {1: 'wetting_greening_accelerate', 2: 'wetting_greening_slowdown', 3: 'wetting_browning_accelerate', 4: 'wetting_browning_slowdown',
+        # 5: 'drying_greening_accelerate', 6: 'drying_greening_slowdown', 7: 'drying_browning_accelerate', 8: 'drying_browning_slowdown'}
+
+
+        ##save pdf
+        # outf = outdir + rf'\\three_dimension.pdf'
+        # plt.savefig(outf)
+        # plt.close()
+
+
+    def generate_bivarite_map(self):  ##
+
+        import xymap
+        tif_growth_rate = result_root + rf'\3mm\annual_growth_rate\trend_analysis\\NIRv_trend.tif'
+        tif_greening= result_root + rf'\3mm\relative_change_growing_season\trend_analysis\\NIRv_trend.tif'
+        # print(isfile(tif_CRU_trend))
+        # print(isfile(tif_CRU_CV))
+        # exit()
+        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
+        T.mk_dir(outdir, force=True)
+        outtif = outdir + rf'\\greening_growth_rate_NIRv.tif'
+        T.mk_dir(result_root + rf'bivariate_analysis\\')
+        tif1 = tif_greening
+        tif2 = tif_growth_rate
+
+        dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
+        dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
+        dics = {'greening_trend': dic1,
+                'growth_rate': dic2}
+        df = T.spatial_dics_to_df(dics)
+        # print(df)
+        df['is_greening'] = df['greening_trend'] > 0
+        df['is_growth_rate'] = df['growth_rate'] > 0
+        print(df)
+        label_list = []
+        for i, row in df.iterrows():
+            if row['is_greening'] and row['is_growth_rate']:
+                label_list.append(1)
+            elif row['is_greening'] and not row['is_growth_rate']:
+                label_list.append(2)
+            elif not row['is_greening'] and row['is_growth_rate']:
+                label_list.append(3)
+            else:
+                label_list.append(4)
+
+        df['label'] = label_list
+        result_dic = T.df_to_spatial_dic(df, 'label')
+        DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
+
+    pass
+
+    def plot_three_dimension_pie(self):  ## plot greening rainfall sensitivity and rainfall trend
 
         dff=result_root+rf'\3mm\Dataframe\Trend\\Trend.df'
         df=T.load_df(dff)
@@ -3496,53 +3639,45 @@ class bivariate_analysis():
         # inner_labels = ["Greening", "Browning"]
         # inner_colors = ['lightgreen', 'brown']
 
+    def plot_three_dimension_pie2(self):  ## plot greening rainfall growthrate
 
-    def generate_category_map(self):
-        ##first map is greening map and second map is bivariate map
         dff=result_root+rf'\3mm\Dataframe\Trend\\Trend.df'
-
         df=T.load_df(dff)
-        df = pd.DataFrame(df)
-        # T.print_head_n(df)
-        # exit()
-        df=df[df['bivariate']>0]
+        # T.print_head_n(df);exit()
+        outer_label_list = ['wetting_greening_accelerate','wetting_greening_slowdown','wetting_browning_accelerate','wetting_browning_slowdown',
+        'drying_greening_accelerate','drying_greening_slowdown','drying_browning_accelerate','drying_browning_slowdown']
+
+        # Classify greening and browning trends
+        df=df[df['LAI4g_1983_2020_trend'] <30]
+        df=df[df['LAI4g_1983_2020_trend'] >-30]
+        print(len(df))
+
         df=df[df['LAI4g_1983_2020_p_value']<0.05]
+        # T.print_head_n(df);exit()
+        vals=df['growth_rate_rainfall_greening'].values
+        vals=np.array(vals)
+        # vals[vals<-99]=np.nan
+        # vals[vals>99]=np.nan
+        vals=vals[~np.isnan(vals)]
 
+        dic_label = {1: 'wetting_greening_accelerate', 2: 'wetting_greening_slowdown', 3: 'wetting_browning_accelerate', 4: 'wetting_browning_slowdown',
+        5: 'drying_greening_accelerate', 6: 'drying_greening_slowdown', 7: 'drying_browning_accelerate', 8: 'drying_browning_slowdown'}
+        val_list=[]
+        for i in range(1,9):
+            # dic_label[i]=dic_label[i]+'_'+str(len(vals[vals==i]))
+            count = len(vals[vals==i])
+            val_list.append(count)
 
-        # Create a new column 'label' with the values 'greening' or 'browning' based on the 'trend' column
-        df["greening_label"] = df["LAI4g_1983_2020_trend"].apply(lambda x: "greening" if x >= 0 else "browning")
-
-        category_mapping = {
-            ("greening", 1): 1,
-            ("greening", 2): 2,
-            ("greening", 3): 3,
-            ("greening", 4): 4,
-            ("browning", 1): 5,
-            ("browning", 2): 6,
-            ("browning", 3): 7,
-            ("browning", 4): 8,
-        }
-
-        # Apply the mapping to create a new column 'new_category'
-        df["three_dimension"] = df.apply(lambda row: category_mapping[(row["greening_label"], row["bivariate"])], axis=1)
-        T.save_df(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.df')
-        T.df_to_excel(df, result_root+rf'\3mm\Dataframe\Trend\\Trend.xlsx')
-
-        # Display the result
-        print(df)
-        outdir=result_root+rf'\3mm\Dataframe\bivariate_analysis\\'
-        outf=outdir+rf'\\three_dimension.tif'
-
-        spatial_dic=T.df_to_spatial_dic(df, 'three_dimension')
-        DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic,outf)
-        ##save pdf
-        # outf = outdir + rf'\\three_dimension.pdf'
-        # plt.savefig(outf)
-        # plt.close()
+        print(val_list)
+        plt.pie(val_list,labels = outer_label_list,autopct='%1.1f%%')
+        plt.show()
 
 
 
-        pass
+
+        ## count each group
+
+
 
 
 
@@ -6090,11 +6225,11 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
 
     # visualize_SHAP().run()
     # PLOT_dataframe().run()

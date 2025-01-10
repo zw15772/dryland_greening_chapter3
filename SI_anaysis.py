@@ -82,6 +82,7 @@ class greening_analysis():
 
 
         # self.greening_products_basemap_whole_time()
+        # self.greening_products_basemap_two_time_periods()
         self.plot_spatial_histgram_period()
         pass
     def greening_products_basemap_whole_time(self):
@@ -158,15 +159,16 @@ class greening_analysis():
         fdir=result_root+rf'\3mm\relative_change_growing_season\trend_analysis\\'
 
         products = ['LAI4g', 'NDVI', 'NIRv']
-        period_list = ['all' ]
+        period_list = ['1983_2001', '2002_2020' ,'all']
 
-        fig, axes = plt.subplots(1, 3, figsize=(12, 9))
+        fig, axes = plt.subplots(3, 3, figsize=(12, 9))
         fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.92, bottom=0.08, left=0.05, right=0.95)
 
         # Loop through products and periods to create subplots
 
-        for period in period_list:
+        for i, period in enumerate(period_list):
             for product in products:
+                ax=axes[i][products.index(product)]
                 if period == 'all':
                     f_trend = fdir + rf'\{product}_trend.tif'
                     f_p_value = fdir + rf'\{product}_p_value.tif'
@@ -178,7 +180,7 @@ class greening_analysis():
                 array_trend[array_trend<-999]=np.nan
 
 
-                ax = axes[products.index(product), period_list.index(period)]
+
 
                 m = Basemap(projection='cyl', resolution='l', ax=ax)
                 ##不显示经纬度
@@ -218,8 +220,8 @@ class greening_analysis():
         dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
         df=T.load_df(dff)
         df = self.df_clean(df)
-        # period_list=['1983_2001','2002_2020']
-        period_list = ['1983_2020', ]
+        period_list=['1983_2001','2002_2020']
+        # period_list = ['1983_2020', ]
         print(df.columns)
         ##plt histogram of LAI
         df=df[df['LAI4g_1983_2020_trend']<30]
@@ -242,7 +244,7 @@ class greening_analysis():
 
         fig, axes = plt.subplots(1, 3, figsize=(9, 3))
         for ax, product in zip(axes, product_list):
-            color_list = [ 'green', ]
+            color_list = [  'red', 'green',]
             flag = 0
             for period in period_list:
 
@@ -259,7 +261,8 @@ class greening_analysis():
                 flag+=1
 
 
-            #
+        plt.legend()
+
 
         plt.show()  #
 
