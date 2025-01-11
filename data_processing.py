@@ -84,7 +84,7 @@ class data_processing():
         # self.download_CCI_ozone()
 
         # self.nc_to_tif_soil_texture()
-        self.resample_soil_texture()
+        # self.resample_soil_texture()
         # self.resample_majority_ly()
         # self.resample_majority_gdal()
 
@@ -110,7 +110,7 @@ class data_processing():
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        # self.tif_to_dic()
+        self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -971,89 +971,83 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'E:\Project3\Data\CRU_monthly\\'
+        fdir_all = rf'E:\Project3\Data\LAI4g\\'
 
         year_list = list(range(1982, 2021))
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            for fdir_ii in os.listdir(fdir_all+fdir):
-                if not 'dryland' in fdir_ii:
+            if not 'scale' in fdir:
+                continue
+            outdir=rf'E:\Project3\Data\LAI4g\dic_global\\'
+
+            T.mk_dir(outdir, force=True)
+            all_array = []  #### so important  it should be go with T.mk_dic
+
+            for f in os.listdir(fdir_all+fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if int(f.split('.')[0][0:4]) not in year_list:
                     continue
 
-
-                outdir=rf'E:\Project3\Data\CRU_monthly\\\\{fdir}\\dic\\'
-                # if os.path.isdir(outdir):
-                    #     pass
-
-                T.mk_dir(outdir, force=True)
-                all_array = []  #### so important  it should be go with T.mk_dic
-
-                for f in os.listdir(fdir_all+fdir+'\\'+fdir_ii):
-                    if not f.endswith('.tif'):
-                        continue
-                    if int(f.split('.')[0][0:4]) not in year_list:
-                        continue
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir, f))
+                array = np.array(array, dtype=float)
 
 
-                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir,fdir_ii, f))
-                    array = np.array(array, dtype=float)
+                # array_unify = array[:720][:720,
+                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+                array_unify = array[:360][:360,
+                              :720]
+                array_unify[array_unify < -999] = np.nan
+                array_unify[array_unify > 7] = np.nan
+                # array[array ==0] = np.nan
 
+                # array_unify[array_unify < 0] = np.nan
 
-                    # array_unify = array[:720][:720,
-                    #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
-                    array_unify = array[:360][:360,
-                                  :720]
-                    array_unify[array_unify < -999] = np.nan
-                    # array_unify[array_unify > 7] = np.nan
-                    # array[array ==0] = np.nan
+                #
+                #
+                # plt.imshow(array_unify)
+                # plt.show()
+                # array_mask = np.array(array_mask, dtype=float)
+                # plt.imshow(array_mask)
+                # plt.show()
 
-                    # array_unify[array_unify < 0] = np.nan
+                array_dryland = array_unify
+                # plt.imshow(array_dryland)
+                # plt.show()
 
-                    #
-                    #
-                    # plt.imshow(array_unify)
-                    # plt.show()
-                    # array_mask = np.array(array_mask, dtype=float)
-                    # plt.imshow(array_mask)
-                    # plt.show()
+                all_array.append(array_dryland)
 
-                    array_dryland = array_unify
-                    # plt.imshow(array_dryland)
-                    # plt.show()
+            row = len(all_array[0])
+            col = len(all_array[0][0])
+            key_list = []
+            dic = {}
 
-                    all_array.append(array_dryland)
+            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+                for c in range(col):
+                    dic[(r, c)] = []
+                    key_list.append((r, c))
+            # print(dic_key_list)
 
-                row = len(all_array[0])
-                col = len(all_array[0][0])
-                key_list = []
-                dic = {}
-
-                for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
-                    for c in range(col):
-                        dic[(r, c)] = []
-                        key_list.append((r, c))
-                # print(dic_key_list)
-
-                for r in tqdm(range(row), desc='构造time series'):  # 构造time series
-                    for c in range(col):
-                        for arr in all_array:
-                            value = arr[r][c]
-                            dic[(r, c)].append(value)
-                        # print(dic)
-                time_series = []
-                flag = 0
-                temp_dic = {}
-                for key in tqdm(key_list, desc='output...'):  # 存数据
-                    flag = flag + 1
-                    time_series = dic[key]
-                    time_series = np.array(time_series)
-                    temp_dic[key] = time_series
-                    if flag % 10000 == 0:
-                        # print(flag)
-                        np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
-                        temp_dic = {}
-                np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
+            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+                for c in range(col):
+                    for arr in all_array:
+                        value = arr[r][c]
+                        dic[(r, c)].append(value)
+                    # print(dic)
+            time_series = []
+            flag = 0
+            temp_dic = {}
+            for key in tqdm(key_list, desc='output...'):  # 存数据
+                flag = flag + 1
+                time_series = dic[key]
+                time_series = np.array(time_series)
+                temp_dic[key] = time_series
+                if flag % 10000 == 0:
+                    # print(flag)
+                    np.save(outdir + 'per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                    temp_dic = {}
+            np.save(outdir + 'per_pix_dic_%03d' % 0, temp_dic)
 
 
 
@@ -13518,13 +13512,14 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\TRENDY\\'
+        fdir = rf'E:\Project3\Data\LAI4g\phenology_average\\'
         for f in os.listdir(fdir):
-            if not 'LPJ-GUESS' in f:
+            if not 'global' in f:
                 continue
 
 
-            # dic=T.load_npy(fdir)
+
+            # dic=T.load_npy_dir(fdir)
             dic=T.load_npy(fdir+f)
 
                 # for f in os.listdir(fdir):
@@ -13578,19 +13573,19 @@ class check_data():
                 # plt.show()
 
 
-                # len_dic[pix]=np.nanmean(vals)
+                len_dic[pix]=np.nanmean(vals)
                 # len_dic[pix]=np.nanstd(vals)
                 vals=np.array(vals)
 
                 # vals=vals[~np.isnan(vals)]
 
-                len_dic[pix] = len(vals)
+                # len_dic[pix] = len(vals)
 
             arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
 
             plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=38)
             plt.colorbar()
-            plt.title(f)
+            # plt.title(f)
             plt.show()
     def testrobinson(self):
         fdir=rf'D:\Project3\Result\multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\100mm_unit\\'
@@ -15155,7 +15150,7 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()

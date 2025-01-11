@@ -89,7 +89,7 @@ class Phenology:
         pass
 
     def phenology_average(self):
-        fdir_all = rf'D:\Project3\Data\LAI4g\biweekly_dic\\'
+        fdir_all = rf'E:\Project3\Data\LAI4g\dic_global\\'
         spatial_dic=T.load_npy_dir(fdir_all)
         result_dic={}
 
@@ -116,27 +116,27 @@ class Phenology:
             # plt.ylabel('LAI4g (m2/m2)')
             #
             # plt.show()
-        outdir=rf'D:\Project3\Data\LAI4g\phenology_average\\'
+        outdir=rf'E:\Project3\Data\LAI4g\\phenology_average\\'
 
         Tools().mk_dir(outdir, force=True)
 
-        np.save(outdir+'phenology_average.npy', result_dic)
+        np.save(outdir+'phenology_average_global.npy', result_dic)
 
 #*****************************************
 # COMPUTE ONSET/OFFSET
 #*****************************************
 
     def GST(self):
-        fdir = rf'D:\Project3\Data\LAI4g\phenology_average\\'
-        outdir = rf'D:\Project3\Data\LAI4g\GST\\'
+        fdir = rf'E:\Project3\Data\LAI4g\phenology_average\\phenology_average_dryland.npy'
+        outdir = rf'E:\Project3\Data\LAI4g\4GST_test\\'
         T.mk_dir(outdir, force=True)
-        spatial_dic = T.load_npy_dir(fdir)
+        spatial_dic = T.load_npy(fdir)
         spatial_dic_result = {}
         for pix in tqdm(spatial_dic):
             r,c=pix
 
-            if r<120:
-                continue
+            # if r<120:
+            #     continue
             LAI = spatial_dic[pix]
             if T.is_all_nan(LAI):
                 continue
@@ -155,9 +155,9 @@ class Phenology:
 
             spatial_dic_result[pix] = result_dict_i
 
-        np.save(join(outdir, '4GST.npy'), spatial_dic_result)
+        np.save(join(outdir, '4GST_global.npy'), spatial_dic_result)
         df_result = T.dic_to_df(spatial_dic_result,'pix')
-        outf = join(outdir, '4GST.df')
+        outf = join(outdir, '4GST_global.df')
         T.save_df(df_result, outf)
         T.df_to_excel(df_result, outf)
 
@@ -166,7 +166,7 @@ class Phenology:
     def divide_LAI_pieces(self,LAI1):
         # ********** Divide the LAI timeseries in 4 pieces *******
 
-        if np.mean(LAI1) > 0:
+        if np.nanmean(LAI1) > 0:
             day = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300,
                    315, 330, 345, 360]
             LAI1dr = LAI1
@@ -814,7 +814,7 @@ class Phenology:
         T.print_head_n(df_3)
 
     def plot_4GST_npy(self):  ##
-        f= rf'D:\Project3\Data\LAI4g\4GST\\\4GST.npy'
+        f= rf'E:\Project3\Data\LAI4g\4GST_test\4GST_global.npy'
         spatial_dic = T.load_npy(f)
         result_dic = {}
         vals_list = []
@@ -834,7 +834,7 @@ class Phenology:
         vals_list = np.unique(vals_list)
         print(vals_list)
 
-        arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(result_dic)
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
         plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=365)
         plt.colorbar()
         plt.title('leaf senescence')

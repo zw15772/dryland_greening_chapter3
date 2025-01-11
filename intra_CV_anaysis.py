@@ -94,12 +94,12 @@ class extract_water_year():  ## extract water year phenology year
 
     def run (self):
         # self.extract_water_year_precip()
-        # self.extract_phenology_year_LAI()
+        self.extract_phenology_year_LAI()
         # self.extract_phenology_year_CO2()
         # self.extract_phenology_monthly_variables()
         # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
-        self.spatial_plot()
+        # self.spatial_plot()
         pass
 
     def extract_water_year_precip(self):
@@ -327,12 +327,12 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def extract_phenology_year_LAI(self):
-        fdir = rf'D:\Project3\Data\LAI4g\biweekly_dic\\'
+        fdir = rf'E:\Project3\Data\LAI4g\dic_global\\'
 
-        outdir= rf'D:\Project3\Data\LAI4g\phenology_year_extraction\\'
+        outdir= rf'E:\Project3\Data\LAI4g\phenology_year_extraction_global\\'
 
         Tools().mk_dir(outdir, force=True)
-        f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir):
 
@@ -681,7 +681,7 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def spatial_plot(self):
-        fdir=rf'E:\Project3\Data\CRU_monthly\extract_LAI4g_phenology_year\precip\\'
+        fdir=rf'E:\Project3\Data\LAI4g\phenology_year_extraction_global\\'
         spatial_dict = T.load_npy_dir(fdir)
         result_dic={}
         for pix in spatial_dict:
@@ -5785,9 +5785,9 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     #extract_heatevent().run()
-    # extract_water_year().run()  ## extract water year and phenology year
+    extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
-    Extract_rainfall_phenology_daily().run()
+    # Extract_rainfall_phenology_daily().run()
     # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()

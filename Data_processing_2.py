@@ -3275,8 +3275,8 @@ class Plot_Robinson:
         if is_plot_colorbar:
             if is_discrete:
                 bounds = np.linspace(vmin, vmax, colormap_n)
-                norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
-                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
                 cax, kw = mpl.colorbar.make_axes(ax, location='bottom', pad=0.05, shrink=0.5)
                 cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, boundaries=bounds, ticks=bounds,
                                                  orientation='horizontal')
@@ -3334,6 +3334,7 @@ class bivariate_analysis():
 
         # self.generate_three_dimension_sensitivity_rainfall_greening() ##rainfall_trend +sensitivity+ greening
         # self.generate_three_dimension_growth_rate_greening_rainfall()
+        # self.plot_three_dimension_pie()
         self.plot_three_dimension_pie2()
 
 
@@ -3427,22 +3428,55 @@ class bivariate_analysis():
 
         for f in os.listdir(fdir_trend):
 
+
             if not f.endswith('.tif'):
                 continue
 
             fname = f.split('.')[0]
 
-            fpath = fdir_trend + f
-
+            # fpath = fdir_trend + f
+            # fpath = rf"E:\Project3\Result\3mm\bivariate_analysis\growth_rate_rainfall_greening.tif"
+            fpath = rf"E:\Project3\Result\3mm\bivariate_analysis\three_dimension.tif"
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
+            # m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
 
+            color_list1 = [
+                '#19449C',
+                '#406BB3',
+                '#6A3777',
+                '#A769AC',
+                '#157E3E',
+                '#7DC466',
+                '#98272F',
+                '#F8B88D',
+            ]
+
+            color_list2 = [
+                '#2c7bb6',
+                '#75b1d3',
+                '#b7dee3',
+                '#e7f4cb',
+                '#fee8a4',
+                '#fdba6e',
+                '#ed6e43',
+                '#d7191c',
+            ]
+
+            my_cmap1 = T.cmap_blend(color_list1,n_colors=8)
+            my_cmap2 = T.cmap_blend(color_list2,n_colors=8)
+            # arr = ToRaster().raster2array(fpath)[0]
+            # arr[arr<-999]=np.nan
+            # plt.imshow(arr,cmap=my_cmap,vmin=1,vmax=8,interpolation='nearest')
+            # plt.colorbar()
+            # plt.show()
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=9, cmap=my_cmap2,)
 
             plt.title(f'{fname}')
             # plt.show()
-            outf = outdir + f+'.pdf'
+            outf = outdir +'3d.pdf'
             plt.savefig(outf)
             plt.close()
+            exit()
 
 
 
