@@ -108,9 +108,9 @@ class data_processing():
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
-        # self.unify_TIFF()
+        self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -276,11 +276,12 @@ class data_processing():
 
         pass
     def nc_to_tif_soil_texture(self):  ## no time series
-        nc_file = rf"E:\Project3\Data\Base_data\HWSD\nc\\S_CEC_CLAY.nc4"  # 替换为你的 .nc 文件路径
-        variable_name = "S_CEC_CLAY"  # 替换为你需要转换的变量名
-        outdir=rf"E:\Project3\Data\Base_data\HWSD\\tif\\"
+        nc_file = rf"E:\Project3\Data\SOIL_Grid\\zroot_cwdx80_forcing.nc"  # 替换为你的 .nc 文件路径
+        variable_name = "zroot_cwdx80_forcing"  # 替换为你需要转换的变量名
+        
+        outdir=rf"E:\Project3\Data\SOIL\\"
         T.mk_dir(outdir,force=True)
-        output_tif = outdir + rf"\\S_CEC_CLAY.tif"  # 替换为输出 .tif 文件路径
+        output_tif = outdir + rf"\\zroot_cwdx80_forcing.tif"  # 替换为输出 .tif 文件路径
         nc = Dataset(nc_file, 'r')
         #
         # print(nc)
@@ -296,13 +297,11 @@ class data_processing():
         print(f"GeoTIFF 文件已保存到: {output_tif}")
         pass
     def resample_soil_texture(self):
-        fdir=rf'E:\Project3\Data\Base_data\HWSD\tif\025\\'
-        outdir=rf'E:\Project3\Data\Base_data\HWSD\tif\\05\\'
+        fdir=rf'E:\Project3\Data\SOIL_Grid\\'
+        outdir=rf'E:\Project3\Data\SOIL_Grid_05\\'
         T.mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
             if not  f.endswith('.tif'):
-                continue
-            if not 'S_CEC_CLAY' in f:
                 continue
 
             date = f.split('.')[0]
@@ -316,7 +315,7 @@ class data_processing():
             # newRows = dataset.YSize * 2
             # newCols = dataset.XSize * 2
             try:
-                gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
+                gdal.Warp(outdir + '{}_05.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
             # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
             # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
             except Exception as e:
@@ -2043,26 +2042,20 @@ class data_processing():
 
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_average, outdir + '{}{:02d}.tif'.format(year, month))
     def unify_TIFF(self):
-        fdir_all=rf'E:\Project3\Data\CRU_monthly\\'
+        fdir_all=rf'E:\Project3\Data\SOIL_Grid_05\\'
+        outdir=rf'E:\Project3\Data\SOIL_Grid_05_unify\\'
+        Tools().mk_dir(outdir, force=True)
 
-        for fdir in os.listdir(fdir_all):
 
-            outdir = rf'E:\Project3\Data\CRU_monthly\\{fdir}\\unify\\'
-            Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(join(fdir_all)):
+            fpath=join(fdir_all,f)
+            outpath=join(outdir,f)
 
-            for fdir_ii in tqdm(os.listdir(join(fdir_all,fdir))):
-                if not 'tif' in fdir_ii:
-                    continue
-                for f in os.listdir(join(fdir_all,fdir,fdir_ii)):
-                    fpath=join(fdir_all,fdir,fdir_ii,f)
-
-                    outpath=join(outdir,f)
-
-                    if not f.endswith('.tif'):
-                        continue
-                    if f.startswith('._'):
-                        continue
-                    unify_tiff=DIC_and_TIF().unify_raster1(fpath,outpath,0.5)
+            if not f.endswith('.tif'):
+                continue
+            if f.startswith('._'):
+                continue
+            unify_tiff=DIC_and_TIF().unify_raster(fpath,outpath,0.5)
 
 
     def aggreate_CO2(self):  # aggregate biweekly data to monthly
@@ -13512,81 +13505,81 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = rf'E:\Project3\Data\LAI4g\phenology_average\\'
-        for f in os.listdir(fdir):
-            if not 'global' in f:
-                continue
+        fdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\global\extraction_LAI4g\\detrended_LAI4g.npy'
+        # for f in os.listdir(fdir):
+        #     if not 'global' in f:
+        #         continue
 
 
 
-            # dic=T.load_npy_dir(fdir)
-            dic=T.load_npy(fdir+f)
+        # dic=T.load_npy_dir(fdir)
+        dic=T.load_npy(fdir)
 
-                # for f in os.listdir(fdir):
-                #     if not f.endswith(('.npy')):
-                #         continue
-                #
-                #     dic_i=T.load_npy(fdir+f)
-                #     dic.update(dic_i)
+            # for f in os.listdir(fdir):
+            #     if not f.endswith(('.npy')):
+            #         continue
+            #
+            #     dic_i=T.load_npy(fdir+f)
+            #     dic.update(dic_i)
 
-            len_dic={}
+        len_dic={}
 
-            for pix in dic:
-                r,c=pix
-                # (r,c)=(817,444)
-                # if not r==444:
-                #     continue
-                # if not c==817:
-                #     continue
-                # if r<480:
-                #     continue
-                vals=dic[pix]
+        for pix in dic:
+            r,c=pix
+            # (r,c)=(817,444)
+            # if not r==444:
+            #     continue
+            # if not c==817:
+            #     continue
+            # if r<480:
+            #     continue
+            vals=dic[pix]
 
-                # date_list = []
-                # date_base = datetime.datetime(1982, 1, 1)
-                # for i in range(len(vals)):
-                #     # date_list.append(date_base + datetime.timedelta(months=i))
-                #     date_obj = T.month_index_to_date_obj(i, date_base,)
-                #     date_list.append(date_obj)
-                # # exit()
-                #
-                # plt.plot(date_list,vals)
-                # plt.title(pix)
-                # plt.figure()
-                # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
-                # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
-                # arr[arr>999999] = np.nan
-                # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
-                # plt.colorbar()
-                # plt.scatter(pix[1],pix[0],c='k',s=200)
-                # plt.show()
-
-
-
-                # if len(vals)<1:
-                #     continue
-                # if np.isnan(np.nanmean(vals)):
-                #     continue
+            # date_list = []
+            # date_base = datetime.datetime(1982, 1, 1)
+            # for i in range(len(vals)):
+            #     # date_list.append(date_base + datetime.timedelta(months=i))
+            #     date_obj = T.month_index_to_date_obj(i, date_base,)
+            #     date_list.append(date_obj)
+            # # exit()
+            #
+            # plt.plot(date_list,vals)
+            # plt.title(pix)
+            # plt.figure()
+            # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
+            # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
+            # arr[arr>999999] = np.nan
+            # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
+            # plt.colorbar()
+            # plt.scatter(pix[1],pix[0],c='k',s=200)
+            # plt.show()
 
 
-                # plt.plot(vals)
-                # plt.show()
+
+            # if len(vals)<1:
+            #     continue
+            # if np.isnan(np.nanmean(vals)):
+            #     continue
 
 
-                len_dic[pix]=np.nanmean(vals)
-                # len_dic[pix]=np.nanstd(vals)
-                vals=np.array(vals)
+            # plt.plot(vals)
+            # plt.show()
 
-                # vals=vals[~np.isnan(vals)]
 
-                # len_dic[pix] = len(vals)
+            len_dic[pix]=np.nanmean(vals)
+            # len_dic[pix]=np.nanstd(vals)
+            vals=np.array(vals)
 
-            arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+            # vals=vals[~np.isnan(vals)]
 
-            plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=38)
-            plt.colorbar()
-            # plt.title(f)
-            plt.show()
+            # len_dic[pix] = len(vals)
+
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=38)
+        plt.colorbar()
+        # plt.title(f)
+        plt.show()
     def testrobinson(self):
         fdir=rf'D:\Project3\Result\multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\100mm_unit\\'
         period='1982_2020'
@@ -15150,7 +15143,7 @@ class moving_window():
 
 
 def main():
-    # data_processing().run()
+    data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
@@ -15177,7 +15170,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 

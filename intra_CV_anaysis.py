@@ -3167,15 +3167,15 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        # self.extract_phenology_LAI_mean()
-        # self.detrend()
-        self.trend_analysis()
+        self.extract_phenology_LAI_mean()
+        self.detrend()
+        # self.trend_analysis()
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = data_root+rf'\LAI4g\phenology_year_extraction\\'
+        fdir = data_root+rf'\LAI4g\phenology_year_extraction_global\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        outdir_CV = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\\extraction_LAI4g'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3229,7 +3229,7 @@ class extract_LAI_phenology():
 
     def detrend(self):  ## detrend LAI4g
 
-        f = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\phenology_LAI_mean.npy'
+        f = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\global\extraction_LAI4g\\LAI4g.npy'
         outdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
@@ -3251,7 +3251,7 @@ class extract_LAI_phenology():
 
             annual_spatial_dict[pix] = detrended_annual_time_series
 
-        np.save(outdir + 'detrended_growing_season_LAI_mean.npy', annual_spatial_dict)
+        np.save(outdir + 'detrended_LAI4g.npy', annual_spatial_dict)
 
         pass
 
@@ -5785,10 +5785,10 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     #extract_heatevent().run()
-    extract_water_year().run()  ## extract water year and phenology year
+    # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()
-    # extract_LAI_phenology().run()
+    extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
 

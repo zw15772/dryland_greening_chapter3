@@ -561,9 +561,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\Trend\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'Trend.df'
+        self.dff = self.this_class_arr + 'moving_window_CV.df'
 
         pass
 
@@ -588,19 +588,20 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
         # df=self.add_AI_classfication(df)
         # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # # df=self.add_continent_to_df(df)
+        # df=self.add_continent_to_df(df)
         # df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
         # #
@@ -821,7 +822,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\LAI4g_trend.tif'
+        f = result_root + rf'\3mm\extract_LAI4g_phenology_year\global\moving_window_average_anaysis\trend_analysis\\detrended_LAI4g_CV_trend.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1134,12 +1135,11 @@ class build_dataframe():
 
 
     def add_soil_texture_to_df(self, df):
-        fdir = data_root + rf'\Base_data\HWSD\tif\05\\'
+        fdir = data_root + rf'\SOIL_Grid_05_unify\\'
         for f in (os.listdir(fdir)):
             if not f.endswith('.tif'):
                 continue
-            if 'silt' in f:
-                continue
+
             tiff = fdir + f
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
@@ -1414,13 +1414,8 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\trend_ecosystem_year\\'
+        fdir=result_root+rf'\3mm\extract_LAI4g_phenology_year\global\moving_window_average_anaysis\trend_analysis\\'
         for f in os.listdir(fdir):
-            # print(f)
-            # exit()
-            if not 'sum_rainfall_trend' in f:
-                continue
-
 
             if not f.endswith('.tif'):
                 continue
@@ -1455,7 +1450,7 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}'] = val_list
+            df[f'{f_name}_global'] = val_list
 
 
         return df
@@ -1702,6 +1697,33 @@ class build_dataframe():
 
         df['AI_classfication'] = val_list
         return df
+    def add_dryland_nondryland_to_df(self, df):
+        fpath=data_root+rf'\\Base_data\\aridity_index_05\\aridity_index.tif'
+
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        array = np.array(array, dtype=float)
+        val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+
+            val = val_dic[pix]
+            if val <=0.65:
+                label = 'Dryland'
+            elif val >0.65:
+                print(val);exit()
+                label = 'Non-dryland'
+            else:
+                raise
+            val_list.append(label)
+        df['Dryland_Nondryland'] = val_list
+
+        return df
+
 
 
 
@@ -5833,6 +5855,7 @@ class TRENDY_CV:
         pass
 
     def run(self):
+        ## intra_CV_anaysis extract_LAI_phenology mean
 
         # self.detrend()
         # self.moving_window_extraction()
@@ -5879,8 +5902,8 @@ class TRENDY_CV:
 
     def moving_window_extraction(self):
 
-        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\detrend_TRENDY\\'
-        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\\\moving_window_extraction\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\extraction_LAI4g\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\\global\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -5957,15 +5980,13 @@ class TRENDY_CV:
         return new_x_extraction_by_window
     def moving_window_CV_anaysis(self):
         window_size=15
-        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
-        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\moving_window_extraction\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\\moving_window_average_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'SDGVM' in f:
-                continue
 
             dic = T.load_npy(fdir + f)
-            slides = 38-window_size
+            slides = 39-window_size
             outf = outdir + f.split('.')[0] + f'_CV.npy'
             print(outf)
             #
@@ -5980,7 +6001,7 @@ class TRENDY_CV:
                 trend_list = []
 
                 time_series_all = dic[pix]
-                if len(time_series_all)<23:
+                if len(time_series_all)<24:
                     continue
                 time_series_all = np.array(time_series_all)
                 # print(time_series_all)
@@ -6022,13 +6043,12 @@ class TRENDY_CV:
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\'
-        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\moving_window_average_anaysis\\trend_analysis\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\moving_window_average_anaysis\\'
+        outdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\moving_window_average_anaysis\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'SDGVM' in f:
-                continue
+
             outf = outdir + f.split('.')[0]
             # if os.path.isfile(outf + '_trend.tif'):
             #     continue
@@ -6042,8 +6062,8 @@ class TRENDY_CV:
             p_value_dic = {}
             for pix in tqdm(dic):
                 r, c = pix
-                if r < 60:
-                    continue
+                # if r < 60:
+                #     continue
                 landcover_value = crop_mask[pix]
                 if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
                     continue
@@ -6175,7 +6195,23 @@ class TRENDY_CV:
 
     pass
     def bar_plot(self):
-        ## here I plot sififinicant trends
+        ## plot non_dryland and dryland bar plot
+        dff=result_root+rf'3mm\Dataframe\CVTrend_global\\CVTrend_global.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
+        classfication_list = [ 'Dryland','Non-dryland',]
+        for classfication in classfication_list:
+            vals=df['Dryland_Nondryland']==classfication
+            vals=list(vals)
+            vals=np.array(vals)
+            vals[vals>99]=np.nan
+            vals[vals<-99]=np.nan
+            vals=vals[~np.isnan(vals)]
+
+            plt.bar(x=classfication, height=np.nanmean(vals), yerr=np.nanstd(vals), error_kw={'capsize': 3})
+        plt.show()
+
 
         pass
     def plot_CV_trend(self):  ##plot CV and trend
@@ -6243,8 +6279,8 @@ class TRENDY_CV:
         # df = df.dropna(subset=[self.y_variable])
         # T.print_head_n(df)
         # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
+        # df = df[df['row'] > 60]
+        # df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 10]
 
         df = df[df['landcover_classfication'] != 'Cropland']
@@ -6256,14 +6292,14 @@ class TRENDY_CV:
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
 
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
