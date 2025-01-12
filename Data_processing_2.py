@@ -80,7 +80,8 @@ class Data_processing_2:
 
         # self.dryland_mask()
         # self.test_histogram()
-        self.resampleSOC()
+        # self.resampleSOC()
+        self.reclassification_koppen()
 
         pass
     def dryland_mask(self):
@@ -197,6 +198,49 @@ class Data_processing_2:
         # plt.colorbar()
         # plt.show()
         ToRaster().array2raster(newRasterfn, longitude_start, latitude_start, pixelWidth, pixelHeight, array, )
+
+    def reclassification_koppen(self):
+        f=rf'E:\Project3\Data\Base_data\Koeppen_tif\\Koeppen.tif_unify.tif'
+        dic={0: 'Tropical', 1: 'Tropical', 2: 'Tropical', 3: 'Tropical', 4: 'Dry', 5: 'Dry', 6: 'Dry', 7: 'Dry', 8: 'Temperate', 9: 'Temperate', 10: 'Temperate',
+         11: 'Temperate', 12: 'Temperate', 13: 'Temperate', 14: 'Temperate', 15: 'Temperate', 16: 'Temperate', 17: 'Continental', 18: 'Continental', 19: 'Continental', 20: 'Continental',
+         21: 'Continental', 22: 'Continental', 23: 'Continental', 24: 'Continental', 25: 'Continental', 26: 'Continental', 27: 'Continental', 28: 'Polar', 29: 'Polar'}
+
+        reclassification_dic = {
+            'Tropical': 1,
+            'Dry': 2,
+            'Temperate': 3,
+            'Continental': 4,
+            'Polar': 5
+
+        }
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+        array = np.array(array, dtype=float)
+        spatial_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+        for pix in spatial_dic:
+            val = spatial_dic[pix]
+            if val not in dic:
+                spatial_dic[pix] = np.nan
+                continue
+            if val<-99:
+                spatial_dic[pix]=np.nan
+                continue
+
+            class_i = dic[val]
+            spatial_dic[pix] = reclassification_dic[class_i]
+
+
+        arr_new = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr_new, interpolation='nearest', cmap='jet')
+        plt.colorbar()
+        plt.title('Koeppen')
+        plt.show()
+        outf=rf'E:\Project3\Data\Base_data\Koeppen_tif\\Koeppen_reclassification.tif'
+        DIC_and_TIF().arr_to_tif(arr_new, outf)
+
+        pass
+
+
 
 
 class Phenology():  ### plot site based phenology curve
@@ -561,9 +605,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
+        self.this_class_arr = (result_root+rf'3mm\Dataframe\CVTrend_global\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'moving_window_CV.df'
+        self.dff = self.this_class_arr + 'CVTrend_global.df'
 
         pass
 
@@ -593,7 +637,7 @@ class build_dataframe():
         # #
         # df=self.add_AI_classfication(df)
         # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
@@ -601,7 +645,7 @@ class build_dataframe():
         # df=self.add_row(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_lat_lon_to_df(df)
-        df=self.add_soil_texture_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
         # #
@@ -1712,15 +1756,20 @@ class build_dataframe():
                 continue
 
             val = val_dic[pix]
-            if val <=0.65:
+            if val <= 0.65:
                 label = 'Dryland'
-            elif val >0.65:
-                print(val);exit()
-                label = 'Non-dryland'
+            elif 0.65 < val <= 0.8:
+                label = 'Sub-humid'
+            elif 0.8 < val <= 1.5:
+                label = 'Humid'
+            elif val > 1.5:
+                label = 'Very Humid'
+            elif val < -99:
+                label = np.nan
             else:
                 raise
             val_list.append(label)
-        df['Dryland_Nondryland'] = val_list
+        df['Dryland_Humid'] = val_list
 
         return df
 
@@ -6198,12 +6247,16 @@ class TRENDY_CV:
         ## plot non_dryland and dryland bar plot
         dff=result_root+rf'3mm\Dataframe\CVTrend_global\\CVTrend_global.df'
         df=T.load_df(dff)
+        print(len(df))
         df=self.df_clean(df)
-        T.print_head_n(df)
-        classfication_list = [ 'Dryland','Non-dryland',]
+        print(len(df))
+
+        # T.print_head_n(df)
+        classfication_list = [ 'Dryland','Sub-humid','Humid','Very Humid']
         for classfication in classfication_list:
-            vals=df['Dryland_Nondryland']==classfication
-            vals=list(vals)
+
+            df_i = df[df['Dryland_Humid'] == classfication]
+            vals = df_i['detrended_LAI4g_CV_trend_global'].tolist()
             vals=np.array(vals)
             vals[vals>99]=np.nan
             vals[vals<-99]=np.nan
@@ -6282,6 +6335,7 @@ class TRENDY_CV:
         # df = df[df['row'] > 60]
         # df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 10]
+        df = df[df['detrended_LAI4g_CV_p_value_global'] < 0.05]
 
         df = df[df['landcover_classfication'] != 'Cropland']
 
@@ -6292,12 +6346,12 @@ class TRENDY_CV:
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
 
