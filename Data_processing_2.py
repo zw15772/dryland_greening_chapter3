@@ -2510,6 +2510,7 @@ class greening_analysis():
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
 
         df = df[df['landcover_classfication'] != 'Cropland']
 
@@ -2580,15 +2581,15 @@ class greening_analysis():
         plt.legend()
 
 
-        # plt.show()
+        plt.show()
         outdir = result_root + rf'3mm\relative_change_growing_season\\pdf\\'
         T.mk_dir(outdir)
         # outf = outdir + f'relative_change_growing_season_yearly.pdf'
-        outf = outdir + f'legend.pdf'
-        plt.savefig(outf)
-        plt.close()
-        T.open_path_and_file(outdir)
-        pass
+        # outf = outdir + f'legend.pdf'
+        # plt.savefig(outf)
+        # plt.close()
+        # T.open_path_and_file(outdir)
+        # pass
 
 
     def plot_time_series_spatial(self):
@@ -5593,6 +5594,7 @@ class TRENDY_trend:
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
 
         df = df[df['landcover_classfication'] != 'Cropland']
 
@@ -5911,8 +5913,9 @@ class TRENDY_CV:
         # self.moving_window_CV_anaysis()
         # self.trend_analysis()
         # self.plt_basemap()
-        # self.plot_CV_trend()
-        self.bar_plot()
+        self.plot_CV_trend_bin() ## plot CV vs. trend in observations
+        # self.plot_CV_trend_among_models()
+        # self.bar_plot()
 
         pass
 
@@ -6249,9 +6252,11 @@ class TRENDY_CV:
         df=T.load_df(dff)
         print(len(df))
         df=self.df_clean(df)
+        df = df[df['detrended_LAI4g_CV_p_value_global'] < 0.05]
         print(len(df))
 
         # T.print_head_n(df)
+
         classfication_list = [ 'Dryland','Sub-humid','Humid','Very Humid']
         for classfication in classfication_list:
 
@@ -6262,12 +6267,71 @@ class TRENDY_CV:
             vals[vals<-99]=np.nan
             vals=vals[~np.isnan(vals)]
 
-            plt.bar(x=classfication, height=np.nanmean(vals), yerr=np.nanstd(vals), error_kw={'capsize': 3})
+
+            plt.bar(x=classfication, height=np.nanmean(vals)*24, yerr=np.nanstd(vals), error_kw={'capsize': 3},color='#D3D3D3')
+            plt.ylabel('Change in CVLAI (%)')
         plt.show()
 
 
         pass
-    def plot_CV_trend(self):  ##plot CV and trend
+    def plot_CV_trend_bin(self):
+        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+
+        lai_trends = df['LAI4g_1983_2020_trend'].values
+        laicv_trends = df['LAI4g_detrend_CV_trend'].values
+
+        # Remove NaN values
+        lai_trends = lai_trends[~np.isnan(lai_trends)]
+        laicv_trends = laicv_trends[~np.isnan(laicv_trends)]
+        lai_trends[lai_trends > 99] = np.nan
+        lai_trends[lai_trends < -99] = np.nan
+        laicv_trends[laicv_trends > 99] = np.nan
+        laicv_trends[laicv_trends < -99] = np.nan
+
+        # plt.hist(laicv_trends, bins=10, alpha=0.5, label='LAICV Trends')
+        # plt.hist(lai_trends, bins=10, alpha=0.5, label='LAI Trends')
+        # plt.legend(loc='upper right')
+        # plt.show()
+        threhold_list = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5]
+        threhold_list = np.linspace(-1, 1, 5)
+        trend_list = []
+        CV_list = []
+        result_dic = {}
+
+        for i in range(len(threhold_list) - 1):
+            threhold1 = threhold_list[i]
+            threhold2 = threhold_list[i + 1]
+
+            df_ii = df[(df['LAI4g_1983_2020_trend'] > threhold1) & (df['LAI4g_1983_2020_trend'] < threhold2)]
+
+            CV_val = df_ii['LAI4g_detrend_CV_trend'].values
+            CV_val = CV_val[~np.isnan(CV_val)]
+            CV_val[CV_val > 99] = np.nan
+            CV_val[CV_val < -99] = np.nan
+            result_dic[f'{threhold1}-{threhold2}'] = CV_val
+        ## bar boxplot
+        for i in range(len(threhold_list) - 1):
+            threhold1 = threhold_list[i]
+            threhold2 = threhold_list[i + 1]
+
+            CV_val = result_dic[f'{threhold1}-{threhold2}']
+
+
+            CV_list.append(CV_val)
+            trend_list.append(f'{threhold1}-{threhold2}')
+
+        plt.boxplot(CV_list, labels=trend_list, showfliers=False)
+        plt.show()
+
+
+
+
+
+
+    def plot_CV_trend_among_models(self):  ##plot CV and trend
 
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
@@ -6335,9 +6399,11 @@ class TRENDY_CV:
         # df = df[df['row'] > 60]
         # df = df[df['Aridity'] < 0.65]
         df = df[df['LC_max'] < 10]
-        df = df[df['detrended_LAI4g_CV_p_value_global'] < 0.05]
+        df = df[df['MODIS_LUCC'] != 12]
+
 
         df = df[df['landcover_classfication'] != 'Cropland']
+
 
         return df
 
