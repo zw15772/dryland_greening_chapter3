@@ -94,8 +94,8 @@ class extract_water_year():  ## extract water year phenology year
 
     def run (self):
         # self.extract_water_year_precip()
-        self.extract_phenology_year_LAI()
-        # self.extract_phenology_year_CO2()
+        # self.extract_phenology_year_LAI()
+        self.extract_phenology_year_CO2()
         # self.extract_phenology_monthly_variables()
         # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
@@ -327,9 +327,9 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def extract_phenology_year_LAI(self):
-        fdir = rf'E:\Project3\Data\LAI4g\dic_global\\'
+        fdir = rf'E:\Project3\Data\MCD15A3H\dic_dryland\\'
 
-        outdir= rf'E:\Project3\Data\LAI4g\phenology_year_extraction_global\\'
+        outdir= rf'E:\Project3\Data\MCD15A3H\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
@@ -444,9 +444,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_year_CO2(self):
-        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\historic_SSP245_interpoolation\\'
+        fdir = rf'E:\Project3\Data\MCD15A3H\dic_dryland\\'
 
-        outdir= rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
+        outdir = rf'E:\Project3\Data\MCD15A3H\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -3167,15 +3167,15 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        self.extract_phenology_LAI_mean()
+        # self.extract_phenology_LAI_mean()
         self.detrend()
         # self.trend_analysis()
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = data_root+rf'\LAI4g\phenology_year_extraction_global\\'
+        fdir = data_root+rf'MCD15A3H\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_LAI4g_phenology_year\global\\extraction_LAI4g'
+        outdir_CV = result_root+rf'\3mm\extract_MCD15A3H_phenology_year\dryland\\extraction_MCD15A3H\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3223,14 +3223,14 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'phenology_LAI_mean.npy'
+        outf = outdir_CV + 'MCD15A3H.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\global\extraction_LAI4g\\LAI4g.npy'
-        outdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\extraction_LAI4g\\'
+        f = rf'E:\Project3\Result\3mm\extract_MCD15A3H_phenology_year\dryland\extraction_MCD15A3H\\MCD15A3H.npy'
+        outdir = rf'E:\Project3\Result\3mm\extract_MCD15A3H_phenology_year\dryland\\extraction_MCD15A3H\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         dict = T.load_npy(f)
@@ -3251,7 +3251,8 @@ class extract_LAI_phenology():
 
             annual_spatial_dict[pix] = detrended_annual_time_series
 
-        np.save(outdir + 'detrended_LAI4g.npy', annual_spatial_dict)
+
+        np.save(outdir + 'detrended_MCD15A3H.npy', annual_spatial_dict)
 
         pass
 

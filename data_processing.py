@@ -1800,9 +1800,9 @@ class data_processing():
                 pass
 
     def resample_GIMMS4g(self):
-        fdir_all = rf'D:\Project3\Data\LAI4g\GIMMS_LAI4g_updated_20230216\\'
+        fdir_all = rf'E:\Project3\Data\PKU_GIMMS_NDVI_updated_20230216\1982_1990_TIFF\\'
 
-        outdir = rf'E:\Project3\Data\\LAI4g\\resample\\'
+        outdir = rf'
 
 
         T.mk_dir(outdir, force=True)
