@@ -851,7 +851,7 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\Dataframe\wetting_greening_bivariable\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\\wetting_greening_bivariable\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + 'wetting_greening_bivariable.df'
 
@@ -880,7 +880,7 @@ class build_dataframe():
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
-        # #
+        #
         # df=self.add_AI_classfication(df)
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
@@ -1080,7 +1080,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:\Project3\Result\3mm\relative_change_growing_season\\phenology_LAI_mean.npy'
+        f = rf'E:\Project3\Result\3mm\relative_change_growing_season\\TRENDY\\GOSIF.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1095,7 +1095,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 1983
+            y = 2002
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -1107,7 +1107,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g'] = change_rate_list
+        df['GOSIF'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -1205,11 +1205,13 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\\\'
+        fdir=rf'E:\Project3\Result\3mm\bivariate_analysis\\'
         for f in os.listdir(fdir):
+            if  not  'CV_LAI4g_NDVI'  in f:
+                continue
+
 
             variable= f.split('.')[0]
-
 
 
             print(variable)
@@ -1222,35 +1224,29 @@ class build_dataframe():
             NDVI_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
 
-                year = row.window
+                year = row.year
                 # pix = row.pix
                 pix = row['pix']
                 r, c = pix
-
 
                 if not pix in val_dic:
                     NDVI_list.append(np.nan)
                     continue
 
-
                 vals = val_dic[pix]
                 print(len(vals))
 
-
-
                 ##### if len vals is 38, the end of list add np.nan
 
-                # if len(vals) == 37:
-                #     vals=np.append(vals,np.nan)
-                #     v1 = vals[year - 1983]
-                #     NDVI_list.append(v1)
                 if len(vals) == 19:
                     ##creast 19 nan
-                    nan_list = [np.nan] * 19
+                    nan_list = np.array([np.nan] * 19)
                     vals=np.append(nan_list,vals)
-
-                    v1 = vals[year - 1983]
-                    NDVI_list.append(v1)
+                if len(vals)!=38:
+                    NDVI_list.append(np.nan)
+                    continue
+                # if len(vals)==37:
+                #     vals = np.append(vals,np.nan)
 
 
                 v1= vals[year - 1983]
@@ -1701,9 +1697,9 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'3mm\relative_change_growing_season\trend_analysis2\\'
+        fdir=result_root+rf'\3mm\bivariate_analysis\\'
         for f in os.listdir(fdir):
-            if not 'NDVI' in f:
+            if not 'CV_LAI4g_NDVI' in f:
                 continue
 
             if not f.endswith('.tif'):
@@ -1786,7 +1782,7 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'rainfall_sensitivity_trend': 'bivariate',
+        df = df.rename(columns={'weighted_avg_NDVI4g_x': 'weighted_avg_NDVI4g',
 
 
                             }
@@ -1800,8 +1796,14 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=[rf'NDVI_2001_2020_p_value',
-                              'NDVI_2001_2020_trend',
+        df = df.drop(columns=[
+
+
+                              'weighted_avg_GOSIF',
+
+                              'weighted_avg_contribution_GOSIF',
+
+
 
                               ])
         return df
@@ -2649,29 +2651,31 @@ class greening_analysis():
         # self.trend_analysis()
         # self.heatmap()
         # self.heatmap()
-        # self.testrobinson()
+        self.plot_robinson()
         # self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
         # self.stacked_bar_plot()
         # self.statistic_analysis()
-        self.plot_robinson()
+        # self.plot_robinson()
         pass
 
     def relative_change(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'3mm\\moving_window_multi_regression\original\growing_season\\'
-        outdir = result_root + rf'\3mm\moving_window_multi_regression\original\growing_season_relative_change\\'
+        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\relative_change_growing_season\\\\'
         Tools().mk_dir(outdir, force=True)
 
-
         for f in os.listdir(fdir):
+            if not 'NDVI4g' in f:
+                continue
+
 
             outf = outdir + f.split('.')[0]
-            # if isfile(outf):
-            #     continue
+            if isfile(outf):
+                continue
             print(outf)
 
             dic = T.load_npy(fdir + f)
@@ -2684,7 +2688,7 @@ class greening_analysis():
                     continue
 
                 # print(len(dic[pix]))
-                time_series = dic[pix]['ecosystem_year']
+                time_series = dic[pix]['growing_season']
 
 
                 time_series = np.array(time_series)
@@ -2710,13 +2714,15 @@ class greening_analysis():
             np.save(outf, zscore_dic)
 
     def weighted_average_LAI(self):  ###add weighted average LAI in dataframe
-        df =result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df'
+        df =result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly_GOSIF.df'
         df = T.load_df(df)
         df_clean = self.df_clean(df)
         # print(len(df_clean))
+        variable='GOSIF'
+
 
         # 去除异常值（根据业务需求设定阈值）
-        df_clean_ii = df_clean[(df_clean['LAI_relative_change'] > -50) & (df_clean['LAI_relative_change'] < 50)]
+        df_clean_ii = df_clean[(df_clean[f'{variable}'] > -50) & (df_clean[f'{variable}'] < 50)]
         # print(len(df_clean_ii));exit()
         # Step 1: 计算纬度权重
         df_clean_ii['latitude_weight'] = np.cos(np.radians(df_clean_ii['lat']))
@@ -2729,18 +2735,19 @@ class greening_analysis():
 
         # Step 3: 计算加权平均LAI
         # weighted_avg_lai = df_clean_ii.groupby('year')['LAI_relative_change'].apply(lambda x: (x * df_clean_ii['normalized_weight']).sum())
-        df_clean_ii['weighted_avg_lai_contribution'] = df_clean_ii['LAI_relative_change'] * df_clean_ii['normalized_weight']
+        df_clean_ii[f'weighted_avg_{variable}_contribution'] = df_clean_ii[f'{variable}'] * df_clean_ii['normalized_weight']
 
-        weighted_avg_lai_per_year = (
-            df_clean_ii.groupby('year')['weighted_avg_lai_contribution'].sum().reset_index(name='weighted_avg_LAI')
+        weighted_avg_variable_per_year = (
+            df_clean_ii.groupby('year')[f'weighted_avg_{variable}_contribution'].sum().reset_index(name=f'weighted_avg_{variable}')
         )
 
-        df_clean_ii = df_clean_ii.merge(weighted_avg_lai_per_year, on='year', how='left')
+        df_clean_ii = df_clean_ii.merge(weighted_avg_variable_per_year, on='year', how='left')
+        # df_clean_ii[f'weighted_avg_{variable}'] = df_clean_ii[weighted_avg_lai_per_year]
         T.print_head_n(df_clean_ii)
 
         # exit()
         # T.print_head_n(df_clean_ii);exit()
-        outf=result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df'
+        outf=result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly_GOSIF.df'
         T.save_df(df_clean_ii,outf)
         T.df_to_excel(df_clean_ii, outf)
 
@@ -2759,12 +2766,13 @@ class greening_analysis():
 
         return df
     def plot_time_series(self):
-        df=T.load_df(rf'E:\Project3\Result\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df')
+        df=T.load_df(rf'E:\Project3\Result\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly_GOSIF.df')
         df=self.df_clean(df)
 
         year_range = range(1983, 2021)
         result_dic = {}
-        variable_list=['LAI4g','NDVI','NIRv','GOSIF']
+        variable_list=['GOSIF']
+        variable_list=['NIRv','NDVI','LAI4g','NDVI4g']
         linewidth_list=[1,1,1,1]
         color_list=['green','brown','blue','orange']
         alpha_list=[1,0.8,0.8,0.8]
@@ -2776,8 +2784,8 @@ class greening_analysis():
 
             for year in year_range:
                 df_i = df[df['year'] == year]
-                # vals = df_i[f'weighted_avg_{var}'].tolist()
-                vals = df_i[f'{var}'].tolist()
+                vals = df_i[f'weighted_avg_{var}'].tolist()
+                # vals = df_i[f'{var}'].tolist()
                 data_dic[year] = np.nanmean(vals)
             result_dic[var] = data_dic
         ##dic to df
@@ -2786,47 +2794,68 @@ class greening_analysis():
 
         T.print_head_n(df_new)
         ##calculate slope and intercept
-        stats_dic={}
+        slope_dic={}
+        intercept_dic={}
+        year_range_dic={}
+        data_range_dic={}
 
         for var in variable_list:
             if var=='GOSIF':
                 year_range_temp = range(2002, 2021)
                 vals=df_new[var].tolist()
-                vals=vals[19:]
+                print(vals)
+
+
+                vals_temp=vals[19:]
+                data_range_dic[var] = vals_temp
+                year_range_dic[var]=year_range_temp
 
             else:
                 year_range_temp = range(1983, 2021)
                 vals=df_new[var].tolist()
+                data_range_dic[var] = vals
+                year_range_dic[var] = year_range_temp
 
-            slope, intercept, r_value, p_value, std_err = stats.linregress(year_range_temp, vals)
-            slope = round(slope, 2)
-            stats_dic[var]=slope
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_range_dic[var], data_range_dic[var])
+            # slope = round(slope, 2)
+
+            slope_dic[var]=slope
+            intercept_dic[var]=intercept
         #     print(slope,intercept)
         # exit()
+        ## plot subplot
 
-        plt.figure(figsize=(self.map_width, self.map_height/2))
+        #
+
         flag=0
 
         for var in variable_list:
-            plt.plot(year_range, result_dic[var].values(), label=var, marker='o', markersize=3, linestyle='-', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
+
+            fig = plt.figure(figsize=(self.map_width, self.map_height ))
+
+            plt.plot(year_range_dic[var],data_range_dic[var] , label=var, marker='o', markersize=3, linestyle='-', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
+            ## plot fitting line
+
+            plt.plot(year_range_dic[var], [slope_dic[var] * x + intercept_dic[var] for x in year_range_dic[var]], linestyle='--', color=color_list[flag],linewidth=linewidth_list[flag],alpha=alpha_list[flag])
             flag=flag+1
 
-        plt.text(0, 1, f'{stats_dic}', transform=plt.gca().transAxes, fontsize=10)
+            plt.text(0, 1, f'y={slope_dic[var]:.2f}x+{intercept_dic[var]:.2f}', transform=plt.gca().transAxes, fontsize=10)
 
 
-        plt.ylabel(f'Relative change (%)', fontsize=10,font='Arial')
-        plt.xticks(font='Arial', fontsize=10)
-        plt.yticks(font='Arial', fontsize=10)
-        plt.ylim(-12, 12)
-        ##add line
-        plt.axhline(y=0, color='grey', linestyle='--',alpha=0.2)
-        # plt.grid(which='major', alpha=0.2)
-        plt.legend()
+            plt.ylabel(f'Relative change (%)', fontsize=10,font='Arial')
+            plt.xticks(font='Arial', fontsize=10)
+            plt.yticks(font='Arial', fontsize=10)
+            plt.ylim(-10,10)
+            ##add line
+            plt.axhline(y=0, color='grey', linestyle='--',alpha=0.2)
+            # plt.grid(which='major', alpha=0.2)
+            plt.legend()
 
 
-        plt.show()
-        outdir = result_root + rf'3mm\relative_change_growing_season\\pdf\\'
-        T.mk_dir(outdir)
+            plt.show()
+        # outdir = result_root + rf'3mm\relative_change_growing_season\\pdf\\'
+        # T.mk_dir(outdir)
         # outf = outdir + f'relative_change_growing_season_yearly.pdf'
         # outf = outdir + f'legend.pdf'
         # plt.savefig(outf)
@@ -2900,22 +2929,20 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\annual_growth_rate\\'
-        outdir = result_root + rf'3mm\annual_growth_rate\\trend_analysis\\'
+        fdir = result_root+rf'\3mm\relative_change_growing_season\\TRENDY\\'
+        outdir = result_root + rf'3mm\relative_change_growing_season\\TRENDY\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
 
-            if 'detrend' in f:
-                continue
 
 
             if not f.endswith('.npy'):
                 continue
 
             outf=outdir+f.split('.')[0]
-            # if os.path.isfile(outf+'_trend.tif'):
-            #     continue
+            if os.path.isfile(outf+'_trend.tif'):
+                continue
             print(outf)
 
             if not f.endswith('.npy'):
@@ -3010,9 +3037,9 @@ class greening_analysis():
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
             plt.title(f'{fname}')
             plt.show()
-            outf = outdir + f+'2.pdf'
-            plt.savefig(outf)
-            plt.close()
+            # outf = outdir + f+'2.pdf'
+            # plt.savefig(outf)
+            # plt.close()
 
     def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
@@ -3655,7 +3682,8 @@ class bivariate_analysis():
         # self.plot_three_dimension_pie()
         # self.plot_three_dimension_pie2()
         # self.generate_bivarite_map()
-        self.plot_bar_greening_wetting() ## robust test between NDVI and LAI
+        # self.plot_bar_greening_wetting() ## robust test between NDVI and LAI
+        self.consistency_CV_LAI4g_NDVI()
 
 
         pass
@@ -3769,7 +3797,7 @@ class bivariate_analysis():
 
             # fpath = fdir_trend + f
             # fpath = rf"E:\Project3\Result\3mm\bivariate_analysis\growth_rate_rainfall_greening.tif"
-            fpath = rf"E:\Project3\Result\3mm\bivariate_analysis\three_dimension.tif"
+            fpath = rf"E:\Project3\Result\3mm\bivariate_analysis\CV_LAI4g_NDVI.tif"
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
             # m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
 
@@ -3794,19 +3822,36 @@ class bivariate_analysis():
                 '#ed6e43',
                 '#d7191c',
             ]
+#### this is for consistency between NDVI and NDVI4g
+            color_list3 = [
+                '#2b83ba',
+            '#d4c0dc',
+            '#c1e4bd',
+            '#f3bb2d',
+
+            ]
+            ## this is for consistency of CV between LAI4g and NDVI
+
+            color_list3 = [
+                '#2c7bb6',
+                '#c7e6db',
+                '#fec980',
+                '#d7191c',
+
+            ]
 
             my_cmap1 = T.cmap_blend(color_list1,n_colors=8)
-            my_cmap2 = T.cmap_blend(color_list2,n_colors=8)
+            my_cmap2 = T.cmap_blend(color_list3,n_colors=4)
             # arr = ToRaster().raster2array(fpath)[0]
             # arr[arr<-999]=np.nan
             # plt.imshow(arr,cmap=my_cmap,vmin=1,vmax=8,interpolation='nearest')
             # plt.colorbar()
             # plt.show()
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=9, cmap=my_cmap2,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=4, is_discrete=True, colormap_n=5, cmap=my_cmap2,)
 
             plt.title(f'{fname}')
             # plt.show()
-            outf = outdir +'3d.pdf'
+            outf = outdir +'CV_LAI4g_NDVI.pdf'
             plt.savefig(outf)
             plt.close()
             exit()
@@ -4062,6 +4107,15 @@ class bivariate_analysis():
     def plot_bar_greening_wetting(self):
         dff=result_root+rf'\3mm\Dataframe\wetting_greening_bivariable\\wetting_greening_bivariable.df'
         variable='NDVI'
+        color_list3 = [
+            '#2b83ba',
+            '#d4c0dc',
+            '#c1e4bd',
+            '#f3bb2d',
+
+        ]
+
+
         df=T.load_df(dff)
         df=self.df_clean(df)
         df=df[df[f'{variable}_p_value'] <0.05]
@@ -4073,25 +4127,78 @@ class bivariate_analysis():
         dic_label={1: 'wetting_greening', 2: 'wetting_browning', 3: 'drying_greening', 4: 'drying_browning'}
 
         val_list=[]
+        fig=plt.figure(figsize=(3,2.5))
 
         for i in range(1,5):
             count=len(vals[vals==i])
             percent=count/len(vals)*100
 
             val_list.append(percent)
-        ## plot bar
-        plt.bar(dic_label.keys(), val_list)
+        x = np.array([0.2, 0.4, 0.6, 0.8])
 
-        plt.ylabel('Percent (%)')
-        plt.xticks(range(1, 5), dic_label.values())
-        plt.show()
+        ## plot bar
+        ## gap is 0.5 ## all bars gap is 0
+        plt.bar(x, val_list, color=color_list3,width=0.1,align='center')
+
+        plt.ylabel('Percent of Area (%)')
+        plt.tight_layout()
+
+        # plt.xticks(range(1, 5), dic_label.values())
+        # plt.show()
+        ## save
+        outf=result_root+rf'\3mm\Dataframe\wetting_greening_bivariable\\bar_{variable}.pdf'
+        plt.savefig(outf)
+        T.open_path_and_file(outf)
 
 
         pass
 
+    def consistency_CV_LAI4g_NDVI(self): ## plot consistency between CV LAI4g and NDVI
+        dff = result_root + rf'\3mm\Dataframe\wetting_greening_bivariable\\wetting_greening_bivariable.df'
 
+        color_list3 = [
+            '#2c7bb6',
+            '#c7e6db',
+            '#fec980',
+            '#d7191c',
 
+        ]
 
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # df = df[df[f'{variable}_p_value'] < 0.05]
+        vals = df[f'CV_LAI4g_NDVI'].values
+        vals = np.array(vals)
+        # vals[vals<-99]=np.nan
+        # vals[vals>99]=np.nan
+        vals = vals[~np.isnan(vals)]
+        dic_label = {1: 'wetting_greening', 2: 'wetting_browning', 3: 'drying_greening', 4: 'drying_browning'}
+
+        val_list = []
+        fig = plt.figure(figsize=(3, 2.5))
+
+        for i in range(1, 5):
+            count = len(vals[vals == i])
+            percent = count / len(vals) * 100
+
+            val_list.append(percent)
+        x = np.array([0.2, 0.4, 0.6, 0.8])
+
+        ## plot bar
+        ## gap is 0.5 ## all bars gap is 0
+        plt.bar(x, val_list, color=color_list3, width=0.1, align='center')
+
+        plt.ylabel('Percent of Area (%)')
+        plt.tight_layout()
+
+        # plt.xticks(range(1, 5), dic_label.values())
+        # plt.show()
+        ## save
+        outf = result_root + rf'\3mm\Dataframe\wetting_greening_bivariable\\bar_consistency_CV_LAI4g_NDVI.pdf'
+        plt.savefig(outf)
+        T.open_path_and_file(outf)
+
+        pass
 
 
 class multi_regression_window():
@@ -6223,6 +6330,7 @@ class TRENDY_CV:
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
         self.plot_CV_trend_among_models()
         # self.bar_plot()
+        # self.plot_sign_between_LAI_NDVI()
 
         pass
 
@@ -6645,13 +6753,18 @@ class TRENDY_CV:
 
     def plot_CV_trend_among_models(self):  ##plot CV and trend
 
+        color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
+                      'yellow', 'pink', 'brown', 'cyan', 'magenta', 'lime', 'teal', 'lavender', 'maroon', 'navy',
+                      'olive', 'silver', 'aqua', 'fuchsia', 'lime', 'teal', 'lavender', 'maroon', 'navy', 'olive',
+                      'silver', 'aqua', 'fuchsia']
+
         dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         T.print_head_n(df)
         marker_list=['^','s', 'P','D','X']*4
-        color_list=['mediumorchid', 'yellow', 'lightseagreen','salmon','greenyellow', 'navy','red','darkorange', ]*3
-        variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+
+        variables_list = ['LAI4g', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -6697,16 +6810,18 @@ class TRENDY_CV:
 
 
         for i, (x, y, marker,color,var) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list)):
-            plt.scatter(x, y, marker=marker,color=color, label=var, s=100, alpha=0.7,edgecolors='black',)
+            plt.scatter(x, y, marker=marker,color=color_list[i], label=var, s=100, alpha=1,edgecolors='black',)
             plt.errorbar(x, y, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
 
             ##markerborderwidth=1
 
-            plt.xlabel('Trend (%/year)')
-            plt.ylabel('CV (%/15 year)')
+            plt.xlabel('Trend (%/year)', fontsize=12)
+            plt.ylabel('CV (%/year)', fontsize=12)
             plt.xlim(-0.4, 0.8)
-            plt.ylim(-0.5, 0.5)
-            plt.legend()
+            plt.ylim(-0.4, 0.5)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
+            # plt.legend()
 
         plt.show()
 
@@ -6730,6 +6845,48 @@ class TRENDY_CV:
 
         return df
 
+    def plot_sign_between_LAI_NDVI(self):
+
+        import xymap
+        tif_rainfall = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
+        tif_greening = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\NDVI_detrend_CV_trend.tif'
+        # print(isfile(tif_CRU_trend))
+        # print(isfile(tif_CRU_CV))
+        # exit()
+        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
+        T.mk_dir(outdir, force=True)
+        outtif = outdir + rf'\\CV_LAI4g_NDVI.tif'
+        T.mk_dir(result_root + rf'bivariate_analysis\\')
+        tif1 = tif_rainfall
+        tif2 = tif_greening
+
+        dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
+        dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
+        dics = {'LAI4g_CV_trend': dic1,
+                'NDVI_CV_trend': dic2}
+        df = T.spatial_dics_to_df(dics)
+        # print(df)
+        df['is_increasing_LAI4g'] = df['LAI4g_CV_trend'] > 0
+        df['is_increasing_NDVI'] = df['NDVI_CV_trend'] > 0
+        print(df)
+        label_list = []
+        for i, row in df.iterrows():
+            if row['is_increasing_LAI4g'] and row['is_increasing_NDVI']:
+                label_list.append(1)
+            elif row['is_increasing_LAI4g'] and not row['is_increasing_NDVI']:
+                label_list.append(2)
+            elif not row['is_increasing_LAI4g'] and row['is_increasing_NDVI']:
+                label_list.append(3)
+            else:
+                label_list.append(4)
+
+        df['label'] = label_list
+        result_dic = T.df_to_spatial_dic(df, 'label')
+        DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
+
+        ## NDVI and LAI CV showing sign:
+        pass
+
 
 
 def main():
@@ -6749,9 +6906,6 @@ def main():
     # Plot_Robinson().robinson_template()
 
 
-
-
-    pass
 
 if __name__ == '__main__':
     main()
