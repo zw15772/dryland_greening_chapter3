@@ -95,8 +95,8 @@ class extract_water_year():  ## extract water year phenology year
     def run (self):
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
-        self.extract_phenology_year_CO2()
-        # self.extract_phenology_monthly_variables()
+        # self.extract_phenology_year_CO2()
+        self.extract_phenology_monthly_variables()
         # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
         # self.spatial_plot()
@@ -327,14 +327,16 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def extract_phenology_year_LAI(self):
-        fdir = rf'E:\Project3\Data\MCD15A3H\dic_dryland\\'
+        fdir = rf'E:\Project3\Data\Landsat\dic\\'
 
-        outdir= rf'E:\Project3\Data\MCD15A3H\phenology_year_extraction_dryland\\'
+        outdir= rf'E:\Project3\Data\Landsat\\\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir):
+            if not 'interpolated' in f:
+                continue
 
             outf = outdir + f
             #
@@ -562,14 +564,16 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'E:\Project3\Data\CRU_monthly\precip\\dic\\'
+        fdir = rf'E:\Project3\Data\Landsat\dic\\'
 
-        outdir= rf'E:\Project3\Data\CRU_monthly\\extract_LAI4g_phenology_year\\Tmax\\'
+        outdir = rf'E:\Project3\Data\Landsat\\\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir):
+            if not 'interpolated' in f:
+                continue
 
             outf = outdir + f
             #
@@ -3173,9 +3177,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = data_root+rf'MCD15A3H\phenology_year_extraction_dryland\\'
+        fdir = data_root+rf'\Landsat\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_MCD15A3H_phenology_year\dryland\\extraction_MCD15A3H\\'
+        outdir_CV = result_root+rf'\3mm\extract_Landsat_phenology_year\dryland\\extraction_Landsat\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3223,14 +3227,14 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'MCD15A3H.npy'
+        outf = outdir_CV + 'Landsat.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = rf'E:\Project3\Result\3mm\extract_MCD15A3H_phenology_year\dryland\extraction_MCD15A3H\\MCD15A3H.npy'
-        outdir = rf'E:\Project3\Result\3mm\extract_MCD15A3H_phenology_year\dryland\\extraction_MCD15A3H\\'
+        f = rf'E:\Project3\Result\3mm\extract_Landsat_phenology_year\dryland\\extraction_Landsat\\Landsat.npy'
+        outdir = rf'E:\Project3\Result\3mm\extract_Landsat_phenology_year\dryland\\extraction_Landsat\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         dict = T.load_npy(f)
@@ -3252,7 +3256,7 @@ class extract_LAI_phenology():
             annual_spatial_dict[pix] = detrended_annual_time_series
 
 
-        np.save(outdir + 'detrended_MCD15A3H.npy', annual_spatial_dict)
+        np.save(outdir + 'detrended_Landsat.npy', annual_spatial_dict)
 
         pass
 
@@ -5786,10 +5790,10 @@ def main():
     # extract_rainfall_annual_based_on_monthly().run()
 
     #extract_heatevent().run()
-    # extract_water_year().run()  ## extract water year and phenology year
+    extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()
-    extract_LAI_phenology().run()
+    # extract_LAI_phenology().run()
     # TRENDY_model().run()
     # check_correlation().run()
 

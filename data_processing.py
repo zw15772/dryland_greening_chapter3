@@ -1,6 +1,6 @@
 # coding='utf-8'
 import sys
-
+import xarray
 import lytools
 import pingouin
 import pingouin as pg
@@ -87,10 +87,9 @@ class data_processing():
         # self.resample_soil_texture()
         # self.resample_majority_ly()
         # self.resample_majority_gdal()
-
-
-
         # self.nc_to_tif_NIRv()
+        # self.nc_to_tif_time_series()
+        self.nc_to_tif_time_series_fast()
         # self.nc_to_tif_Terraclimate()
         # self.nc_to_tif_TRMM()
         # self.nc_to_tif_LUCC()
@@ -108,7 +107,7 @@ class data_processing():
         # self.resample_inversion()
         # self.aggregate_GIMMS3g()
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
-        self.unify_TIFF()
+        # self.unify_TIFF()
         # self.extract_dryland_tiff()
         # self.tif_to_dic()
         # self.aggreate_CO2()
@@ -367,12 +366,47 @@ class data_processing():
 
 
 
+    def nc_to_tif_time_series_fast(self):
+
+        fdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
+        outdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\TIFF\\'
+        Tools().mk_dir(outdir,force=True)
+        for f in tqdm(os.listdir(fdir)):
+
+            outdir_name = f.split('.')[0]
+            # print(outdir_name)
+
+            yearlist = list(range(1982, 2021))
+            fpath = join(fdir,f)
+            nc_in = xarray.open_dataset(fpath)
+            # print(nc_in)
+            time_bnds = nc_in['time_bnds']
+            for t in range(len(time_bnds)):
+                date = time_bnds[t]['time']
+                date = pd.to_datetime(date.values)
+                date_str = date.strftime('%Y%m%d')
+                date_str = date_str.split()[0]
+                outf = join(outdir, f'{date_str}.tif')
+                array = nc_in['ndvi'][t]/10000.
+                array = np.array(array)
+                array[array < 0] = np.nan
+                longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.0833333333333, -0.0833333333333
+                ToRaster().array2raster(outf, longitude_start, latitude_start,
+                                        pixelWidth, pixelHeight, array, ndv=-999999)
+                # exit()
+
+
+            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+            try:
+                self.nc_to_tif_template(fdir+f, var_name='ndvi', outdir=outdir, yearlist=yearlist)
+            except Exception as e:
+                print(e)
+                continue
 
     def nc_to_tif_time_series(self):
 
-        # fdir=data_root+f'\GPP\\NIRvGPP\\nc\\'
-        fdir=rf'D:\Project3\Data\deposition\\'
-        outdir=rf'D:\Project3\Data\deposition\\TIFF\\'
+        fdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
+        outdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
 
@@ -384,7 +418,7 @@ class data_processing():
 
             # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
             try:
-                self.nc_to_tif_template(fdir+f, var_name='GPP', outdir=outdir, yearlist=yearlist)
+                self.nc_to_tif_template(fdir+f, var_name='ndvi', outdir=outdir, yearlist=yearlist)
             except Exception as e:
                 print(e)
                 continue
@@ -410,14 +444,13 @@ class data_processing():
 
     def nc_to_tif_NIRv(self):
 
-        fdir = rf'C:\Users\wenzhang1\Desktop\Terra\nc\\'
-        outdir = rf'C:\Users\wenzhang1\Desktop\Terra\TIFF\\\\'
+        fdir = rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
+        outdir = rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\TIFF\\'
         Tools().mk_dir(outdir, True)
         for f in os.listdir(fdir):
             if not f.endswith('.nc'):
                 continue
-            if not 'tmin' in f:
-                continue
+
             outf=outdir+f.split('.')[0]+'.tif'
             if os.path.isfile(outf):
                 continue
@@ -1748,13 +1781,13 @@ class data_processing():
                 except Exception as e:
                     pass
     def resample_AVHRR_LAI(self):
-        fdir_all = rf'D:\Project3\Data\CO2\CO2_TIFF\original\\'
+        fdir_all = rf'E:\Project3\Data\Landsat\TIFF\\'
 
-        outdir =rf'D:\Project3\Data\CO2\CO2_TIFF\original\\'
+        outdir =rf'E:\Project3\Data\Landsat\resample\\'
 
 
         T.mk_dir(outdir, force=True)
-        year = list(range(1982, 2021))
+        year = list(range(1982, 2023))
         # print(year)
         # exit()
         for f in tqdm(os.listdir(fdir_all)):
@@ -1793,7 +1826,7 @@ class data_processing():
             # newRows = dataset.YSize * 2
             # newCols = dataset.XSize * 2
             try:
-                gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.25, yRes=0.25, dstSRS='EPSG:4326')
+                gdal.Warp(outdir + '{}.tif'.format(date), dataset, xRes=0.5, yRes=0.5, dstSRS='EPSG:4326')
             # 如果不想使用默认的最近邻重采样方法，那么就在Warp函数里面增加resampleAlg参数，指定要使用的重采样方法，例如下面一行指定了重采样方法为双线性重采样：
             # gdal.Warp("resampletif.tif", dataset, width=newCols, height=newRows, resampleAlg=gdalconst.GRIORA_Bilinear)
             except Exception as e:
@@ -1802,7 +1835,7 @@ class data_processing():
     def resample_GIMMS4g(self):
         fdir_all = rf'E:\Project3\Data\PKU_GIMMS_NDVI_updated_20230216\1982_1990_TIFF\\'
 
-        outdir = rf'
+        outdir =''
 
 
         T.mk_dir(outdir, force=True)
@@ -13494,7 +13527,8 @@ class plt_moving_dataframe():
 
 class check_data():
     def run (self):
-        self.plot_sptial()
+        # self.plot_sptial()
+        self.pixel_inspection()
 
         # self.testrobinson()
         # self.plot_time_series()
@@ -13505,15 +13539,15 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\global\extraction_LAI4g\\detrended_LAI4g.npy'
+        fdir = rf'E:\Project3\Data\Landsat\dic\\'
         # for f in os.listdir(fdir):
         #     if not 'global' in f:
         #         continue
 
 
 
-        # dic=T.load_npy_dir(fdir)
-        dic=T.load_npy(fdir)
+        dic=T.load_npy_dir(fdir)
+        # dic=T.load_npy(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -13566,20 +13600,71 @@ class check_data():
             # plt.show()
 
 
-            len_dic[pix]=np.nanmean(vals)
+            # len_dic[pix]=np.nanmean(vals)
             # len_dic[pix]=np.nanstd(vals)
             vals=np.array(vals)
 
-            # vals=vals[~np.isnan(vals)]
+            vals=vals[~np.isnan(vals)]
 
-            # len_dic[pix] = len(vals)
+            len_dic[pix] = len(vals)
 
         arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+        arr[arr==0]=np.nan
+        arr = arr / 468 * 100
 
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=19,vmax=38)
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=90)
         plt.colorbar()
         # plt.title(f)
         plt.show()
+
+
+    def pixel_inspection(self):
+
+        fdir = rf'E:\Project3\Data\Landsat\dic\\'
+        dic=T.load_npy_dir(fdir)
+
+        len_dic={}
+
+        for pix in dic:
+            r,c=pix
+            vals=dic[pix]
+            vals=np.array(vals)
+            # vals_clip = vals[36:]
+            vals_clip = vals
+            # print(len(vals_clip));exit()
+            vals_clip=vals_clip[~np.isnan(vals_clip)]
+
+            len_dic[pix] = len(vals_clip)
+
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
+        arr[arr==0]=np.nan
+        arr = arr / 468 * 100
+        # arr = arr / 432 * 100
+        arr[arr<70]=np.nan
+        # arr_flatten = arr.flatten()
+        # plt.hist(arr_flatten,range=(50,100),bins=5)
+        plt.imshow(arr, cmap='RdBu', interpolation='nearest', vmin=0, vmax=90)
+        plt.colorbar()
+        # plt.title(f)
+        plt.show()
+        exit()
+
+        for i in tqdm(range(len(arr))):
+            for j in range(len(arr[0])):
+                vals = dic[(i,j)]
+                vals_temp = vals[~np.isnan(vals)]
+                valid_ratio = len(vals_temp)/468
+                if valid_ratio<0.9 and valid_ratio>0.8:
+                    plt.plot(vals)
+                    plt.scatter(range(len(vals)),vals)
+                    print(vals)
+                    print(valid_ratio)
+                    plt.title(f'{i}_{j}')
+                    plt.show()
+
+
+
+
     def testrobinson(self):
         fdir=rf'D:\Project3\Result\multi_regression_moving_window\window15_anomaly_GPCC\trend_analysis\100mm_unit\\'
         period='1982_2020'
