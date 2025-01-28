@@ -82,6 +82,7 @@ class greening_analysis():
 
 
         self.greening_products_basemap_whole_time()
+        self.greening_products_basemap_whole_time_CV()
         # self.greening_products_basemap_two_time_periods()
         # self.plot_spatial_histgram_period()
         pass
@@ -93,8 +94,11 @@ class greening_analysis():
 
         vmin_vmax = {
             'NDVI4g': (-0.1, 0.1),
+
+            # 'GOSIF': (-1, 1)
+            'GIMMS_plus_NDVI': (-0.1, 0.1),
             'NDVI': (-0.5, 0.5),
-            'GOSIF': (-1, 1)
+            'Landsat': (-0.3, 0.3),
         }
 
         # Create synthetic data (replace with actual data as needed)
@@ -103,13 +107,13 @@ class greening_analysis():
         T.mk_dir(temp_root)
         # T.open_path_and_file(fdir);exit()
 
-        products = [ 'NDVI4g', 'NDVI','GOSIF']
+        products = [ 'NDVI4g', 'GIMMS_plus_NDVI','NDVI','Landsat']
 
 
 
         # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
 
-        fig, axes = plt.subplots(3, 1, figsize=(6, 7))
+        fig, axes = plt.subplots(4, 1, figsize=(12, 14))
         # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
 
         # Loop through products and periods to create subplots
@@ -190,6 +194,115 @@ class greening_analysis():
         outf = result_root + rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\greening_products_basemap_whole_time.png'
         plt.savefig(outf, dpi=600)
         plt.close()
+
+    def greening_products_basemap_whole_time_CV(self):
+        ## three products 3 time periods comparison
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.basemap import Basemap
+        import numpy as np
+
+        vmin_vmax = {
+            'detrended_NDVI4g_CV': (-0.5, 0.5),
+
+            # 'GOSIF': (-1, 1)
+            'detrended_GIMMS_plus_NDVI_CV': (-0.5, 0.5),
+            'NDVI_detrend_CV': (-0.5, 0.5),
+            'detrended_Landsat_CV_2020': (-0.5, 0.5),
+        }
+
+        # Create synthetic data (replace with actual data as needed)
+        fdir=result_root+rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        temp_root = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
+        T.mk_dir(temp_root)
+
+        products = [ 'detrended_NDVI4g_CV', 'detrended_GIMMS_plus_NDVI_CV','NDVI_detrend_CV','detrended_Landsat_CV_2020']
+
+
+
+        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
+
+        fig, axes = plt.subplots(4, 1, figsize=(12, 14))
+        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
+
+        # Loop through products and periods to create subplots
+
+        for i, product in enumerate(products):  # Use 'i' to index the subplot
+            ax = axes[i]
+
+            f_trend = fdir + rf'\{product}_trend.tif'
+
+            f_p_value = fdir + rf'\{product}_p_value.tif'
+
+            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
+            array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
+            array_trend[array_trend<-999]=np.nan
+            array_p_value[array_p_value<-999]=np.nan
+
+
+            # m = Basemap(projection='cyl', resolution='l', ax=ax)
+            # ##不显示经纬度
+            # m.drawcoastlines()
+            # m.drawcountries()
+            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
+            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
+
+            # Plot the data using pcolormesh
+            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
+
+            # arr_trend = array_trend[:60]
+
+            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
+            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
+            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            ## create the basemap instance
+
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
+                        resolution='l', ax=ax)
+
+            m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
+            # Plot the data using pcolormesh
+            vmin, vmax = vmin_vmax[product]
+            color_list = [
+                '#844000',
+                '#fc9831',
+                '#fffbd4',
+                '#86b9d2',
+                '#064c6c',
+            ]
+
+            # m, ret = Plot_Robinson().plot_Robinson(f_trend, ax, cmap='RdBu', vmin=vmin, vmax=vmax, is_plot_colorbar=False)
+            #
+
+            cmap='RdBu'
+
+            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=cmap, vmin=vmin, vmax=vmax)
+            m = self.plot_sig_scatter(
+                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
+                s=3,
+                c='k', marker='x',
+                zorder=100, res=4
+            )
+            # plt.show()
+            # Add p_value markers
+            # significance_threshold = 0.05  # Define significance threshold
+            # significant = array_p_value < significance_threshold  # Mask for significant values
+            # lon_significant = lon_list[significant]
+            # lat_significant = lat_list[significant]
+            #
+            # # Scatter plot for significant p-values
+            # m.scatter(lon_significant, lat_significant, s=0.005, c='k', marker='.', alpha=0.8, zorder=2)
+
+            # Add a colorbar for this subplot
+            cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
+                                location='left')
+            # cbar.set_label(f'{product} Trend Value',y=1)
+            cbar.set_label(f'{product} trend (%)',labelpad=-58)
+            # ax.set_title(product)
+            # plt.show()
+        outf = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\greening_products_basemap_whole_time_CV.png'
+        plt.savefig(outf, dpi=600)
+        plt.close()
+
 
 
     def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
