@@ -5,6 +5,8 @@ import lytools
 import pingouin
 import pingouin as pg
 # from green_driver_trend_contribution import *
+from sklearn.linear_model import TheilSenRegressor
+from scipy.stats import t
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -640,12 +642,12 @@ class build_moving_window_dataframe():
         self.threshold = '5mm'
         self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_CV.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_all_year.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         df=self.build_df(df)
         # self.append_value(df)
-        # df=self.append_attributes(df)
+        df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         # df=self.add_window_to_df(df)
@@ -699,7 +701,7 @@ class build_moving_window_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
-            if not 'LAI4g_detrend_CV':
+            if not 'LAI4g_detrend_CV' in f:
                 continue
 
             fname = f.split('.')[0]
@@ -878,9 +880,11 @@ class build_moving_window_dataframe():
         # exit()
         return df
     def append_attributes(self, df):  ## add attributes
-        fdir =  result_root + rf'\\moving_window_extraction\wet_year_moving_window_extraction\\'
+        fdir =  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
+                continue
+            if not 'detrended_GIMMS_plus_NDVI_CV' in f:
                 continue
 
             # array=np.load(fdir+f)
@@ -953,9 +957,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\dominant_factors\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + 'dominant_factors.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_all_year.df'
 
         pass
 
@@ -964,7 +968,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -980,7 +984,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
         df=self.add_AI_classfication(df)
@@ -2747,10 +2751,11 @@ class greening_analysis():
 
         # self.relative_change()
         # self.weighted_average_LAI()
-        self.plot_time_series()
+        # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
-        # self.trend_analysis()
+        # self.trend_analysis_simply_linear()
+        self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
         # self.plot_robinson()
@@ -3031,7 +3036,8 @@ class greening_analysis():
 
         pass
 
-    def trend_analysis(self):
+    def trend_analysis_TS(self):
+        from scipy.stats import theilslopes
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
@@ -3040,14 +3046,16 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\relative_change_growing_season\\'
-        outdir = result_root + rf'3mm\relative_change_growing_season\\TRENDY\\trend_analysis\\'
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\dryland\\trend_analysis_TS\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'Landsat' in f:
+            print(f)
+            if  'GOSIF' in f:
                 continue
-
+            if 'detrend' in f:
+                continue
 
 
             if not f.endswith('.npy'):
@@ -3074,7 +3082,111 @@ class greening_analysis():
                 if dic_modis_mask[pix]==12:
                     continue
 
-                time_series=dic[pix][3:36]
+                time_series=dic[pix]['growing_season']
+                # print(time_series)
+
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                if len(set(time_series))==1:
+                    continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                # try:
+                #
+                #         # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                #         slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    ## Theil-Sen regression
+                slope, intercept, p_value = self.TS_trend_analysis(time_series)
+                # plt.scatter(np.arange(len(time_series)), time_series)
+                # print(slope, intercept, p_value)
+                # plt.show()
+                trend_dic[pix] = slope
+                p_value_dic[pix] = p_value
+                # except:
+                #     continue
+
+            arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
+            arr_trend_dryland = arr_trend * array_mask
+
+            # p_value_arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
+            # p_value_arr_dryland = p_value_arr * array_mask
+
+
+            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+            # exit()
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
+            # DIC_and_TIF(pixelsize=0.5).arr_to_tif(p_value_arr_dryland, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend_dryland)
+            # np.save(outf + '_p_value', p_value_arr_dryland)
+    def TS_trend_analysis(self,vals):
+        x = np.arange(len(vals))
+        regressor = TheilSenRegressor()
+        regressor.fit(x.reshape(-1, 1), vals)
+        slope = regressor.coef_[0]
+        intercept = regressor.intercept_
+        y_pred = regressor.predict(x.reshape(-1, 1))
+        plt.scatter(x, y_pred)
+        p_value = self.one_sample_t_test(x, vals,regressor)
+
+        return slope, intercept, p_value
+
+    def trend_analysis_simply_linear(self):
+        from scipy.stats import theilslopes
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\dryland\\trend_analysis_simple_linear\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if  'GOSIF' in f:
+                continue
+            if 'detrend' in f:
+                continue
+
+
+            if not f.endswith('.npy'):
+                continue
+
+            outf=outdir+f.split('.')[0]
+            if os.path.isfile(outf+'_trend.tif'):
+                continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r,c=pix
+                if r<60:
+                    continue
+                landcover_value=crop_mask[pix]
+                if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                    continue
+                if dic_modis_mask[pix]==12:
+                    continue
+
+                time_series=dic[pix]['growing_season']
                 # print(time_series)
 
 
@@ -3091,11 +3203,15 @@ class greening_analysis():
                 try:
 
                         # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
-                    slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
-                    trend_dic[pix] = slope
-                    p_value_dic[pix] = p_value
+                        slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
+                        trend_dic[pix] = slope
+                        p_value_dic[pix] = p_value
+
+
                 except:
                     continue
+
+
 
             arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
             arr_trend_dryland = arr_trend * array_mask
@@ -3116,6 +3232,28 @@ class greening_analysis():
 
             np.save(outf + '_trend', arr_trend_dryland)
             np.save(outf + '_p_value', p_value_arr_dryland)
+
+
+    def one_sample_t_test(self,X, y, reg):
+        from sklearn.linear_model import LinearRegression
+        beta_hat = [reg.intercept_] + reg.coef_.tolist()
+        n = len(y)
+        # compute the p-values
+        # from scipy.stats import t
+        # add ones column
+        X1 = np.column_stack((np.ones(n), X))
+        # standard deviation of the noise.
+        sigma_hat = np.sqrt(np.sum(np.square(y - X1 @ beta_hat)) / (n - X1.shape[1]))
+        # estimate the covariance matrix for beta
+        beta_cov = np.linalg.inv(X1.T @ X1)
+        # the t-test statistic for each variable from the formula from above figure
+        t_vals = beta_hat / (sigma_hat * np.sqrt(np.diagonal(beta_cov)))
+        # compute 2-sided p-values.
+        p_vals = t.sf(np.abs(t_vals), n - X1.shape[1]) * 2
+
+
+        return p_vals
+
 
     def gen_robinson_template(self):
         pass
@@ -7286,7 +7424,7 @@ def main():
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
@@ -7296,7 +7434,7 @@ def main():
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
     # products_check().run()
-    plot_dominant_factors().run()
+    # plot_dominant_factors().run()
 
 
 
