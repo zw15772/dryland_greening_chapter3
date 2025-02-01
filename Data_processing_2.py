@@ -2755,13 +2755,13 @@ class greening_analysis():
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis_simply_linear()
-        self.trend_analysis_TS()
+        # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
         # self.plot_robinson()
         # self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
-        # self.plot_spatial_histgram_period()
+        self.plot_spatial_histgram_period()
         # self.stacked_bar_plot()
         # self.statistic_analysis()
         # self.plot_robinson()
@@ -3585,15 +3585,15 @@ class greening_analysis():
         df=T.load_df(dff)
         df = self.df_clean(df)
         ##plt histogram of LAI
-        df=df[df['LAI4g_1983_2020_trend']<30]
-        df=df[df['LAI4g_1983_2020_trend']>-30]
-        first_period=df['LAI4g_1983_2001_trend'].values
+        df=df[df['LAI4g_1983_2020_trend']<50]
+        df=df[df['LAI4g_1983_2020_trend']>-50]
+        first_period=df['NDVI_1983_2001_trend'].values
         first_period_vals=np.array(first_period)
         first_period_vals[first_period_vals<-99]=np.nan
         first_period_vals[first_period_vals > 99] = np.nan
         first_period_vals=first_period_vals[~np.isnan(first_period_vals)]
 
-        second_period=df['LAI4g_2002_2020_trend'].values
+        second_period=df['NDVI_2002_2020_trend'].values
         second_period_vals=np.array(second_period)
         second_period_vals[second_period_vals<-99]=np.nan
         second_period_vals[second_period_vals > 99] = np.nan
@@ -3616,18 +3616,18 @@ class greening_analysis():
         # plt.plot(x1, y1, color='red', label='1983–2001', linewidth=2)
         # plt.plot(x2, y2, color='green', label='2002–2020', linewidth=2)
 
-        plt.xlabel('LAI trend ( %/year)')
+        plt.xlabel('NDVI trend ( %/year)')
         plt.ylabel('Probability')
         plt.legend()
         # plt.grid(True, linestyle='--', alpha=0.5)
         plt.xlim(-1., 1.)
         outdir = rf'E:\Project3\Result\3mm\relative_change_growing_season\trend_plot\\'
-        outf = join(outdir, 'LAI_trend_2_periods_hist.pdf')
-        plt.savefig(outf)
-        plt.close()
-        T.open_path_and_file(outdir)
+        outf = join(outdir, 'NDVI_trend_2_periods_hist.pdf')
+        # plt.savefig(outf)
+        # plt.close()
+        # T.open_path_and_file(outdir)
 
-        # plt.show()
+        plt.show()
 
         pass
 
