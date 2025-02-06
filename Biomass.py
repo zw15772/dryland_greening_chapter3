@@ -91,24 +91,30 @@ class Data_processing_2:
         # self.resampleSOC()
         # self.reclassification_koppen()
         # self.aggregation_soil()
-        self.resample()
-        # self.scale()
-        self.extract_tiff_by_shp()
-        # self.aggregate()
 
-        # self.tif_to_dic()
-        # self.interpolation()
+
+        # self.extract_tiff_by_shp()
+        # self.average_tiff()
+        # self.plot_bar()
+        # self.rename_tiff()
+        self.plot_biomass_vs_NPP()
 
 
         pass
 
     def nc_to_tif_time_series(self):
+        import netCDF4
 
-        fdir=data_root+rf'nc\\'
+        fdir=data_root+rf'NPP\\nc\\'
 
         for f in os.listdir(fdir):
+            if not 'ISAM_S2' in f:
+                continue
+
+
+
             fname=f.split('.')[0]
-            outdir = data_root + rf'TIFF\\{fname}\\'
+            outdir = data_root + rf'NPP\\TIFF\\{fname}\\'
 
             Tools().mk_dir(outdir, force=True)
 
@@ -119,17 +125,24 @@ class Data_processing_2:
 
 
             # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
-            try:
-                self.nc_to_tif_template(fdir+f, var_name='cVeg', outdir=outdir, yearlist=yearlist)
-            except Exception as e:
-                print(e)
-                continue
+            # try:
+            #     self.nc_to_tif_template(fdir+f, var_name='npp', outdir=outdir, yearlist=yearlist)
+            ncin = netCDF4.Dataset(fdir + f, 'r')
+            ncin = Dataset(fdir + f, 'r')
+            print(ncin.variables.keys())
+            time = ncin.variables['time'][:]
+            basetime_str = ncin.variables['time'].units
+            print(basetime_str);exit()
+            # except Exception as e:
+            #     print(e)
+            #     continue
 
     def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
         try:
             ncin = Dataset(fname, 'r')
             print(ncin.variables.keys())
-            time=ncin.variables['time'][:]
+            # time=ncin.variables['time'][:]
+            # time_counter=ncin.variables['time_counter'][:]
 
         except:
             raise UserWarning('File not supported: ' + fname)
@@ -145,8 +158,13 @@ class Data_processing_2:
                 try:
                     lat = ncin.variables['lat_FULL'][:]
                     lon = ncin.variables['lon_FULL'][:]
+
                 except:
-                    raise UserWarning('lat or lon not found')
+                    try:
+                        lat = ncin.variables['lat_FULL_bnds'][:]
+                        lon = ncin.variables['lon_FULL_bnds'][:]
+                    except:
+                        raise UserWarning('lat or lon not found')
         shape = np.shape(lat)
         try:
             time = ncin.variables['time_counter'][:]
@@ -193,13 +211,16 @@ class Data_processing_2:
                                 basetime = datetime.datetime.strptime(basetime, '%Y')
                             except:
                                 try:
-                                    basetime_ = basetime.split('T')[0]
-                                    # print(basetime_)
-                                    basetime = datetime.datetime.strptime(basetime_, '%Y-%m-%d')
-                                    # print(basetime)
+                                    basetime = datetime.datetime.strptime(basetime, '%Y.%f')
                                 except:
+                                    try:
+                                        basetime_ = basetime.split('T')[0]
+                                        # print(basetime_)
+                                        basetime = datetime.datetime.strptime(basetime_, '%Y-%m-%d')
+                                        # print(basetime)
+                                    except:
 
-                                    raise UserWarning('basetime format not supported')
+                                        raise UserWarning('basetime format not supported')
         data = ncin.variables[var_name]
         if len(shape) == 2:
             xx, yy = lon, lat
@@ -447,194 +468,216 @@ class Data_processing_2:
     def extract_tiff_by_shp(self):
 
         shp_dryland = rf'E:\Biomass\Data\Basedata\\dryland.shp'
-        fdir = rf'E:\Biomass\Data\Biomass\TIFF\\'
-        outdir = rf'E:\Biomass\Data\Biomass\dryland_tiff\\'
+        fdir = rf'E:\Biomass\Data\NPP\TIFF\\'
+        outdir = rf'E:\Biomass\Data\NPP\dryland_tiff\\'
         T.mk_dir(outdir)
-        for fdir_i in os.listdir(fdir):
+        for fdir_i in tqdm(os.listdir(fdir)):
+            outdir_i = join(outdir, fdir_i)
+            T.mk_dir(outdir_i)
 
             fdir_i = join(fdir, fdir_i)
+            print(fdir_i)
+
             for f in os.listdir(fdir_i):
-                fpath = join(fdir_i, f)
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-                outf=join(outdir,f)
-                ToRaster().clip_array(array, outf ,shp_dryland,)
-
-
-
-
-        pass
-
-    def aggregate(self):
-        ##every four days to biweekly
-        fdir=rf'E:\Project3\Data\MCD15A3H\dryland_tiff\\'
-        outdir=rf'E:\Project3\Data\MCD15A3H\aggregate\\'
-        month_list=['01','02','03','04','05','06','07','08','09','10','11','12']
-        yearlist=list(range(2003,2021))
-        T.mk_dir(outdir, force=True)
-
-        for year in yearlist:
-            for month in month_list:
-                data_aggregate_list=[]
-
-                for f in T.listdir(fdir):
-                    if not f.endswith('.tif'):
-                        continue
-                    if  int(f.split('.')[0][0:4])!=year:
-                        continue
-                    if  (f.split('.')[0][4:6])!=month:
-                        continue
-
-
-                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
-                    array = np.array(array, dtype=float)
-                    array[array < -99] = np.nan
-                    data_aggregate_list.append(array)
-                average_array = np.nanmax(data_aggregate_list, axis=0)
-                outf=join(outdir,f'{year}{month}.tif')
-                ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, average_array)
-
-
-
-
-        pass
-
-    def tif_to_dic(self):
-
-        fdir_all = rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
-
-        year_list = list(range(1982, 2021))
-
-        # 作为筛选条件
-        for fdir in os.listdir(fdir_all):
-            if not 'dryland' in fdir:
-                continue
-            outdir=join(fdir_all, 'dic')
-
-
-            T.mk_dir(outdir, force=True)
-            all_array = []  #### so important  it should be go with T.mk_dic
-
-            for f in os.listdir(fdir_all+fdir):
                 if not f.endswith('.tif'):
                     continue
-                if int(f.split('.')[0][0:4]) not in year_list:
+                inf = join(fdir_i, f)
+
+                outf=join(outdir_i,f)
+                ToRaster().clip_array(inf, outf ,shp_dryland,)
+
+
+
+
+        pass
+
+    def average_tiff(self):
+        ## calculate spatial average of long term
+        fdir = rf'E:\Biomass\Data\NPP\dryland_tiff\\'
+        outdir = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
+        T.mk_dir(outdir, force=True)
+        for fdir_i in tqdm(os.listdir(fdir)):
+
+            fdir_i = join(fdir, fdir_i)
+            # print(fdir_i)
+
+            all_array = []
+            flag=0
+
+            for f in os.listdir(fdir_i):
+                flag+=1
+
+                if not f.endswith('.tif'):
                     continue
-
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir, f))
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_i, f))
                 array = np.array(array, dtype=float)
+                array[array <= 0] = np.nan
+                array=array*24*60*60*30 ## GPP unit is kg/m2/month
 
+                all_array.append(array)
 
-                # array_unify = array[:720][:720,
-                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
-                array_unify = array[:360][:360,
-                              :720]
-                array_unify[array_unify < -999] = np.nan
-                array_unify[array_unify > 1] = np.nan
-                # array[array ==0] = np.nan
+            all_array = np.array(all_array)
+            year_length = flag//12
+            # print(year_length);exit()
+            all_array_mean = np.nansum(all_array, axis=0)/year_length
+            # all_array_mean = np.nanmean(all_array, axis=0)
+            variable_name = fdir_i.split('/')[-1]
+            print(outdir)
 
-                # array_unify[array_unify < 0] = np.nan
+            outf = join(outdir, f'{variable_name}_mean.tif')
+            # print(outf);exit()
+            ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, all_array_mean)
 
-                #
-                #
-                # plt.imshow(array_unify)
-                # plt.show()
-                # array_mask = np.array(array_mask, dtype=float)
-                # plt.imshow(array_mask)
-                # plt.show()
+    def plot_bar(self):
+        fdir = rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\'
+        variable_list=['CABLE-POP','CLASSIC','CLM5','IBIS',
+                       'ISBA-CTRIP','JSBACH','JULES','LPJ-GUESS','ORCHIDEE',
+                       'SDGVM']
 
-                array_dryland = array_unify
-                # plt.imshow(array_dryland)
-                # plt.show()
+        data_all={}
+        uncertainty_all={}
+        for f in os.listdir(fdir):
 
-                all_array.append(array_dryland)
-
-            row = len(all_array[0])
-            col = len(all_array[0][0])
-            key_list = []
-            dic = {}
-
-            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
-                for c in range(col):
-                    dic[(r, c)] = []
-                    key_list.append((r, c))
-            # print(dic_key_list)
-
-            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
-                for c in range(col):
-                    for arr in all_array:
-                        value = arr[r][c]
-                        dic[(r, c)].append(value)
-                    # print(dic)
-            time_series = []
-            flag = 0
-            temp_dic = {}
-            for key in tqdm(key_list, desc='output...'):  # 存数据
-                flag = flag + 1
-                time_series = dic[key]
-                time_series = np.array(time_series)
-                temp_dic[key] = time_series
-                if flag % 10000 == 0:
-                    # print(flag)
-                    np.save(outdir + '\\per_pix_dic_%03d' % (flag / 10000), temp_dic)
-                    temp_dic = {}
-            np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
-
-    def interpolation(self):
-
-        fdir = rf'E:\Project3\Data\Landsat\dic\\'
-        dic = T.load_npy_dir(fdir)
-
-        dict_clean = {}
-
-        for pix in dic:
-            r, c = pix
-            vals = dic[pix]
-            vals = np.array(vals)
-            # vals_clip = vals[36:]
-            vals_clip = vals
-            vals_no_nan = vals_clip[~np.isnan(vals_clip)]
-            ratio = len(vals_no_nan) / len(vals_clip)
-            if ratio < 0.5:
+            if not f.endswith('.tif'):
                 continue
-            dict_clean[pix] = vals_clip
+            fname=(f.split('.')[0].split('_')[0])
+            if fname not in variable_list:
+                continue
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir, f))
+            array = np.array(array, dtype=float)
+            array[array < 0] = np.nan
+            array[array>9999] = np.nan
+            #### average spatially
+            average = np.nanmean(array)
+            std=np.nanstd(array)
 
-        mon_mean_dict = {}
-        for pix in tqdm(dict_clean,desc='calculating long term mean'):
-            vals = dict_clean[pix]
-            vals_reshape = vals.reshape(-1, 12)
-            vals_reshape_T = vals_reshape.T
-            mon_mean_list = []
-            for mon in vals_reshape_T:
-                mon_mean = np.nanmean(mon)
-                mon_mean_list.append(mon_mean)
-            mon_mean_dict[pix] = mon_mean_list
+            data_all[fname]=average
+            uncertainty_all[fname]=std
+        result_all={'average':data_all,'uncertainty':uncertainty_all}
 
-        spatial_dic={}
 
-        for pix in dict_clean:
-            vals = dict_clean[pix]
-            vals_reshape = vals.reshape(-1, 12)
-            vals_reshape_T = vals_reshape.T
-            # print(len(vals_reshape));exit()
-            mon_vals_interpolated_T = []
-            for i in range(len(vals_reshape_T)):
-                mon_mean = mon_mean_dict[pix][i]
-                mon_vals = vals_reshape_T[i]
-                mon_vals = np.array(mon_vals)
-                mon_vals[np.isnan(mon_vals)] = mon_mean
-                mon_vals_interpolated_T.append(mon_vals)
-            mon_vals_interpolated_T = np.array(mon_vals_interpolated_T)
-            mon_vals_interpolated = mon_vals_interpolated_T.T
-            mon_vals_interpolated_flatten = mon_vals_interpolated.flatten()
-            vals_origin = dic[pix]
-            spatial_dic[pix] = mon_vals_interpolated_flatten
-            # plt.imshow(mon_vals_interpolated)
-            # plt.figure(figsize=(15, 6))
-            # plt.plot(mon_vals_interpolated_flatten)
-            # plt.scatter(np.arange(0, len(vals_origin)), vals_origin, c='r')
-            # plt.scatter(np.arange(0, len(mon_vals_interpolated_flatten)), mon_vals_interpolated_flatten, c='g',zorder=-1)
-            # plt.show()
-        np.save(fdir+'interpolated', spatial_dic)
+        df=pd.DataFrame.from_dict(result_all,orient='index')
+
+        df=df.T
+        df=df.sort_index()
+
+        df.plot(kind='bar',yerr='uncertainty',figsize=(6, 4),rot=45,legend=False,color='grey',alpha=0.7)
+
+        # df.plot(kind='bar',figsize=(8, 8),rot=45,legend=False,color='grey')
+        plt.xticks(rotation=45)
+        plt.ylim(0, 4.5)
+        plt.ylabel('Biomass (Kg/m2/yr)')
+        plt.tight_layout()
+
+        plt.show()
+        # plt.savefig(join(f,'plot_bar.png'))
+        # plt.close()
+
+
+    def rename_tiff(self):
+        dic={
+            'CABLE-POP_S2_npp_mean':'CABLE-POP',
+        'CLASSIC_S2_npp_mean':'CLASSIC',
+        'CLM5_S2_mean':'CLM5',
+        'DLEM_S2_npp_mean':'DLEM',
+        'IBIS_S2_npp_mean':'IBIS',
+        'ISBA-CTRIP_S2_npp_mean':'ISBA-CTRIP',
+        'JSBACH_S2_npp_mean':'JSBACH',
+        'JULES_S2_npp_mean':'JULES',
+        'LPJmL_S2_npp_mean':'LPJmL',
+            'LPJwsl_S2_npp_mean':'LPJwsl',
+            'OCN_S2_npp_mean':'OCN',
+            'ORCHIDEE_S2_npp_mean':'ORCHIDEE',
+            'SDGVM_S2_npp_mean':'SDGVM',
+            'VISIT_S2_npp_mean':'VISIT',
+            'YIBs_S2_Monthly_npp_mean':'YIBs',}
+
+        # dic = {
+        #     'CABLE-POP_S2_gpp_mean': 'CABLE-POP',
+        #     'CLASSIC_S2_gpp_mean': 'CLASSIC',
+        #     'CLM5_S2_gpp_mean': 'CLM5',
+        #     'DLEM_S2_gpp_mean': 'DLEM',
+        #     'IBIS_S2_gpp_mean': 'IBIS',
+        #     'ISBA-CTRIP_S2_gpp_mean': 'ISBA-CTRIP',
+        #     'JSBACH_S2_gpp_mean': 'JSBACH',
+        #     'JULES_S2_gpp_mean': 'JULES',
+        #     'LPJmL_S2_gpp_mean': 'LPJmL',
+        #     'LPJwsl_S2_gpp_mean': 'LPJwsl',
+        #     'OCN_S2_gpp_mean': 'OCN',
+        #     'ORCHIDEE_S2_gpp_mean': 'ORCHIDEE',
+        #     'SDGVM_S2_gpp_mean': 'SDGVM',
+        #     'VISIT_S2_gpp_mean': 'VISIT',
+        #     'YIBs_S2_Monthly_gpp_mean': 'YIBs', }
+        #
+
+        fdir = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            fname=(f.split('.')[0].split('_')[0])
+
+            if fname in dic:
+                fname=dic[fname]
+            os.rename(join(fdir,f),join(fdir,fname+'.tif'))
+    def plot_biomass_vs_NPP(self):
+        fdir_NPP = rf'E:\Biomass\Data\GPP\dryland_tiff_average\\'
+        average_NPP={}
+        average_biomass={}
+
+        variable_list=['DLEM','VISIT','YIBs','LPJmL','OCN','LPJwsl']
+        for f in os.listdir(fdir_NPP):
+            if not f.endswith('.tif'):
+                continue
+            if f.split('.')[0].split('_')[0]  in variable_list:
+                continue
+            f_NPP_name=(f.split('.')[0].split('_')[0])
+            f_NPP=join(fdir_NPP,f)
+            f_bimass_name=(f.split('.')[0].split('_')[0])
+            f_biomass=join(rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\',f_bimass_name+'.tif')
+            if not os.path.exists(f_NPP) or not os.path.exists(f_biomass):
+                continue
+            array_NPP, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_NPP)
+            array_NPP = np.array(array_NPP, dtype=float)
+            array_NPP[array_NPP <=0] = np.nan
+            array_NPP[array_NPP>9999] = np.nan
+            average_NPP[f_NPP_name]=np.nanmean(array_NPP)
+
+
+            array_biomass, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_biomass)
+            array_biomass = np.array(array_biomass, dtype=float)
+            array_biomass[array_biomass <= 0] = np.nan
+            array_biomass[array_biomass>9999] = np.nan
+            average_biomass[f_bimass_name]=np.nanmean(array_biomass)
+        df=pd.DataFrame({'GPP':average_NPP,'biomass':average_biomass})
+
+        color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
+                       'pink', 'brown', 'cyan', 'magenta', 'lime', 'teal', 'lavender', 'maroon', 'navy',
+                      'olive', 'silver', 'aqua', 'fuchsia', 'lime', 'teal', 'lavender', 'maroon', 'navy', 'olive',
+                      'silver', 'aqua', 'fuchsia']
+
+        marker_list = ['o', 'v', '^', '<', '>', 's', 'p', '*', 'h', 'H', '+', 'x', 'D',]
+
+        df=df.sort_index()
+        ## using different markers
+
+
+        for i in range(len(df)):
+            plt.scatter(df.iloc[i]['GPP'],df.iloc[i]['biomass'],color=color_list[i],marker=marker_list[i],s=100)
+        plt.legend(df.index)
+
+        plt.xlabel('GPP (kg/m2/yr)',fontsize=10)
+        plt.ylabel('biomass (kg/m2/yr)',fontsize=10)
+
+        plt.show()
+        plt.close()
+
+
+
+
+        pass
+
+
 
 
 def main():

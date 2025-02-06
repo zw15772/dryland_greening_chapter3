@@ -2750,18 +2750,21 @@ class greening_analysis():
     def run(self):
 
         # self.relative_change()
+        # self.anomaly()
+        # self.anomaly_two_period()
+        # self.long_term_mean()
         # self.weighted_average_LAI()
         # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
-        # self.trend_analysis_simply_linear()
+        self.trend_analysis_simply_linear()
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
         # self.plot_robinson()
         # self.plot_significant_percentage_area()
         # self.plot_spatial_barplot_period()
-        self.plot_spatial_histgram_period()
+        # self.plot_spatial_histgram_period()
         # self.stacked_bar_plot()
         # self.statistic_analysis()
         # self.plot_robinson()
@@ -2771,13 +2774,76 @@ class greening_analysis():
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\extract_Landsat_phenology_year\dryland\extraction_Landsat\\\\'
-        outdir = result_root + rf'3mm\relative_change_growing_season\\\\'
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\relative_change_growing_season\\\\whole_period\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'Landsat' in f:
+
+            if 'detrend' in f:
                 continue
+            if not 'NDVI' in f:
+                continue
+            if '4g' in f:
+                continue
+            if 'GIMMS' in f:
+                continue
+
+
+            outf = outdir + f.split('.')[0]
+            if isfile(outf):
+                continue
+            print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+
+
+                time_series = np.array(time_series)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                relative_change = (time_series - mean) / mean * 100
+                anomaly = time_series - mean
+                zscore_dic[pix] = relative_change
+                # plot
+                plt.plot(anomaly)
+                plt.legend(['anomaly'])
+                plt.show()
+
+                plt.plot(relative_change)
+                plt.legend(['relative_change'])
+                # plt.legend(['anomaly','relative_change'])
+                plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
+    def long_term_mean(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\mean_growing_season\\\\whole_period\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
             if 'detrend' in f:
                 continue
 
@@ -2801,7 +2867,7 @@ class greening_analysis():
 
 
                 time_series = np.array(time_series)
-                time_series = time_series[3:37]
+                # time_series = time_series[3:37]
 
                 print(len(time_series))
 
@@ -2810,7 +2876,63 @@ class greening_analysis():
 
                 time_series = time_series
                 mean = np.nanmean(time_series)
-                relative_change = (time_series - mean) / mean * 100
+
+
+                zscore_dic[pix] = mean
+                # plt.plot(time_series)
+                #
+                # plt.plot(relative_change)
+                # plt.legend(['original','relative_change'])
+                # plt.show()
+
+                ## save
+
+            DIC_and_TIF().pix_dic_to_tif(zscore_dic,  outf.split('.')[0] + '.tif')
+
+            np.save(outf, zscore_dic)
+
+    def anomaly(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\anomaly_growing_season\\\\whole_period\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+            if 'detrend' in f:
+                continue
+
+            outf = outdir + f.split('.')[0]
+            if isfile(outf):
+                continue
+            print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+
+
+                time_series = np.array(time_series)
+
+
+                print(len(time_series))
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                relative_change = (time_series - mean)
 
                 zscore_dic[pix] = relative_change
                 # plot
@@ -2822,6 +2944,32 @@ class greening_analysis():
 
                 ## save
             np.save(outf, zscore_dic)
+    def anomaly_two_period(self):
+        fdir = result_root + rf'\3mm\anomaly_growing_season\\whole_period\\'
+        for f in os.listdir(fdir):
+
+            if 'detrend' in f:
+                continue
+            outdir = result_root + rf'3mm\anomaly_growing_season\\two_period\\'
+            Tools().mk_dir(outdir, force=True)
+            outf = outdir + f.split('.')[0]
+            dic = T.load_npy(fdir + f)
+            result_dic_first = {}
+            result_dic_second = {}
+
+            for pix in tqdm(dic):
+                time_series = dic[pix]
+                time_series_first = time_series[0:19]
+                time_series_second = time_series[19:]
+
+                result_dic_first[pix] = time_series_first
+                result_dic_second[pix] = time_series_second
+
+            np.save(outf,result_dic_first)
+            np.save(outf,result_dic_second)
+
+
+        pass
 
     def weighted_average_LAI(self):  ###add weighted average LAI in dataframe
         df =result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_landsat.df'
@@ -3151,13 +3299,12 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
-        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\dryland\\trend_analysis_simple_linear\\'
+        fdir = result_root+rf'3mm\anomaly_growing_season\\whole_period\\'
+        outdir = result_root + rf'3mm\anomaly_growing_season\\whole_period\\trend_analysis_simple_linear_0206\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if  'GOSIF' in f:
-                continue
+
             if 'detrend' in f:
                 continue
 
@@ -3186,7 +3333,7 @@ class greening_analysis():
                 if dic_modis_mask[pix]==12:
                     continue
 
-                time_series=dic[pix]['growing_season']
+                time_series=dic[pix]
                 # print(time_series)
 
 
@@ -3202,8 +3349,8 @@ class greening_analysis():
                     continue
                 try:
 
-                        # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
-                        slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
+                        slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                        # slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
                         trend_dic[pix] = slope
                         p_value_dic[pix] = p_value
 
