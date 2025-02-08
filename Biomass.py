@@ -548,7 +548,7 @@ class Data_processing_2:
             array[array < 0] = np.nan
             array[array>9999] = np.nan
             #### average spatially
-            average = np.nanmean(array)
+            average = np.nansum(array)
             std=np.nanstd(array)
 
             data_all[fname]=average
@@ -565,8 +565,8 @@ class Data_processing_2:
 
         # df.plot(kind='bar',figsize=(8, 8),rot=45,legend=False,color='grey')
         plt.xticks(rotation=45)
-        plt.ylim(0, 4.5)
-        plt.ylabel('Biomass (Kg/m2/yr)')
+        # plt.ylim(0, 10000)
+        plt.ylabel('Biomass (Kg/m2)')
         plt.tight_layout()
 
         plt.show()
@@ -621,7 +621,7 @@ class Data_processing_2:
                 fname=dic[fname]
             os.rename(join(fdir,f),join(fdir,fname+'.tif'))
     def plot_biomass_vs_NPP(self):
-        fdir_NPP = rf'E:\Biomass\Data\GPP\dryland_tiff_average\\'
+        fdir_NPP = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
         average_NPP={}
         average_biomass={}
 
@@ -648,7 +648,7 @@ class Data_processing_2:
             array_biomass = np.array(array_biomass, dtype=float)
             array_biomass[array_biomass <= 0] = np.nan
             array_biomass[array_biomass>9999] = np.nan
-            average_biomass[f_bimass_name]=np.nanmean(array_biomass)
+            average_biomass[f_bimass_name]=np.nansum(array_biomass)
         df=pd.DataFrame({'GPP':average_NPP,'biomass':average_biomass})
 
         color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
@@ -663,11 +663,11 @@ class Data_processing_2:
 
 
         for i in range(len(df)):
-            plt.scatter(df.iloc[i]['GPP'],df.iloc[i]['biomass'],color=color_list[i],marker=marker_list[i],s=100)
+            plt.scatter(df.iloc[i]['biomass'],df.iloc[i]['GPP'],color=color_list[i],marker=marker_list[i],s=100)
         plt.legend(df.index)
 
-        plt.xlabel('GPP (kg/m2/yr)',fontsize=10)
-        plt.ylabel('biomass (kg/m2/yr)',fontsize=10)
+        plt.ylabel('NPP (kg/m2/yr)',fontsize=10)
+        plt.xlabel('Biomass (kg/m2)',fontsize=10)
 
         plt.show()
         plt.close()
