@@ -81,8 +81,9 @@ class greening_analysis():
     def run(self):
 
 
-        self.greening_products_basemap_whole_time()
-        self.greening_products_basemap_whole_time_CV()
+        # self.greening_products_basemap_whole_time()
+        # self.greening_products_basemap_whole_time_CV()
+        self.greening_products_basemap_whole_time_consistency()
         # self.greening_products_basemap_two_time_periods()
         # self.plot_spatial_histgram_period()
         pass
@@ -107,13 +108,13 @@ class greening_analysis():
         T.mk_dir(temp_root)
         # T.open_path_and_file(fdir);exit()
 
-        products = [ 'NDVI4g', 'GIMMS_plus_NDVI','NDVI','Landsat']
+        products = [ 'NDVI4g', 'GIMMS_plus_NDVI','NDVI',]
 
 
 
         # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
 
-        fig, axes = plt.subplots(4, 1, figsize=(12, 14))
+        fig, axes = plt.subplots(3, 1, figsize=(12, 14))
         # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
 
         # Loop through products and periods to create subplots
@@ -185,15 +186,24 @@ class greening_analysis():
             # m.scatter(lon_significant, lat_significant, s=0.005, c='k', marker='.', alpha=0.8, zorder=2)
 
             # Add a colorbar for this subplot
+            ## colorbar ticks .2f
+
+
+
             cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
                                 location='left')
             # cbar.set_label(f'{product} Trend Value',y=1)
-            cbar.set_label(f'{product} trend (%)',labelpad=-58)
+            cbar.set_label(f'{product} trend (%)',labelpad=-68)
+
+            tick_labels = np.round(np.linspace(vmin, vmax, 5), 2)
+            cbar.set_ticks(tick_labels)
+            cbar.set_ticklabels([f"{tick:.2f}" for tick in tick_labels])
             # ax.set_title(product)
             # plt.show()
         outf = result_root + rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\greening_products_basemap_whole_time.png'
         plt.savefig(outf, dpi=600)
         plt.close()
+        T.open_path_and_file(outf)
 
     def greening_products_basemap_whole_time_CV(self):
         ## three products 3 time periods comparison
@@ -300,6 +310,83 @@ class greening_analysis():
             # ax.set_title(product)
             # plt.show()
         outf = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\greening_products_basemap_whole_time_CV.png'
+        plt.savefig(outf, dpi=600)
+        plt.close()
+
+    def greening_products_basemap_whole_time_consistency(self):
+        ## three products 3 time periods comparison
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.basemap import Basemap
+        import numpy as np
+
+
+        # Create synthetic data (replace with actual data as needed)
+        fdir=result_root+rf'\3mm\bivariate_analysis\CV_products_comparison_bivariate\\'
+        temp_root = result_root + rf'3mm\bivariate_analysis\CV_products_comparison_bivariate\\temp_root\\'
+
+        T.mk_dir(temp_root)
+
+        products = [ 'LAI4g_NDVI4g','LAI4g_GIMMS_NDVI', 'LAI4g_NDVI',]
+
+        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
+
+        fig, axes = plt.subplots(3, 1, figsize=(12, 14))
+        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
+
+        # Loop through products and periods to create subplots
+
+        for i, product in enumerate(products):  # Use 'i' to index the subplot
+            ax = axes[i]
+
+            f_trend = fdir + rf'\{product}.tif'
+
+
+            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
+
+            array_trend[array_trend<-999]=np.nan
+
+
+
+            # m = Basemap(projection='cyl', resolution='l', ax=ax)
+            # ##不显示经纬度
+            # m.drawcoastlines()
+            # m.drawcountries()
+            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
+            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
+
+            # Plot the data using pcolormesh
+            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
+
+            # arr_trend = array_trend[:60]
+
+            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
+            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
+            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            ## create the basemap instance
+
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
+                        resolution='l', ax=ax)
+
+            m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
+            # Plot the data using pcolormesh
+
+            color_list = [
+                 '#a86ee1',
+                '#d6cb38',
+                '#4defef',
+                '#de6e13',
+            ]
+
+            my_cmap2 = T.cmap_blend(color_list, n_colors=5)
+
+            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=my_cmap2,)
+            # cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
+            #                     location='left')
+            # # cbar.set_label(f'{product} Trend Value',y=1)
+            # cbar.set_label(f'{product}', labelpad=-58)
+
+
+        outf = result_root + rf'3mm\bivariate_analysis\CV_products_comparison_bivariate\whole_time_consistency.png'
         plt.savefig(outf, dpi=600)
         plt.close()
 

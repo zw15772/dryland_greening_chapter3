@@ -3123,7 +3123,7 @@ class greening_analysis():
         year_range = range(1983, 2021)
         result_dic = {}
 
-        variable_list=['LAI4g','NDVI4g','NDVI','GIMMS_plus_NDVI']
+        variable_list=['NDVI4g','GIMMS_plus_NDVI','NDVI',]
 
 
         for var in variable_list:
@@ -3177,25 +3177,28 @@ class greening_analysis():
         #     print(slope,intercept)
         # exit()
         ## plot subplot
-
+        fig, ax1 = plt.subplots(1, 3, figsize=(self.map_width*3, self.map_height*1.1))
+        flag = 0
 
         for var in variable_list:
 
-            fig, ax1 = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax1 = plt.subplot(1, 3, flag + 1)
+
 
             # Plot the first dataset (38-year data)
             year_list = range(1983, 2021)
             ax1.plot(year_range_dic[var],data_range_dic[var] , color='k', lw=1, markersize=3, linestyle='-', marker='o',
                      fillstyle='none')
             slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, data_range_dic[var])
-            plt.plot(year_list, [slope * x + intercept for x in year_list],
+            ax1.plot(year_list, [slope * x + intercept for x in year_list],
                      linestyle='--', color='k', alpha=0.5)
-            plt.text(0, 1, f'{slope:.2f}', transform=plt.gca().transAxes,
+            ax1.text(0, 1, f'{slope:.2f}', transform=plt.gca().transAxes,
                      fontsize=10)
 
             ax1.set_ylabel("Relative change (%/yr)", color='k', fontsize=10, font='Arial')
             ax1.tick_params(axis='y', labelcolor='k')
             ax1.set_xticks(range(1983, 2021, 4))
+            ax1.set_xticklabels(range(1983, 2021, 4), rotation=45)
             # ax1.set_ylim(-8, 8)
 
             ## plot fitting curve
@@ -3207,16 +3210,19 @@ class greening_analysis():
             ## add y=0
 
             ax1.axhline(y=0, color='grey', lw=1.2, ls='--')
+            flag += 1
+            plt.title(var)
 
-            # plt.show()
-            outdir = result_root + rf'3mm\relative_change_growing_season\\whole_period\\plot\\'
-            T.mk_dir(outdir)
-            outf = outdir + rf'{var}_15.pdf'
+        # plt.show()
+        plt.tight_layout()
+        outdir = result_root + rf'3mm\relative_change_growing_season\\whole_period\\plot\\'
+        T.mk_dir(outdir)
+        outf = outdir + rf'{var}_all_15.pdf'
 
-            plt.savefig(outf)
-            plt.close()
-            T.open_path_and_file(outdir)
-            pass
+        plt.savefig(outf)
+        plt.close()
+        T.open_path_and_file(outdir)
+
 
 
     def plot_time_series_spatial(self):
@@ -6952,6 +6958,8 @@ class TRENDY_CV:
     ## 1)
 
     def __init__(self):
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
 
     def run(self):
@@ -6961,7 +6969,7 @@ class TRENDY_CV:
         # self.moving_window_extraction()
         # self.moving_window_CV_anaysis()
         # self.moving_window_mean_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
         # self.plot_robinson()
         # self.plt_basemap()
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
@@ -7471,7 +7479,8 @@ class TRENDY_CV:
         # print(continent_list)
         # exit()
         classfication_list = ['Dryland', 'Sub-humid', 'Humid', 'Very Humid']
-        classfication_list=['Global','North_America','South_America','Asia','Africa',  'Australia',  ]
+        classfication_list=['Global','Australia','South_America','Africa',  'Asia', 'North_America', ]
+        fig = plt.figure(figsize=(self.map_width / 1.2, self.map_height))
         for classfication in classfication_list:
             if classfication=='Global':
                 df_i=df
@@ -7483,11 +7492,13 @@ class TRENDY_CV:
             vals[vals>99]=np.nan
             vals[vals<-99]=np.nan
             vals=vals[~np.isnan(vals)]
-            print(np.nanmean(vals)*38)
+            count=len(vals)
+            print(count)
+            # print(np.nanmean(vals))
 
             plt.bar(x=classfication, height=np.nanmean(vals), yerr=np.nanstd(vals), error_kw={'capsize': 3},color='#D3D3D3')
             plt.xticks(rotation=45)
-            plt.ylabel('Change in CVLAI (%)')
+            plt.ylabel('Change in CVLAI (%/yr)')
         plt.show()
 
 
@@ -7501,12 +7512,13 @@ class TRENDY_CV:
         df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
         print(len(df))
         ## reclass
-        threhold_list = [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]
+        threhold_list = [  0.1, 0.2,  0.3,  0.4, 0.5,  0.6, 0.65]
         label_list = []
         CV_list = []
         CV_list_mean = []
         CV_list_std = []
         result_dic = {}
+        countlist=[]
 
         for i in range(len(threhold_list) - 1):
             threhold1 = threhold_list[i]
@@ -7525,23 +7537,40 @@ class TRENDY_CV:
             threhold2 = threhold_list[i + 1]
 
             CV_val = result_dic[f'{threhold1}-{threhold2}']
-            CV_val_mean = np.nanmean(CV_val)*38
-            CV_val_std = np.nanstd(CV_val)*38
+            CV_val_mean = np.nanmean(CV_val)
+            CV_val_std = np.nanstd(CV_val)
             CV_list_mean.append(CV_val_mean)
             CV_list_std.append(CV_val_std)
-
+            countlist.append(len(CV_val))
 
             CV_list.append(CV_val)
             label_list.append(f'{threhold1}-{threhold2}')
         ## plot violin plot
+        x_ticks = np.linspace(0.05,0.65,len(label_list))
+        print(countlist)
+        fig=plt.figure(figsize=(self.map_width/1.2,self.map_height))
 
-        plt.bar(x=label_list, height=CV_list_mean, yerr=CV_list_std, error_kw={'capsize': 3}, color='#D3D3D3')
+
+
+        plt.bar(x=x_ticks, height=CV_list_mean, yerr=CV_list_std, error_kw={'capsize': 3}, color='#D3D3D3',width=0.05)
         plt.xlabel('Aridity')
-        plt.ylabel('Trend of CVLAI (%)')
+        plt.ylabel('Trend of CVLAI (%/yr)')
+        plt.twinx()
+        plt.twiny()
+
+        # plt.hist(df['Aridity'].tolist(), bins=20, alpha=0.5, label='Positive', color='green', rwidth=0.9)
+        AI_values = df['Aridity'].tolist()
+
+        # x,y=Plot().plot_hist_smooth(AI_values,bins=threhold_list,alpha=0,interpolate_window=5)
+        # plt.plot(x, y,)
+        # plt.ylim(0.036, 0.12)
+
 
 
         # plt.xticks(np.arange(1, len(label_list) + 1), label_list, rotation=45)
         plt.tight_layout()
+        plt.yticks([])
+        plt.xticks([])
         plt.show()
 
 
@@ -7887,9 +7916,9 @@ def main():
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_window().run()
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
