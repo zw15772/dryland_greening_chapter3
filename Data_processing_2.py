@@ -7873,39 +7873,6 @@ class products_check():
 
 
 
-class plot_dominant_factors():
-    def __init__(self):
-        pass
-    def run(self):
-        self.plot_dominant_factors()
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
-
-    def plot_dominant_factors(self):
-        dff=result_root+rf'\3mm\Dataframe\dominant_factors\\dominant_factors.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        vals=df['max_flag_climate_only'].values
-        ### count number of each factor
-        count_list=[]
-        for i in range(1,6):
-            count_list.append(np.sum(vals==i))
-        plt.bar(x=['1','2','3','4','5'],height=count_list)
-        plt.show()
-
-        pass
-    pass
 
 def main():
     # Data_processing_2().run()
