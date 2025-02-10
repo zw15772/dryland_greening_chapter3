@@ -1039,9 +1039,6 @@ class Rainfall_product_comparison():
     pass
 
 class TRENDY_trend():
-    pass
-
-class TRENDY_CV():
 
     def trend_analysis_plot(self):
         outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
@@ -1063,7 +1060,7 @@ class TRENDY_CV():
 
         fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
         count = 1
-        for model in model_list:
+        for model in model_list3:
 
 
 
@@ -1099,10 +1096,140 @@ class TRENDY_CV():
 
 
             # plt.show()
-        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
-        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
+        cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
+        cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
         # cb.set_label(f'{model}_CV_trend', labelpad=-40)
-        outf = outdir + rf'CV_trend_analysis_plot1.png'
+        outf = outdir + rf'CV_trend_analysis_plot_legend.pdf'
+
+        plt.subplots_adjust(hspace=0.055, wspace=0.038)
+        #
+        plt.savefig(outf, dpi=600)
+        plt.close()
+        # plt.show()
+        # T.open_path_and_file(outdir)
+        # exit()
+
+    pass
+
+    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
+                                               s=20,
+                                               c='k', marker='x',
+                                               zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
+
+        # arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        #
+        os.remove(fpath_clip)
+        # os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+        # exit()
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list) + res/2
+        lat_list = np.array(lat_list) - res/2
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        # lon_list = lon_list + pixelWidth / 2
+        # lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        # print(lat_list);exit()
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+        # ax.scatter(lon_list,lat_list)
+        # plt.show()
+
+        return m
+
+
+class TRENDY_CV():
+
+    def trend_analysis_plot(self):
+        outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        temp_root = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
+
+        model_list = ['LAI4g',  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', ]
+        model_list2=['ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      ]
+        model_list3=['SDGVM_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+
+        # plt.show()
+
+        plt.figure(figsize=(11, 7))
+
+        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        count = 1
+        for model in model_list3:
+
+
+
+            fpath= fdir+f'{model}_detrend_CV_trend.tif'
+            f_p_value = fdir + f'{model}_detrend_CV_p_value.tif'
+
+
+            ax = plt.subplot(3, 2, count)
+            # print(count, f)
+            count = count + 1
+            # if not count == 9:
+            #     continue
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr = Tools().mask_999999_arr(arr, warning=False)
+            arr_m = ma.masked_where(np.isnan(arr), arr)
+            lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
+                        resolution='l', ax=ax)
+
+            m = self.plot_sig_scatter(
+                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
+                s=1,
+                c='k', marker='x',
+                zorder=100, res=4
+            )
+            plt.title(model)
+
+            m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
+            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=-1, vmax=1)
+
+
+            # plt.show()
+        cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
+        cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
+        # cb.set_label(f'{model}_CV_trend', labelpad=-40)
+        outf = outdir + rf'CV_trend_analysis_plot_legend.pdf'
 
         plt.subplots_adjust(hspace=0.055, wspace=0.038)
         #
