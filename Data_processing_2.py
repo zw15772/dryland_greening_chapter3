@@ -799,22 +799,22 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'E:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         print(fdir)
         print(self.dff)
-        # variable_list = [
-        #                  'rainfall_seasonality_all_year_ecosystem_year',
-        #                'heat_event_frenquency_growing_season','rainfall_frenquency_non_growing_season', 'rainfall_frenquency_growing_season',
-        #
-        #                  'rainfall_intensity_growing_season',
-        #                   'rainfall_intensity_non_growing_season','detrended_sum_rainfall_growing_season_CV'
-        #
-        #                 ]
+        variable_list = [
+                         'rainfall_seasonality_all_year',
+                       'heat_event_frenquency','rainfall_frenquency',
+
+                         'rainfall_intensity',
+                          'detrended_sum_rainfall_CV'
+
+                        ]
 
         for f in os.listdir(fdir):
 
             variable= f.split('.')[0]
-            if  not 'SDGVM_S2_lai_detrend_CV' in variable:
+            if variable not in variable_list:
                 continue
 
             print(variable)
@@ -849,23 +849,23 @@ class build_moving_window_dataframe():
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 23:
-                    vals=np.append(vals,np.nan)
-                    v1 = vals[y-0]
-                    NDVI_list.append(v1)
+                # if len(vals) == 23:
+                #     vals=np.append(vals,np.nan)
+                #     v1 = vals[y-0]
+                #     NDVI_list.append(v1)
 
-                # if len(vals) !=24:
-                #
-                #     NDVI_list.append(np.nan)
-                #     continue
+                if len(vals) !=24:
+
+                    NDVI_list.append(np.nan)
+                    continue
 
 
                 if len(vals) ==0:
                     NDVI_list.append(np.nan)
                     continue
-                #
-                # v1= vals[y-0]
-                # NDVI_list.append(v1)
+
+                v1= vals[y-0]
+                NDVI_list.append(v1)
 
 
 
@@ -3124,6 +3124,7 @@ class greening_analysis():
         result_dic = {}
 
         variable_list=['NDVI4g','GIMMS_plus_NDVI','NDVI',]
+        variable_list=['LAI4g']
 
 
         for var in variable_list:
@@ -3132,8 +3133,8 @@ class greening_analysis():
             data_dic = {}
 
             for year in year_range:
-                df_i = df[df['year'] == year]
-                # vals = df_i[f'weighted_avg_{var}'].tolist()
+                # df_i = df[df['year'] == year]
+                vals = df_i[f'weighted_avg_{var}'].tolist()
                 vals = df_i[f'{var}'].tolist()
                 data_dic[year] = np.nanmean(vals)
             result_dic[var] = data_dic
@@ -3212,16 +3213,16 @@ class greening_analysis():
             ax1.axhline(y=0, color='grey', lw=1.2, ls='--')
             flag += 1
             plt.title(var)
-
-        # plt.show()
         plt.tight_layout()
-        outdir = result_root + rf'3mm\relative_change_growing_season\\whole_period\\plot\\'
-        T.mk_dir(outdir)
-        outf = outdir + rf'{var}_all_15.pdf'
+        plt.show()
 
-        plt.savefig(outf)
-        plt.close()
-        T.open_path_and_file(outdir)
+        # outdir = result_root + rf'3mm\relative_change_growing_season\\whole_period\\plot\\'
+        # T.mk_dir(outdir)
+        # outf = outdir + rf'{var}_all_15.pdf'
+
+        # plt.savefig(outf)
+        # plt.close()
+        # T.open_path_and_file(outdir)
 
 
 
@@ -4809,7 +4810,7 @@ class bivariate_analysis():
 
         ]
 
-        fig = plt.figure(figsize=(3, 2.5))
+
         variables = [ 'LAI4g_NDVI','LAI4g_GIMMS_NDVI', 'LAI4g_NDVI4g',]
         for variable in variables:
             val_list = []
@@ -4825,20 +4826,23 @@ class bivariate_analysis():
 
             ## plot bar
             ## gap is 0.5 ## all bars gap is 0
+            fig = plt.figure(figsize=(3, 2.5))
             plt.bar(x, val_list, color=color_list3, width=0.1, align='center')
 
             plt.ylabel('Percent of Area (%)')
             plt.tight_layout()
 
             # plt.xticks(range(0, 1), dic_label.values())
-            plt.show()
+            # plt.show()
             ## save
             outdir = result_root + rf'\3mm\bivariate_analysis\CV_products_comparison_bivariate\\barplot\\'
 
-            # T.mk_dir(outdir)
-            # outf =outdir+rf'{variable}.pdf'
-            # plt.savefig(outf)
-            # T.open_path_and_file(outf)
+            T.mk_dir(outdir)
+            outf =outdir+rf'{variable}.pdf'
+            plt.savefig(outf)
+            plt.close()
+
+        T.open_path_and_file(outdir)
 
         pass
 
@@ -6974,7 +6978,7 @@ class TRENDY_CV:
         # self.plt_basemap()
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
         # self.plot_CV_trend_among_models()
-        # self.bar_plot()
+        self.bar_plot()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
         # self.plot_significant_percentage_area()
@@ -7497,9 +7501,13 @@ class TRENDY_CV:
             # print(np.nanmean(vals))
 
             plt.bar(x=classfication, height=np.nanmean(vals), yerr=np.nanstd(vals), error_kw={'capsize': 3},color='#D3D3D3')
+            plt.tight_layout()
             plt.xticks(rotation=45)
             plt.ylabel('Change in CVLAI (%/yr)')
         plt.show()
+        outf = rf'C:\Users\wenzhang1\Desktop\transfer_figure\bar_plot_continent.pdf'
+        fig.savefig(outf, dpi=300)
+
 
 
         pass
@@ -7566,12 +7574,14 @@ class TRENDY_CV:
         # plt.ylim(0.036, 0.12)
 
 
-
         # plt.xticks(np.arange(1, len(label_list) + 1), label_list, rotation=45)
         plt.tight_layout()
         plt.yticks([])
         plt.xticks([])
-        plt.show()
+        # plt.show()
+        outf=rf'C:\Users\wenzhang1\Desktop\transfer_figure\bar_plot_continent.pdf'
+        fig.savefig(outf, dpi=300)
+
 
 
     def plot_CV_trend_bin(self):
@@ -7881,9 +7891,9 @@ def main():
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
     # visualize_SHAP().run()
