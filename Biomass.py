@@ -95,9 +95,12 @@ class Data_processing_2:
 
         # self.extract_tiff_by_shp()
         # self.average_tiff()
+        # self.average_tiff_biomass()
         # self.plot_bar()
         # self.rename_tiff()
-        self.plot_biomass_vs_NPP()
+        # self.plot_biomass_vs_NPP_average()
+        self.plot_biomass_vs_NPP_total()
+        self.plot_scatter()
 
 
         pass
@@ -468,8 +471,8 @@ class Data_processing_2:
     def extract_tiff_by_shp(self):
 
         shp_dryland = rf'E:\Biomass\Data\Basedata\\dryland.shp'
-        fdir = rf'E:\Biomass\Data\NPP\TIFF\\'
-        outdir = rf'E:\Biomass\Data\NPP\dryland_tiff\\'
+        fdir = rf'E:\Biomass\Data\Biomass\TIFF\\'
+        outdir = rf'E:\Biomass\Data\Biomass\dryland_tiff\\'
         T.mk_dir(outdir)
         for fdir_i in tqdm(os.listdir(fdir)):
             outdir_i = join(outdir, fdir_i)
@@ -527,6 +530,44 @@ class Data_processing_2:
             outf = join(outdir, f'{variable_name}_mean.tif')
             # print(outf);exit()
             ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, all_array_mean)
+
+
+    def average_tiff_biomass(self):
+        ## calculate spatial average of long term
+        fdir = rf'E:\Biomass\Data\Biomass\dryland_tiff\\'
+        outdir = rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\'
+        T.mk_dir(outdir, force=True)
+        for fdir_i in tqdm(os.listdir(fdir)):
+
+            fdir_i = join(fdir, fdir_i)
+            # print(fdir_i)
+
+            all_array = []
+            flag=0
+
+            for f in os.listdir(fdir_i):
+                flag+=1
+
+                if not f.endswith('.tif'):
+                    continue
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_i, f))
+                array = np.array(array, dtype=float)
+                array[array <= 0] = np.nan
+
+
+                all_array.append(array)
+
+            all_array = np.array(all_array)
+
+            all_array_mean = np.nanmean(all_array, axis=0)
+
+            variable_name = fdir_i.split('/')[-1]
+            print(outdir)
+
+            outf = join(outdir, f'{variable_name}_mean.tif')
+            # print(outf);exit()
+            ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, all_array_mean)
+
 
     def plot_bar(self):
         fdir = rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\'
@@ -620,7 +661,7 @@ class Data_processing_2:
             if fname in dic:
                 fname=dic[fname]
             os.rename(join(fdir,f),join(fdir,fname+'.tif'))
-    def plot_biomass_vs_NPP(self):
+    def plot_biomass_vs_NPP_average(self):
         fdir_NPP = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
         average_NPP={}
         average_biomass={}
@@ -643,12 +684,11 @@ class Data_processing_2:
             array_NPP[array_NPP>9999] = np.nan
             average_NPP[f_NPP_name]=np.nanmean(array_NPP)
 
-
             array_biomass, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_biomass)
             array_biomass = np.array(array_biomass, dtype=float)
             array_biomass[array_biomass <= 0] = np.nan
             array_biomass[array_biomass>9999] = np.nan
-            average_biomass[f_bimass_name]=np.nansum(array_biomass)
+            average_biomass[f_bimass_name]=np.nanmean(array_biomass)
         df=pd.DataFrame({'GPP':average_NPP,'biomass':average_biomass})
 
         color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
@@ -667,7 +707,86 @@ class Data_processing_2:
         plt.legend(df.index)
 
         plt.ylabel('NPP (kg/m2/yr)',fontsize=10)
-        plt.xlabel('Biomass (kg/m2)',fontsize=10)
+        plt.xlabel('Biomass (Kg/m2)',fontsize=10)
+
+        plt.show()
+        plt.close()
+
+    def plot_biomass_vs_NPP_total(self):
+        fdir_NPP = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
+        average_NPP = {}
+        average_biomass = {}
+
+        variable_list = ['DLEM', 'VISIT', 'YIBs', 'LPJmL', 'OCN', 'LPJwsl']
+        for f in os.listdir(fdir_NPP):
+            if not f.endswith('.tif'):
+                continue
+            if f.split('.')[0].split('_')[0] in variable_list:
+                continue
+            f_NPP_name = (f.split('.')[0].split('_')[0])
+            f_NPP = join(fdir_NPP, f)
+            f_bimass_name = (f.split('.')[0].split('_')[0])
+            f_biomass = join(rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\', f_bimass_name + '.tif')
+            if not os.path.exists(f_NPP) or not os.path.exists(f_biomass):
+                continue
+            # print(f_biomass);exit()
+            array_NPP, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_NPP)
+            array_NPP = np.array(array_NPP, dtype=float)
+            array_NPP[array_NPP <= 0] = np.nan
+            array_NPP[array_NPP > 9999] = np.nan
+            D_NPP = DIC_and_TIF(tif_template=f_NPP)
+            area_dict = D_NPP.calculate_pixel_area()
+            NPP_dict = D_NPP.spatial_tif_to_dic(f_NPP)
+            NPP_total = 0
+            for pix in NPP_dict:
+                NPP_val = NPP_dict[pix]
+                if np.isnan(NPP_val):
+                    continue
+                if NPP_val <= 0:
+                    continue
+                if NPP_val > 9999:
+                    continue
+                NPP_total += NPP_dict[pix] * area_dict[pix]
+            NPP_total_MG = NPP_total / 1000 / 1e6
+
+            D_biomass = DIC_and_TIF(tif_template=f_biomass)
+            biomass_area_dict = D_biomass.calculate_pixel_area()
+            biomass_dict = D_biomass.spatial_tif_to_dic(f_biomass)
+            biomass_total = 0
+            for pix in biomass_dict:
+                biomass_val = biomass_dict[pix]
+                if np.isnan(biomass_val):
+                    continue
+                if biomass_val <= 0:
+                    continue
+                if biomass_val > 9999:
+                    continue
+                biomass_total += biomass_val * biomass_area_dict[pix]
+            biomass_total_MG = biomass_total / 1000 / 1e6
+
+            average_NPP[f_NPP_name] = NPP_total_MG
+            average_biomass[f_bimass_name] = biomass_total_MG
+            print(NPP_total_MG,biomass_total_MG)
+
+        df = pd.DataFrame({'GPP': average_NPP, 'biomass': average_biomass})
+
+
+        color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
+                      'pink', 'brown', 'cyan', 'magenta', 'lime', 'teal', 'lavender', 'maroon', 'navy',
+                      'olive', 'silver', 'aqua', 'fuchsia', 'lime', 'teal', 'lavender', 'maroon', 'navy', 'olive',
+                      'silver', 'aqua', 'fuchsia']
+
+        marker_list = ['o', 'v', '^', '<', '>', 's', 'p', '*', 'h', 'H', '+', 'x', 'D', ]
+
+        df = df.sort_index()
+        ## using different markers
+
+        for i in range(len(df)):
+            plt.scatter(df.iloc[i]['biomass'], df.iloc[i]['GPP'], color=color_list[i], marker=marker_list[i], s=100)
+        plt.legend(df.index)
+
+        plt.ylabel('NPP (Million Mg/yr)', fontsize=10)
+        plt.xlabel('Biomass (Million Mg)', fontsize=10)
 
         plt.show()
         plt.close()
@@ -676,6 +795,81 @@ class Data_processing_2:
 
 
         pass
+    def plot_scatter(self):  ##### plot double y axis
+
+        fdir_NPP = rf'E:\Biomass\Data\NPP\dryland_tiff_average\\'
+        average_NPP = {}
+        average_biomass = {}
+
+
+        for f in os.listdir(fdir_NPP):
+            if not f.endswith('.tif'):
+                continue
+            if not 'CLM' in f:
+                continue
+
+            f_NPP_name = (f.split('.')[0].split('_')[0])
+            f_NPP = join(fdir_NPP, f)
+            f_bimass_name = (f.split('.')[0].split('_')[0])
+            f_biomass = join(rf'E:\Biomass\Data\Biomass\dryland_tiff_average\\', f_bimass_name + '.tif')
+            if not os.path.exists(f_NPP) or not os.path.exists(f_biomass):
+                continue
+
+
+            D_NPP = DIC_and_TIF(tif_template=f_NPP)
+            area_dict = D_NPP.calculate_pixel_area()
+
+            D_biomass = DIC_and_TIF(tif_template=f_biomass)
+            biomass_dict = D_biomass.spatial_tif_to_dic(f_biomass)
+            NPP_dict = D_NPP.spatial_tif_to_dic(f_NPP)
+            NPP_total = []
+            biomass_total = []
+            for pix in list(set(NPP_dict.keys()) & set(biomass_dict.keys()) & set(area_dict.keys())):
+                # Ensure all data exist
+                if pix not in NPP_dict or pix not in biomass_dict or pix not in area_dict:
+                    continue
+
+
+                NPP_val = NPP_dict[pix]
+                if np.isnan(NPP_val):
+                    continue
+                if NPP_val <= 0:
+                    continue
+                if NPP_val > 9999:
+                    continue
+
+                biomass_val = biomass_dict[pix]
+                if np.isnan(biomass_val):
+                    continue
+                if biomass_val <= 0:
+                    continue
+                if biomass_val > 9999:
+                    continue
+                area_val = area_dict[pix]
+
+
+                # Filter and clean data
+                if not (0 < NPP_val <= 1.5) or not (0 < biomass_val <= 5) :
+                    continue
+
+                    # Convert biomass to Megagrams (Mg) by dividing by 1000
+                biomass_total.append(biomass_val * area_val / 1000/1e6)
+                NPP_total.append(NPP_val * area_val / 1000/1e6)
+
+
+            print(len(biomass_total))
+            print(len(NPP_total))
+
+
+        plt.scatter(biomass_total,NPP_total,s=2,color='blue')
+
+        plt.ylabel('NPP (Million Mg/yr)', fontsize=10)
+        plt.xlabel('Biomass (Million Mg)', fontsize=10)
+
+        plt.show()
+        plt.close()
+
+    pass
 
 
 

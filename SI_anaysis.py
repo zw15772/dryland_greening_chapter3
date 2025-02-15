@@ -42,6 +42,20 @@ import shutil
 import requests
 from lytools import *
 from osgeo import gdal
+# coding=utf-8
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import shap
+from lytools import *
+from sklearn.ensemble import RandomForestRegressor
+from scipy.special import softmax
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from pprint import pprint
+import xgboost as xgb
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
 
 from osgeo import gdal
 
@@ -585,7 +599,8 @@ class climate_variables:
         pass
     def run(self):
         # self.trend_analysis_simply_linear()
-        self.plot_climate_variable_trends()
+        # self.plot_climate_variable_trends()
+        self.average_analysis()
 
     def trend_analysis_simply_linear(self):
         from scipy.stats import theilslopes
@@ -679,6 +694,86 @@ class climate_variables:
 
             np.save(outf + '_trend', arr_trend_dryland)
             np.save(outf + '_p_value', p_value_arr_dryland)
+
+    def average_analysis(self):
+        from scipy.stats import theilslopes
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\ecosystem_year\average\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if  'detrend' in f:
+                continue
+
+            if not f.endswith('.npy'):
+                continue
+
+            outf=outdir+f.split('.')[0]
+            if os.path.isfile(outf+'_trend.tif'):
+                continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r,c=pix
+                if r<60:
+                    continue
+                landcover_value=crop_mask[pix]
+                if landcover_value==16 or landcover_value==17 or landcover_value==18:
+                    continue
+                if dic_modis_mask[pix]==12:
+                    continue
+
+                time_series=dic[pix]['ecosystem_year']
+                # print(time_series)
+
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                if len(set(time_series))==1:
+                    continue
+                # print(time_series)
+
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                average_value=np.nanmean(time_series)
+                try:
+
+                        trend_dic[pix] = np.nanmean(time_series)
+
+                except:
+                    continue
+
+            arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
+            arr_trend_dryland = arr_trend * array_mask
+
+            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+            # exit()
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
+
+            np.save(outf + '_trend', arr_trend_dryland)
+
 
     def plot_climate_variable_trends(self):
         ## three products 3 time periods comparison
@@ -1041,47 +1136,75 @@ class Rainfall_product_comparison():
 class TRENDY_trend():
 
     def trend_analysis_plot(self):
-        outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
-        temp_root = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
+        outdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
         model_list = ['LAI4g',  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', ]
-        model_list2=['ISAM_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai',
-                      'ORCHIDEE_S2_lai',
-                      ]
-        model_list3=['SDGVM_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai','LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai', 'SDGVM_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        # plt.show()
 
-        plt.figure(figsize=(11, 7))
+        dic_name = {'LAI4g': 'LAI',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
 
-        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+
+
+
+
+        fdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
         count = 1
-        for model in model_list3:
+        for model in model_list:
 
 
 
-            fpath= fdir+f'{model}_detrend_CV_trend.tif'
-            f_p_value = fdir + f'{model}_detrend_CV_p_value.tif'
+            fpath= fdir+f'{model}_trend.tif'
+            f_p_value = fdir + f'{model}_p_value.tif'
 
 
-            ax = plt.subplot(3, 2, count)
+            # ax = plt.subplot(3, 2, count)
             # print(count, f)
             count = count + 1
             # if not count == 9:
             #     continue
+            color_list = [
+                '#844000',
+                '#fc9831',
+                '#fffbd4',
+                '#86b9d2',
+                '#064c6c',
+            ]
+            my_cmap2 = T.cmap_blend(color_list, n_colors=5)
+
 
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+
             arr = Tools().mask_999999_arr(arr, warning=False)
             arr_m = ma.masked_where(np.isnan(arr), arr)
             lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
             lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
             lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            plt.figure(figsize=(5, 3))
+
             m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
+                        resolution='l')
+
 
             m = self.plot_sig_scatter(
                 m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
@@ -1089,25 +1212,24 @@ class TRENDY_trend():
                 c='k', marker='x',
                 zorder=100, res=4
             )
-            plt.title(model)
+            plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
 
             m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
-            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=-1, vmax=1)
+            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=my_cmap2, zorder=-1, vmin=-0.3, vmax=0.3)
 
 
             # plt.show()
-        cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
-        cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
+        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
+        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
         # cb.set_label(f'{model}_CV_trend', labelpad=-40)
-        outf = outdir + rf'CV_trend_analysis_plot_legend.pdf'
+            outf = outdir + rf'trend_analysis_{model}.png'
 
-        plt.subplots_adjust(hspace=0.055, wspace=0.038)
-        #
-        plt.savefig(outf, dpi=600)
-        plt.close()
-        # plt.show()
-        # T.open_path_and_file(outdir)
-        # exit()
+            plt.subplots_adjust(hspace=0.055, wspace=0.038)
+            #
+            plt.savefig(outf, dpi=600)
+            plt.close()
+            # plt.show()
+        T.open_path_and_file(outdir)
 
     pass
 
@@ -1175,30 +1297,41 @@ class TRENDY_CV():
         temp_root = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
 
         model_list = ['LAI4g',  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', ]
-        model_list2=['ISAM_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai',
-                      'ORCHIDEE_S2_lai',
-                      ]
-        model_list3=['SDGVM_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai','SDGVM_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        # plt.show()
+        dic_name = {'LAI4g': 'LAI',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
 
-        plt.figure(figsize=(11, 7))
+
 
         fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
         count = 1
-        for model in model_list3:
-
+        for model in model_list:
 
 
             fpath= fdir+f'{model}_detrend_CV_trend.tif'
             f_p_value = fdir + f'{model}_detrend_CV_p_value.tif'
 
 
-            ax = plt.subplot(3, 2, count)
+            # ax = plt.subplot(3, 2, count)
             # print(count, f)
             count = count + 1
             # if not count == 9:
@@ -1210,8 +1343,10 @@ class TRENDY_CV():
             lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
             lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
             lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            plt.figure(figsize=(5, 3))
+
             m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
+                        resolution='l',)
 
             m = self.plot_sig_scatter(
                 m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
@@ -1219,24 +1354,24 @@ class TRENDY_CV():
                 c='k', marker='x',
                 zorder=100, res=4
             )
-            plt.title(model)
+            plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
 
             m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
             ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=-1, vmax=1)
 
 
             # plt.show()
-        cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
-        cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
-        # cb.set_label(f'{model}_CV_trend', labelpad=-40)
-        outf = outdir + rf'CV_trend_analysis_plot_legend.pdf'
+        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
+        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
+        # # cb.set_label(f'{model}_CV_trend', labelpad=-40)
+            outf = outdir + rf'CV_trend_analysis_plot_{model}.png'
 
-        plt.subplots_adjust(hspace=0.055, wspace=0.038)
-        #
-        plt.savefig(outf, dpi=600)
-        plt.close()
+            plt.subplots_adjust(hspace=0.055, wspace=0.038)
+            #
+            plt.savefig(outf, dpi=600)
+            plt.close()
         # plt.show()
-        # T.open_path_and_file(outdir)
+        T.open_path_and_file(outdir)
         # exit()
     pass
 
@@ -1296,11 +1431,805 @@ class TRENDY_CV():
 
         return m
 
+class SHAP_CV():
+
+
+    def __init__(self):
+
+        self.y_variable = 'LAI4g_detrend_CV'
+
+        # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
+        self.threshold = '3mm'
+        self.this_class_png = result_root + rf'\{self.threshold}\SHAP\\RF_{self.y_variable}_interaction\\'
+        T.mk_dir(self.this_class_png)
+
+        # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
+        self.dff = result_root+rf'{self.threshold}\Dataframe\moving_window_CV\\moving_window_CV_new.df'
+        self.variable_list_rt()
+        self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+                          'SDGVM_S2_lai',
+                          'YIBs_S2_Monthly_lai']
+
+        ##----------------------------------
+
+
+
+        ####################
+
+        self.x_variable_list = self.x_variable_list_CRU
+        self.x_variable_range_dict = self.x_variable_range_dict_global_CRU
+
+        pass
+
+    def run(self):
+        # self.check_df_attributes()
+
+        # self.check_variables_ranges()
+        # self.show_colinear()
+        # self.check_spatial_plot()
+        self.pdp_shap()
+        # self.plot_pdp_shap()
+        # self.plot_pdp_shap_density_cloud()
+        # self.plot_pdp_shap_density_cloud_individual()
+        # self.plot_relative_importance()
+
+        # self.spatial_shapely()   ### spatial plot
+        # self.variable_contributions()
+        # self.max_contributions()
+        # self.plot_pdp_shap_normalized()
+        # self.pdp_shap_trend()
+
+        pass
+
+    def check_df_attributes(self):
+        dff = self.dff
+        df = T.load_df(dff)
+        T.print_head_n(df)
+        print(df.columns.tolist())
+        print(len(df))
+        # exit()
+        pass
+
+    def check_variables_ranges(self):
+
+        dff = self.dff
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        df = self.plot_hist(df)
+        df = self.valid_range_df(df)
+        # df = self.__select_extreme(df)
+        # T.print_head_n(df)
+        # exit()
+
+        x_variable_list = self.x_variable_list
+        print(len(x_variable_list))
+        # exit()
+        flag = 1
+
+        for var in x_variable_list:
+            print(flag, var)
+            vals = df[var].tolist()
+            plt.subplot(4, 4, flag)
+            flag += 1
+            plt.hist(vals, bins=100)
+            plt.title(var)
+        plt.tight_layout()
+        plt.show()
+
+
+        pass
+
+    def AIC_criteria(self):
+
+        import statsmodels.api as sm
+
+        pass
+    def variable_list_rt(self):
+        self.x_variable_list = [
+
+            # 'detrended_average_annual_tmax',
+            # 'heavy_rainfall_days',
+
+            # 'rainfall_frequency',
+            'rainfall_intensity',
+            'maxmum_dry_spell',
+            'rainfall_seasonality_all_year',
+            # 'rainfall_seasonality',
+            'detrended_sum_rainfall_interannual_CV',
+            # 'CV_rainfall_interseasonal',
+            # 'Aridity',
+            # 'CO2_gridded',
+
+            'heat_event_frequency',
+            'silt',
+            # 'rooting_depth',
+
+
+
+            # # 'heavy_rainfall_days',
+
+
+        ]
+
+
+        self.x_variable_list_CRU = [
+
+            'cwdx80_05',
+
+            'sand',
+
+            'rainfall_intensity',
+
+
+            'rainfall_frenquency',
+
+            'rainfall_seasonality_all_year',
+
+            'detrended_sum_rainfall_CV',
+
+            'CO2_interannual_rainfall_interaction',
+
+
+                'heat_event_frenquency',
+                 # 'Tmax',
+            # 'VPD',
+            # 'SOC',
+            # 'S_SAND',
+            #  'T_SAND',
+            # 'T_CLAY',
+            # 'rooting_depth',
+
+
+            ]
+        self.x_variable_range_dict_global = {
+            'CO2_ecosystem_year': [350, 410],
+            'detrended_average_annual_tmax': [-10, 40],
+            'detrended_sum_rainfall_growing_season_CV_ecosystem_year': [0, 70],
+
+            'detrended_sum_rainfall_std': [0, 250],
+            'detrended_sum_rainfall': [0, 1000],
+            'CV_rainfall_interseasonal': [100, 600],
+            'detrended_sum_rainfall_interannual_CV': [0, 70],
+
+
+            'rainfall_seasonality': [0, 10],  # rainfall_seasonality
+
+
+            'sum_rainfall': [0, 1500],
+            'CO2_gridded': [350, 410],
+            'CO2': [350, 410],
+            'Aridity': [0, 1],
+
+            'heat_event_frenquency_growing_season': [0, 6],
+
+
+
+
+            'maxmum_dry_spell': [0, 200],  # maxmum_dry_spell
+            'rainfall_frequency': [0, 200],  # rainfall_frequency
+            'rainfall_intensity': [0, 5],  # rainfall_intensity
+            'rainfall_seasonality_all_year': [0, 25],  #
+            'heavy_rainfall_days': [0, 50],
+            'T_sand': [20, 90],
+            'rooting_depth': [0, 30],
+
+        }
+
+        self.x_variable_range_dict_global_CRU = {
+            'nitrogen': [0, 500],
+            'zroot_cwd80_05': [0, 25000],
+            'cwdx80_05': [0, 1000],
+            'cec': [0, 400],
+            'sand': [0, 900],
+            'soc': [0, 600],
+            'CO2_interannual_rainfall_interaction': [0, 20000 ],
+
+
+
+            'CO2': [350, 410],
+            'sum_rainfall': [0, 1500],
+            'S_CEC_CLAY': [0, 100],
+            'AWC_CLASS': [0, 7],
+            'dry_spell': [0, 20],
+            'rainfall_intensity': [0, 25],
+            'rainfall_frenquency': [0, 100],
+    'rainfall_seasonality_all_year': [15, 80],
+
+            'detrended_sum_rainfall_CV':[0,60],
+
+    'heat_event_frenquency': [0, 3],
+            'S_SAND': [0, 100],
+            'T_SAND': [20, 90],
+            'T_CLAY': [0, 60],
+            'Tmax': [0, 40],
+            'VPD': [0, 4],
+            'SOC': [0, 1],
+            'rooting_depth': [0, 25],
+
+    }
+
+    def show_colinear(self, ):
+        dff = self.dff
+        df = T.load_df(dff)
+        vars_list = self.x_variable_list
+        df = df[vars_list]
+        ## add LAI4g_raw
+        df['LAI4g_CV_growing_season'] = T.load_df(dff)['LAI4g_CV_growing_season']
+        ## plot heat map to show the colinear variables
+        import seaborn as sns
+        plt.figure(figsize=(10, 10))
+        ### x tick label rotate
+        plt.xticks(rotation=45)
+
+        sns.heatmap(df.corr(), annot=True, fmt=".2f")
+        plt.show()
+
+
+    def plot_hist(self, df):
+        # T.print_head_n(df)
+        # exit()
+        x_variable_list = self.x_variable_list
+        ## combine x and y
+        all_list = copy.copy(x_variable_list)
+        all_list.append(self.y_variable)
+        # print(all_list)
+        # exit()
+        for var in all_list:
+            vals = df[var].tolist()
+            vals = np.array(vals)
+            # vals[vals<-500] = np.nan
+            # vals[vals>500] = np.nan
+            # vals = vals[~np.isnan(vals)]
+            plt.hist(vals, bins=100)
+            plt.title(var)
+            plt.show()
+        exit()
+        return df
+
+    def valid_range_df(self, df):
+
+        print('original len(df):', len(df))
+        for var in self.x_variable_list_CRU:
+
+            if not var in df.columns:
+                print(var, 'not in df')
+                continue
+            min, max = self.x_variable_range_dict[var]
+            df = df[(df[var] >= min) & (df[var] <= max)]
+        print('filtered len(df):', len(df))
+        return df
+
+    def df_clean(self, df):
+        # T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] >60]
+        df = df[df['Aridity'] < 0.65]
+        df=df[df['LC_max']<20]
+        print(len(df))
+
+
+        df = df[df['MODIS_LUCC'] != 12]
+
+        # #
+        # df = df[df['lon'] > -125]
+        # df = df[df['lon'] < -105]
+        # df = df[df['lat'] > 0]
+        # df = df[df['lat'] < 45]
+        # print(len(df))
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def df_clean_for_consistency(self, df):  ## df clean for three products consistency pixels
+        # T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df=df[df['LC_max']<20]
+        print(len(df))
+
+
+        df = df[df['MODIS_LUCC'] != 12]
+
+
+        df = df[df['LAI4g_NDVI4g'].isin([1, 4])]
+        df = df[df['LAI4g_NDVI'].isin([1, 4])]
+        df = df[df['LAI4g_GIMMS_NDVI'].isin([1, 4])]
+
+
+
+
+        # #
+        # df = df[df['lon'] > -125]
+        # df = df[df['lon'] < -105]
+        # df = df[df['lat'] > 0]
+        # df = df[df['lat'] < 45]
+        # print(len(df))
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def check_spatial_plot(self):
+
+        dff = self.dff
+        df=T.load_df(dff)
+        pix_list = df['pix'].tolist()
+        unique_pix_list = list(set(pix_list))
+        region_arr = DIC_and_TIF(pixelsize=.5).pix_dic_to_spatial_arr(unique_pix_list)
+        plt.imshow(region_arr, cmap='jet', vmin=1, vmax=3,interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+
+    def pdp_shap(self):
+
+        dff = self.dff
+        outdir = join(self.this_class_png, 'pdp_shap_CV')
+
+        T.mk_dir(outdir, force=True)
+        x_variable_list = self.x_variable_list_CRU
+
+        y_variable = self.y_variable
+        # plt.hist(T.load_df(dff)[y_variable].tolist(),bins=100)
+        # plt.show()
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # df=self.df_clean_for_consistency(df)
+
+
+        pix_list = df['pix'].tolist()
+        unique_pix_list = list(set(pix_list))
+        spatial_dic={}
+
+        for pix in unique_pix_list:
+            spatial_dic[pix] = 1
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
+
+
+        T.print_head_n(df)
+        print(len(df))
+        T.print_head_n(df)
+        print('-' * 50)
+        ## text select df the first 1000
+
+        # df = df[0:1000]
+        # exit()
+        # model, r2 = self.__train_model(X, Y)  # train a Random Forests model
+        # all_vars_vif = self.discard_vif_vars(df, x_variable_list)
+        # all_vars_vif.append('CV_rainfall')
+        # print('all_vars_vif:',all_vars_vif)
+        # exit()
+        # df = self.valid_range_df(df)
+        all_vars = copy.copy(x_variable_list)
+
+
+        all_vars.append(y_variable)  # add the y variable to the list
+        all_vars.append('pix')
+
+
+        all_vars_df = df[all_vars]  # get the dataframe with the x variables and the y variable
+        all_vars_df = all_vars_df.dropna(subset=x_variable_list, how='any')
+        all_vars_df = all_vars_df.dropna(subset=self.y_variable, how='any')
+
+        ## for plot use not training
+        ## I want to add CO2 into new df but using all_vars_df to selected from df
+        ## so that all_vars_df can be used for future ploting
+        # all_vars_df_CO2 = copy.copy(all_vars_df)
+        # merged = pd.merge(all_vars_df_CO2, df[["pix", "Aridity"]], on="pix", how="left")
+        # T.save_df(merged, join(outdir, 'all_vars_df_aridity.df'))
+        # exit()
+
+
+
+        ######
+
+
+        pix_list = all_vars_df['pix'].tolist()
+        # print(len(pix_list));exit()
+        unique_pix_list = list(set(pix_list))
+        spatial_dic = {}
+        #
+        for pix in unique_pix_list:
+            spatial_dic[pix] = 1
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+
+
+        X = all_vars_df[x_variable_list]
+
+        Y = all_vars_df[y_variable]
+        train_data_X_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.X.df')
+        train_data_y_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.y.df')
+
+        # exit()
+
+        ## save selected df for future ploting
+        T.print_head_n(X)
+        # X = X.dropna()
+        # print(len(X));exit()
+
+
+
+        model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
+        imp_dict_xgboost = {}
+        for i in range(len(x_variable_list)):
+            imp_dict_xgboost[x_variable_list[i]] = model.feature_importances_[i]
+        #     plt.barh(x_variable_list[i], model.feature_importances_[i])
+        # plt.show()
+        sorted_imp = sorted(imp_dict_xgboost.items(), key=lambda x: x[1], reverse=True)
+
+        x_ = []
+        y_ = []
+        for key, value in sorted_imp:
+            x_.append(key)
+            y_.append(value)
+        print(x_)
+        plt.figure()
+        plt.bar(x_, y_)
+        plt.xticks(rotation=45)
+        # plt.tight_layout()
+        plt.title('RF')
+        plt.show()
+        # exit()
+        # plt.figure()
+
+        ## random sample
+
+        sample_indices = np.random.choice(X.shape[0], 1000, replace=False)
+        X_sample = X.iloc[sample_indices]
+        explainer = shap.TreeExplainer(model)
+
+
+        # ### round R2
+
+        # # x_variable_range_dict = self.x_variable_range_dict
+        # y_base = explainer.expected_value
+        # print('y_base', y_base)
+        # print('y_mean', np.mean(y))
+        # shap_values = explainer.shap_values(X)
+        shap_values = explainer(X_sample)
+        outf_shap = join(outdir, self.y_variable + '.shap')
+        # ## how to resever X and Y before the shap
+        #
+
+
+        T.save_dict_to_binary(shap_values, outf_shap)
+        ## save model
+
+        T.save_dict_to_binary(model, join(outdir, self.y_variable + '.model'))
+        # exit()
+
+    def plot_pdp_shap(self):
+        x_variable_list = self.x_variable_list
+
+        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
+        # print(isfile(inf_shap));exit()
+        shap_values = T.load_dict_from_binary(inf_shap)
+        print(shap_values)
+
+        imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
+        x_list = []
+        y_list = []
+        for key in imp_dict.keys():
+            x_list.append(key)
+            y_list.append(imp_dict[key])
+        plt.barh(x_list[::-1], y_list[::-1],color='grey',alpha=0.5)
+        print(x_list)
+        # plt.title(f'R2_{R2}')
+        # plt.xticks(rotation=45, )
+        ## set xlabel font size
+        plt.xticks(fontsize=12)
+
+        plt.title('shap')
+
+        plt.tight_layout()
+
+        plt.show()
+
+        flag = 1
+        centimeter_factor = 1 / 2.54
+        plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+
+        for x_var in x_list:
+            shap_values_mat = shap_values[:, x_var]
+            data_i = shap_values_mat.data
+            value_i = shap_values_mat.values
+            df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
+            # pprint(df_i);exit()
+            df_i_random = df_i.sample(n=len(df_i) )
+            df_i = df_i_random
+
+            x_variable_range_dict = self.x_variable_range_dict
+            ## redefine start, end
+            start, end = self.x_variable_range_dict[x_var]
+
+
+
+            bins = np.linspace(start, end, 50)
+            df_group, bins_list_str = T.df_bin(df_i, x_var, bins)
+            y_mean_list = []
+            x_mean_list = []
+            y_err_list = []
+            df_i_copy = copy.copy(df_i)
+            df_i_copy = df_i_copy[df_i_copy[x_var]>start]
+            df_i_copy = df_i_copy[df_i_copy[x_var]<end]
+            scatter_x_list = df_i_copy[x_var].tolist()
+            scatter_y_list = df_i_copy['shap_v'].tolist()
+            for name, df_group_i in df_group:
+                x_i = name[0].left
+                # print(x_i)
+                # exit()
+                vals = df_group_i['shap_v'].tolist()
+
+                if len(vals) == 0:
+                    continue
+                # mean = np.nanmean(vals)
+                mean = np.nanmedian(vals)
+                err = np.nanstd(vals)
+                y_mean_list.append(mean)
+                x_mean_list.append(x_i)
+                y_err_list.append(err)
+            #     err,_,_ = self.uncertainty_err(SM)
+            # print(df_i)
+            # exit()
+            plt.subplot(4, 3, flag)
+            plt.scatter(scatter_x_list, scatter_y_list, alpha=0.2, c='gray', marker='.', s=1, zorder=-1)
+            # print(data_i[0])
+            # exit()
+            # interp_model = interpolate.interp1d(x_mean_list, y_mean_list, kind='cubic')
+            # y_interp = interp_model(x_mean_list)
+            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
+            plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
+
+            # exit()
+            # plt.fill_between(x_mean_list, np.array(y_mean_list) - np.array(y_err_list), np.array(y_mean_list) + np.array(y_err_list), alpha=0.3,color='red')
+            #### rename x_label remove
+
+            plt.xlabel(x_var, fontsize=12)
+
+            flag += 1
+            plt.ylim(-5, 5)
+
+        plt.suptitle(self.y_variable)
+
+        plt.tight_layout()
+        plt.show()
+        # plt.savefig(outf,dpi=300)
+        # plt.close()
+
+    def plot_pdp_shap_density_cloud(self):
+        x_variable_list = self.x_variable_list
+
+        name_dic={'rainfall_intensity':'Rainfall intensity (mm/events)',
+                  'rainfall_frenquency':'Rainfall frequency (events/year)',
+                  'rainfall_seasonality_all_year':'Rainfall seasonality (unitless)',
+                  'detrended_sum_rainfall_CV':r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                  'heat_event_frenquency':'Heat event frequency (events/year)',
+                  'cwdx80_05':'Rooting zone water storage capacity (mm)',
+
+                  'sand':'Sand (g/kg)',
+
+        }
+
+        # inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
+        inf_shap = rf'E:\Project3\Result\3mm\SHAP\RF_LAI4g_selected_samples_detrend_CV_\pdp_shap_CV\\LAI4g_detrend_CV_.shap.pkl'
+
+        # print(isfile(inf_shap));exit()
+        shap_values = T.load_dict_from_binary(inf_shap)
+        print(shap_values)
+
+        imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
+        x_list = []
+        y_list = []
+        for key in imp_dict.keys():
+            x_list.append(key)
+            y_list.append(imp_dict[key])
+
+        flag = 1
+        centimeter_factor = 1 / 2.54
+        # plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+        fig, axs = plt.subplots(4, 2,
+                                figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+        # print(axs);exit()
+        axs = axs.flatten()
+        for x_var in x_list:
+            shap_values_mat = shap_values[:, x_var]
+            data_i = shap_values_mat.data
+            value_i = shap_values_mat.values
+            df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
+            # pprint(df_i);exit()
+            df_i_random = df_i.sample(n=len(df_i) )
+            df_i = df_i_random
+
+            ## redefine start, end
+            start, end = self.x_variable_range_dict[x_var]
+
+            bins = np.linspace(start, end, 50)
+            df_group, bins_list_str = T.df_bin(df_i, x_var, bins)
+            y_mean_list = []
+            x_mean_list = []
+            y_err_list = []
+            df_i_copy = copy.copy(df_i)
+            df_i_copy = df_i_copy[df_i_copy[x_var]>start]
+            df_i_copy = df_i_copy[df_i_copy[x_var]<end]
+            scatter_x_list = df_i_copy[x_var].tolist()
+            scatter_y_list = df_i_copy['shap_v'].tolist()
+            for name, df_group_i in df_group:
+                x_i = name[0].left
+                # print(x_i)
+                # exit()
+                vals = df_group_i['shap_v'].tolist()
+
+                if len(vals) == 0:
+                    continue
+                # mean = np.nanmean(vals)
+                mean = np.nanmedian(vals)
+                err = np.nanstd(vals)
+                y_mean_list.append(mean)
+                x_mean_list.append(x_i)
+                y_err_list.append(err)
+
+            percentiles = [5, 95]
+            ## datapoints percentile
+            percentile_values = np.percentile(scatter_x_list, percentiles)
+            print(percentile_values)
+
+            # plt.subplot(4, 3, flag)
+            ax = axs[flag-1]
+            ax.vlines(percentile_values, -5, 5, color='gray', linestyle='--', alpha=1)
+
+            # ax2 = ax.twiny()  # Create a twin x-axis
+            # ax2.set_xlim(ax.get_xlim())  # Match the limits with the main axis
+            # ax2.set_xticks(percentile_values)  # Set percentile values as ticks
+            # ax2.set_xticklabels([f'{p}%' for p in percentiles])  # Label with percentiles
+
+
+            KDE_plot().plot_scatter(scatter_x_list, scatter_y_list,ax=ax )
+
+            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
+            ax.plot(x_mean_list, y_mean_list, c='red', alpha=1)
+
+            # ax.set_title(name_dic[x_var], fontsize=12)
+            ax.set_xlabel(name_dic[x_var], fontsize=12)
+            ax.set_ylabel(r'CV$_{\mathrm{LAI}}$ (%/year)', fontsize=12)
+
+            flag += 1
+            ax.set_ylim(-5, 5)
+            # plt.show()
+
+
+        plt.suptitle(self.y_variable)
+
+        plt.tight_layout()
+        plt.show()
+        # plt.savefig(outf,dpi=300)
+        # plt.close()
+
+
+
+
+
+
+
+
+    def feature_importances_shap_values(self, shap_values, features):
+        '''
+        Prints the feature importances based on SHAP values in an ordered way
+        shap_values -> The SHAP values calculated from a shap.Explainer object
+        features -> The name of the features, on the order presented to the explainer
+        '''
+        # Calculates the feature importance (mean absolute shap value) for each feature
+        importances = []
+        # for i in range(len(shap_values)):
+        #     importances.append(np.abs(shap_values[i]).mean())
+        for i in range(shap_values.values.shape[1]):
+            importances.append(np.mean(np.abs(shap_values.values[:, i])))
+
+
+        # Calculates the normalized version
+        # importances_norm = softmax(importances)
+        # Organize the importances and columns in a dictionary
+        feature_importances = {fea: imp for imp, fea in zip(importances, features)}
+        # feature_importances_norm = {fea: imp for imp, fea in zip(importances_norm, features)}
+        # Sorts the dictionary
+        feature_importances = {k: v for k, v in
+                               sorted(feature_importances.items(), key=lambda item: item[1], reverse=True)}
+        # feature_importances_norm = {k: v for k, v in
+        #                             sorted(feature_importances_norm.items(), key=lambda item: item[1], reverse=True)}
+        # Prints the feature importances
+        # for k, v in feature_importances.items():
+        #     print(f"{k} -> {v:.4f} (softmax = {feature_importances_norm[k]:.4f})")
+
+        return feature_importances
+        # return feature_importances_norm
+
+    def __select_extreme(self, df):
+        df = df[df['T_max'] > 1]
+        df = df[df['intensity'] < -2]
+        return df
+
+    def __train_model(self, X, y):
+        from sklearn.model_selection import train_test_split
+        '''
+        :param X: a dataframe of x variables
+        :param y: a dataframe of y variable
+        :return: a random forest model and the R^2
+        '''
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, random_state=1, test_size=0.3)  # split the data into training and testing
+        # model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=-1,) # build a random forest model
+        # rf.fit(X_train, y_train) # train the model
+        # r2 = rf.score(X_test,y_test)
+        # model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
+        #                        max_depth=7, eta=0.1, random_state=42, n_jobs=14,  )
+        model = RandomForestRegressor(n_estimators=100, random_state=42,n_jobs=12)
+
+        model.fit(X_train, y_train)
+        # model.fit(X_train, y_train)
+        # Get predictions
+        y_pred = model.predict(X_test)
+        # print(len(y_pred))
+        # plt.scatter(y_test, y_pred)
+        # plt.show()
+        r = stats.pearsonr(y_test, y_pred)
+        r2 = r[0] ** 2
+        print('r2:', r2)
+        # exit()
+
+        return model, y, y_pred
+
+    def __train_model_RF(self, X, y):
+        '''
+        :param X: a dataframe of x variables
+        :param y: a dataframe of y variable
+        :return: a random forest model and the R^2
+        '''
+        # X_train, X_test, y_train, y_test = train_test_split(
+        #     X, y, random_state=1, test_size=0.) # split the data into training and testing
+        rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)  # build a random forest model
+        rf.fit(X, y)  # train the model
+        coef = rf.feature_importances_
+        imp_dict = {}
+        for i in range(len(coef)):
+            imp_dict[self.x_variable_list[i]] = coef[i]
+
+        return imp_dict
+
+    def benchmark_model(self, y, y_pred):
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+        plt.scatter(y, y_pred)
+        plt.plot([0.6, 1.2], [0.6, 1.2], color='r', linestyle='-', linewidth=2)
+        plt.ylabel('Predicted', size=20)
+        plt.xlabel('Actual', size=20)
+        plt.xlim(0.6, 1.2)
+        plt.ylim(0.6, 1.2)
+        plt.show()
+
+
 
 def main():
     # greening_analysis().run()
     # climate_variables().run()
-    TRENDY_CV().trend_analysis_plot()
+    # TRENDY_trend().trend_analysis_plot()
+    # TRENDY_CV().trend_analysis_plot()
+    SHAP_CV().run()
+
 
     pass
 

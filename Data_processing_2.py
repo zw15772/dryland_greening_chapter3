@@ -650,10 +650,12 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
+        # df=self.add_interaction_to_df(df)
+        df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
-        #self.show_field()
+        self.show_field()
 
         T.save_df(df, self.dff)
         self.__df_to_excel(df, self.dff)
@@ -802,14 +804,19 @@ class build_moving_window_dataframe():
         fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         print(fdir)
         print(self.dff)
+        # variable_list = [
+        #                  'rainfall_seasonality_all_year',
+        #                'heat_event_frenquency','rainfall_frenquency',
+        #
+        #                  'rainfall_intensity',
+        #                   'detrended_sum_rainfall_CV'
+        #
+        #                 ]
+
         variable_list = [
-                         'rainfall_seasonality_all_year',
-                       'heat_event_frenquency','rainfall_frenquency',
+            'CO2'
 
-                         'rainfall_intensity',
-                          'detrended_sum_rainfall_CV'
-
-                        ]
+        ]
 
         for f in os.listdir(fdir):
 
@@ -873,6 +880,55 @@ class build_moving_window_dataframe():
         # df[f'{variable}_ecosystem_year'] = NDVI_list
         # exit()
         return df
+    def add_interaction_to_df(self,df):
+
+
+        df['CO2_interannual_rainfall_interaction'] = df['CO2']*df['detrended_sum_rainfall_CV']
+        return df
+
+
+
+    pass
+
+    def add_products_consistency_to_df(self,df):
+        fdir=rf'E:\Project3\Result\3mm\bivariate_analysis\CV_products_comparison_bivariate\\'
+        variable_list=['LAI4g_GIMMS_NDVI',
+                       'LAI4g_NDVI',
+                       'LAI4g_NDVI4g',
+
+
+        ]
+        for variable in variable_list:
+            fpath=fdir+variable_list[0]+'.tif'
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            array = np.array(array, dtype=float)
+
+            val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+
+
+            val_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                pix = row['pix']
+                if not pix in val_dic:
+                    val_list.append(np.nan)
+                    continue
+                val = val_dic[pix]
+                if val < -99:
+                    val_list.append(np.nan)
+                    continue
+                if val > 99:
+                    val_list.append(np.nan)
+                    continue
+                val_list.append(val)
+
+
+            df[f'{variable}'] = val_list
+        return df
+
+
+        pass
     def append_attributes(self, df):  ## add attributes
         fdir =  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
         for f in tqdm(os.listdir(fdir)):
@@ -2846,14 +2902,14 @@ class greening_analysis():
         # self.anomaly_two_period()
         # self.long_term_mean()
         # self.weighted_average_LAI()
-        self.plot_time_series()
+        # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis_simply_linear()
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
-        # self.plot_robinson()
+        self.plot_robinson()
         # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
         # self.plot_spatial_barplot_period()
@@ -3528,14 +3584,14 @@ class greening_analysis():
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-0.3, vmax=0.3, is_discrete=True, colormap_n=5,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-0.3, vmax=0.3, is_discrete=True, colormap_n=7,)
 
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
             plt.title(f'{fname}')
-            # plt.show()
-            outf = outdir + f+'.pdf'
-            plt.savefig(outf)
-            plt.close()
+            plt.show()
+            # outf = outdir + f+'.pdf'
+            # plt.savefig(outf)
+            # plt.close()
 
     def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
@@ -4153,6 +4209,7 @@ class Plot_Robinson:
         :param fpath: tif file
         :param is_reproj: if True, reproject file from 4326 to Robinson
         :param res: resolution, meter
+        ## trend color list
         '''
         color_list = [
             '#844000',
@@ -4163,13 +4220,13 @@ class Plot_Robinson:
         ]
         #### CV list
 
-        color_list = [
-            '#008837',
-            '#a6dba0',
-            '#f7f7f7',
-            '#c2a5cf',
-            '#7b3294',
-        ]
+        # color_list = [
+        #     '#008837',
+        #     '#a6dba0',
+        #     '#f7f7f7',
+        #     '#c2a5cf',
+        #     '#7b3294',
+        # ]
         # Blue represents high values, and red represents low values.
         if ax == None:
             # plt.figure(figsize=(10, 10))
@@ -6977,8 +7034,8 @@ class TRENDY_CV:
         # self.plot_robinson()
         # self.plt_basemap()
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        # self.plot_CV_trend_among_models()
-        self.bar_plot()
+        self.plot_CV_trend_among_models()
+        # self.bar_plot()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
         # self.plot_significant_percentage_area()
@@ -7498,15 +7555,15 @@ class TRENDY_CV:
             vals=vals[~np.isnan(vals)]
             count=len(vals)
             print(count)
-            # print(np.nanmean(vals))
+            print(np.nanmean(vals))
 
             plt.bar(x=classfication, height=np.nanmean(vals), yerr=np.nanstd(vals), error_kw={'capsize': 3},color='#D3D3D3')
             plt.tight_layout()
             plt.xticks(rotation=45)
             plt.ylabel('Change in CVLAI (%/yr)')
-        plt.show()
-        outf = rf'C:\Users\wenzhang1\Desktop\transfer_figure\bar_plot_continent.pdf'
-        fig.savefig(outf, dpi=300)
+        # plt.show()
+        # outf = rf'C:\Users\wenzhang1\Desktop\transfer_figure\bar_plot_continent.pdf'
+        # fig.savefig(outf, dpi=300)
 
 
 
@@ -7648,7 +7705,7 @@ class TRENDY_CV:
 
     def plot_CV_trend_among_models(self):  ##plot CV and trend
 
-        color_list = ['black', 'red', 'blue', 'green', 'orange', 'purple', 'gray',
+        color_list = ['black', 'red', 'blue', 'green', 'orange', 'greenyellow',  'gray',
                       'yellow', 'pink', 'brown', 'cyan', 'magenta', 'lime', 'teal', 'lavender', 'maroon', 'navy',
                       'olive', 'silver', 'aqua', 'fuchsia', 'lime', 'teal', 'lavender', 'maroon', 'navy', 'olive',
                       'silver', 'aqua', 'fuchsia']
@@ -7883,15 +7940,14 @@ class products_check():
 
 
 
-
 def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_window().run()
