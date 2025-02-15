@@ -1139,7 +1139,7 @@ class TRENDY_trend():
         outdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
-        model_list = ['LAI4g',  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        model_list = [  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                       'JULES_S2_lai', 'LPJ-GUESS_S2_lai','LPX-Bern_S2_lai',
@@ -1215,7 +1215,7 @@ class TRENDY_trend():
             plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
 
             m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
-            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=my_cmap2, zorder=-1, vmin=-0.3, vmax=0.3)
+            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=my_cmap2, zorder=-1, vmin=-1, vmax=1)
 
 
             # plt.show()
@@ -1440,7 +1440,7 @@ class SHAP_CV():
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
-        self.this_class_png = result_root + rf'\{self.threshold}\SHAP\\RF_{self.y_variable}_interaction\\'
+        self.this_class_png = result_root + rf'\{self.threshold}\SHAP\\RF_{self.y_variable}_consistency\\'
         T.mk_dir(self.this_class_png)
 
         # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
@@ -1471,8 +1471,8 @@ class SHAP_CV():
         # self.check_variables_ranges()
         # self.show_colinear()
         # self.check_spatial_plot()
-        # self.pdp_shap()
-        self.plot_pdp_shap()
+        self.pdp_shap()
+        # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()
         # self.plot_relative_importance()
@@ -1572,7 +1572,7 @@ class SHAP_CV():
 
             'detrended_sum_rainfall_CV',
 
-            'CO2_interannual_rainfall_interaction',
+            # 'CO2_interannual_rainfall_interaction',
 
 
                 'heat_event_frenquency',
@@ -1891,7 +1891,7 @@ class SHAP_CV():
 
         ## random sample
 
-        sample_indices = np.random.choice(X.shape[0], 1000, replace=False)
+        sample_indices = np.random.choice(X.shape[0], 40000, replace=False)
         X_sample = X.iloc[sample_indices]
         explainer = shap.TreeExplainer(model)
 
@@ -2226,9 +2226,9 @@ class SHAP_CV():
 def main():
     # greening_analysis().run()
     # climate_variables().run()
-    # TRENDY_trend().trend_analysis_plot()
+    TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    SHAP_CV().run()
+    # SHAP_CV().run()
 
 
     pass

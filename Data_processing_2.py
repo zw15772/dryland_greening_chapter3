@@ -651,8 +651,8 @@ class build_moving_window_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         # df=self.add_window_to_df(df)
-        # df=self.add_interaction_to_df(df)
-        df=self.add_products_consistency_to_df(df)
+        df=self.add_interaction_to_df(df)
+        # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
         self.show_field()
@@ -7928,10 +7928,10 @@ class products_check():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
