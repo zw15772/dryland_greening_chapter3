@@ -2518,16 +2518,6 @@ class visualize_SHAP():
 
 
 
-
-
-
-
-
-
-
-
-        fdir = rf'D:\Project3\Data\CO2\CO2_TIFF\unify_05\phenology_year_extraction\\'
-
         pass
 
 class PLOT_dataframe():
@@ -4112,10 +4102,7 @@ class greening_analysis():
         pass
 
 
-class Plot_basemap:
-    def __init__(self):
-        pass
-    pass
+
 
 
 
@@ -7034,11 +7021,11 @@ class TRENDY_CV:
         # self.plot_robinson()
         # self.plt_basemap()
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        self.plot_CV_trend_among_models()
-        # self.bar_plot()
+        # self.plot_CV_trend_among_models()
+        # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
-        # self.plot_significant_percentage_area()
+        self.plot_significant_percentage_area()
 
         pass
 
@@ -7523,7 +7510,7 @@ class TRENDY_CV:
 
 
     pass
-    def bar_plot(self):
+    def bar_plot_continent(self):
         ## plot non_dryland and dryland bar plot
         dff=result_root+rf'3mm\Dataframe\moving_window_CV\\moving_window_CV_new.df'
         df=T.load_df(dff)
@@ -7941,10 +7928,10 @@ class products_check():
 
 
 def main():
-    # Data_processing_2().run()
+    Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
@@ -7956,7 +7943,7 @@ def main():
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
     # products_check().run()
-    # plot_dominant_factors().run()
+
 
 
 
