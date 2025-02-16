@@ -1436,7 +1436,7 @@ class SHAP_CV():
 
     def __init__(self):
 
-        self.y_variable = 'LAI4g_detrend_CV'
+        self.y_variable = 'GIMMS_plus_NDVI_detrend_CV'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
@@ -1741,10 +1741,10 @@ class SHAP_CV():
 
         df = df[df['MODIS_LUCC'] != 12]
 
-
-        df = df[df['LAI4g_NDVI4g'].isin([1, 4])]
-        df = df[df['LAI4g_NDVI'].isin([1, 4])]
+        # df = df[df['LAI4g_NDVI4g'].isin([1, 4])]
+        # df = df[df['LAI4g_NDVI'].isin([1, 4])]
         df = df[df['LAI4g_GIMMS_NDVI'].isin([1, 4])]
+        print(len(df))
 
 
 
@@ -1783,8 +1783,8 @@ class SHAP_CV():
         # plt.hist(T.load_df(dff)[y_variable].tolist(),bins=100)
         # plt.show()
         df = T.load_df(dff)
-        df = self.df_clean(df)
-        # df=self.df_clean_for_consistency(df)
+        # df = self.df_clean(df)
+        df=self.df_clean_for_consistency(df)
 
 
         pix_list = df['pix'].tolist()
@@ -2226,9 +2226,9 @@ class SHAP_CV():
 def main():
     # greening_analysis().run()
     # climate_variables().run()
-    TRENDY_trend().trend_analysis_plot()
+    # TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    # SHAP_CV().run()
+    SHAP_CV().run()
 
 
     pass

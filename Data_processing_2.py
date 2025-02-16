@@ -650,8 +650,8 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
-        df=self.add_interaction_to_df(df)
+        df=self.add_window_to_df(df)
+        # df=self.add_interaction_to_df(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -801,7 +801,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=rf'E:\Project3\Result\3mm\extract_NDVI4g_phenology_year\dryland\moving_window_average_anaysis\\'
         print(fdir)
         print(self.dff)
         # variable_list = [
@@ -814,7 +814,7 @@ class build_moving_window_dataframe():
         #                 ]
 
         variable_list = [
-            'CO2'
+            'NDVI4g_detrend_CV'
 
         ]
 
