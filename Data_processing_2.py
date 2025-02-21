@@ -639,10 +639,10 @@ class Phenology():  ### plot site based phenology curve
 
 class build_moving_window_dataframe():
     def __init__(self):
-        self.threshold = '5mm'
+        self.threshold = '1mm'
         self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_CV_new.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_1mm_3mm.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -702,6 +702,8 @@ class build_moving_window_dataframe():
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
+                continue
+            if not 'LAI4g' in f:
                 continue
 
             fname = f.split('.')[0]
@@ -801,22 +803,23 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'E:\Project3\Result\3mm\extract_NDVI4g_phenology_year\dryland\moving_window_average_anaysis\\'
+        fdir=rf'E:\Project3\Result\5mm\CRU_JRA\moving_window_average_anaysis_trend\ecosystem_year\\'
         print(fdir)
         print(self.dff)
-        # variable_list = [
-        #                  'rainfall_seasonality_all_year',
-        #                'heat_event_frenquency','rainfall_frenquency',
-        #
-        #                  'rainfall_intensity',
-        #                   'detrended_sum_rainfall_CV'
-        #
-        #                 ]
-
         variable_list = [
-            'NDVI4g_detrend_CV'
+                       #   'rainfall_seasonality_all_year',
+                       # 'rainfall_frenquency',
+                       #
+                       #   'rainfall_intensity',
+                       'detrended_sum_rainfall_CV',
+            # 'heat_event_frenquency',
 
-        ]
+                        ]
+
+        # variable_list = [
+        #     'NDVI4g_detrend_CV'
+        #
+        # ]
 
         for f in os.listdir(fdir):
 
@@ -851,7 +854,7 @@ class build_moving_window_dataframe():
                 vals=np.array(vals)
                 # print(vals)
                 vals[vals>999] = np.nan
-                vals[vals<-999] = np.nan
+                vals[vals<0] = np.nan
 
                 ##### if len vals is 38, the end of list add np.nan
 
@@ -1007,9 +1010,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\CV_products_comparison\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'CV_products_comparison.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_1mm_3mm.df'
 
         pass
 
@@ -1034,27 +1037,27 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
-        # df=self.add_AI_classfication(df)
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
-        # df=self.add_soil_texture_to_df(df)
+        df=self.add_AI_classfication(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
+        df=self.add_soil_texture_to_df(df)
         # #
         # # df=self.add_rooting_depth_to_df(df)
         # #
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         df=self.show_field(df)
 

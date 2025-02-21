@@ -1436,15 +1436,17 @@ class SHAP_CV():
 
     def __init__(self):
 
-        self.y_variable = 'GIMMS_plus_NDVI_detrend_CV'
+        self.y_variable = 'NDVI_detrend_CV'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
-        self.this_class_png = result_root + rf'\{self.threshold}\SHAP\\RF_{self.y_variable}_consistency\\'
-        T.mk_dir(self.this_class_png)
+        self.this_class_png = result_root + rf'\{self.threshold}\\SHAP\\RF_{self.y_variable}\\'
+        # self.this_class_png = result_root + rf'\{self.threshold}\CRU_JRA\\SHAP\RF_{self.y_variable}\\'
 
-        # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
-        self.dff = result_root+rf'{self.threshold}\Dataframe\moving_window_CV\\moving_window_CV_new.df'
+        T.mk_dir(self.this_class_png, force=True)
+
+        self.dff = rf'E:\Project3\Result\3mm\Dataframe\moving_window_CV\\moving_window_CV_new.df'
+        # self.dff = result_root+rf'3mm\Dataframe\moving_window_CV\\moving_window_CV_1mm_3mm.df'
         self.variable_list_rt()
         self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -1471,11 +1473,13 @@ class SHAP_CV():
         # self.check_variables_ranges()
         # self.show_colinear()
         # self.check_spatial_plot()
-        self.pdp_shap()
+        # self.pdp_shap()
+        # self.plot_relative_importance() ## use this
         # self.plot_pdp_shap()
-        # self.plot_pdp_shap_density_cloud()
+        # self.plot_pdp_shap_density_cloud()  ## use this
+        self.plot_heatmap_ranking()
         # self.plot_pdp_shap_density_cloud_individual()
-        # self.plot_relative_importance()
+
 
         # self.spatial_shapely()   ### spatial plot
         # self.variable_contributions()
@@ -1576,13 +1580,6 @@ class SHAP_CV():
 
 
                 'heat_event_frenquency',
-                 # 'Tmax',
-            # 'VPD',
-            # 'SOC',
-            # 'S_SAND',
-            #  'T_SAND',
-            # 'T_CLAY',
-            # 'rooting_depth',
 
 
             ]
@@ -1626,16 +1623,15 @@ class SHAP_CV():
             'cwdx80_05': [0, 1000],
             'cec': [0, 400],
             'sand': [0, 900],
-            'soc': [0, 600],
+
             'CO2_interannual_rainfall_interaction': [0, 20000 ],
-
-
 
             'CO2': [350, 410],
             'sum_rainfall': [0, 1500],
-            'S_CEC_CLAY': [0, 100],
-            'AWC_CLASS': [0, 7],
+
+
             'dry_spell': [0, 20],
+
             'rainfall_intensity': [0, 25],
             'rainfall_frenquency': [0, 100],
     'rainfall_seasonality_all_year': [15, 80],
@@ -1643,15 +1639,39 @@ class SHAP_CV():
             'detrended_sum_rainfall_CV':[0,60],
 
     'heat_event_frenquency': [0, 3],
-            'S_SAND': [0, 100],
-            'T_SAND': [20, 90],
-            'T_CLAY': [0, 60],
-            'Tmax': [0, 40],
-            'VPD': [0, 4],
-            'SOC': [0, 1],
-            'rooting_depth': [0, 25],
 
-    }
+            'rainfall_intensity_CPC': [0, 20],
+            'rainfall_frenquency_CPC': [0, 100],
+            'rainfall_seasonality_all_year_CPC': [10, 80],
+            'detrended_sum_rainfall_CV_CPC': [0, 60],
+
+            'rainfall_intensity_MSWEP': [0, 20],
+            'rainfall_frenquency_MSWEP': [0, 120],
+            'rainfall_seasonality_all_year_MSWEP': [10, 80],
+            'detrended_sum_rainfall_CV_MSWEP': [0, 100],
+
+            'rainfall_intensity_ERA5': [0, 20],
+            'rainfall_frenquency_ERA5': [0, 150],
+            'rainfall_seasonality_all_year_ERA5': [10, 80],
+            'detrended_sum_rainfall_CV_ERA5': [0, 100],
+
+            'rainfall_intensity_1mm': [0, 25],
+
+        'rainfall_frenquency_1mm': [0, 140],
+
+        'rainfall_seasonality_all_year_1mm': [10, 80],
+
+        'detrended_sum_rainfall_CV_1mm': [0, 60],
+
+            'rainfall_intensity_5mm': [0, 25],
+
+        'rainfall_frenquency_5mm': [0, 100],
+
+        'rainfall_seasonality_all_year_5mm': [10, 80],
+
+        'detrended_sum_rainfall_CV_5mm': [0, 100],
+
+        }
 
     def show_colinear(self, ):
         dff = self.dff
@@ -1741,7 +1761,7 @@ class SHAP_CV():
 
         df = df[df['MODIS_LUCC'] != 12]
 
-        # df = df[df['LAI4g_NDVI4g'].isin([1, 4])]
+        df = df[df['LAI4g_NDVI4g'].isin([1, 4])]
         # df = df[df['LAI4g_NDVI'].isin([1, 4])]
         df = df[df['LAI4g_GIMMS_NDVI'].isin([1, 4])]
         print(len(df))
@@ -1783,8 +1803,8 @@ class SHAP_CV():
         # plt.hist(T.load_df(dff)[y_variable].tolist(),bins=100)
         # plt.show()
         df = T.load_df(dff)
-        # df = self.df_clean(df)
-        df=self.df_clean_for_consistency(df)
+        df = self.df_clean(df)
+        # df=self.df_clean_for_consistency(df)
 
 
         pix_list = df['pix'].tolist()
@@ -1914,6 +1934,90 @@ class SHAP_CV():
 
         T.save_dict_to_binary(model, join(outdir, self.y_variable + '.model'))
         # exit()
+    def plot_relative_importance(self):  ## bar plot
+
+        ## here plot relative importance of each variable
+        x_variable_list = self.x_variable_list
+
+
+        name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency': r'Fq$\mathrm{rainfall}$ (events/year)',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality (unitless)',
+                    'detrended_sum_rainfall_CV': r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                    'heat_event_frenquency': r'Fq$\mathrm{heat\ event}$ (events/year)',
+                    'cwdx80_05': 'S0 (mm)',
+
+                    'sand': 'Sand (g/kg)',
+
+                    }
+
+        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
+        # print(isfile(inf_shap));exit()
+        shap_values = T.load_dict_from_binary(inf_shap)
+        print(shap_values)
+        total_sum_list = []
+        sum_abs_shap_dic = {}
+        for i in range(shap_values.values.shape[1]):
+            sum_abs_shap_dic[i]=(np.sum(np.abs(shap_values.values[:, i])))
+
+            total_sum_list.append(np.sum(np.abs(shap_values.values[:, i])))
+        total_sum_list=np.array(total_sum_list)
+        total_sum=np.sum(total_sum_list, axis=0)
+        relative_importance={}
+
+        for key in sum_abs_shap_dic.keys():
+            relative_importance[key]=sum_abs_shap_dic[key]/total_sum*100
+
+        x_list = []
+        y_list = []
+        imp_dict = {}
+        fig, ax = plt.subplots(figsize=(3, 1.5))
+        for key in relative_importance.keys():
+            x_list.append(key)
+            y_list.append(relative_importance[key])
+            imp_dict[key]=relative_importance[key]
+        imp_dict_sort = sorted(imp_dict.items(), key=lambda x: x[1])
+        x_list_sort = [x_variable_list[x[0]] for x in imp_dict_sort]
+        ## use new name from dictionary
+        x_list_sort = [name_dic[x] for x in x_list_sort]
+        y_list_sort = [x[1] for x in imp_dict_sort]
+        # pprint(imp_dict_sort);exit()
+        # plt.barh(x_variable_list[::-1], y_list[::-1], color='grey', alpha=0.5)
+        ## set color_list
+        color_dic = {'Rainfall intensity (mm/events)': 'red',
+                     'Fq$\mathrm{rainfall}$ (events/year)': 'blue',
+                     'Rainfall seasonality (unitless)': 'green',
+                     'CV$_{\mathrm{interannual\ rainfall}}$ (%)': 'orange',
+                     'Fq$\mathrm{heat\ event}$ (events/year)': 'purple',
+                     'S0 (mm)': 'black',
+
+                     'Sand (g/kg)': 'grey',
+                     }
+        ax.bar(x_list_sort[::-1], y_list_sort[::-1], color=[color_dic[x] for x in x_list_sort[::-1]], alpha=0.5,edgecolor='black')
+        ## fontsize
+
+        print(x_list)
+
+        plt.xticks(fontsize=8,rotation=90)
+        plt.yticks(fontsize=8)
+        plt.ylabel('Importance (%)', fontsize=8)
+        ## add text R2=0.89 in (0.5, 0.5)
+        plt.text(4, 20, 'R2=0.94', fontsize=8)
+        ## save fig
+
+        plt.savefig(join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.png'), dpi=300, bbox_inches='tight')
+        plt.savefig(join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.pdf'), dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+
+
+
+        # plt.tight_layout()
+        #
+        # plt.show()
+
+        pass
 
     def plot_pdp_shap(self):
         x_variable_list = self.x_variable_list
@@ -1923,33 +2027,37 @@ class SHAP_CV():
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
 
+        name_dic = {'rainfall_intensity_CPC': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency_CPC': r'Fq$_{\mathrm{ rainfall}}$ (events/year)',
+                    'rainfall_seasonality_all_year_CPC': 'Rainfall seasonality (unitless)',
+                    'detrended_sum_rainfall_CV_CPC': r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                    'heat_event_frenquency': r'Fq$_{\mathrm{ heat\ event}}$ (events/year)',
+                    'cwdx80_05': 'S0 (mm)',
+
+                    'sand': 'Sand (g/kg)',
+
+                    }
+
         imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
         x_list = []
         y_list = []
         for key in imp_dict.keys():
             x_list.append(key)
+
             y_list.append(imp_dict[key])
-        plt.barh(x_list[::-1], y_list[::-1],color='grey',alpha=0.5)
-        print(x_list)
-        # plt.title(f'R2_{R2}')
-        # plt.xticks(rotation=45, )
-        ## set xlabel font size
-        plt.xticks(fontsize=12)
 
-        plt.title('shap')
-
-        plt.tight_layout()
-
-        plt.show()
 
         flag = 1
         centimeter_factor = 1 / 2.54
         plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
 
         for x_var in x_list:
+
             shap_values_mat = shap_values[:, x_var]
+
             data_i = shap_values_mat.data
             value_i = shap_values_mat.values
+
             df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
             # pprint(df_i);exit()
             df_i_random = df_i.sample(n=len(df_i) )
@@ -1996,39 +2104,38 @@ class SHAP_CV():
             # y_interp = interp_model(x_mean_list)
             y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
             plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
+            plt.ylabel(r'CV$_{\mathrm{LAI}}$ (%/yr)', fontsize=10)
 
             # exit()
             # plt.fill_between(x_mean_list, np.array(y_mean_list) - np.array(y_err_list), np.array(y_mean_list) + np.array(y_err_list), alpha=0.3,color='red')
             #### rename x_label remove
 
-            plt.xlabel(x_var, fontsize=12)
+            plt.xlabel(name_dic[x_var], fontsize=10)
 
             flag += 1
             plt.ylim(-5, 5)
 
-        plt.suptitle(self.y_variable)
 
         plt.tight_layout()
         plt.show()
         # plt.savefig(outf,dpi=300)
         # plt.close()
 
+
     def plot_pdp_shap_density_cloud(self):
         x_variable_list = self.x_variable_list
 
-        name_dic={'rainfall_intensity':'Rainfall intensity (mm/events)',
-                  'rainfall_frenquency':'Rainfall frequency (events/year)',
-                  'rainfall_seasonality_all_year':'Rainfall seasonality (unitless)',
-                  'detrended_sum_rainfall_CV':r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
-                  'heat_event_frenquency':'Heat event frequency (events/year)',
-                  'cwdx80_05':'Rooting zone water storage capacity (mm)',
+        name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency': r'Fq$_{\mathrm{ rainfall}}$ (events/year)',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality (unitless)',
+                    'detrended_sum_rainfall_CV': r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                    'heat_event_frenquency': r'Fq$_{\mathrm{ heat\ event}}$ (events/year)',
+                    'cwdx80_05': 'S0 (mm)',
+                    'sand': 'Sand (g/kg)',
 
-                  'sand':'Sand (g/kg)',
+                    }
+        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
 
-        }
-
-        # inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
-        inf_shap = rf'E:\Project3\Result\3mm\SHAP\RF_LAI4g_selected_samples_detrend_CV_\pdp_shap_CV\\LAI4g_detrend_CV_.shap.pkl'
 
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
@@ -2045,9 +2152,11 @@ class SHAP_CV():
         centimeter_factor = 1 / 2.54
         # plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
         fig, axs = plt.subplots(4, 2,
-                                figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+                                figsize=(20 * centimeter_factor, 18 * centimeter_factor))
         # print(axs);exit()
+
         axs = axs.flatten()
+
         for x_var in x_list:
             shap_values_mat = shap_values[:, x_var]
             data_i = shap_values_mat.data
@@ -2091,7 +2200,7 @@ class SHAP_CV():
             print(percentile_values)
 
             # plt.subplot(4, 3, flag)
-            ax = axs[flag-1]
+            ax = axs[flag]
             ax.vlines(percentile_values, -5, 5, color='gray', linestyle='--', alpha=1)
 
             # ax2 = ax.twiny()  # Create a twin x-axis
@@ -2106,25 +2215,178 @@ class SHAP_CV():
             ax.plot(x_mean_list, y_mean_list, c='red', alpha=1)
 
             # ax.set_title(name_dic[x_var], fontsize=12)
-            ax.set_xlabel(name_dic[x_var], fontsize=12)
-            ax.set_ylabel(r'CV$_{\mathrm{LAI}}$ (%/year)', fontsize=12)
+            ax.set_xlabel(name_dic[x_var], fontsize=10)
+            ax.set_ylabel(r'CV$_{\mathrm{LAI}}$ (%/year)', fontsize=10)
 
             flag += 1
             ax.set_ylim(-5, 5)
-            # plt.show()
+        last_subplot = axs[0]
 
-
-        plt.suptitle(self.y_variable)
-
+        last_subplot.set_frame_on(False)
+        last_subplot.set_xticks([])
+        last_subplot.set_yticks([])
         plt.tight_layout()
-        plt.show()
+
+
+
+        plt.savefig(join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '_shap.png'), dpi=300, bbox_inches='tight')
+        plt.savefig(join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '_shap.pdf'), dpi=300, bbox_inches='tight')
+        plt.close()
+
+        # plt.tight_layout()
+        # plt.show()
         # plt.savefig(outf,dpi=300)
         # plt.close()
 
 
 
 
+    def plot_heatmap_ranking(self):
+        ##  plot heatmap for the ranking of the x variables
 
+        fdir_all = result_root+rf'\3mm\SHAP\\'
+
+        x_variable_list = self.x_variable_list
+        # x_variable_list=['rainfall_intensity','rainfall_frenquency','sand','detrended_sum_rainfall_CV','heat_event_frenquency', 'cwdx80_50','  rainfall_seasonality_all_year']
+
+
+        dic_result = {'rainfall_intensity':0,
+                        'rainfall_frenquency':1,
+                        'sand':2,
+                        'detrended_sum_rainfall_CV':3,
+                        'heat_event_frenquency':5,
+                        'cwdx80_05':4,
+                        'rainfall_seasonality_all_year':6,}
+
+
+
+        all_model_results_list = []
+        model_list = [ 'LAI4g','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai','LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'SDGVM_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+        dic_name = {
+            'LAI4g': 'Obs',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
+
+        for model in model_list[::-1]:
+
+            fdir = join(fdir_all, rf'RF_{model}_detrend_CV_')
+
+
+            for fdir_ii in T.listdir(fdir):
+
+                for f in T.listdir(join(fdir, fdir_ii)):
+
+                    if not '.shap.pkl' in f:
+                        continue
+                    print(f)
+
+
+                    inf_shap = join(fdir, fdir_ii, f)
+
+                    shap_values = T.load_dict_from_binary(inf_shap)
+                    print(shap_values)
+
+                    total_sum_list = []
+                    sum_abs_shap_dic = {}
+
+
+                    for i in range(shap_values.values.shape[1]):
+
+                        sum_abs_shap_dic[i]=(np.sum(np.abs(shap_values.values[:, i])))
+
+                        total_sum_list.append(np.sum(np.abs(shap_values.values[:, i])))
+                    total_sum_list=np.array(total_sum_list)
+                    total_sum=np.sum(total_sum_list, axis=0)
+                    relative_importance={}
+
+                    for key in sum_abs_shap_dic.keys():
+                        relative_importance[key]=sum_abs_shap_dic[key]/total_sum*100
+
+                    x_list = []
+                    y_list = []
+                    imp_dict = {}
+                    for key in relative_importance.keys():
+                        x_list.append(key)
+                        y_list.append(relative_importance[key])
+                        imp_dict[key]=relative_importance[key]
+                        ### sort by importance and the relative importance largest is 6 and smallest is 0
+
+                    imp_dict_sort = sorted(imp_dict.items(), key=lambda x: x[1])
+
+
+                    x_list_sort = [x_variable_list[x[0]] for x in imp_dict_sort]
+
+                    x_list_sort_number = [dic_result[x] for x in x_list_sort[::-1]]
+
+                    all_model_results_list.append(x_list_sort_number)
+        all_model_results_arr = np.array(all_model_results_list)
+        ## plot heatmap
+        name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency': r'Fq$\mathrm{rainfall}$ (events/year)',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality (unitless)',
+                    'detrended_sum_rainfall_CV': r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                    'heat_event_frenquency': r'Fq$\mathrm{heat\ event}$ (events/year)',
+                    'cwdx80_05': 'S0 (mm)',
+
+                    'sand': 'Sand (g/kg)',
+
+                    }
+        x_label = ['Rainfall intensity', r'Fq$_{\mathrm{rainfall}}$', 'Sand',
+                   'CV$_{\mathrm{interannual\ rainfall}}$', 'S0',
+                   r'Fq$_{\mathrm{heat\ event}}$',  'Rainfall seasonality']
+        cell_size = 0.5  # Desired size of each square box (in inches)
+        fig_width = cell_size * len(x_list_sort)  # Total figure width
+        fig_height = cell_size * len(model_list)  # Total figure height
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+        # sns.heatmap(all_model_results_arr, annot=True, fmt=".2f",
+        #             cmap='GnBu_r', cbar=False, linewidths=0.5, linecolor='white', ax=ax, )
+        sns.heatmap(all_model_results_arr,
+                    cmap='GnBu_r', cbar=False, linewidths=0.5, linecolor='white', ax=ax, )
+
+        ax.set_yticks(np.arange(all_model_results_arr.shape[0]) + 0.5)  # Center labels
+        # ax.set_yticklabels(model_list[::-1], rotation=0, va='center')
+        ##get name from dic
+        ax.set_yticklabels([dic_name[x] for x in model_list[::-1]], rotation=0, va='center')
+
+
+        ax.set_xticks(np.arange(all_model_results_arr.shape[1]) + 0.5)  # Center labels
+        ax.set_xticklabels(x_label, rotation=90, ha='right')
+        ax.set_aspect('equal')
+        plt.tight_layout()
+        plt.savefig(result_root + rf'\3mm\SHAP\\Figure\\heatmap_ranking.pdf')
+        plt.close()
+
+        #
+        #
+        # plt.show()
+
+
+
+
+            ## plot heatmap
+
+
+        pass
 
 
 
