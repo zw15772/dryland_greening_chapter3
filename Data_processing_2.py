@@ -1010,9 +1010,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\moving_window_CV\\')
+        self.this_class_arr = (result_root+rf'3mm\CRU_JRA\Dataframe\rainfall_seasonality_unpack\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_CV_1mm_3mm.df'
+        self.dff = self.this_class_arr + rf'rainfall_seasonality_unpack_new.df'
 
         pass
 
@@ -1020,7 +1020,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        # df=self.foo1(df)
+        df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -1030,7 +1030,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        # df = self.add_detrend_zscore_to_df(df)
+        df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -1240,7 +1240,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'E:\Project3\Result\3mm\anomaly_growing_season\whole_period\\LAI4g.npy'
+        f = rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\rainfall_intensity.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1253,7 +1253,7 @@ class build_dataframe():
         year = []
 
         for pix in tqdm(dic):
-            time_series = dic[pix]
+            time_series = dic[pix]['ecosystem_year']
 
             y = 1983
             for val in time_series:
@@ -1267,7 +1267,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g'] = change_rate_list
+        df['rainfall_intensity'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -1365,12 +1365,17 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'E:\Project3\Result\3mm\anomaly_growing_season\whole_period\\'
+        fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        variable_list=['rainfall_frenquency','dry_spell','heavy_rainfall_days',
+                       'CV_intraannual_rainfall','rainfall_seasonality_all_year']
+
         for f in os.listdir(fdir):
 
 
 
             variable= f.split('.')[0]
+            if not variable in variable_list:
+                continue
 
 
             print(variable)
@@ -1392,7 +1397,7 @@ class build_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                vals = val_dic[pix]
+                vals = val_dic[pix]['ecosystem_year']
                 print(len(vals))
 
                 ##### if len vals is 38, the end of list add np.nan
@@ -7934,12 +7939,12 @@ def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
     # visualize_SHAP().run()

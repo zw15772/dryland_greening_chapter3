@@ -1474,7 +1474,7 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.pdp_shap()
-        # self.plot_relative_importance() ## use this
+        self.plot_relative_importance() ## use this
         # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()  ## use this
         self.plot_heatmap_ranking()
@@ -2487,13 +2487,15 @@ class SHAP_rainfall_seasonality():
 
     def __init__(self):
 
-        self.this_class_png = results_root + 'SHAP\\png\\CV\\'
-        self.dff = rf'E:\Project3\Result\Dataframe\rainfall_seasonality_unpack\\rainfall_seasonality_unpack.df'
+
+        self.dff = rf'E:\Project3\Result\3mm\CRU_JRA\Dataframe\\rainfall_seasonality_unpack\\rainfall_seasonality_unpack_new.df'
         self.variable_list_rt()
 
         ##----------------------------------
 
-        self.y_variable = 'intraannual_rainfall_CV'
+        self.y_variable = 'CV_intraannual_rainfall'
+        self.this_class_png = result_root + rf'3mm\CRU_JRA\rainfall_seasonality_RF\\{self.y_variable}\\'
+        T.mk_dir(self.this_class_png, force=True)
 
         ####################
 
@@ -2506,14 +2508,10 @@ class SHAP_rainfall_seasonality():
         # self.check_df_attributes()
 
         # self.check_variables_ranges()
-        # self.show_colinear()
-        self.pdp_shap()
-        # self.plot_pdp_shap()
-        # self.variable_average_shapely()
-        # self.variable_contributions()
-        # self.variable_contributions()
-        # self.plot_pdp_shap_normalized()
-        # self.pdp_shap_trend()
+        self.show_colinear()
+        # self.pdp_shap()
+        # self.plot_relative_importance()
+
 
         pass
 
@@ -2558,21 +2556,22 @@ class SHAP_rainfall_seasonality():
 
           'rainfall_frenquency',
             'rainfall_intensity',
-            # 'maxmum_dry_spell',
+            'heavy_rainfall_days',
+
+            'dry_spell',
             'rainfall_seasonality_all_year',
-            # 'heavy_rainfall_days',
 
 
 
         ]
         self.x_variable_range_dict_global = {
-            'maxmum_dry_spell': [0, 200],  # maxmum_dry_spell
-            'rainfall_frenquency': [0, 150],  # rainfall_frequency
-            'rainfall_intensity': [0, 20],  # rainfall_intensity
-            'heavy_rainfall_days': [0, 200],
+            'dry_spell': [0, 4],  # _dry_spell
+            'rainfall_frenquency': [0, 125],  # rainfall_frequency
+            'rainfall_intensity': [0, 30],  # rainfall_intensity
+            'heavy_rainfall_days': [0, 80],
 
 
-            'rainfall_seasonality_all_year': [20, 80],  # rainfall_seasonality_all_year
+            'rainfall_seasonality_all_year': [0, 100],  # rainfall_seasonality_all_year
 
 
 
@@ -2582,14 +2581,44 @@ class SHAP_rainfall_seasonality():
     def show_colinear(self, ):
         dff = self.dff
         df = T.load_df(dff)
+        df=self.df_clean(df)
         vars_list = self.x_variable_list
         df = df[vars_list]
+        name_dic = {'rainfall_intensity': 'Rainfall intensity',
+                    'rainfall_frenquency': r'Fq$\mathrm{rainfall}$',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality',
+
+                    'dry_spell': 'Dry spell',
+                    'heavy_rainfall_days': 'Heavy rainfall days',
+
+                    'CV_intraannual_rainfall': r'CV $\mathrm{intraannual rainfall}$', }
         ## add LAI4g_raw
-        df['intraannual_rainfall_CV'] = T.load_df(dff)['intraannual_rainfall_CV']
+        df['CV_intraannual_rainfall'] = T.load_df(dff)['CV_intraannual_rainfall']
         ## plot heat map to show the colinear variables
         import seaborn as sns
-        plt.figure(figsize=(10, 10))
-        sns.heatmap(df.corr(), annot=True, fmt=".2f")
+        cell_size =1 # Desired size of each square box (in inches)
+        vars_list.append('CV_intraannual_rainfall')
+        fig_width = cell_size * len(vars_list)
+        fig_height = cell_size * len(vars_list)
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+        x_labels = vars_list
+        y_labels = vars_list
+
+        sns.heatmap(df.corr(), annot=True, fmt=".2f",cbar_kws={'shrink': 0.5})
+        ax.set_yticks(np.arange(len(x_labels)) + 0.5)
+        # ax.set_yticklabels(model_list[::-1], rotation=0, va='center')
+        ##get name from dic
+        ax.set_yticklabels([name_dic[x] for x in vars_list], rotation=0, va='center')
+
+        ax.set_xticks(np.arange(len(y_labels)) + 0.5)
+        ax.set_xticklabels([name_dic[x] for x in vars_list],   rotation=90, ha='center')
+        ax.set_aspect('equal')
+
+
+
+        plt.tight_layout()
+
+
         plt.show()
 
     def discard_vif_vars(self, df, x_vars_list):
@@ -2665,10 +2694,12 @@ class SHAP_rainfall_seasonality():
 
         return df
 
+
+
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_CV')
+        outdir = join(self.this_class_png, 'pdp_shap_rainfall')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list
@@ -2678,380 +2709,209 @@ class SHAP_rainfall_seasonality():
         # plt.show()
         df = T.load_df(dff)
         df = self.df_clean(df)
+        # df = self.valid_range_df(df)
+
+        pix_list = df['pix'].tolist()
+        unique_pix_list = list(set(pix_list))
+        spatial_dic = {}
+
+        for pix in unique_pix_list:
+            spatial_dic[pix] = 1
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
+
         T.print_head_n(df)
-        df = self.valid_range_df(df)
         print(len(df))
         T.print_head_n(df)
         print('-' * 50)
+        ## text select df the first 1000
+
+        # df = df[0:1000]
         # exit()
         # model, r2 = self.__train_model(X, Y)  # train a Random Forests model
         # all_vars_vif = self.discard_vif_vars(df, x_variable_list)
         # all_vars_vif.append('CV_rainfall')
         # print('all_vars_vif:',all_vars_vif)
         # exit()
+        # df = self.valid_range_df(df)
         all_vars = copy.copy(x_variable_list)
-        # all_vars=copy.copy(all_vars_vif)
 
         all_vars.append(y_variable)  # add the y variable to the list
+        all_vars.append('pix')
+
         all_vars_df = df[all_vars]  # get the dataframe with the x variables and the y variable
-        all_vars_df = all_vars_df.dropna()
+        all_vars_df = all_vars_df.dropna(subset=x_variable_list, how='any')
+        all_vars_df = all_vars_df.dropna(subset=self.y_variable, how='any')
+
+        ## for plot use not training
+        ## I want to add CO2 into new df but using all_vars_df to selected from df
+        ## so that all_vars_df can be used for future ploting
+        # all_vars_df_CO2 = copy.copy(all_vars_df)
+        # merged = pd.merge(all_vars_df_CO2, df[["pix", "Aridity"]], on="pix", how="left")
+        # T.save_df(merged, join(outdir, 'all_vars_df_aridity.df'))
+        # exit()
+
+        ######
+
+        pix_list = all_vars_df['pix'].tolist()
+        # print(len(pix_list));exit()
+        unique_pix_list = list(set(pix_list))
+        spatial_dic = {}
+        #
+        for pix in unique_pix_list:
+            spatial_dic[pix] = 1
+        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
+        plt.colorbar()
+        plt.show()
 
         X = all_vars_df[x_variable_list]
 
         Y = all_vars_df[y_variable]
+        train_data_X_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.X.df')
+        train_data_y_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.y.df')
+
+        # exit()
+
+        ## save selected df for future ploting
+        T.print_head_n(X)
+        # X = X.dropna()
+        # print(len(X));exit()
 
         model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
         imp_dict_xgboost = {}
         for i in range(len(x_variable_list)):
             imp_dict_xgboost[x_variable_list[i]] = model.feature_importances_[i]
+        #     plt.barh(x_variable_list[i], model.feature_importances_[i])
+        # plt.show()
         sorted_imp = sorted(imp_dict_xgboost.items(), key=lambda x: x[1], reverse=True)
+
         x_ = []
         y_ = []
         for key, value in sorted_imp:
             x_.append(key)
             y_.append(value)
+        print(x_)
         plt.figure()
         plt.bar(x_, y_)
-        plt.xticks(rotation=90)
-        plt.tight_layout()
-        plt.title('xgboost')
-        # plt.show()
-        plt.figure()
+        plt.xticks(rotation=45)
+        # plt.tight_layout()
+        plt.title('RF')
+        plt.show()
+        # exit()
+        # plt.figure()
 
+        ## random sample
+
+        sample_indices = np.random.choice(X.shape[0], 2000, replace=False)
+        X_sample = X.iloc[sample_indices]
         explainer = shap.TreeExplainer(model)
 
         # ### round R2
 
-        # print('shaply_R2:',R2)
-        x_variable_range_dict = self.x_variable_range_dict
-        y_base = explainer.expected_value
-        print('y_base', y_base)
-        print('y_mean', np.mean(y))
-        # shap_values = explainer.shap_values(X)
+        # # x_variable_range_dict = self.x_variable_range_dict
+        # y_base = explainer.expected_value
+        # print('y_base', y_base)
+        # print('y_mean', np.mean(y))
+        # shap_values = explainer.shap_values(X) ##### not use!!!
+        shap_values = explainer(X_sample)
         outf_shap = join(outdir, self.y_variable + '.shap')
-        ## how to resever X and Y before the shap
-
-        shap_values = explainer(X)
+        # ## how to resever X and Y before the shap
+        #
 
         T.save_dict_to_binary(shap_values, outf_shap)
-        exit()
+        ## save model
 
-    def plot_pdp_shap(self):
+        T.save_dict_to_binary(model, join(outdir, self.y_variable + '.model'))
+        # exit()
+
+
+
+    def plot_relative_importance(self):  ## bar plot
+
+        ## here plot relative importance of each variable
         x_variable_list = self.x_variable_list
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
-        shap_values = T.load_dict_from_binary(inf_shap)
 
-        imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
+        name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency': r'Fq$\mathrm{rainfall}$ (events/year)',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality (unitless)',
+
+                    'dry_spell': 'Dry spell duration (days)',
+                    'heavy_rainfall_days': 'Heavy rainfall days (days)',
+
+
+                    }
+
+        inf_shap = join(self.this_class_png, 'pdp_shap_rainfall', self.y_variable + '.shap.pkl')
+        # print(isfile(inf_shap));exit()
+        shap_values = T.load_dict_from_binary(inf_shap)
+        print(shap_values)
+        total_sum_list = []
+        sum_abs_shap_dic = {}
+        for i in range(shap_values.values.shape[1]):
+            sum_abs_shap_dic[i]=(np.sum(np.abs(shap_values.values[:, i])))
+
+            total_sum_list.append(np.sum(np.abs(shap_values.values[:, i])))
+        total_sum_list=np.array(total_sum_list)
+        total_sum=np.sum(total_sum_list, axis=0)
+        relative_importance={}
+
+        for key in sum_abs_shap_dic.keys():
+            relative_importance[key]=sum_abs_shap_dic[key]/total_sum*100
+
         x_list = []
         y_list = []
-        for key in imp_dict.keys():
+        imp_dict = {}
+        fig, ax = plt.subplots(figsize=(3, 1.5))
+        for key in relative_importance.keys():
             x_list.append(key)
-            y_list.append(imp_dict[key])
-        plt.bar(x_list, y_list)
+            y_list.append(relative_importance[key])
+            imp_dict[key]=relative_importance[key]
+        imp_dict_sort = sorted(imp_dict.items(), key=lambda x: x[1])
+        x_list_sort = [x_variable_list[x[0]] for x in imp_dict_sort]
+        ## use new name from dictionary
+        x_list_sort = [name_dic[x] for x in x_list_sort]
+        y_list_sort = [x[1] for x in imp_dict_sort]
+        # pprint(imp_dict_sort);exit()
+        # plt.barh(x_variable_list[::-1], y_list[::-1], color='grey', alpha=0.5)
+        ## set color_list
+        color_dic = {'Rainfall intensity (mm/events)': 'red',
+                     'Fq$\mathrm{rainfall}$ (events/year)': 'blue',
+                     'Rainfall seasonality (unitless)': 'green',
+                     'Dry spell duration (days)': 'orange',
+                     'Heavy rainfall days (days)': 'purple',
+
+                     }
+        ax.bar(x_list_sort[::-1], y_list_sort[::-1], color=[color_dic[x] for x in x_list_sort[::-1]], alpha=0.5,edgecolor='black')
+        ## fontsize
+
         print(x_list)
-        # plt.title(f'R2_{R2}')
-        plt.xticks(rotation=90, )
-        ## set xlabel font size
-        plt.xticks(fontsize=12)
 
-        plt.title('shap')
+        plt.xticks(fontsize=8,rotation=90)
+        plt.yticks(fontsize=8)
+        plt.ylabel('Importance (%)', fontsize=8)
+        ## add text R2=0.89 in (0.5, 0.5)
+        plt.text(3, 50, 'R2=0.98', fontsize=8)
+        ## save fig
 
-        plt.tight_layout()
+        plt.savefig(join(self.this_class_png, 'pdp_shap_rainfall', self.y_variable + '.png'), dpi=300, bbox_inches='tight')
+        plt.savefig(join(self.this_class_png, 'pdp_shap_rainfall', self.y_variable + '.pdf'), dpi=300, bbox_inches='tight')
+        plt.close()
 
-        plt.show()
 
-        flag = 1
-        centimeter_factor = 1 / 2.54
-        plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
-        for x_var in x_list:
-            shap_values_mat = shap_values[:, x_var]
-            data_i = shap_values_mat.data
-            value_i = shap_values_mat.values
-            df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
-            df_i_random = df_i.sample(n=len(df_i) // 2)
-            df_i = df_i_random
 
-            # x_variable_range_dict = self.x_variable_range_dict
-            start, end = self.x_variable_range_dict[x_var]
-            bins = np.linspace(start, end, 50)
-            df_group, bins_list_str = T.df_bin(df_i, x_var, bins)
-            y_mean_list = []
-            x_mean_list = []
-            y_err_list = []
-            scatter_x_list = df_i[x_var].tolist()
-            scatter_y_list = df_i['shap_v'].tolist()
-            for name, df_group_i in df_group:
-                x_i = name[0].left
-                # print(x_i)
-                # exit()
-                vals = df_group_i['shap_v'].tolist()
 
-                if len(vals) == 0:
-                    continue
-                # mean = np.nanmean(vals)
-                mean = np.nanmedian(vals)
-                err = np.nanstd(vals)
-                y_mean_list.append(mean)
-                x_mean_list.append(x_i)
-                y_err_list.append(err)
-            #     err,_,_ = self.uncertainty_err(SM)
-            # print(df_i)
-            # exit()
-            plt.subplot(3, 3, flag)
-            plt.scatter(scatter_x_list, scatter_y_list, alpha=0.2, c='gray', marker='.', s=1, zorder=-1)
-            # print(data_i[0])
-            # exit()
-            # interp_model = interpolate.interp1d(x_mean_list, y_mean_list, kind='cubic')
-            # y_interp = interp_model(x_mean_list)
-            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
-            plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
 
-            # exit()
-            # plt.fill_between(x_mean_list, np.array(y_mean_list) - np.array(y_err_list), np.array(y_mean_list) + np.array(y_err_list), alpha=0.3,color='red')
-            #### rename x_label remove
-
-            plt.xlabel(x_var, fontsize=12)
-
-            flag += 1
-            plt.ylim(-5, 5)
-
-        plt.suptitle(self.y_variable)
-
-        plt.tight_layout()
-        plt.show()
-        # plt.savefig(outf,dpi=300)
-        # plt.close()
-
-    def variable_average_shapely(self):
-
-        dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_CV')
-        T.open_path_and_file(outdir)
-        exit()
-
-        T.mk_dir(outdir, force=True)
-        x_variable_list = self.x_variable_list
-
-        y_variable = self.y_variable
-        # plt.hist(T.load_df(dff)[y_variable].tolist(),bins=100)
+        # plt.tight_layout()
+        #
         # plt.show()
-        df_origin = T.load_df(dff)
-        df_origin = self.df_clean(df_origin)
-        df_origin = self.valid_range_df(df_origin)
-        all_vars = copy.copy(x_variable_list)
-        # all_vars=copy.copy(all_vars_vif)
 
-        all_vars.append(y_variable)  # add the y variable to the list
-        # df_origin = df_origin[all_vars]  # get the dataframe with the x variables and the y variable
-        df_origin = df_origin.dropna(subset=all_vars)
-        # print('df_origin')
-        print(len(df_origin))
-        x_variable_list = self.x_variable_list
-        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
-        shap_values = T.load_dict_from_binary(inf_shap)
-        # T.print_head_n(df_origin);exit()
+        pass
 
-        for x_var in x_variable_list:
-            print(x_var)
-            shap_values_mat = shap_values[:, x_var]
-            data_i = shap_values_mat.data
-            value_i = shap_values_mat.values
-            col_name = f'{x_var}_shap'
-            df_origin[col_name] = value_i
-            # df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
-            # arr = T.
-        # T.print_head_n(df_origin)
-        df_pix_dict = T.df_groupby(df_origin, 'pix')
-        for xvar in x_variable_list:
-            col_name = f'{xvar}_shap'
-            spatial_dict = {}
-            for pix in df_pix_dict:
-                df_pix = df_pix_dict[pix]
-                vals = df_pix[col_name].tolist()
-                # vals = np.array(vals)
-                vals_abs = np.abs(vals)
 
-                vals_abs_sum = np.sum(vals)
-                vals_abs_sum_mean = vals_abs_sum / len(vals)
-                spatial_dict[pix] = vals_abs_sum_mean
-            outf = join(outdir, col_name + '.tif')
-            DIC_and_TIF(pixelsize=.25).pix_dic_to_tif(spatial_dict, outf)
-
-        T.open_path_and_file(outdir)
-        exit()
-
-    def variable_contributions(self):
-        r2 = .53
-        fdir = join(self.this_class_png, 'pdp_shap_CV')
-        outdir = join(self.this_class_png, 'variable_contributions')
-        T.mk_dir(outdir, force=True)
-        all_spatial_dict = {}
-        keys = []
-        for f in T.listdir(fdir):
-            if not f.endswith('.tif'):
-                continue
-            fpath = join(fdir, f)
-            spatial_dict = DIC_and_TIF(pixelsize=.25).spatial_tif_to_dic(fpath)
-            key = f.split('.')[0]
-            all_spatial_dict[key] = spatial_dict
-            keys.append(key)
-        df = T.spatial_dics_to_df(all_spatial_dict)
-        sum_val_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            val_list = []
-            for key in keys:
-                val = row[key]
-                # print(val)
-                val_list.append(val)
-            sum_val = np.sum(val_list)
-            sum_val_list.append(sum_val)
-        df['sum'] = sum_val_list
-        new_key_dict = {}
-        flag = 1
-        for key in keys:
-            df[key + '_contrib'] = df[key] / df['sum'] * 100 * r2
-            new_key_dict[key + '_contrib'] = flag
-            flag += 1
-        pprint(new_key_dict)
-        T.print_head_n(df)
-        result_dict = {}
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            dict_i = {}
-            for new_key in new_key_dict:
-                val = row[new_key]
-                dict_i[new_key] = val
-            pix = row['pix']
-            max_key = T.get_max_key_from_dict(dict_i)
-            max_key_flag = new_key_dict[max_key]
-            max_val = dict_i[max_key]
-            result_dict[pix] = {'max_key': max_key, 'max_key_flag': max_key_flag, 'max_val': max_val}
-        result_df = T.dic_to_df(result_dict, 'pix')
-        outf_max_val = join(outdir, 'max_val.tif')
-        outf_max_flag = join(outdir, 'max_flag.tif')
-        max_val_dict = T.df_to_spatial_dic(result_df, 'max_val')
-        DIC_and_TIF(pixelsize=.25).pix_dic_to_tif(max_val_dict, outf_max_val)
-        max_flag_dict = T.df_to_spatial_dic(result_df, 'max_key_flag')
-        DIC_and_TIF(pixelsize=.25).pix_dic_to_tif(max_flag_dict, outf_max_flag)
-
-        legend_f = join(outdir, 'legend.txt')
-        fw = open(legend_f, 'w')
-        fw.write(str(new_key_dict))
-        fw.close()
-
-        T.open_path_and_file(outdir)
-
-    def max_contributions(self):
-        fdir = join(self.this_class_png, 'pixel_shapely')
-        outdir = join(self.this_class_png, 'pixel_shapely')
-        T.mk_dir(outdir, force=True)
-        array_list = []
-
-        for f in T.listdir(fdir):
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
-            array_list.append(array)
-
-        array = np.array(array_list)
-        max_array = np.max(array, axis=0)
-        outf = join(outdir, 'max_variable.tif')
-        DIC_and_TIF(pixelsize=.25).pix_dic_to_tif(max_array, outf)
-
-    def pdp_shap_trend(self):
-        dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap')
-        outf = join(outdir, self.y_variable + '.png')
-        T.mk_dir(outdir, force=True)
-        x_variable_list = self.x_variable_list
-
-        y_variable = self.y_variable
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        # df = self.__select_extreme(df)
-        # df = self.valid_range_df(df)
-        print(df.columns.tolist())
-        print(len(df))
-        T.print_head_n(df)
-        print('-' * 50)
-        # exit()
-        # model, r2 = self.__train_model(X, Y)  # train a Random Forests model
-        all_vars = copy.copy(x_variable_list)  # copy the x variables
-        all_vars.append(y_variable)  # add the y variable to the list
-        all_vars_df = df[all_vars]  # get the dataframe with the x variables and the y variable
-        # T.print_head_n(all_vars_df)
-        # exit()
-        all_vars_df = all_vars_df.dropna()  # drop rows with missing values
-        X = all_vars_df[x_variable_list]
-        Y = all_vars_df[y_variable]
-        model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
-        # explainer = shap.Explainer(model)
-        explainer = shap.TreeExplainer(model)
-        x_variable_range_dict = self.x_variable_range_dict
-        y_base = explainer.expected_value
-        print('y_base', y_base)
-        print('y_mean', np.mean(y))
-        # shap_values = explainer.shap_values(X)
-        shap_values = explainer(X)
-        imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
-        x_list = []
-        y_list = []
-        for key in imp_dict.keys():
-            x_list.append(key)
-            y_list.append(imp_dict[key])
-        plt.barh(x_list, y_list)
-        plt.tight_layout()
-        # plt.show()
-        # plt.figure(figsize=(8, 8))
-
-        flag = 1
-        centimeter_factor = 1 / 2.54
-        plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
-        for x_var in x_variable_list:
-            shap_values_mat = shap_values[:, x_var]
-            data_i = shap_values_mat.data
-            value_i = shap_values_mat.values
-            df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
-            # x_variable_range_dict = self.x_variable_range_dict
-            start, end = x_variable_range_dict[x_var]
-            bins = np.linspace(start, end, 50)
-            df_group, bins_list_str = T.df_bin(df_i, x_var, bins)
-            y_mean_list = []
-            x_mean_list = []
-            y_err_list = []
-            for name, df_group_i in df_group:
-                x_i = name[0].left
-                # print(x_i)
-                # exit()
-                vals = df_group_i['shap_v'].tolist()
-
-                if len(vals) == 0:
-                    continue
-                mean = np.nanmean(vals)
-                err = np.nanstd(vals)
-                y_mean_list.append(mean)
-                x_mean_list.append(x_i)
-                y_err_list.append(err)
-            #     err,_,_ = self.uncertainty_err(SM)
-            # print(df_i)
-            # exit()
-            plt.subplot(5, 4, flag)
-            plt.scatter(data_i, value_i, alpha=0.9, c='gray', marker='.', s=4, zorder=-1)
-            # print(data_i[0])
-            # exit()
-            # interp_model = interpolate.interp1d(x_mean_list, y_mean_list, kind='cubic')
-            # y_interp = interp_model(x_mean_list)
-            plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
-
-            # exit()
-            # plt.fill_between(x_mean_list, np.array(y_mean_list) - np.array(y_err_list), np.array(y_mean_list) + np.array(y_err_list), alpha=0.3,color='red')
-            plt.xlabel(x_var)
-            flag += 1
-            plt.ylim(-1, 1)
-
-        plt.suptitle(y_variable)
-        plt.tight_layout()
-        plt.show()
-        # plt.savefig(outf,dpi=300)
-        # plt.close()
 
     def feature_importances_shap_values(self, shap_values, features):
         '''
@@ -3147,7 +3007,8 @@ def main():
     # climate_variables().run()
     # TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    SHAP_CV().run()
+    # SHAP_CV().run()
+    SHAP_rainfall_seasonality().run()
 
 
     pass
