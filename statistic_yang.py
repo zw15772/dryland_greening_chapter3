@@ -2138,7 +2138,7 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'LAI4g_detrend_CV_'
+        self.y_variable = 'GIMMS_plus_NDVI_detrend_CV'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
@@ -2170,9 +2170,9 @@ class SHAP_CV():
         # self.check_df_attributes()
 
         # self.check_variables_ranges()
-        self.show_colinear()
+        # self.show_colinear()
         # self.check_spatial_plot()
-        # self.pdp_shap()
+        self.pdp_shap()
         # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## for paper use
@@ -2369,13 +2369,35 @@ class SHAP_CV():
         ## add LAI4g_raw
         df['LAI4g_detrend_CV'] = T.load_df(dff)['LAI4g_detrend_CV']
         ## plot heat map to show the colinear variables
-        import seaborn as sns
-        plt.figure(figsize=(10, 10))
-        ### x tick label rotate
-        plt.xticks(rotation=45)
-        plt.imshow(df.corr())
 
-        # sns.heatmap(df.corr(), annot=True, fmt=".2f")
+        name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
+                    'rainfall_frenquency': 'Rainfall frequency (events/year)',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality (unitless)',
+                    'detrended_sum_rainfall_CV': r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
+                    'heat_event_frenquency': 'Heat event frequency (events/year)',
+                    'cwdx80_05': 'Rooting zone water storage capacity (mm)',
+                    'sand': 'Sand (g/kg)',
+
+                    }
+
+        import seaborn as sns
+        fig, ax=plt.subplots(figsize=(8, 5))
+        ### x tick label rotate
+        vmin = -1
+        vmax = 1
+
+        sns.heatmap(df.corr(), annot=True, fmt=".2f",vmin=vmin, vmax=vmax,cmap="RdBu")
+        plt.xticks(rotation=45)
+        ax.set_yticks(np.arange(len(vars_list)) + 0.5)
+        # ax.set_yticklabels(model_list[::-1], rotation=0, va='center')
+        ##get name from dic
+        # ax.set_yticklabels([name_dic[x] for x in vars_list], rotation=0, va='center')
+        #
+        # ax.set_xticks(np.arange(len(vars_list)) + 0.5)
+        # ax.set_xticklabels([name_dic[x] for x in vars_list], rotation=45, ha='center')
+        # ax.set_aspect('equal')
+
+        plt.tight_layout()
         plt.show()
 
     def discard_vif_vars(self, df, x_vars_list):
@@ -3274,7 +3296,6 @@ class SHAP_CV():
                     colors = {var: cmap(norm(i)) for i, (var, _) in enumerate(imp_dict_sort)}
                     dic_color[f] = colors
 
-
                     result_dic_X = {}
                     result_dic_Y = {}
                     result_dic_err = {}
@@ -3712,7 +3733,8 @@ class SHAP_CV():
         # r2 = rf.score(X_test,y_test)
         # model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
         #                        max_depth=7, eta=0.1, random_state=42, n_jobs=14,  )
-        model = RandomForestRegressor(n_estimators=100, random_state=42,n_jobs=12)
+        # model = RandomForestRegressor(n_estimators=100, random_state=42,n_jobs=12,max_depth=7)
+        model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
         model.fit(X_train, y_train)
         # model.fit(X_train, y_train)

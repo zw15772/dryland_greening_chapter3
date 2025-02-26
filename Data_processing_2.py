@@ -642,7 +642,7 @@ class build_moving_window_dataframe():
         self.threshold = '1mm'
         self.this_class_arr = (rf'E:\Project3\Result\3mm\Dataframe\\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_CV_1mm_3mm.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_new.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -650,8 +650,8 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
-        # df=self.add_interaction_to_df(df)
+        # df=self.add_window_to_df(df)
+        df=self.add_interaction_to_df(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -803,7 +803,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'E:\Project3\Result\5mm\CRU_JRA\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=rf'E:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\\ecosystem_year\\'
         print(fdir)
         print(self.dff)
         variable_list = [
@@ -811,7 +811,9 @@ class build_moving_window_dataframe():
                        # 'rainfall_frenquency',
                        #
                        #   'rainfall_intensity',
-                       'detrended_sum_rainfall_CV',
+                       # 'detrended_sum_rainfall_CV',
+             'detrended_sum_rainfall',
+            # 'CO2',
             # 'heat_event_frenquency',
 
                         ]
@@ -886,7 +888,7 @@ class build_moving_window_dataframe():
     def add_interaction_to_df(self,df):
 
 
-        df['CO2_interannual_rainfall_interaction'] = df['CO2']*df['detrended_sum_rainfall_CV']
+        df['CO2_interannual_rainfall_interaction'] = df['CO2']*df['detrended_sum_rainfall']
         return df
 
 
@@ -961,8 +963,8 @@ class build_moving_window_dataframe():
         columns = df.columns
         print(columns)
         for col in columns:
-            if 'sensitivity' in col:
-                new_name = col.split('sensitivity')[0]
+            if 'CO2_interannual_rainfall_interaction' in col:
+                new_name = 'CO2_interannual_rainfall_interaction_CV'
                 print(new_name)
                 # exit()
                 ## drop the 'sensitivity'
@@ -1010,9 +1012,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\CRU_JRA\Dataframe\rainfall_seasonality_unpack\\')
+        self.this_class_arr = (result_root+rf'3mm\Dataframe\moving_window_CV\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'rainfall_seasonality_unpack_new.df'
+        self.dff = self.this_class_arr + rf'moving_window_CV_new.df'
 
         pass
 
@@ -1020,7 +1022,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -7939,12 +7941,12 @@ def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_window().run()
     # bivariate_analysis().run()
     # visualize_SHAP().run()
