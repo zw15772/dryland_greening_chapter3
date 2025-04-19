@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
 T = Tools()
-results_root = rf'E:\Project3\Result\\'
+results_root = rf'D:\Project3\Result\\'
 # data_root = rf'E:\Project3\Data\ERA5_daily\dict\\'
 
 
@@ -2172,13 +2172,13 @@ class SHAP_CV():
         # self.check_variables_ranges()
         # self.show_colinear()
         # self.check_spatial_plot()
-        self.pdp_shap()
+        # self.pdp_shap()
         # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## for paper use
         # self.plot_relative_importance()
         # self.plot_pdp_shap_all_models_SI()
-        # self.plot_pdp_shap_all_models_main()
+        self.plot_pdp_shap_all_models_main()
         # self.plot_heatmap_ranking()
         # self.plot_interaction_manual()
         # self.spatial_shapely()   ### spatial plot
@@ -3189,8 +3189,12 @@ class SHAP_CV():
         centimeter_factor = 1 / 2.54
         rows=2
         cols=4
-        color_list=['black','red','blue','green','orange','greenyellow','gray',
-                    'yellow','pink','brown','cyan','magenta','lime','teal','lavender','maroon','navy','olive','silver','aqua','fuchsia','lime','teal','lavender','maroon','navy','olive','silver','aqua','fuchsia']
+
+        color_list=['black', 'red', 'blue', 'purple', 'orange', 'greenyellow',  'gray',
+                      'yellow', 'pink', 'brown', 'cyan', 'magenta', 'goldenrod', 'teal', 'lavender', 'maroon', 'navy',
+                      'olive', 'silver', 'aqua', 'fuchsia', 'lime', 'teal', 'lavender', 'maroon', 'navy', 'olive',
+                      'silver', 'aqua', 'fuchsia']
+
         y_scale_list = [1,1,1,1,1]
 
         linewidth_list=[2]
@@ -3249,6 +3253,7 @@ class SHAP_CV():
 
     # plt.suptitle(self.y_variable)
             plt.tight_layout()
+        plt.savefig(join(self.this_class_png, 'pdp_shap_all_models_SI.pdf'))
         plt.show()
 
 
@@ -3259,7 +3264,7 @@ class SHAP_CV():
         all_model_results = {}
 
         dic_color={}
-        model_list = ['LAI4g_selected_samples', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                       'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -3379,8 +3384,8 @@ class SHAP_CV():
 
                 flag += 1
                 # plt.show()
-            # plt.title(f)
-            # plt.show()
+            plt.title(f)
+            plt.show()
 
 
 

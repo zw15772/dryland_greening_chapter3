@@ -81,9 +81,9 @@ D = DIC_and_TIF(pixelsize=0.5)
 centimeter_factor = 1/2.54
 
 
-this_root = 'E:\Project3\\'
-data_root = 'E:/Project3/Data/'
-result_root = 'E:/Project3/Result/'
+this_root = 'D:\Project3\\'
+data_root = 'D:/Project3/Data/'
+result_root = 'D:/Project3/Result/'
 
 class greening_analysis():
 
@@ -1473,8 +1473,8 @@ class SHAP_CV():
         # self.check_variables_ranges()
         # self.show_colinear()
         # self.check_spatial_plot()
-        self.pdp_shap()
-        self.plot_relative_importance() ## use this
+        # self.pdp_shap()
+        # self.plot_relative_importance() ## use this
         # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()  ## use this
         # self.plot_heatmap_ranking()
@@ -4054,6 +4054,127 @@ class SHAP_CO2_interaction():
         plt.xlim(0.6, 1.2)
         plt.ylim(0.6, 1.2)
         plt.show()
+class Bivariate_analysis():
+    def __init__(self):
+        pass
+    def run (self):
+        # self.plot_robinson()
+        self.statistis()
+
+    def plot_robinson(self):
+
+        fdir_trend = result_root + rf'\3mm\bivariate_analysis\\'
+        temp_root = result_root + rf'\3mm\bivariate_analysis\\temp\\'
+        outdir = result_root + rf'\3mm\FIGURE\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+
+            fpath = rf"D:\Project3\Result\3mm\bivariate_analysis\heat_events_CVinternnaul.tif"
+            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            # m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
+
+            color_list1 = [
+                '#d01c8b',
+                '#f3d705',
+                '#3d46e8',
+                '#4dac26',
+
+            ]
+
+            my_cmap2 = T.cmap_blend(color_list1, n_colors=5)
+            # arr = ToRaster().raster2array(fpath)[0]
+            # arr[arr<-999]=np.nan
+            # plt.imshow(arr,cmap=my_cmap,vmin=1,vmax=8,interpolation='nearest')
+            # plt.colorbar()
+            # plt.show()
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=5, is_discrete=True, colormap_n=5,
+                                                   cmap=my_cmap2, )
+
+            plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + 'heat_events_CVinternnaul.pdf'
+            plt.savefig(outf)
+            plt.close()
+            exit()
+
+    def statistis(self):
+        tiff=result_root+rf'\3mm\bivariate_analysis\heat_events_CVinternnaul.tif'
+        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        whole_number_pixels =array[array>-999].size
+
+        dic={}
+        for i in range(1,5):
+            array[array==i]=i
+            count=np.count_nonzero(array==i)
+            percentage=count/whole_number_pixels*100
+            dic[i]=percentage
+        color_list = [
+            '#d01c8b',
+            '#f3d705',
+            '#3d46e8',
+            '#4dac26',
+
+
+        ]
+
+        print(dic)
+        label_list=['Inc_Inc','Inc_Dec','Dec_Inc','Dec_Dec']
+        plt.bar(dic.keys(),dic.values(),color=color_list)
+        plt.xticks(range(1,5),label_list,size=12)
+        plt.ylabel('Percentage (%)', size=12)
+        # plt.show()
+        plt.savefig(result_root + rf'\3mm\FIGURE\heatmap.pdf')
+
+class Trend_CV():
+    def __init__(self):
+        pass
+    def run(self):
+        self.greening_CV()
+        pass
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+    def greening_CV(self):
+        dff=result_root+rf'\3mm\Dataframe\Trend_new\Trend.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        df=df[df['LAI4g_p_value']<0.05]
+        df=df[df['LAI4g_detrend_CV_p_value']<0.05]
+       ## percentile ==90th
+        threshold_greening = df['LAI4g_trend'].quantile(0.90)
+        threshold_browning=df['LAI4g_trend'].quantile(0.1)
+
+
+        df_very_greening = df[df['LAI4g_trend'] > threshold_greening]
+        df_very_browning= df[df['LAI4g_trend'] < threshold_browning]
+        df_middle=df[(df['LAI4g_trend'] > threshold_browning) & (df['LAI4g_trend'] < threshold_greening)]
+        ## check CV
+        CV_greening_pixels=df_very_greening['LAI4g_detrend_CV_trend']
+        CV_browning_pixels=df_very_browning['LAI4g_detrend_CV_trend']
+        CV_middle_pixels=df_middle['LAI4g_detrend_CV_trend']
+
+        plt.bar([1,2,3], [np.nanmean(CV_greening_pixels),np.nanmean(CV_browning_pixels),np.nanmean(CV_middle_pixels)],color=['green','red','blue'])
+        plt.show()
+
+
 
 def main():
     # greening_analysis().run()
@@ -4062,7 +4183,9 @@ def main():
     # TRENDY_CV().trend_analysis_plot()
     # SHAP_CV().run()
     # SHAP_rainfall_seasonality().run()
-    SHAP_CO2_interaction().run()
+    # SHAP_CO2_interaction().run()
+    Bivariate_analysis().run()
+    # Trend_CV().run()
 
 
     pass
