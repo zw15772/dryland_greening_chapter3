@@ -67,9 +67,9 @@ D = DIC_and_TIF(pixelsize=0.25)
 
 
 
-this_root = 'E:\Project3\\'
-data_root = 'E:/Project3/Data/'
-result_root = 'E:/Project3/Result/'
+this_root = 'D:\Project3\\'
+data_root = 'D:/Project3/Data/'
+result_root = 'D:/Project3/Result/'
 
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
@@ -88,7 +88,7 @@ class data_processing():
         # self.resample_majority_ly()
         # self.resample_majority_gdal()
         # self.nc_to_tif_NIRv()
-        self.nc_to_tif_time_series()
+        # self.nc_to_tif_time_series()
         # self.nc_to_tif_time_series_fast()
         # self.nc_to_tif_Terraclimate()
         # self.nc_to_tif_TRMM()
@@ -109,7 +109,7 @@ class data_processing():
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        # self.tif_to_dic()
+        self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -368,40 +368,42 @@ class data_processing():
 
     def nc_to_tif_time_series_fast(self):
 
-        fdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
-        outdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\TIFF\\'
+        fdir_all=rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\nc\\'
+        outdir=rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\tiff\\'
         Tools().mk_dir(outdir,force=True)
-        for f in tqdm(os.listdir(fdir)):
+        for fdir in os.listdir(fdir_all):
+            for f in tqdm(os.listdir(fdir_all+fdir)):
 
-            outdir_name = f.split('.')[0]
-            # print(outdir_name)
+                outdir_name = f.split('.')[0]
+                # print(outdir_name)
 
-            yearlist = list(range(1982, 2021))
-            fpath = join(fdir,f)
-            nc_in = xarray.open_dataset(fpath)
-            # print(nc_in)
-            time_bnds = nc_in['time_bnds']
-            for t in range(len(time_bnds)):
-                date = time_bnds[t]['time']
-                date = pd.to_datetime(date.values)
-                date_str = date.strftime('%Y%m%d')
-                date_str = date_str.split()[0]
-                outf = join(outdir, f'{date_str}.tif')
-                array = nc_in['ndvi'][t]/10000.
-                array = np.array(array)
-                array[array < 0] = np.nan
-                longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.0833333333333, -0.0833333333333
-                ToRaster().array2raster(outf, longitude_start, latitude_start,
-                                        pixelWidth, pixelHeight, array, ndv=-999999)
-                # exit()
+                yearlist = list(range(1982, 2021))
+                fpath = join(fdir_all, fdir, f)
+                nc_in = xarray.open_dataset(fpath)
+                print(nc_in)
+                # time_bnds = nc_in['time_bnds']
+                time_bnds = nc_in['time']
+                for t in range(len(time_bnds)):
+                    date = time_bnds[t]['time']
+                    date = pd.to_datetime(date.values)
+                    date_str = date.strftime('%Y%m%d')
+                    date_str = date_str.split()[0]
+                    outf = join(outdir, f'{date_str}.tif')
+                    array = nc_in['VODCA_CXKu'][t]
+                    array = np.array(array)
+                    array[array < 0] = np.nan
+                    longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.25, -0.25
+                    ToRaster().array2raster(outf, longitude_start, latitude_start,
+                                            pixelWidth, pixelHeight, array, ndv=-999999)
+                    # exit()
 
 
-            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
-            try:
-                self.nc_to_tif_template(fdir+f, var_name='ndvi', outdir=outdir, yearlist=yearlist)
-            except Exception as e:
-                print(e)
-                continue
+                # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+                try:
+                    self.nc_to_tif_template(fdir+f, var_name='VODCA_CXKu', outdir=outdir, yearlist=yearlist)
+                except Exception as e:
+                    print(e)
+                    continue
 
     def nc_to_tif_time_series(self):
 
@@ -966,17 +968,17 @@ class data_processing():
 
     pass
     def extract_dryland_tiff(self):
-        self.datadir='E:/Project3/Data/'
+        self.datadir=rf'D:\Project3\Data\\'
         NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask05.tif')
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
 
 
 
-        fdir_all = rf'E:\Project3\Data\CRU_monthly\\VPD\\'
+        fdir_all = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'unify' in fdir:
+            if not 'resample' in fdir:
                 continue
 
 
@@ -1003,15 +1005,15 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'E:\Project3\Data\LAI4g\\'
+        fdir_all = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\'
 
-        year_list = list(range(1982, 2021))
+        year_list = list(range(1987, 2021))
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'scale' in fdir:
+            if not 'dryland' in fdir:
                 continue
-            outdir=rf'E:\Project3\Data\LAI4g\dic_global\\'
+            outdir=rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\dic\\'
 
             T.mk_dir(outdir, force=True)
             all_array = []  #### so important  it should be go with T.mk_dic
@@ -1031,7 +1033,7 @@ class data_processing():
                 array_unify = array[:360][:360,
                               :720]
                 array_unify[array_unify < -999] = np.nan
-                array_unify[array_unify > 7] = np.nan
+                # array_unify[array_unify > 7] = np.nan
                 # array[array ==0] = np.nan
 
                 # array_unify[array_unify < 0] = np.nan
@@ -1675,26 +1677,29 @@ class data_processing():
             print(f'{fdir_i}:',year_dic)
             print(flag)
     def daily_to_monthly(self):
-        fdir=data_root+'Inversion\TIFF\\'
-        outdir=data_root+'Inversion\monthly_TIFF\\'
+        fdir=data_root+rf'\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\tiff\\'
+        outdir=data_root+rf'\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\monthly_tiff\\'
         Tools().mk_dir(outdir,force=True)
-        year_list=list(range(1982,2021))
+        year_list=list(range(1988,2021))
         month_list=list(range(1,13))
 
 
         for year in year_list:
+            year=str(year)
 
 
             for month in month_list:
                 month_list_data = []
                 month=format(month,'02d')
+                month=str(month)
 
                 for f in os.listdir(fdir):
                     if not f.endswith('.tif'):
                         continue
                     ## year =year and month =month
                     # print(f.split('.')[0][0:4])
-                    # print(f.split('.')[0][4:6])
+                    # print(f.split('.')[0][4:6]);exit()
+
                     # print(type(f.split('.')[0][0:4]))
 
                     if not (f.split('.')[0][0:4])==str(year):
@@ -1709,7 +1714,7 @@ class data_processing():
                     array[array<-999]=np.nan
                     array[array>10000]=np.nan
                     ## GPP need scale factor need to multiply 10^15 and divide areas
-                    array=np.array(array)*10 ** 15
+                    array=np.array(array)
                     month_list_data.append(array)
 
                 month_list_data=np.nanmean(month_list_data,axis=0)
@@ -1781,13 +1786,13 @@ class data_processing():
                 except Exception as e:
                     pass
     def resample_AVHRR_LAI(self):
-        fdir_all = rf'E:\Project3\Data\Landsat\TIFF\\'
+        fdir_all = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\monthly_tiff\\'
 
-        outdir =rf'E:\Project3\Data\Landsat\resample\\'
+        outdir =rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\resample\\'
 
 
         T.mk_dir(outdir, force=True)
-        year = list(range(1982, 2023))
+        year = list(range(1988, 2023))
         # print(year)
         # exit()
         for f in tqdm(os.listdir(fdir_all)):

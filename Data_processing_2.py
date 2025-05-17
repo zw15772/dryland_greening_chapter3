@@ -7958,7 +7958,7 @@ class TRENDY_CV:
         f_sensitivity_trend = result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\npy_time_series\trend\\sum_rainfall_sensitivity_trend.tif'
         f_rainfall_trend=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\ecosystem_year\trend\\\sum_rainfall_trend.tif'
         f_CVLAI=result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-
+        outf = result_root + rf'\3mm\FIGURE\\heatmap.pdf'
         arr_LAI_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_CVLAI)
 
         arr_LAI_trend[arr_LAI_trend < -999] = np.nan
@@ -8047,7 +8047,10 @@ class TRENDY_CV:
         plt.xlabel('beta')
         plt.ylabel('Trend in Rainfall (mm/yr)')
 
-        plt.show()
+        # plt.show()
+        plt.savefig(outf)
+        plt.close()
+
 
 
 

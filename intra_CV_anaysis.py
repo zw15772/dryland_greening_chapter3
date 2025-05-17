@@ -67,9 +67,9 @@ D = DIC_and_TIF(pixelsize=0.5)
 
 
 
-this_root = 'E:\Project3\\'
-data_root = 'E:/Project3/Data/'
-result_root = 'E:/Project3/Result/'
+this_root = 'D:\Project3\\'
+data_root = 'D:/Project3/Data/'
+result_root = 'D:/Project3/Result/'
 
 def mk_dir(outdir):
     if not os.path.isdir(outdir):
@@ -96,8 +96,8 @@ class extract_water_year():  ## extract water year phenology year
         # self.extract_water_year_precip()
         # self.extract_phenology_year_LAI()
         # self.extract_phenology_year_CO2()
-        # self.extract_phenology_monthly_variables()
-        self.extract_phenology_year_rainfall()
+        self.extract_phenology_monthly_variables()
+        # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
         # self.spatial_plot()
         pass
@@ -562,16 +562,22 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'E:\Project3\Data\Landsat\dic\\'
+        fdir = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\dic\\'
 
-        outdir = rf'E:\Project3\Data\Landsat\\\phenology_year_extraction_dryland\\'
+        outdir = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
-        f_phenology = rf'E:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
+        new_spatial_dic={}
+        # for pix in phenology_dic:
+        #     val=phenology_dic[pix]['SeasType']
+        #     new_spatial_dic[pix]=val
+        # spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        # plt.show()
+        # exit()
         for f in T.listdir(fdir):
-            if not 'interpolated' in f:
-                continue
 
             outf = outdir + f
             #
@@ -3179,9 +3185,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = data_root+rf'\GIMMS3g_plus_NDVI\phenology_year_extraction_dryland\\'
+        fdir = data_root+rf'\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\wrong\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\\extraction_GIMMS3g_plus_NDVI\\'
+        outdir_CV = result_root+rf'\3mm\extract_VOD_phenology_year\dryland\\extraction_VOD_wrong\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3229,16 +3235,18 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'Landsat.npy'
+        outf = outdir_CV + 'VOD.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = rf'E:\Project3\Result\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\extraction_GIMMS3g_plus_NDVI\\GIMMS_plus_NDVI.npy'
-        outdir = rf'E:\Project3\Result\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\\extraction_GIMMS3g_plus_NDVI\\'
+        f = rf'D:\Project3\Result\\3mm\extract_VOD_phenology_year\dryland\\extraction_VOD\\VOD.npy'
+        outdir = rf'D:\Project3\Result\\3mm\extract_VOD_phenology_year\dryland\\extraction_VOD\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
+        spatial_leng_dic={}
+
         dict = T.load_npy(f)
         for pix in tqdm(dict):
             time_series = dict[pix]['growing_season']
@@ -3256,9 +3264,17 @@ class extract_LAI_phenology():
             # plt.show()
 
             annual_spatial_dict[pix] = detrended_annual_time_series
+            ## plot
+            spatial_leng_dic[pix] = len(detrended_annual_time_series)
+
+        spatial_arr = D.pix_dic_to_spatial_arr(spatial_leng_dic)
+        plt.imshow(spatial_arr)
+        plt.colorbar()
+        plt.title(f)
+        plt.show()
 
 
-        np.save(outdir + 'detrended_GIMMS_plus_NDVI.npy', annual_spatial_dict)
+        np.save(outdir + 'detrended_VOD.npy', annual_spatial_dict)
 
         pass
 
@@ -3751,11 +3767,11 @@ class moving_window():
         self.result_root = 'E:/Project3/Result/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
         # self.trend_analysis()
@@ -3765,7 +3781,7 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'\5mm\CRU_JRA\\extraction_rainfall_characteristic\\\\'
+        fdir_all = self.result_root + rf'\3mm\extract_VOD_phenology_year\dryland\extraction_VOD\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         growing_season_mode_list = [ 'ecosystem_year', ]
