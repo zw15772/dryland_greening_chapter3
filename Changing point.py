@@ -7,6 +7,7 @@ import pingouin as pg
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
+import xarray
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -78,9 +79,10 @@ class changing_point():
     def __init__(self):
         pass
     def run(self):
-        self.plot()
+        # self.plot()
         # self.beast()
-        # self.anaysis_result_of_changing_point()
+        self.anaysis_result_of_changing_point()
+        # self.anaysis_result_of_changing_point_raw()
         pass
     def plot(self):
         fdir=rf'D:\Project3\Data\LAI4g\dic_dryland\\'
@@ -146,8 +148,8 @@ class changing_point():
                 rb.plot(o, fig=plt.figure(figsize=(10, 5)))
                 plt.show()
 
-                # if 21<=cp_i<=23 and pro[i] > 0.5:
-                if cp_i == 22 and pro[i] > 0.5:
+
+                if cp_i == 21 and pro[i] > 0.5:
 
                     result_dic[pix]=flag+1
         spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
@@ -159,6 +161,54 @@ class changing_point():
 
         pass
 
+    def anaysis_result_of_changing_point_raw(self):
+
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        dic=T.load_dict_from_binary(result_root+rf'3mm\changing_point_detection\\1982-2020_biweekly_raw.pkl')
+        result_dic={}
+
+        for o,pix in dic:
+            r,c=pix
+
+            if r < 60:
+                continue
+            landcover_value = crop_mask[pix]
+            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+            if dic_modis_mask[pix] == 12:
+                continue
+
+            cp=o.trend.cp
+            pro=o.trend.cpPr
+            print(cp,pro)
+
+            # #
+            if T.is_all_nan(cp):
+                continue
+            flag=0
+            for i in range(len(cp)):
+                cp_i=cp[i]
+                cp_i=np.round(cp_i,0)
+                # rb.plot(o, fig=plt.figure(figsize=(10, 5)))
+                # plt.show()
+
+                if cp_i==2004 and pro[i] > 0.8:
+                # if cp_i == 22 and pro[i] > 0.5:
+
+                    result_dic[pix]=flag+1
+        spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
+        plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        plt.show()
+        exit()
+
+
     def anaysis_result_of_changing_point_CV(self):
 
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -169,7 +219,7 @@ class changing_point():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        dic=T.load_dict_from_binary(result_root+rf'3mm\changing_point_detection\\LAI4g_cp.pkl')
+        dic=T.load_dict_from_binary(result_root+rf'3mm\changing_point_detection\\1982-2020_biweekly_raw.pkl')
         result_dic={}
 
         for pix in dic:
@@ -200,7 +250,8 @@ class changing_point():
                 # plt.show()
                 #
                 # if 21<=cp_i<=23 and pro[i] > 0.5:
-                if cp_i == 22 and pro[i] > 0.5:
+                # if cp_i == 22 and pro[i] > 0.5:
+                if 528<=cp_i<=551 and pro[i] > 0.5:
 
                     result_dic[pix]=flag+1
         spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)

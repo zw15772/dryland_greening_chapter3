@@ -16,6 +16,7 @@ from scipy import interpolate
 from scipy import signal
 import time
 import re
+import xarray
 
 from osgeo import ogr
 from osgeo import osr
