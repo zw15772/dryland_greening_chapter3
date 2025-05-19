@@ -89,7 +89,8 @@ class Data_processing:
         # self.generate_nan_map()
 
 
-        self.tif_to_dic()
+        # self.tif_to_dic()
+        self.extract_phenology_fire_mean()
         # self.interpolation()
 
 
@@ -435,10 +436,141 @@ class Data_processing:
                     temp_dic = {}
             np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
 
-    def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = data_root+rf'\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\wrong\\'
+    def extract_phenology_monthly_variables(self):
+        fdir = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\dic\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_VOD_phenology_year\dryland\\extraction_VOD_wrong\\'
+        outdir = rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\\phenology_year_extraction_dryland\\'
+
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        new_spatial_dic={}
+        # for pix in phenology_dic:
+        #     val=phenology_dic[pix]['SeasType']
+        #     new_spatial_dic[pix]=val
+        # spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        # plt.show()
+        # exit()
+        for f in T.listdir(fdir):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
+            dic_DOY={15: 0,
+                     30: 0,
+                     45: 1,
+                     60: 1,
+                     75: 2,
+                     90: 2,
+                     105: 3,
+                     120: 3,
+                     135: 4,
+                     150: 4,
+                     165: 5,
+                     180: 5,
+                     195: 6,
+                     210: 6,
+                     225: 7,
+                     240: 7,
+                     255: 8,
+                     270: 8,
+                     285: 9,
+                     300: 9,
+                     315: 10,
+                     330: 10,
+                     345: 11,
+                     360: 11,}
+
+
+            result_dic = {}
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
+                    continue
+
+                r, c = pix
+
+                SeasType=phenology_dic[pix]['SeasType']
+                if SeasType==2:
+
+                    SOS=phenology_dic[pix]['Onsets']
+                    try:
+                        SOS=float(SOS)
+
+                    except:
+                        continue
+
+                    SOS=int(SOS)
+                    SOS_biweekly=dic_DOY[SOS]
+
+                    EOS=phenology_dic[pix]['Offsets']
+                    EOS=int(EOS)
+                    EOS_biweekly=dic_DOY[EOS]
+
+
+                    time_series = spatial_dict[pix]
+
+
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(12 - EOS_biweekly - 1)]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                    non_growing_season_list = []
+                    growing_season_list = []
+                    for vals in time_series_flatten_extraction_reshape:
+                        if T.is_all_nan(vals):
+                            continue
+                        ## non-growing season +growing season is 365
+
+                        non_growing_season = vals[0:SOS_biweekly]
+                        growing_season = vals[SOS_biweekly:]
+                        # print(growing_season)
+                        non_growing_season_list.append(non_growing_season)
+                        growing_season_list.append(growing_season)
+                    # print(len(growing_season_list))
+                    non_growing_season_list = np.array(non_growing_season_list)
+                    growing_season_list = np.array(growing_season_list)
+
+
+                elif SeasType==3:
+                    # SeasClass=phenology_dic[pix]['SeasClss']
+                    # ## whole year is growing season
+                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+                    # print(lat,lon)
+                    # print(SeasType)
+                    # print(SeasClass)
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[12:]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
+                    non_growing_season_list = []
+                    growing_season_list = time_series_flatten_extraction_reshape
+
+                else:
+                    SeasClss=phenology_dic[pix]['SeasClss']
+                    print(SeasType,SeasClss)
+                    continue
+
+                result_dic[pix]={'SeasType':SeasType,
+                    'non_growing_season':non_growing_season_list,
+                              'growing_season':growing_season_list,
+                              'ecosystem_year':time_series_flatten_extraction_reshape}
+
+            np.save(outf, result_dic)
+
+
+
+
+
+
+    def extract_phenology_fire_mean(self):  ## extract LAI average
+        fdir = data_root+rf'\Fire\dic\\'
+
+        outdir_CV = result_root+rf'\3mm\extract_fire_ecosystem_year\\extraction_fire\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -486,66 +618,10 @@ class Data_processing:
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'VOD.npy'
+        outf = outdir_CV + 'fire.npy'
 
         np.save(outf, result_dic)
 
-    def interpolation(self):
-
-        fdir = rf'E:\Project3\Data\Landsat\dic\\'
-        dic = T.load_npy_dir(fdir)
-
-        dict_clean = {}
-
-        for pix in dic:
-            r, c = pix
-            vals = dic[pix]
-            vals = np.array(vals)
-            # vals_clip = vals[36:]
-            vals_clip = vals
-            vals_no_nan = vals_clip[~np.isnan(vals_clip)]
-            ratio = len(vals_no_nan) / len(vals_clip)
-            if ratio < 0.5:
-                continue
-            dict_clean[pix] = vals_clip
-
-        mon_mean_dict = {}
-        for pix in tqdm(dict_clean,desc='calculating long term mean'):
-            vals = dict_clean[pix]
-            vals_reshape = vals.reshape(-1, 12)
-            vals_reshape_T = vals_reshape.T
-            mon_mean_list = []
-            for mon in vals_reshape_T:
-                mon_mean = np.nanmean(mon)
-                mon_mean_list.append(mon_mean)
-            mon_mean_dict[pix] = mon_mean_list
-
-        spatial_dic={}
-
-        for pix in dict_clean:
-            vals = dict_clean[pix]
-            vals_reshape = vals.reshape(-1, 12)
-            vals_reshape_T = vals_reshape.T
-            # print(len(vals_reshape));exit()
-            mon_vals_interpolated_T = []
-            for i in range(len(vals_reshape_T)):
-                mon_mean = mon_mean_dict[pix][i]
-                mon_vals = vals_reshape_T[i]
-                mon_vals = np.array(mon_vals)
-                mon_vals[np.isnan(mon_vals)] = mon_mean
-                mon_vals_interpolated_T.append(mon_vals)
-            mon_vals_interpolated_T = np.array(mon_vals_interpolated_T)
-            mon_vals_interpolated = mon_vals_interpolated_T.T
-            mon_vals_interpolated_flatten = mon_vals_interpolated.flatten()
-            vals_origin = dic[pix]
-            spatial_dic[pix] = mon_vals_interpolated_flatten
-            # plt.imshow(mon_vals_interpolated)
-            # plt.figure(figsize=(15, 6))
-            # plt.plot(mon_vals_interpolated_flatten)
-            # plt.scatter(np.arange(0, len(vals_origin)), vals_origin, c='r')
-            # plt.scatter(np.arange(0, len(mon_vals_interpolated_flatten)), mon_vals_interpolated_flatten, c='g',zorder=-1)
-            # plt.show()
-        np.save(fdir+'interpolated', spatial_dic)
 
 def main():
     Data_processing().run()
