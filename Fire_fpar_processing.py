@@ -79,7 +79,210 @@ class download_fpar():
         pass
 
     def run(self):
+        self.nc_to_tif_time_series_fast()
         pass
+
+    def download_fpar(self):
+        import os
+        import requests
+        from bs4 import BeautifulSoup
+        from urllib.parse import urljoin
+        year_list=list(range(1982,2021))
+
+        # Target URL
+        for year in year_list:
+            base_url = f"http://www.glass.umd.edu/05D/FVC/glass_fvc_avhrr_netcdf/{year}/"
+            output_dir = data_root + f"glass_fvc_avhrr\\netcdf/{year}/"
+            T.mk_dir(output_dir, force=True)
+
+
+            # Loop through all links and download .nc files
+            response = requests.get(base_url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Find all .nc4 files
+            file_links = [urljoin(base_url, a['href']) for a in soup.find_all('a') if a['href'].endswith('.nc4')]
+
+            # Download each file
+            for file_url in file_links:
+                filename = file_url.split('/')[-1]
+                out_path = os.path.join(output_dir, filename)
+
+                if os.path.exists(out_path):
+                    print(f"Already downloaded: {filename}")
+                    continue
+
+                print(f"Downloading: {filename}")
+                with requests.get(file_url, stream=True) as r:
+                    r.raise_for_status()
+                    with open(out_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+
+        print("Download complete.")
+
+    def nc_to_tif_time_series_fast(self):
+
+        fdir_all=rf'D:\Project3\Data\glass_fvc_avhrr\netcdf\\'
+        outdir=rf'D:\Project3\Data\glass_fvc_avhrr\\\\TIFF\\'
+        Tools().mk_dir(outdir,force=True)
+        for fdir in tqdm(os.listdir(fdir_all)):
+
+            for f in os.listdir(fdir_all+fdir):
+                if not f.endswith('.nc4'):
+                    continue
+
+                outdir_name = f.split('.')[2][1:]
+                # print(outdir_name);exit()
+
+                yearlist = list(range(1982, 2021))
+                fpath = join(fdir_all+fdir,f)
+                nc_in = xarray.open_dataset(fpath)
+                print(nc_in)
+
+                outf = join(outdir, f'{outdir_name}.tif')
+                array = nc_in['FVC']
+                array = np.array(array)
+                array[array < 0] = np.nan
+                longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.5, -0.5
+                ToRaster().array2raster(outf, longitude_start, latitude_start,
+                                        pixelWidth, pixelHeight, array, ndv=-999999)
+                # exit()
+
+
+            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+            try:
+                self.nc_to_tif_template(fdir+f, var_name='FVC', outdir=outdir, yearlist=yearlist)
+            except Exception as e:
+                print(e)
+                continue
+
+    def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
+        try:
+            ncin = Dataset(fname, 'r')
+            print(ncin.variables.keys())
+            time=ncin.variables['time'][:]
+
+        except:
+            raise UserWarning('File not supported: ' + fname)
+        # lon,lat = np.nan,np.nan
+        try:
+            lat = ncin.variables['lat'][:]
+            lon = ncin.variables['lon'][:]
+        except:
+            try:
+                lat = ncin.variables['latitude'][:]
+                lon = ncin.variables['longitude'][:]
+            except:
+                try:
+                    lat = ncin.variables['lat_FULL'][:]
+                    lon = ncin.variables['lon_FULL'][:]
+                except:
+                    raise UserWarning('lat or lon not found')
+        shape = np.shape(lat)
+        try:
+            time = ncin.variables['time_counter'][:]
+            basetime_str = ncin.variables['time_counter'].units
+        except:
+            time = ncin.variables['time'][:]
+            basetime_str = ncin.variables['time'].units
+
+        basetime_unit = basetime_str.split('since')[0]
+        basetime_unit = basetime_unit.strip()
+        print(basetime_unit)
+        print(basetime_str)
+        if basetime_unit == 'days':
+            timedelta_unit = 'days'
+        elif basetime_unit == 'years':
+            timedelta_unit = 'years'
+        elif basetime_unit == 'month':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'months':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'seconds':
+            timedelta_unit = 'seconds'
+        elif basetime_unit == 'hours':
+            timedelta_unit = 'hours'
+        else:
+            raise Exception('basetime unit not supported')
+        basetime = basetime_str.strip(f'{timedelta_unit} since ')
+        try:
+            basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d')
+        except:
+            try:
+                basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S')
+            except:
+                try:
+                    basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S.%f')
+                except:
+                    try:
+                        basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M')
+                    except:
+                        try:
+                            basetime = datetime.datetime.strptime(basetime, '%Y-%m')
+                        except:
+                            try:
+                                basetime_ = basetime.split('T')[0]
+                                # print(basetime_)
+                                basetime = datetime.datetime.strptime(basetime_, '%Y-%m-%d')
+                                # print(basetime)
+                            except:
+
+                                raise UserWarning('basetime format not supported')
+        data = ncin.variables[var_name]
+        if len(shape) == 2:
+            xx, yy = lon, lat
+        else:
+            xx, yy = np.meshgrid(lon, lat)
+        for time_i in tqdm(range(len(time))):
+            if basetime_unit == 'days':
+                date = basetime + datetime.timedelta(days=int(time[time_i]))
+            elif basetime_unit == 'years':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                date2 = f'{int(base_year + time[time_i])}-01-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'month' or basetime_unit == 'months':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                base_month = basetime.month
+                date2 = f'{int(base_year + time[time_i] // 12)}-{int(base_month + time[time_i] % 12)}-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'seconds':
+                date = basetime + datetime.timedelta(seconds=int(time[time_i]))
+            elif basetime_unit == 'hours':
+                date = basetime + datetime.timedelta(hours=int(time[time_i]))
+            else:
+                raise Exception('basetime unit not supported')
+            time_str = time[time_i]
+            mon = date.month
+            year = date.year
+            if year not in yearlist:
+                continue
+            day = date.day
+            outf_name = f'{year}{mon:02d}{day:02d}.tif'
+            outpath = join(outdir, outf_name)
+            if isfile(outpath):
+                continue
+            arr = data[time_i]
+            arr = np.array(arr)
+            lon_list = []
+            lat_list = []
+            value_list = []
+            for i in range(len(arr)):
+                for j in range(len(arr[i])):
+                    lon_i = xx[i][j]
+                    if lon_i > 180:
+                        lon_i -= 360
+                    lat_i = yy[i][j]
+                    value_i = arr[i][j]
+                    lon_list.append(lon_i)
+                    lat_list.append(lat_i)
+                    value_list.append(value_i)
+            DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
+
 
 
 class Data_processing:
@@ -96,12 +299,13 @@ class Data_processing:
         # self.scale()
         # self.extract_dryland_tiff()
         # self.generate_nan_map()
+        # self.composite_fpar()
 
 
         # self.tif_to_dic()
         # self.extract_phenology_monthly_variables()
-        # self.extract_phenology_fire_mean()
-        self.weighted_fire()
+        self.extract_phenology_fire_mean()
+        # self.weighted_fire()
         # self.interpolation()
 
 
@@ -112,14 +316,13 @@ class Data_processing:
 
     def nc_to_tif_time_series_fast(self):
 
-        fdir_all=rf'D:\Project3\Data\Fire\\nc\\'
-        outdir=rf'D:\Project3\Data\Fire\\\\TIFF\\'
+        fdir_all=rf'D:\Project3\Data\glass_fvc_avhrr\netcdf\\'
+        outdir=rf'D:\Project3\Data\glass_fvc_avhrr\\\\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for fdir in tqdm(os.listdir(fdir_all)):
-            if 'ZIP' in fdir:
-                continue
+
             for f in os.listdir(fdir_all+fdir):
-                if not f.endswith('.nc'):
+                if not f.endswith('.nc4'):
                     continue
 
                 outdir_name = f.split('-')[0]
@@ -136,10 +339,10 @@ class Data_processing:
                     date_str = date.strftime('%Y%m%d')
                     date_str = date_str.split()[0]
                     outf = join(outdir, f'{date_str}.tif')
-                    array = nc_in['burned_area'][t]
+                    array = nc_in['FVC'][t]
                     array = np.array(array)
                     array[array < 0] = np.nan
-                    longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.25, -0.25
+                    longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.5, -0.5
                     ToRaster().array2raster(outf, longitude_start, latitude_start,
                                             pixelWidth, pixelHeight, array, ndv=-999999)
                     # exit()
@@ -147,7 +350,7 @@ class Data_processing:
 
                 # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
                 try:
-                    self.nc_to_tif_template(fdir+f, var_name='burned_area', outdir=outdir, yearlist=yearlist)
+                    self.nc_to_tif_template(fdir+f, var_name='FVC', outdir=outdir, yearlist=yearlist)
                 except Exception as e:
                     print(e)
                     continue
@@ -323,11 +526,10 @@ class Data_processing:
         array_mask[array_mask < 0] = np.nan
 
 
-        fdir_all = rf'D:\Project3\Data\Fire\\'
+        fdir_all = rf'D:\Project3\Data\glass_fvc_avhrr\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'sum' in fdir:
-                continue
+
 
 
             fdir_i = join(fdir_all, fdir)
@@ -368,17 +570,27 @@ class Data_processing:
             # print(outf);exit()
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_void,outf)
 
+        pass
+
+    def composite_fpar(self):
+        fdir=rf'D:\Project3\Data\glass_fvc_avhrr\dryland_tiff\\'
+        outdir=rf'D:\Project3\Data\glass_fvc_avhrr\composite_fpar\\'
+        T.mk_dir(outdir)
+
+
+        Pre_Process().monthly_compose(fdir,outdir,date_fmt='doy',method='max')
 
         pass
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\Fire\\'
+        fdir_all = rf'D:\Project3\Data\glass_fvc_avhrr\\'
         year_list = list(range(1982, 2021))
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'sum' in fdir:
+            if not 'composite_fpar' in fdir:
                 continue
+
             outdir=join(fdir_all, 'dic')
 
 
@@ -447,10 +659,127 @@ class Data_processing:
                     temp_dic = {}
             np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
 
-    def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\Fire\dic\\'
+    def extract_phenology_year_fpar(self):
+        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\dic\\'
 
-        outdir = rf'D:\Project3\Data\Fire\\\phenology_year_extraction_dryland\\'
+        outdir= rf'D:\Project3\Data\glass_fvc_avhrr\\\phenology_year_extraction_dryland\\'
+
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        for f in T.listdir(fdir):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
+            dic_DOY={15: 0,
+                     30: 1,
+                     45: 2,
+                     60: 3,
+                     75: 4,
+                     90: 5,
+                     105: 6,
+                     120: 7,
+                     135: 8,
+                     150: 9,
+                     165:10,
+                     180:11,
+                     195:12,
+                     210:13,
+                     225:14,
+                     240:15,
+                     255:16,
+                     270:17,
+                     285:18,
+                     300:19,
+                     315:20,
+                     330:21,
+                     345:22,
+                     360:23,}
+
+
+            result_dic = {}
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
+                    continue
+
+                r, c = pix
+
+                SeasType=phenology_dic[pix]['SeasType']
+                if SeasType==2:
+
+                    SOS=phenology_dic[pix]['Onsets']
+                    try:
+                        SOS=float(SOS)
+
+                    except:
+                        continue
+
+                    SOS=int(SOS)
+                    SOS_biweekly=dic_DOY[SOS]
+
+                    EOS=phenology_dic[pix]['Offsets']
+                    EOS=int(EOS)
+                    EOS_biweekly=dic_DOY[EOS]
+
+
+                    time_series = spatial_dict[pix]
+
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(24 - EOS_biweekly - 1)]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 24)
+                    non_growing_season_list = []
+                    growing_season_list = []
+                    for vals in time_series_flatten_extraction_reshape:
+                        if T.is_all_nan(vals):
+                            continue
+                        ## non-growing season +growing season is 365
+
+                        non_growing_season = vals[0:SOS_biweekly]
+                        growing_season = vals[SOS_biweekly:]
+                        # print(growing_season)
+                        non_growing_season_list.append(non_growing_season)
+                        growing_season_list.append(growing_season)
+                    # print(len(growing_season_list))
+                    non_growing_season_list = np.array(non_growing_season_list)
+                    growing_season_list = np.array(growing_season_list)
+
+
+                elif SeasType==3:
+                    # SeasClass=phenology_dic[pix]['SeasClss']
+                    # ## whole year is growing season
+                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+                    # print(lat,lon)
+                    # print(SeasType)
+                    # print(SeasClass)
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[24:]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 24)
+                    non_growing_season_list = []
+                    growing_season_list = time_series_flatten_extraction_reshape
+
+                else:
+                    SeasClss=phenology_dic[pix]['SeasClss']
+                    print(SeasType,SeasClss)
+                    continue
+
+                result_dic[pix]={'SeasType':SeasType,
+                    'non_growing_season':non_growing_season_list,
+                              'growing_season':growing_season_list,
+                              'ecosystem_year':time_series_flatten_extraction_reshape}
+
+            np.save(outf, result_dic)
+
+    def extract_phenology_monthly_variables(self):
+        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\dic\\'
+
+        outdir = rf'D:\Project3\Data\glass_fvc_avhrr\\\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -577,9 +906,9 @@ class Data_processing:
 
 
     def extract_phenology_fire_mean(self):  ## extract LAI average
-        fdir = rf'D:\Project3\Data\Fire\\\phenology_year_extraction_dryland\\'
+        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_fire_ecosystem_year\\'
+        outdir_CV = result_root+rf'\3mm\extract_fpar_ecosystem_year\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -627,7 +956,7 @@ class Data_processing:
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'fire.npy'
+        outf = outdir_CV + 'FVC.npy'
 
         np.save(outf, result_dic)
 
@@ -662,9 +991,9 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
@@ -674,13 +1003,11 @@ class moving_window():
         pass
     def moving_window_extraction(self):
 
-        fdir_all = self.result_root + rf'\3mm\extract_fire_ecosystem_year\\'
-        outdir = self.result_root + rf'\3mm\extract_fire_ecosystem_year\\\moving_window_extraction\\'
+        fdir_all = self.result_root + rf'\3mm\extract_FVC_ecosystem_year\\'
+        outdir = self.result_root + rf'\3mm\extract_FVC_ecosystem_year\\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'weighted' in f:
-                continue
 
             if not f.endswith('.npy'):
                 continue
@@ -704,10 +1031,12 @@ class moving_window():
                 # time_series = dic[pix]
 
                 time_series = np.array(time_series)
+
                 # if T.is_all_nan(time_series):
                 #     continue
                 if len(time_series) == 0:
                     continue
+                print(len(time_series))
 
 
                 # time_series[time_series < -999] = np.nan
@@ -1212,6 +1541,8 @@ class moving_window():
 
 
 def main():
+
+    # download_fpar().run()
     # Data_processing().run()
     moving_window().run()
 

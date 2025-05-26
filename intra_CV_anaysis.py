@@ -94,9 +94,9 @@ class extract_water_year():  ## extract water year phenology year
 
     def run (self):
         # self.extract_water_year_precip()
-        # self.extract_phenology_year_LAI()
+        self.extract_phenology_year_LAI()
         # self.extract_phenology_year_CO2()
-        self.extract_phenology_monthly_variables()
+        # self.extract_phenology_monthly_variables()
         # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
         # self.spatial_plot()
