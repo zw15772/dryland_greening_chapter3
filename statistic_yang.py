@@ -22,7 +22,7 @@ class SHAP:
     def __init__(self):
 
         self.this_class_png = results_root + 'SHAP\\png\\raw\\'
-        self.dff =rf'E:\Project3\Result\Dataframe\moving_window\moving_window.df'
+        self.dff =rf'D:\Project3\Result\Dataframe\moving_window\moving_window.df'
         self.variable_list_rt()
 
 
@@ -1540,379 +1540,6 @@ class Partial_Dependence_Plots:
 
 
 
-class multi_regression():
-    def __init__(self):
-
-        self.fdirX = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
-        self.fdirY = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\moving_window_average_anaysis\\'
-
-
-
-        self.y_var = ['LAI4g_CV']
-        self.xvar = [ 'maxmum_dry_spell', 'GPCC', 'CV_rainfall', 'wet_frequency_90th','peak_rainfall_timing']
-
-        self.multi_regression_result_dir = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\multi_regression\\'
-        T.mk_dir(self.multi_regression_result_dir, force=True)
-
-        self.multi_regression_result_f = rf'E:\Data\ERA5_daily\dict\extract_rainfall_annual\multi_regression\multi_regression_result.npy'
-
-        pass
-
-    def run(self):
-
-        # step 1 build dataframe
-
-        # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-
-        # # # step 2 cal correlation
-        # self.cal_multi_regression_beta()
-
-        # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_f,self.y_var[0])
-
-        ## step 4 convert m2/m2/ppm to %/100ppm
-        # self.convert_CO2_sensitivity_unit()
-
-        # step 5
-        # self.calculate_trend_contribution()
-
-        pass
-
-    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
-
-        df = pd.DataFrame()
-
-        filey = fdir_Y + fy[0] + '.npy'
-        print(filey)
-
-        dic_y = T.load_npy(filey)
-        # array=np.load(filey)
-        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
-        pix_list = []
-        y_val_list = []
-
-        for pix in dic_y:
-            yvals = dic_y[pix]
-
-            if len(yvals) == 0:
-                continue
-            yvals = T.interp_nan(yvals)
-            yvals = np.array(yvals)
-            if yvals[0] == None:
-                continue
-
-            pix_list.append(pix)
-            y_val_list.append(yvals)
-        df['pix'] = pix_list
-        df['y'] = y_val_list
-
-        # build x
-
-        for xvar in fx_list:
-
-            # print(var_name)
-            x_val_list = []
-            filex = fdir_X + xvar + '.npy'
-            # filex = fdir_X + xvar + f'_{period}.npy'
-
-            # print(filex)
-            # exit()
-            # x_arr = T.load_npy(filex)
-            dic_x = T.load_npy(filex)
-            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
-                pix = row.pix
-                if not pix in dic_x:
-                    x_val_list.append([])
-                    continue
-                xvals = dic_x[pix]
-                xvals = np.array(xvals)
-                if len(xvals) == 0:
-                    x_val_list.append([])
-                    continue
-
-                xvals = T.interp_nan(xvals)
-                if xvals[0] == None:
-                    x_val_list.append([])
-                    continue
-
-                x_val_list.append(xvals)
-
-            # x_val_list = np.array(x_val_list)
-            df[xvar] = x_val_list
-        T.print_head_n(df)
-        ## save df
-        T.save_df(df, self.multi_regression_result_dir + fy[0] + '.df')
-        T.df_to_excel(df, self.multi_regression_result_dir + fy[0] + '.xlsx')
-
-        return df
-
-    def __linearfit(self, x, y):
-        '''
-        最小二乘法拟合直线
-        :param x:
-        :param y:
-        :return:
-        '''
-        N = float(len(x))
-        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
-        for i in range(0, int(N)):
-            sx += x[i]
-            sy += y[i]
-            sxx += x[i] * x[i]
-            syy += y[i] * y[i]
-            sxy += x[i] * y[i]
-        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
-        b = (sy - a * sx) / N
-        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
-        return a, b, r
-
-    def cal_multi_regression_beta(self):
-        import statsmodels.api as sm
-        import statsmodels.formula.api as smf
-        import pandas as pd
-        import joblib
-
-        df = T.load_df(self.multi_regression_result_dir + 'LAI4g_CV.df')
-
-        x_var_list = self.xvar
-
-        outf = self.multi_regression_result_f
-
-        multi_derivative = {}
-
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            # print(row);exit()
-            pix = row.pix
-
-            y_vals = row['y'][0:-1]
-            # y_vals = T.remove_np_nan(y_vals)
-            # y_vals = T.interp_nan(y_vals)
-            if len(y_vals) == 0:
-                continue
-
-            # y_vals_detrend = signal.detrend(y_vals)
-            #  calculate partial derivative with multi-regression
-            df_new = pd.DataFrame()
-            x_var_list_valid = []
-
-            for x in x_var_list:
-
-                x_vals = row[x]
-
-                if len(x_vals) == 0:
-                    continue
-
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                if len(x_vals) != len(y_vals):
-                    continue
-                # print(x_vals)
-                if x_vals[0] == None:
-                    continue
-
-                df_new[x] = x_vals
-
-                x_var_list_valid.append(x)
-            if len(df_new) <= 3:
-                continue
-            if len(x_var_list_valid) < 2:
-                continue
-            # T.print_head_n(df_new)
-
-            df_new['y'] = y_vals  # nodetrend
-
-            # T.print_head_n(df_new)
-            df_new = df_new.dropna(axis=1, how='all')
-
-            x_var_list_valid_new = []
-            for v_ in x_var_list_valid:
-                if not v_ in df_new:
-                    continue
-                else:
-                    x_var_list_valid_new.append(v_)
-            # T.print_head_n(df_new)
-
-
-            df_new = df_new.dropna()
-            ## build multiregression model and consider interactioon
-
-            model = smf.ols(formula='y ~ ' + '+'.join(x_var_list_valid_new), data=df_new).fit()
-
-            coef_ = np.array(model.params)
-            coef_dic = dict(zip(x_var_list_valid_new, coef_))
-            # print(df_new['y'])
-            # exit()
-            multi_derivative[pix] = coef_dic
-        T.save_npy(multi_derivative, outf)
-
-    pass
-
-    def plt_multi_regression_result(self, multi_regression_result_dir, y_var):
-
-        NDVI_mask_f = rf'D:/Project3/Data/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = rf'D:/Project3/Data//Base_data/glc_025\\glc2000_025.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f =  rf'D:/Project3/Data//Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        f = self.multi_regression_result_f
-
-        dic = T.load_npy(f)
-        var_list = []
-        for pix in dic:
-
-
-            vals = dic[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        for var_i in var_list:
-            # print(var_i)
-            spatial_dic = {}
-            for pix in dic:
-                r, c = pix
-                if r < 120:
-                    continue
-
-                landcover_value = crop_mask[pix]
-
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-                dic_i = dic[pix]
-                if not var_i in dic_i:
-                    continue
-                val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            print(var_i)
-            # plt.imshow(arr)
-            # plt.colorbar()
-            # plt.show()
-            outf = self.multi_regression_result_dir + rf'\\{var_i}.tif'
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, outf)
-
-
-
-
-    def convert_CO2_sensitivity_unit(self):
-        period_list = ['1982_2020']
-        for period in period_list:
-            CO2_sensitivity_f = result_root + rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
-            average_LAI4g_f = result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(CO2_sensitivity_f)
-            arr[arr < -99] = np.nan
-            dic_CO2_sensitivity = DIC_and_TIF().spatial_arr_to_dic(arr)
-
-            dic_LAI4g_average = T.load_npy(average_LAI4g_f)
-
-            for pix in dic_CO2_sensitivity:
-                CO2_sensitivity = dic_CO2_sensitivity[pix]
-                CO2_sensitivity = np.array(CO2_sensitivity, dtype=float)
-                if np.isnan(CO2_sensitivity):
-                    continue
-                if not pix in dic_LAI4g_average:
-                    continue
-                LAI_average = dic_LAI4g_average[pix]
-                LAI_average = np.array(LAI_average, dtype=float)
-
-                if np.isnan(LAI_average):
-                    continue
-                CO2_sensitivity = CO2_sensitivity / LAI_average * 100
-                if CO2_sensitivity < -99999:
-                    continue
-                dic_CO2_sensitivity[pix] = CO2_sensitivity
-            arr_new = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic_CO2_sensitivity)
-            arr_new[arr_new < -99] = np.nan
-            arr_new[arr_new > 99] = np.nan
-
-            # plt.imshow(arr_new)
-            # plt.colorbar()
-            # plt.show()
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif", "_scale.tif")}')
-            # DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_CO2_sensitivity, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
-            # T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
-
-    def calculate_trend_contribution(self):
-        ## here I would like to calculate the trend contribution of each variable
-        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
-        ## load the trend of each variable
-        ## load the trend of the target variable
-        ## load multi regression result
-        ## calculate the trend contribution
-        trend_dir = result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
-
-        selected_vairables_list = [
-            'CRU_trend',
-            'CO2_trend',
-            'tmax_trend',
-            'VPD_trend',
-        ]
-
-        trend_dict = {}
-        for variable in selected_vairables_list:
-            fpath = join(trend_dir, f'{variable}.npy')
-            array = np.load(fpath, allow_pickle=True)
-            array[array < -9999] = np.nan
-            spatial_dict = D.spatial_arr_to_dic(array)
-            for pix in tqdm(spatial_dict, desc=variable):
-                r, c = pix
-                if r < 120:
-                    continue
-                val = spatial_dict[pix]
-                if np.isnan(val):
-                    continue
-                if not pix in trend_dict:
-                    trend_dict[pix] = {}
-                key = variable.replace('_trend', '')
-                trend_dict[pix][key] = spatial_dict[pix]
-
-        f = self.multi_regression_result_f
-        print(f)
-        print(isfile(f))
-        # exit()
-        dic_multiregression = T.load_npy(f)
-        var_list = []
-        for pix in dic_multiregression:
-
-            # landcover_value = crop_mask[pix]
-            # if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-            #     continue
-
-            vals = dic_multiregression[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        # print(var_list)
-        # exit()
-        for var_i in var_list:
-            spatial_dic = {}
-            for pix in dic_multiregression:
-                if not pix in trend_dict:
-                    continue
-
-                dic_i = dic_multiregression[pix]
-                if not var_i in dic_i:
-                    continue
-                val_multireg = dic_i[var_i]
-                val_trend = trend_dict[pix][var_i]
-                val_contrib = val_multireg * val_trend
-                spatial_dic[pix] = val_contrib
-            arr_contrib = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
-            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
-            plt.colorbar()
-            plt.title(var_i)
-            plt.show()
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib,
-                                                   f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
 
 
 
@@ -2138,11 +1765,12 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'GIMMS_plus_NDVI_detrend_CV'
+        self.y_variable = 'LAI4g_detrend_CV'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
-        self.this_class_png = results_root + rf'\{self.threshold}\SHAP\\RF_{self.y_variable}\\'
+        self.this_class_png = results_root + rf'\{self.threshold}\SHAP_version2\\png\\RF_{self.y_variable}\\'
+        T.mk_dir(self.this_class_png, force=True)
 
         # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
         self.dff = results_root+rf'{self.threshold}\Dataframe\moving_window_CV\\moving_window_CV_new.df'
@@ -2173,12 +1801,12 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.pdp_shap()
-        # self.plot_pdp_shap()
+        self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## for paper use
         # self.plot_relative_importance()
         # self.plot_pdp_shap_all_models_SI()
-        self.plot_pdp_shap_all_models_main()
+        # self.plot_pdp_shap_all_models_main()
         # self.plot_heatmap_ranking()
         # self.plot_interaction_manual()
         # self.spatial_shapely()   ### spatial plot
@@ -2283,9 +1911,9 @@ class SHAP_CV():
             'detrended_sum_rainfall_CV',
 
                 # 'Aridity',
-                # 'CO2',
+                'FVC',
                 'heat_event_frenquency',
-                 # 'Tmax',
+                 'fire_weighted_ecosystem_year_average',
             # 'VPD',
             # 'SOC',
             # 'S_SAND',
@@ -2299,6 +1927,7 @@ class SHAP_CV():
             'CO2_ecosystem_year': [350, 410],
             'detrended_average_annual_tmax': [-10, 40],
             'detrended_sum_rainfall_growing_season_CV_ecosystem_year': [0, 70],
+
 
             'detrended_sum_rainfall_std': [0, 250],
             'detrended_sum_rainfall': [0, 1000],
@@ -2336,6 +1965,8 @@ class SHAP_CV():
             'cec': [0, 400],
             'sand': [0, 900],
             'soc': [0, 600],
+            'FVC': [0, 1],
+            'fire_weighted_ecosystem_year_average': [0, 4],
 
 
 
@@ -2458,16 +2089,18 @@ class SHAP_CV():
         # T.print_head_n(df)
         # df = df.dropna(subset=[self.y_variable])
         # T.print_head_n(df)
-        # exit()
-        # df = df[df['row'] > 120]
+        print('original len(df):',len(df))
+        df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
         df=df[df['LC_max']<20]
-        print(len(df))
         # df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
         # print(len(df))
         # exit()
 
         df = df[df['MODIS_LUCC'] != 12]
+        print('filtered len(df):',len(df))
+        # exit()
+
 
         # #
         # df = df[df['lon'] > -125]
@@ -2502,7 +2135,7 @@ class SHAP_CV():
         # plt.hist(T.load_df(dff)[y_variable].tolist(),bins=100)
         # plt.show()
         df = T.load_df(dff)
-        df = self.df_clean(df)
+        # df = self.df_clean(df)
         # df = self.valid_range_df(df)
 
         pix_list = df['pix'].tolist()
@@ -2511,7 +2144,7 @@ class SHAP_CV():
 
         for pix in unique_pix_list:
             spatial_dic[pix] = 1
-        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        # arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
         # plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
         # plt.colorbar()
         # plt.show()
@@ -2519,8 +2152,8 @@ class SHAP_CV():
 
 
         T.print_head_n(df)
-        print(len(df))
-        T.print_head_n(df)
+        # print(len(df))
+        # T.print_head_n(df)
         print('-' * 50)
         ## text select df the first 1000
 
@@ -2561,12 +2194,12 @@ class SHAP_CV():
         unique_pix_list = list(set(pix_list))
         spatial_dic = {}
         #
-        for pix in unique_pix_list:
-            spatial_dic[pix] = 1
-        arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-        plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
-        plt.colorbar()
-        plt.show()
+        # for pix in unique_pix_list:
+        #     spatial_dic[pix] = 1
+        # arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        # plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
+        # plt.colorbar()
+        # plt.show()
 
 
         X = all_vars_df[x_variable_list]
@@ -2578,13 +2211,18 @@ class SHAP_CV():
         # exit()
 
         ## save selected df for future ploting
-        T.print_head_n(X)
+        # T.print_head_n(X)
         # X = X.dropna()
         # print(len(X));exit()
 
 
 
         model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
+        # plt.scatter(y, y_pred)
+        # plt.xlabel('y')
+        # plt.ylabel('y_pred')
+        # plt.show()
+        # exit()
         imp_dict_xgboost = {}
         for i in range(len(x_variable_list)):
             imp_dict_xgboost[x_variable_list[i]] = model.feature_importances_[i]
@@ -2609,7 +2247,7 @@ class SHAP_CV():
 
         ## random sample
 
-        sample_indices = np.random.choice(X.shape[0], 40000, replace=False)
+        sample_indices = np.random.choice(X.shape[0], size=40000, replace=False)
         X_sample = X.iloc[sample_indices]
         explainer = shap.TreeExplainer(model)
 
@@ -3738,22 +3376,24 @@ class SHAP_CV():
         # r2 = rf.score(X_test,y_test)
         # model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
         #                        max_depth=7, eta=0.1, random_state=42, n_jobs=14,  )
-        # model = RandomForestRegressor(n_estimators=100, random_state=42,n_jobs=12,max_depth=7)
-        model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
+        model = RandomForestRegressor(n_estimators=100, random_state=42,n_jobs=14)
+        # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
         model.fit(X_train, y_train)
         # model.fit(X_train, y_train)
         # Get predictions
         y_pred = model.predict(X_test)
+
         # print(len(y_pred))
         # plt.scatter(y_test, y_pred)
         # plt.show()
         r = stats.pearsonr(y_test, y_pred)
+
         r2 = r[0] ** 2
         print('r2:', r2)
         # exit()
 
-        return model, y, y_pred
+        return model, y_test, y_pred
 
     def __train_model_RF(self, X, y):
         '''

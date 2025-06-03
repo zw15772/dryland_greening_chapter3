@@ -74,7 +74,7 @@ this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
 result_root = 'D:/Project3/Result/'
 
-class download_fpar():
+class download_FVC():
     def __init__(self):
         pass
 
@@ -120,6 +120,62 @@ class download_fpar():
                             f.write(chunk)
 
         print("Download complete.")
+
+class download_NOAA_AVHRR():
+    def __init__(self):
+        pass
+
+    def run(self):
+        self.download_AVHRR_NOAA()
+        # self.nc_to_tif_time_series_fast()
+        pass
+
+    def download_AVHRR_NOAA(self):
+        import os
+        import requests
+        from bs4 import BeautifulSoup
+        from urllib.parse import urljoin
+        outdir=data_root + 'NOAA_AVHRR\\'
+        T.mk_dir(outdir, force=True)
+
+
+        # Target URL
+        ## https://www.ncei.noaa.gov/thredds/fileServer/cdr/lai/1981/AVHRR-Land_v005_AVH15C1_NOAA-07_19810628_c20181025194441.nc
+        base_url = 'https://www.ncei.noaa.gov/thredds/fileServer/cdr/lai/'
+        index_url = 'https://www.ncei.noaa.gov/thredds/catalog/ncFC/cdr/lai-fapar-fc/files/catalog.html'
+        response = requests.get(index_url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find all .nc files
+        file_links = [urljoin(index_url, a['href']) for a in soup.find_all('a') if a['href'].endswith('.nc')]
+
+        # Download each file
+        for file_url in tqdm(file_links):
+            # print(file_url)
+            fname = file_url.split('/')[-2:]
+            year = fname[0]
+            outdir_i = join(outdir, year)
+            T.mk_dir(outdir_i, force=True)
+            fname = '/'.join(fname)
+            if not fname.endswith('.nc'):
+                continue
+            # print(fname)
+            new_url = base_url + fname
+            outpath=join(outdir,fname)
+            if os.path.isfile(outpath):
+                continue
+
+            try:
+                with requests.get(new_url, stream=True) as r:
+                    r.raise_for_status()
+                    with open(outpath, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+            except:
+                print(f"Failed to download: {fname}")
+
+
+
 
     def nc_to_tif_time_series_fast(self):
 
@@ -991,9 +1047,9 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
 
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
@@ -1001,61 +1057,62 @@ class moving_window():
         # self.robinson()
 
         pass
+
     def moving_window_extraction(self):
 
         fdir_all = self.result_root + rf'\3mm\extract_FVC_ecosystem_year\\'
-        outdir = self.result_root + rf'\3mm\extract_FVC_ecosystem_year\\\moving_window_extraction\\'
 
-        T.mk_dir(outdir, force=True)
-        for f in os.listdir(fdir_all):
+        growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
+        # growing_season_mode_list = ['growing_season', ]
 
-            if not f.endswith('.npy'):
-                continue
+        for mode in growing_season_mode_list:
 
-            outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
+            outdir = self.result_root + rf'\3mm\extract_VOD_phenology_year\\\moving_window_extraction\\{mode}\\'
+            # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
+            T.mk_dir(outdir, force=True)
+            for f in os.listdir(fdir_all):
+                if not 'detrended' in f:
+                    continue
 
+                if not f.endswith('.npy'):
+                    continue
 
-            # if os.path.isfile(outf):
-            #     continue
-            # if os.path.isfile(outf):
-            #     continue
+                outf = outdir + f.split('.')[0] + '.npy'
+                print(outf)
 
-            dic = T.load_npy(fdir_all+f)
-            window = 15
-
-            new_x_extraction_by_window = {}
-            for pix in tqdm(dic):
-
-                time_series = dic[pix]
-                # time_series = dic[pix]
-
-                time_series = np.array(time_series)
-
-                # if T.is_all_nan(time_series):
+                # if os.path.isfile(outf):
                 #     continue
-                if len(time_series) == 0:
-                    continue
-                print(len(time_series))
+                # if os.path.isfile(outf):
+                #     continue
 
+                dic = T.load_npy(fdir_all + f)
+                window = 15
 
-                # time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    print('error')
-                    continue
-                # print((len(time_series)))
-                ## if all values are identical, then continue
-                if np.nanmax(time_series) == np.nanmin(time_series):
-                    continue
+                new_x_extraction_by_window = {}
+                for pix in tqdm(dic):
 
-                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
-                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
+                    time_series = dic[pix][mode]
+                    # time_series = dic[pix]
 
-            T.save_npy(new_x_extraction_by_window, outf)
+                    time_series = np.array(time_series)
+                    # if T.is_all_nan(time_series):
+                    #     continue
+                    if len(time_series) == 0:
+                        continue
 
+                    # time_series[time_series < -999] = np.nan
+                    if np.isnan(np.nanmean(time_series)):
+                        print('error')
+                        continue
+                    # print((len(time_series)))
+                    ## if all values are identical, then continue
+                    if np.nanmax(time_series) == np.nanmin(time_series):
+                        continue
 
+                    # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
+                    new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
 
-
+                T.save_npy(new_x_extraction_by_window, outf)
 
     def forward_window_extraction(self, x, window):
         # 前窗滤波
@@ -1151,10 +1208,11 @@ class moving_window():
     def moving_window_average_anaysis(self): ## each window calculating the average
         window_size = 15
 
-        f = rf'D:\Project3\Result\3mm\extract_fire_ecosystem_year\moving_window_extraction\\fire_weighted_ecosystem_year.npy'
+        f = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_extraction\\FVC.npy'
         dic = T.load_npy(f)
 
-        outf = rf'D:\Project3\Result\3mm\extract_fire_ecosystem_year\moving_window_extraction\\fire_weighted_ecosystem_year_average.npy'
+
+        outf = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_extraction_average\\FVC.npy'
 
 
         slides = 36 - window_size+1   ## revise!!
@@ -1543,8 +1601,9 @@ class moving_window():
 def main():
 
     # download_fpar().run()
+    download_NOAA_AVHRR().run()
     # Data_processing().run()
-    moving_window().run()
+    # moving_window().run()
 
 
 if __name__ == '__main__':
