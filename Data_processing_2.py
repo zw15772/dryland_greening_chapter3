@@ -89,8 +89,9 @@ class Data_processing_2:
         # self.aggregation_soil()
         # self.resample()
         # self.scale()
-        # self.extract_dryland_tiff()
+
         # self.aggregate()
+        # self.extract_dryland_tiff()
 
         self.tif_to_dic()
         # self.interpolation()
@@ -322,8 +323,8 @@ class Data_processing_2:
 
         pass
     def resample(self):
-        fdir=rf'D:\Data\AVHRR_solely\GIMMS_LAI4g_AVHRR_solely_1982_2015\\'
-        outdir=rf'D:\Data\AVHRR_solely\GIMMS_LAI4g_AVHRR_solely_1982_2015\resample\\'
+        fdir=rf'D:\Project3\Data\NDVI_SNU\SNU_NDVI_v1\TIFF\\'
+        outdir=rf'D:\Project3\Data\NDVI_SNU\SNU_NDVI_v1\resample\\'
         T.mk_dir(outdir)
         for f in T.listdir(fdir):
             fpath=fdir+f
@@ -367,7 +368,7 @@ class Data_processing_2:
         fdir_all = rf'D:\Project3\Data\GEODES_AVHRR_LAI\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'tif_average' in fdir:
+            if not 'dryland_tiff' in fdir:
                 continue
 
 
@@ -394,10 +395,10 @@ class Data_processing_2:
         pass
     def aggregate(self):
         ##every four days to biweekly
-        fdir=rf'D:\Project3\Data\MODIS_LAI_2002-2024\reproj\\'
-        outdir=rf'D:\Project3\Data\MODIS_LAI_2002-2024\reproj\aggregate\\'
+        fdir=rf'D:\Project3\Data\GEODES_AVHRR_LAI\tif_average\\'
+        outdir=rf'D:\Project3\Data\GEODES_AVHRR_LAI\aggregate\\'
         month_list=['01','02','03','04','05','06','07','08','09','10','11','12']
-        yearlist=list(range(2002,2025))
+        yearlist=list(range(1982,2021))
         T.mk_dir(outdir, force=True)
 
         for year in yearlist:
@@ -411,6 +412,7 @@ class Data_processing_2:
                         continue
                     if  (f.split('.')[0][4:6])!=month:
                         continue
+
 
 
                     array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
@@ -8866,9 +8868,9 @@ class products_check():
     def run(self):
         # self.check_consistency()  ### selected regions showing differences
 
-        # self.calculate_significance_count()
+        self.calculate_significance_count()
         # self.plot_products_pdf()
-        self.plot_time_series()
+        # self.plot_time_series()
 
 
 
@@ -8953,10 +8955,12 @@ class products_check():
         #
         # pvalue_f=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\NDVI_detrend_CV_p_value.npy'
 
-        f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_trend_2002_2020.npy'
+        # f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_trend_2002_2020.npy'
+        #
+        # pvalue_f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_p_value_2002_2020.npy'
+        f=rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\trend\\detrended_GEODES_AVHRR_LAI_CV_trend.npy'
 
-        pvalue_f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_p_value_2002_2020.npy'
-
+        pvalue_f=rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\trend\\detrended_GEODES_AVHRR_LAI_CV_p_value.npy'
         array_trend=np.load(f)
         array_pvalue=np.load(pvalue_f)
         num=0
@@ -9069,7 +9073,7 @@ class products_check():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
@@ -9085,7 +9089,7 @@ def main():
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
     # CV_disentangle().run()
-    # products_check().run()
+    products_check().run()
 
 
 

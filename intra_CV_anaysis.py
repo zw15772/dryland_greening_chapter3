@@ -562,9 +562,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\MODIS_LAI_2002-2024\dic\\'
+        fdir = rf'D:\Project3\Data\AVHRR_solely\GIMMS_LAI4g_AVHRR_solely_1982_2015\dic\\'
 
-        outdir = rf'D:\Project3\Data\MODIS_LAI_2002-2024\phenology_year_extraction_dryland\\'
+        outdir = rf'D:\Project3\Data\AVHRR_solely\GIMMS_LAI4g_AVHRR_solely_1982_2015\phenology_year_extraction_dryland\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -3185,9 +3185,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir = rf'D:\Project3\Data\MODIS_LAI_2002-2024\\phenology_year_extraction_dryland\\'
+        fdir = rf'D:\Project3\Data\GEODES_AVHRR_LAI\\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_MODIS_LAI_2002-2024_phenology_year\\'
+        outdir_CV = result_root+rf'\3mm\extract_GEODES_AVHRR_LAI_phenology_year\\'
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3235,14 +3235,14 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'MODIS_LAI_2002-2024.npy'
+        outf = outdir_CV + 'GEODES_AVHRR_LAI.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = result_root+rf'\3mm\extract_MODIS_LAI_2002-2024_phenology_year\\MODIS_LAI_2002-2024.npy'
-        outdir = result_root+rf'\3mm\extract_MODIS_LAI_2002-2024_phenology_year\\'
+        f = result_root+rf'3mm\extract_GEODES_AVHRR_LAI_phenology_year\\GEODES_AVHRR_LAI.npy'
+        outdir = result_root+rf'\3mm\extract_GEODES_AVHRR_LAI_phenology_year\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         spatial_leng_dic={}
@@ -3274,7 +3274,7 @@ class extract_LAI_phenology():
         plt.show()
 
 
-        np.save(outdir + 'detrended_MODIS_LAI_2002-2024.npy', annual_spatial_dict)
+        np.save(outdir + 'detrended_GEODES_AVHRR_LAI.npy', annual_spatial_dict)
 
         pass
 
@@ -3775,7 +3775,7 @@ class moving_window():
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -3783,14 +3783,14 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'\3mm\extract_MODIS_LAI_2002-2024_phenology_year\\'
+        fdir_all = self.result_root + rf'\3mm\extract_GEODES_AVHRR_LAI_phenology_year\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'\3mm\extract_AVHRR_solely_phenology_year\\\moving_window_extraction\\'
+        outdir = self.result_root + rf'\3mm\extract_GEODES_AVHRR_LAI_phenology_year\\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -4003,8 +4003,8 @@ class moving_window():
         # growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
         # for mode in growing_season_mode_list:
 
-        fdir = rf'D:\Project3\Result\3mm\extract_AVHRR_solely_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_AVHRR_solely_phenology_year\moving_window_extraction\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4012,7 +4012,7 @@ class moving_window():
                 continue
 
             dic = T.load_npy(fdir + f)
-            slides = 33-window_size+1  ## other datasets 38
+            slides = 38-window_size+1  ## other datasets 38
             outf = outdir + f.split('.')[0] + f'_CV.npy'
             print(outf)
 
@@ -4026,7 +4026,7 @@ class moving_window():
             for pix in tqdm(dic):
                 trend_list = []
                 time_series_all = dic[pix]
-                if len(time_series_all)<19:  ##
+                if len(time_series_all)<24:  ##
                     continue
                 time_series_all = np.array(time_series_all)
                 for ss in range(slides):
@@ -4291,8 +4291,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002\moving_window_extraction\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4327,7 +4327,7 @@ class moving_window():
                     ## ignore the last one year
 
                 # time_series = dic[pix][:-1]
-                time_series = dic[pix][0:15]
+                time_series = dic[pix]
                 # print((time_series))
                 # exit()
                 time_series = np.array(time_series)
@@ -4366,11 +4366,11 @@ class moving_window():
             # plt.title(f)
             # plt.show()
 
-            D.arr_to_tif(arr_trend, outf + '_trend_2002_2020.tif')
-            D.arr_to_tif(p_value_arr, outf + '_p_value_2002_2020.tif')
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
-            np.save(outf + '_trend_2002_2020', arr_trend)
-            np.save(outf + '_p_value_2002_2020', p_value_arr)
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
 
         T.open_path_and_file(outdir)
 
