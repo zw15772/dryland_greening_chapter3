@@ -87,6 +87,7 @@ class Data_processing_2:
         # self.resampleSOC()
         # self.reclassification_koppen()
         # self.aggregation_soil()
+        # self.nc_to_tif_time_series_fast()
         # self.resample()
         # self.scale()
 
@@ -257,8 +258,8 @@ class Data_processing_2:
 
     def nc_to_tif_time_series_fast(self):
 
-        fdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\'
-        outdir=rf'E:\Project3\Data\GIMMS3g_plus_NDVI\\TIFF\\'
+        fdir=rf'D:\Project3\Data\SNU_LAI\\nc\\'
+        outdir=rf'D:\Project3\Data\SNU_LAI\\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for f in tqdm(os.listdir(fdir)):
 
@@ -268,7 +269,7 @@ class Data_processing_2:
             yearlist = list(range(1982, 2021))
             fpath = join(fdir,f)
             nc_in = xarray.open_dataset(fpath)
-            # print(nc_in)
+            print(nc_in)
             time_bnds = nc_in['time_bnds']
             for t in range(len(time_bnds)):
                 date = time_bnds[t]['time']
@@ -276,7 +277,7 @@ class Data_processing_2:
                 date_str = date.strftime('%Y%m%d')
                 date_str = date_str.split()[0]
                 outf = join(outdir, f'{date_str}.tif')
-                array = nc_in['ndvi'][t]/10000.
+                array = nc_in['LAI'][t]*0.01
                 array = np.array(array)
                 array[array < 0] = np.nan
                 longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.0833333333333, -0.0833333333333
@@ -323,8 +324,8 @@ class Data_processing_2:
 
         pass
     def resample(self):
-        fdir=rf'D:\Project3\Data\NDVI_SNU\SNU_NDVI_v1\TIFF\\'
-        outdir=rf'D:\Project3\Data\NDVI_SNU\SNU_NDVI_v1\resample\\'
+        fdir=rf'D:\Project3\Data\SNU_LAI\TIFF\\'
+        outdir=rf'D:\Project3\Data\SNU_LAI\resample\\'
         T.mk_dir(outdir)
         for f in T.listdir(fdir):
             fpath=fdir+f
@@ -365,10 +366,10 @@ class Data_processing_2:
         array_mask[array_mask < 0] = np.nan
 
 
-        fdir_all = rf'D:\Project3\Data\GEODES_AVHRR_LAI\\'
+        fdir_all = rf'D:\Project3\Data\SNU_LAI\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'dryland_tiff' in fdir:
+            if not 'resample' in fdir:
                 continue
 
 
@@ -431,7 +432,7 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\GEODES_AVHRR_LAI\\'
+        fdir_all = rf'D:\Project3\Data\SNU_LAI\\'
 
         year_list = list(range(1982, 2021))
 
@@ -1381,8 +1382,8 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'D:\Project3\Result\3mm\extract_AVHRR_solely_phenology_year\\'
-        variable_list=['AVHRR_solely_relative_change']
+        fdir=rf'D:\Project3\Result\3mm\\extract_SNU_LAI_phenology_year\\'
+        variable_list=['SNU_LAI_relative_change']
 
         for f in os.listdir(fdir):
 
@@ -2917,12 +2918,12 @@ class greening_analysis():
 
     def run(self):
 
-        self.relative_change()
+        # self.relative_change()
         # self.anomaly()
         # self.anomaly_two_period()
         # self.long_term_mean()
         # self.weighted_average_LAI()
-        # self.plot_time_series()
+        self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis_simply_linear()
@@ -2943,20 +2944,20 @@ class greening_analysis():
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'3mm\extract_AVHRR_solely_phenology_year\\'
-        outdir = result_root + rf'3mm\extract_AVHRR_solely_phenology_year\\'
+        fdir = result_root + rf'\3mm\extract_SNU_LAI_phenology_year\\'
+        outdir = result_root + rf'3mm\extract_SNU_LAI_phenology_year\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
 
-            if 'detrend' in f:
+            if  'detrended' in f:
                 continue
 
 
 
-            outf = outdir + f.split('.')[0]
+            outf = outdir + f.split('.')[0]+'_relative_change.npy'
             if isfile(outf):
                 continue
             print(outf)
@@ -2971,7 +2972,7 @@ class greening_analysis():
                     continue
 
                 # print(len(dic[pix]))
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
 
 
                 time_series = np.array(time_series)
@@ -3198,7 +3199,7 @@ class greening_analysis():
 
         variable_list=['NDVI4g','GIMMS_plus_NDVI','NDVI',]
         # variable_list=['LAI4g']
-        variable_list = ['AVHRR_solely_relative_change']
+        variable_list = ['SNU_LAI_relative_change']
 
 
         for var in variable_list:
@@ -3366,14 +3367,13 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
-        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\dryland\\trend_analysis_TS\\'
+        fdir = result_root+rf'\\3mm\extract_SNU_LAI_phenology_year\\'
+        outdir = result_root + rf'3mm\extract_SNU_LAI_phenology_year\\trend_analysis_TS\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             print(f)
-            if  'GOSIF' in f:
-                continue
+
             if 'detrend' in f:
                 continue
 
@@ -3471,23 +3471,23 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\3mm\relative_change_growing_season\whole_period\\'
-        outdir = result_root + rf'3mm\relative_change_growing_season\whole_period\\\\trend_analysis_simple_linear_0206_lymethod\\'
+        fdir = result_root+rf'\\3mm\extract_SNU_LAI_phenology_year\\'
+        outdir = result_root + rf'3mm\extract_SNU_LAI_phenology_year\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
 
-            if 'detrend' in f:
+            if not 'relative_change' in f:
                 continue
 
 
             if not f.endswith('.npy'):
                 continue
 
-            outf=outdir+f.split('.')[0]
-            if os.path.isfile(outf+'_trend.tif'):
-                continue
-            print(outf)
+            # outf=outdir+f.split('.')[0]
+            # if os.path.isfile(outf+'_trend.tif'):
+            #     continue
+            # print(outf)
 
             if not f.endswith('.npy'):
                 continue
@@ -3539,11 +3539,11 @@ class greening_analysis():
             p_value_arr_dryland = p_value_arr * array_mask
 
 
-            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
-            #
-            # plt.colorbar()
-            # plt.title(f)
-            # plt.show()
+            plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.3, vmax=0.3)
+
+            plt.colorbar()
+            plt.title(f)
+            plt.show()
             # exit()
 
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
@@ -3579,9 +3579,9 @@ class greening_analysis():
     def plot_robinson(self):
 
         # fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        fdir_trend = result_root+rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+        fdir_trend = result_root+rf'3mm\extract_SNU_LAI_phenology_year\trend\\'
         temp_root = result_root+rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_plot\\'
-        outdir = result_root+rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\trend_plot\\'
+        outdir = result_root+rf'\3mm\extract_SNU_LAI_phenology_year\trend\\trend_plot\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -3589,10 +3589,7 @@ class greening_analysis():
 
             if not f.endswith('.tif'):
                 continue
-            if not 'LAI4g' in f:
-                continue
-            if 'detrend' in f:
-                continue
+
 
             fname = f.split('.')[0]
             fname_p_value = fname.replace('trend', 'p_value')
@@ -3606,9 +3603,9 @@ class greening_analysis():
 
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
             plt.title(f'{fname}')
-            plt.show()
-            # outf = outdir + f+'.pdf'
-            # plt.savefig(outf)
+            # plt.show()
+            outf = outdir + f+'.pdf'
+            plt.savefig(outf)
             # plt.close()
 
     def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
@@ -4337,19 +4334,20 @@ class bivariate_analysis():
         # self.xy_map()
         # self.plot_histogram()
         # self.plot_robinson()
+        # self.generate_bivarite_map()
 
-        # self.generate_three_dimension_sensitivity_rainfall_greening() ##rainfall_trend +sensitivity+ greening
+        self.generate_three_dimension_sensitivity_rainfall_greening() ##rainfall_trend +sensitivity+ greening
         # self.generate_three_dimension_growth_rate_greening_rainfall()
         # self.plot_three_dimension_pie()
         # self.plot_three_dimension_pie2()
-        # self.generate_bivarite_map()
+
         # self.plot_bar_greening_wetting() ## robust test between NDVI and LAI
         # self.plot_bar_greening_wetting2()
         # self.consistency_CV_LAI4g_NDVI()
         # self.CV_products_comparison_bivariate()
         # self.CV_products_comparison_bar()
         # self.scatterplot()
-        self.plot_figure1d()
+        # self.plot_figure1d()
 
 
         pass
@@ -4618,35 +4616,36 @@ class bivariate_analysis():
     def generate_bivarite_map(self):  ##
 
         import xymap
-        tif_rainfall = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\trend\\heat_event_frenquency_trend.tif'
+        tif_rainfall = result_root + rf'\D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\detrended_sum_rainfall_CV_trend.tif'
         # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-        tif_sensitivity= result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\\rainfall_frenquency_trend.tif'
+        tif_sensitivity= result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\npy_time_series\\sum_rainfall_detrend_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
         outdir = result_root + rf'3mm\\\bivariate_analysis\\'
         T.mk_dir(outdir, force=True)
-        outtif = outdir + rf'\\heat_events_frequency.tif'
+        outtif = outdir + rf'\\interannual_CVrainfall_beta.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
         tif1 = tif_rainfall
         tif2 = tif_sensitivity
 
         dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
         dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
-        dics = {'heat_events': dic1,
-                'frequency': dic2}
+        dics = {'interannual_CVrainfall': dic1,
+                'beta': dic2}
         df = T.spatial_dics_to_df(dics)
         # print(df)
-        df['heat_increase'] = df['heat_events'] > 0
-        df['CV_inter_increase'] = df['frequency'] > 0
+        df['interannual_CVrainfall_increase'] = df['interannual_CVrainfall'] > 0
+        df['beta_increase'] = df['beta'] > 0
+
         print(df)
         label_list = []
         for i, row in df.iterrows():
-            if row['heat_increase'] and row['CV_inter_increase']:
+            if row['interannual_CVrainfall_increase'] and row['beta_increase']:
                 label_list.append(1)
-            elif row['heat_increase'] and not row['CV_inter_increase']:
+            elif row['interannual_CVrainfall_increase'] and not row['beta_increase']:
                 label_list.append(2)
-            elif not row['heat_increase'] and row['CV_inter_increase']:
+            elif not row['interannual_CVrainfall_increase'] and row['beta_increase']:
                 label_list.append(3)
             else:
                 label_list.append(4)
@@ -5056,16 +5055,16 @@ class bivariate_analysis():
 
 class multi_regression_beta():
     def __init__(self):
-        self.this_root = 'E:\Project3\\'
-        self.data_root = 'E:/Project3/Data/'
-        self.result_root = 'E:/Project3/Result/'
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
 
         self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
         self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
 
         self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var = ['phenology_LAI_mean_detrend_relative_change']
-        pass
+        self.y_var = ['SNU_LAI_relative_change_detrend']
+
 
     def run(self):
         # self.anomaly()
@@ -5073,7 +5072,7 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
@@ -5087,17 +5086,17 @@ class multi_regression_beta():
         # #
         #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
         ###step 2 crate individial files
-        # self.plt_multi_regression_result(outdir,self.y_var)
-#
+#         self.plt_multi_regression_result(outdir,self.y_var)
+# #
         # ##step 3 covert to time series
 
         # self.convert_files_to_time_series(outdir,self.y_var)
         ### step 4 build dataframe using build Dataframe function and then plot here
         # self.plot_moving_window_time_series()
         ## spatial trends of sensitivity
-        # self.calculate_trend_trend()
+        self.calculate_trend_trend()
         # plot robinson
-        self.plot_robinson()
+        # self.plot_robinson()
         # self.plot_sensitivity_preicipation_trend()
 
     def anomaly(self):  ### anomaly GS
@@ -5672,10 +5671,10 @@ class multi_regression_beta():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\npy_time_series\\'
-        outdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\npy_time_series\\trend\\'
+        fdir=rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\npy_time_series\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\npy_time_series\\trend\\'
 
-        T.mkdir(outdir)
+        T.mkdir(outdir,force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('npy'):
@@ -5717,9 +5716,9 @@ class multi_regression_beta():
 
             arr_trend=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
             arr_p_value = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
-            plt.imshow(arr_trend)
-            plt.colorbar()
-            plt.show()
+            # plt.imshow(arr_trend)
+            # plt.colorbar()
+            # plt.show()
             outf = outdir + f.split('.')[0] + '_trend.tif'
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend,outf)
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_p_value, outf + '_p_value.tif')
@@ -8861,214 +8860,6 @@ class CV_disentangle():
 
 
 
-class products_check():
-    def __init__(self):
-        pass
-
-    def run(self):
-        # self.check_consistency()  ### selected regions showing differences
-
-        self.calculate_significance_count()
-        # self.plot_products_pdf()
-        # self.plot_time_series()
-
-
-
-    def check_consistency(self):
-        dff=result_root+rf'\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df'
-        df=T.load_df(dff)
-        T.print_head_n(df)
-        variable_list=['LAI4g','NDVI4g','NDVI','GIMMS_plus_NDVI']
-        result_dic={}
-
-        regions = {
-            "Western_US": {"lat_min": 24, "lat_max": 42, "lon_min": -112, "lon_max": -97},
-            "Southern_South_America": {"lat_min": -18, "lat_max": -2, "lon_min": -45, "lon_max": -36},
-            "Centra_Asia": {"lat_min": 44, "lat_max": 48, "lon_min": 43, "lon_max": 68},
-            "Australia": {"lat_min": -33, "lat_max": -26, "lon_min": 143, "lon_max": 150},
-
-        }
-        year_range = range(1983, 2021)
-
-        for region in regions:
-            df_filtered = df[(df['lat'] > regions[region]['lat_min']) & (df['lat'] < regions[region]['lat_max']) & (
-                    df['lon'] > regions[region]['lon_min']) & (df['lon'] < regions[region]['lon_max'])]
-
-
-            for var in variable_list:
-
-                result_dic[var] = {}
-                data_dic = {}
-
-                for year in year_range:
-                    df_i = df_filtered[df_filtered['year'] == year]
-                    # vals = df_i[f'weighted_avg_{var}'].tolist()
-                    vals = df_i[f'{var}'].tolist()
-                    data_dic[year] = np.nanmean(vals)
-                result_dic[var] = data_dic
-            ##dic to df
-
-
-
-            ## plot
-            color_list=['black','red','blue','green']
-
-            for var in variable_list:
-
-
-                plt.plot(year_range, result_dic[var].values(), label=var, color=color_list[variable_list.index(var)])
-
-
-
-                plt.ylabel(f'Relative change (%)', fontsize=10, font='Arial')
-                plt.xticks(font='Arial', fontsize=10)
-                plt.yticks(font='Arial', fontsize=10)
-                # plt.ylim(-20, 20)
-                ##add line
-                plt.axhline(y=0, color='grey', linestyle='--', alpha=0.2)
-                # plt.grid(which='major', alpha=0.2)
-                plt.legend()
-            plt.title(region)
-            plt.show()
-
-
-
-            pass
-
-
-        pass
-
-    def calculate_significance_count(self):
-        # f=rf'D:\Project3\Result\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\detrended_GIMMS_plus_NDVI_CV_trend.npy'
-
-        # pvalue_f=rf'D:\Project3\Result\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\detrended_GIMMS_plus_NDVI_CV_p_value.npy'
-
-        # f=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.npy'
-        #
-        # pvalue_f=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_p_value.npy'
-
-        # f=rf'D:\Project3\Result\3mm\extract_NDVI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\detrended_NDVI4g_CV_trend.npy'
-        #
-        # pvalue_f=rf'D:\Project3\Result\3mm\extract_NDVI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\detrended_NDVI4g_CV_p_value.npy'
-
-        # f=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\NDVI_detrend_CV_trend.npy'
-        #
-        # pvalue_f=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\NDVI_detrend_CV_p_value.npy'
-
-        # f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_trend_2002_2020.npy'
-        #
-        # pvalue_f=rf'D:\Project3\Result\3mm\extract_MODIS_LAI_2002-2024_phenology_year\moving_window_extraction\trend\\detrended_MODIS_LAI_CV_p_value_2002_2020.npy'
-        f=rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\trend\\detrended_GEODES_AVHRR_LAI_CV_trend.npy'
-
-        pvalue_f=rf'D:\Project3\Result\3mm\extract_GEODES_AVHRR_LAI_phenology_year\moving_window_extraction\trend\\detrended_GEODES_AVHRR_LAI_CV_p_value.npy'
-        array_trend=np.load(f)
-        array_pvalue=np.load(pvalue_f)
-        num=0
-        total_count=0
-        non_significant=0
-        dic_trend=DIC_and_TIF().spatial_arr_to_dic(array_trend)
-        dic_pvalue=DIC_and_TIF().spatial_arr_to_dic(array_pvalue)
-
-        for pix in dic_trend:
-            r,c=pix
-            if r<60:
-                continue
-
-            trend=dic_trend[pix]
-            if trend<-9999:
-                continue
-            total_count+=1
-
-
-
-            p_value=dic_pvalue[pix]
-            if trend>0:
-                non_significant+=1
-
-            if trend>0 and p_value<0.05:
-                num+=1
-        percentage=num/total_count
-        non_significant_percentage=non_significant/total_count
-        print(percentage)
-        print(non_significant_percentage)
-
-
-
-
-
-        pass
-
-    def plot_products_pdf(self):
-        fdir=rf'D:\Project3\Result\3mm\plot_products_CV_pdf\\'
-        color_list=['r','g','b','k','m']
-        for f in os.listdir(fdir):
-            if not f.endswith('.tif'):
-                continue
-            if 'p_value' in f:
-                continue
-            product_name=f.split('.')[0]
-            ## plot PDF
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
-            array[array<-9999]=np.nan
-            array=array.flatten()
-            x,y=Plot().plot_hist_smooth(array, range=(-2,2),bins=100,alpha=0)
-
-            plt.plot(x,y,label=product_name,color=color_list.pop(0))
-        plt.legend()
-
-        plt.show()
-
-
-        pass
-    def plot_time_series(self):
-        dff=rf'D:\Project3\Result\3mm\Dataframe\moving_window_CV\\products_consistency.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        T.print_head_n(df)
-
-        year_range = range(0, 24)
-        result_dic = {}
-
-        variable_list=['LAI4g_detrend_CV','detrended_AVHRR_solely_CV','NDVI4g_detrend_CV','NDVI_detrend_CV',
-                       'detrended_GIMMS_plus_NDVI',]
-        result_dic={}
-        for var in variable_list:
-
-            result_dic[var] = {}
-            data_dic = {}
-
-            for year in year_range:
-                df_i = df[df['window'] == year]
-
-                vals = df_i[f'{var}'].tolist()
-                data_dic[year] = np.nanmean(vals)
-            result_dic[var] = data_dic
-        ##dic to df
-
-        df_new = pd.DataFrame(result_dic)
-
-
-        for var in variable_list:
-            plt.plot(year_range, df_new[var], label=var)
-        plt.ylabel('CV %')
-        plt.xlabel('window')
-
-        plt.legend()
-        plt.show()
-
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
 
 
 
@@ -9084,12 +8875,12 @@ def main():
     # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
     # CV_disentangle().run()
-    products_check().run()
+
 
 
 
