@@ -3773,7 +3773,7 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
@@ -3781,7 +3781,7 @@ class moving_window():
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -4128,11 +4128,11 @@ class moving_window():
         window_size = 15
 
 
-        fdir = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\\moving_window_min_max_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'LAI4g_detrend' in f:
+            if not 'SNU_LAI_relative_change_detrend' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
@@ -4296,12 +4296,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\NDVI_LAI\LAI4g_predict\average_LAI4g_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\NDVI_LAI\LAI4g_predict\average_LAI4g_phenology_year\moving_window_extraction\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'CV' in f:
+            if not 'relative' in f:
                 continue
 
 
