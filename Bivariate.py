@@ -560,13 +560,8 @@ class Plot_Robinson:
         return wkt
 
 
-class heatmap():
-    def __init__(self):
-        self.map_width = 15.3 * centimeter_factor
-        self.map_height = 8.2 * centimeter_factor
-        pass
-    def run(self):
-        self.heatmap()
+
+
 
 
 
@@ -818,12 +813,13 @@ class heatmap():
 
 class greening_CV_relationship():
     def __init__(self):
-        ### plot figure the relationship between greening/browning and CV trends
-
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
 
     def run(self):
-        self.statistic_bar()
+        # self.statistic_bar()
+        self.heatmap()
 
         pass
 
@@ -852,9 +848,9 @@ class greening_CV_relationship():
 
         # print(len(df));exit()
         SNU_LAI_trend_values = df['SNU_LAI_relative_change_trend'].tolist()
-        SNU_LAI_trend_pvalues = df['SNU_LAI_relative_change_p_value'].tolist()
+
         SNU_LAI_CV_values = df['SNU_LAI_CV'].tolist()
-        SNU_LAI_CV_pvalues = df['detrended_SNU_LAI_CV_p_value'].tolist()
+
 
         SNU_LAI_trend_values = np.array(SNU_LAI_trend_values)
 
@@ -865,14 +861,326 @@ class greening_CV_relationship():
         class3=np.logical_and(SNU_LAI_CV_values<0,SNU_LAI_trend_values>0)
         class4=np.logical_and(SNU_LAI_CV_values<0,SNU_LAI_trend_values<0)
         ## calculate the percentage of each class
-        class1_percentage = np.sum(class1)/len(df)
-        class2_percentage = np.sum(class2)/len(df)
-        class3_percentage = np.sum(class3)/len(df)
-        class4_percentage = np.sum(class4)/len(df)
+        class1_percentage = np.sum(class1)/len(df)*100
+        class2_percentage = np.sum(class2)/len(df)*100
+        class3_percentage = np.sum(class3)/len(df)*100
+        class4_percentage = np.sum(class4)/len(df)*100
         print(class1_percentage,class2_percentage,class3_percentage,class4_percentage)
         plt.bar([1,2,3,4],[class1_percentage,class2_percentage,class3_percentage,class4_percentage])
         plt.xticks([1,2,3,4],['CV>0 and trend >0','CV>0 and trend <0','CV < 0 and trend > 0','CV < 0 and trend < 0'])
+        plt.ylabel('Percentage')
         plt.show()
+
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+        return df
+
+    def generate_bivarite_map(self):  ##
+
+        import xymap
+        tif_rainfall = result_root + rf'3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\trend\\\\detrended_SNU_LAI_CV_trend.tif'
+        # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
+        tif_sensitivity= result_root + rf'3mm\extract_SNU_LAI_phenology_year\trend\\SNU_LAI_relative_change_trend.tif'
+        # print(isfile(tif_CRU_trend))
+        # print(isfile(tif_CRU_CV))
+        # exit()
+        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
+        T.mk_dir(outdir, force=True)
+        outtif = outdir + rf'\\CV_greening_bivariate.tif'
+        T.mk_dir(result_root + rf'bivariate_analysis\\')
+        tif1 = tif_rainfall
+        tif2 = tif_sensitivity
+
+        dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
+        dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
+        dics = {'CV_LAI': dic1,
+                'Trend_LAI': dic2}
+        df = T.spatial_dics_to_df(dics)
+        # print(df)
+        df['CV_LAI_increase'] = df['CV_LAI'] > 0
+        df['Trend_LAI_increase'] = df['Trend_LAI'] > 0
+
+        print(df)
+        label_list = []
+        for i, row in df.iterrows():
+            if row['CV_LAI_increase'] and row['Trend_LAI_increase']:
+                label_list.append(1)
+            elif row['CV_LAI_increase'] and not row['Trend_LAI_increase']:
+                label_list.append(2)
+            elif not row['CV_LAI_increase'] and row['Trend_LAI_increase']:
+                label_list.append(3)
+            elif not row['CV_LAI_increase'] and not row['Trend_LAI_increase']:
+                label_list.append(4)
+            else:
+                raise
+
+        df['label'] = label_list
+        result_dic = T.df_to_spatial_dic(df, 'label')
+        DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
+
+
+    def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
+        # print(len(df));exit()
+
+
+        # plt.show();exit()
+
+        T.print_head_n(df)
+        x_var = 'detrended_SNU_LAI_min_trend'
+        y_var = 'detrended_SNU_LAI_max_trend'
+        z_var = 'SNU_LAI_CV'
+
+        bin_y = np.linspace(-0.02, 0.02, 11)
+
+        bin_x = np.linspace(-0.02, 0.02, 11)
+        # percentile_list=np.linspace(0,100,7)
+        # bin_x=np.percentile(df[x_var],percentile_list)
+        # print(bin_x)
+        # bin_y=np.percentile(df[y_var],percentile_list)
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
+                    col_name_x=x_var,
+                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y,round_x=4,round_y=4)
+        # pprint(matrix_dict);exit()
+
+        my_cmap = T.cmap_blend(color_list = ['#000000','r', 'b'])
+        my_cmap = 'RdBu'
+        self.plot_df_bin_2d_matrix(matrix_dict,-1,1,x_ticks_list,y_ticks_list,cmap=my_cmap,
+                              is_only_return_matrix=False)
+        plt.colorbar()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        pprint(matrix_dict)
+        # plt.show()
+
+
+        matrix_dict_count, x_ticks_list, y_ticks_list = self.df_bin_2d_count(df, val_col_name=z_var,
+                                                              col_name_x=x_var,
+                                                              col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
+        pprint(matrix_dict_count)
+        scatter_size_dict = {
+            (1,20): 5,
+            (20,50): 20,
+            (50,100): 50,
+            (100,200): 75,
+            (200,400): 100,
+            (400,800): 200,
+            (800,np.inf): 250
+        }
+        matrix_dict_count_normalized = {}
+        # Normalize counts for circle size
+        for key in matrix_dict_count:
+            num = matrix_dict_count[key]
+            for key2 in scatter_size_dict:
+                if num >= key2[0] and num < key2[1]:
+                    matrix_dict_count_normalized[key] = scatter_size_dict[key2]
+                    break
+        pprint(matrix_dict_count_normalized)
+        reverse_x = list(range(len(bin_y)-1))[::-1]
+        reverse_x_dict = {}
+        for i in range(len(bin_y)-1):
+            reverse_x_dict[i] = reverse_x[i]
+        # print(reverse_x_dict);exit()
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='gray',edgecolors='none',alpha=.5)
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
+
+        plt.xlabel('Trend in LAImin (unitless)')
+        plt.ylabel('Trend in LAImax (unitless)')
+
+        plt.show()
+        # plt.savefig(outf)
+        # plt.close()
+
+
+    def mode(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
+        df=df[df['SNU_LAI_relative_change_p_value']<0.05]
+        df=df[df['SNU_LAI_relative_change_trend']>0]
+        df = df[df['SNU_LAI_CV'] < 0]
+        LAI_max_list=[]
+        LAI_min_list=[]
+
+
+        for i,row in df.iterrows():
+            time_series_LAImin=row['SNU_LAI_relative_change_detrend_min']
+
+            time_series_LAImin=np.array(time_series_LAImin)
+            # print(time_series_LAImin)
+            if np.isnan(time_series_LAImin).all():
+                continue
+
+            if time_series_LAImin.shape[0]!=24:
+                continue
+            time_series_LAImax=row['SNU_LAI_relative_change_detrend_max']
+            time_series_LAImax=np.array(time_series_LAImax)
+            if time_series_LAImax.shape[0]!=24:
+                continue
+
+            LAI_max_list.append(time_series_LAImax)
+            LAI_min_list.append(time_series_LAImin)
+        ## average
+        LAI_max_list=np.array(LAI_max_list)
+        LAI_min_list=np.array(LAI_min_list)
+        LAI_max_list_avg=np.mean(LAI_max_list,axis=0)
+        LAI_min_list_avg=np.mean(LAI_min_list,axis=0)
+        slope_laimin, intercept_laimin, r_value_laimin, p_value_laimin, std_err_laimin = stats.linregress(np.arange(len(LAI_min_list_avg)), LAI_min_list_avg)
+        slope_laimax, intercept_laimax, r_value_laimax, p_value_laimax, std_err_laimax = stats.linregress(np.arange(len(LAI_max_list_avg)), LAI_max_list_avg)
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+
+
+        plt.plot(LAI_min_list_avg,'b')
+        ## plot regression line
+        plt.plot(np.arange(len(LAI_min_list_avg)), [slope_laimin * x + intercept_laimin for x in np.arange(len(LAI_min_list_avg))],
+                 linestyle='--', color='b', alpha=0.5)
+        plt.text(10, -15, f'{slope_laimin:.2f}*x+{intercept_laimin:.2f} p={p_value_laimin:.2f}',
+                 fontsize=12)
+        print(f'{slope_laimin:.2f}*LAImin+{intercept_laimin:.2f}')
+        print(p_value_laimin)
+
+        plt.plot(LAI_max_list_avg,'r')
+        plt.plot(np.arange(len(LAI_max_list_avg)),
+                 [slope_laimax * x + intercept_laimax for x in np.arange(len(LAI_max_list_avg))],
+                 linestyle='--', color='r', alpha=0.5)
+        ## text regression model y=ax+b
+        plt.text(10, 20, f'{slope_laimax:.2f}*x+{intercept_laimax:.2f} p={p_value_laimax:.2f}',
+                 fontsize=12)
+        print(f'{slope_laimax:.2f}*LAImax+{intercept_laimax:.2f}')
+        print(p_value_laimax)
+
+        plt.xticks(range(0, 24, 3))
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+
+
+        plt.ylabel ('Relative change (%)')
+        plt.tight_layout()
+        plt.legend(['LAImin','',  'LAImax',''], loc='upper left')
+
+        plt.show()
+
+
+
+        # plt.show();exit()
+
+
+
+
+        # plt.close()
+
+    def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
+        df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
+        matrix_dict = {}
+        y_ticks_list = []
+        x_ticks_dict = {}
+        flag1 = 0
+        for name_y, df_group_y_i in df_group_y:
+            matrix_i = []
+            y_ticks = (name_y[0].left + name_y[0].right) / 2
+            y_ticks = np.round(y_ticks, round_y)
+            y_ticks_list.append(y_ticks)
+            df_group_x, _ = self.df_bin(df_group_y_i, col_name_x, bin_x)
+            flag2 = 0
+            for name_x, df_group_x_i in df_group_x:
+                vals = df_group_x_i[val_col_name].tolist()
+                rt_mean = len(vals)
+                matrix_i.append(rt_mean)
+                x_ticks = (name_x[0].left + name_x[0].right) / 2
+                x_ticks = np.round(x_ticks, round_x)
+                x_ticks_dict[x_ticks] = 0
+                key = (flag1, flag2)
+                matrix_dict[key] = rt_mean
+                flag2 += 1
+            flag1 += 1
+        x_ticks_list = list(x_ticks_dict.keys())
+        x_ticks_list.sort()
+        return matrix_dict,x_ticks_list,y_ticks_list
+
+    def df_bin(self, df, col, bins):
+        df_copy = df.copy()
+        df_copy[f'{col}_bins'] = pd.cut(df[col], bins=bins)
+        df_group = df_copy.groupby([f'{col}_bins'],observed=True)
+        bins_name = df_group.groups.keys()
+        bins_name_list = list(bins_name)
+        bins_list_str = [str(i) for i in bins_name_list]
+        # for name,df_group_i in df_group:
+        #     vals = df_group_i[col].tolist()
+        #     mean = np.nanmean(vals)
+        #     err,_,_ = self.uncertainty_err(SM)
+        #     # x_list.append(name)
+        #     y_list.append(mean)
+        #     err_list.append(err)
+        return df_group, bins_list_str
+
+
+    def plot_df_bin_2d_matrix(self,matrix_dict,vmin,vmax,x_ticks_list,y_ticks_list,cmap='RdBu',
+                              is_only_return_matrix=False):
+        print(x_ticks_list)
+        keys = list(matrix_dict.keys())
+        r_list = []
+        c_list = []
+        for r, c in keys:
+            r_list.append(r)
+            c_list.append(c)
+        r_list = set(r_list)
+        c_list = set(c_list)
+
+        row = len(r_list)
+        col = len(c_list)
+        spatial = []
+        for r in range(row):
+            temp = []
+            for c in range(col):
+                key = (r, c)
+                if key in matrix_dict:
+                    val_pix = matrix_dict[key]
+                    temp.append(val_pix)
+                else:
+                    temp.append(np.nan)
+            spatial.append(temp)
+
+        matrix = np.array(spatial, dtype=float)
+        matrix = matrix[::-1]
+        if is_only_return_matrix:
+            return matrix
+        plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
+        plt.xticks(range(len(c_list)), x_ticks_list)
+        plt.yticks(range(len(r_list)), y_ticks_list[::-1])
 
 
 
@@ -1715,330 +2023,17 @@ class build_dataframe():
             print(col)
         return df
         pass
-class CV_disentangle():
-    ## this one is to disentangle the CV because of LAImin or LAImax
-    def __init__(self):
-        self.map_width = 15.3 * centimeter_factor
-        self.map_height = 8.2 * centimeter_factor
-        pass
-
-    def run(self):
-        # self.heatmap()
-        self.mode()
-        # self.generate_bivarite_map()
-        pass
-
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-        return df
-
-    def generate_bivarite_map(self):  ##
-
-        import xymap
-        tif_rainfall = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\trend\\LAI4g_detrend_max_trend.tif'
-        # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-        tif_sensitivity= result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\trend\\LAI4g_detrend_min_trend.tif'
-        # print(isfile(tif_CRU_trend))
-        # print(isfile(tif_CRU_CV))
-        # exit()
-        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
-        T.mk_dir(outdir, force=True)
-        outtif = outdir + rf'\\LAI_min_max.tif'
-        T.mk_dir(result_root + rf'bivariate_analysis\\')
-        tif1 = tif_rainfall
-        tif2 = tif_sensitivity
-
-        dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
-        dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
-        dics = {'LAImin': dic2,
-                'LAI_max': dic1}
-        df = T.spatial_dics_to_df(dics)
-        # print(df)
-        df['LAImin_increase'] = df['LAImin'] > 0
-        df['LAI_max_increase'] = df['LAI_max'] > 0
-        print(df)
-        label_list = []
-        for i, row in df.iterrows():
-            if row['LAImin_increase'] and row['LAI_max_increase']:
-                label_list.append(1)
-            elif row['LAImin_increase'] and not row['LAI_max_increase']:
-                label_list.append(2)
-            elif not row['LAImin_increase'] and row['LAI_max_increase']:
-                label_list.append(3)
-            else:
-                label_list.append(4)
-
-        df['label'] = label_list
-        result_dic = T.df_to_spatial_dic(df, 'label')
-        DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
 
 
-    def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
-        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
-        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        print(len(df))
-        df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
-        print(len(df));exit()
-
-
-        # plt.show();exit()
-
-        T.print_head_n(df)
-        x_var = 'detrended_SNU_LAI_min_trend'
-        y_var = 'detrended_SNU_LAI_max_trend'
-        z_var = 'SNU_LAI_CV'
-
-        bin_y = np.linspace(-0.02, 0.02, 11)
-
-        bin_x = np.linspace(-0.02, 0.02, 11)
-        # percentile_list=np.linspace(0,100,7)
-        # bin_x=np.percentile(df[x_var],percentile_list)
-        # print(bin_x)
-        # bin_y=np.percentile(df[y_var],percentile_list)
-        plt.figure(figsize=(self.map_width, self.map_height))
-
-        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
-                    col_name_x=x_var,
-                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y,round_x=4,round_y=4)
-        # pprint(matrix_dict);exit()
-
-        my_cmap = T.cmap_blend(color_list = ['#000000','r', 'b'])
-        my_cmap = 'RdBu'
-        self.plot_df_bin_2d_matrix(matrix_dict,-1,1,x_ticks_list,y_ticks_list,cmap=my_cmap,
-                              is_only_return_matrix=False)
-        plt.colorbar()
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        pprint(matrix_dict)
-        # plt.show()
-
-
-        matrix_dict_count, x_ticks_list, y_ticks_list = self.df_bin_2d_count(df, val_col_name=z_var,
-                                                              col_name_x=x_var,
-                                                              col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
-        pprint(matrix_dict_count)
-        scatter_size_dict = {
-            (1,20): 5,
-            (20,50): 20,
-            (50,100): 50,
-            (100,np.inf): 100
-        }
-        matrix_dict_count_normalized = {}
-        # Normalize counts for circle size
-        for key in matrix_dict_count:
-            num = matrix_dict_count[key]
-            for key2 in scatter_size_dict:
-                if num >= key2[0] and num < key2[1]:
-                    matrix_dict_count_normalized[key] = scatter_size_dict[key2]
-                    break
-        pprint(matrix_dict_count_normalized)
-        reverse_x = list(range(len(bin_y)-1))[::-1]
-        reverse_x_dict = {}
-        for i in range(len(bin_y)-1):
-            reverse_x_dict[i] = reverse_x[i]
-        # print(reverse_x_dict);exit()
-        for x,y in matrix_dict_count_normalized:
-            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='gray',edgecolors='none',alpha=.5)
-        for x,y in matrix_dict_count_normalized:
-            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
-
-        plt.xlabel('Trend in LAImin (unitless)')
-        plt.ylabel('Trend in LAImax (unitless)')
-
-        plt.show()
-        # plt.savefig(outf)
-        # plt.close()
-
-
-    def mode(self):  ## plot trend as function of Aridity and precipitation trend
-        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
-        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        print(len(df))
-        df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
-        df=df[df['SNU_LAI_relative_change_p_value']<0.05]
-        df=df[df['SNU_LAI_relative_change_trend']>0]
-        df = df[df['SNU_LAI_CV'] < 0]
-        LAI_max_list=[]
-        LAI_min_list=[]
-
-
-        for i,row in df.iterrows():
-            time_series_LAImin=row['SNU_LAI_relative_change_detrend_min']
-
-            time_series_LAImin=np.array(time_series_LAImin)
-            # print(time_series_LAImin)
-            if np.isnan(time_series_LAImin).all():
-                continue
-
-            if time_series_LAImin.shape[0]!=24:
-                continue
-            time_series_LAImax=row['SNU_LAI_relative_change_detrend_max']
-            time_series_LAImax=np.array(time_series_LAImax)
-            if time_series_LAImax.shape[0]!=24:
-                continue
-
-            LAI_max_list.append(time_series_LAImax)
-            LAI_min_list.append(time_series_LAImin)
-        ## average
-        LAI_max_list=np.array(LAI_max_list)
-        LAI_min_list=np.array(LAI_min_list)
-        LAI_max_list_avg=np.mean(LAI_max_list,axis=0)
-        LAI_min_list_avg=np.mean(LAI_min_list,axis=0)
-        slope_laimin, intercept_laimin, r_value_laimin, p_value_laimin, std_err_laimin = stats.linregress(np.arange(len(LAI_min_list_avg)), LAI_min_list_avg)
-        slope_laimax, intercept_laimax, r_value_laimax, p_value_laimax, std_err_laimax = stats.linregress(np.arange(len(LAI_max_list_avg)), LAI_max_list_avg)
-        plt.figure(figsize=(self.map_width, self.map_height))
-
-
-
-        plt.plot(LAI_min_list_avg,'b')
-        ## plot regression line
-        plt.plot(np.arange(len(LAI_min_list_avg)), [slope_laimin * x + intercept_laimin for x in np.arange(len(LAI_min_list_avg))],
-                 linestyle='--', color='b', alpha=0.5)
-        plt.text(10, -15, f'{slope_laimin:.2f}*x+{intercept_laimin:.2f} p={p_value_laimin:.2f}',
-                 fontsize=12)
-        print(f'{slope_laimin:.2f}*LAImin+{intercept_laimin:.2f}')
-        print(p_value_laimin)
-
-        plt.plot(LAI_max_list_avg,'r')
-        plt.plot(np.arange(len(LAI_max_list_avg)),
-                 [slope_laimax * x + intercept_laimax for x in np.arange(len(LAI_max_list_avg))],
-                 linestyle='--', color='r', alpha=0.5)
-        ## text regression model y=ax+b
-        plt.text(10, 20, f'{slope_laimax:.2f}*x+{intercept_laimax:.2f} p={p_value_laimax:.2f}',
-                 fontsize=12)
-        print(f'{slope_laimax:.2f}*LAImax+{intercept_laimax:.2f}')
-        print(p_value_laimax)
-
-        plt.xticks(range(0, 24, 3))
-        window_size = 15
-
-        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-        year_range = range(1983, 2021)
-        year_range_str = []
-        for year in year_range:
-
-            start_year = year
-            end_year = year + window_size - 1
-            if end_year > 2020:
-                break
-            year_range_str.append(f'{start_year}-{end_year}')
-        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
-
-
-        plt.ylabel ('Relative change (%)')
-        plt.tight_layout()
-        plt.legend(['LAImin','',  'LAImax',''], loc='upper left')
-
-        plt.show()
-
-
-
-        # plt.show();exit()
-
-
-
-
-        # plt.close()
-
-    def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
-        df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
-        matrix_dict = {}
-        y_ticks_list = []
-        x_ticks_dict = {}
-        flag1 = 0
-        for name_y, df_group_y_i in df_group_y:
-            matrix_i = []
-            y_ticks = (name_y[0].left + name_y[0].right) / 2
-            y_ticks = np.round(y_ticks, round_y)
-            y_ticks_list.append(y_ticks)
-            df_group_x, _ = self.df_bin(df_group_y_i, col_name_x, bin_x)
-            flag2 = 0
-            for name_x, df_group_x_i in df_group_x:
-                vals = df_group_x_i[val_col_name].tolist()
-                rt_mean = len(vals)
-                matrix_i.append(rt_mean)
-                x_ticks = (name_x[0].left + name_x[0].right) / 2
-                x_ticks = np.round(x_ticks, round_x)
-                x_ticks_dict[x_ticks] = 0
-                key = (flag1, flag2)
-                matrix_dict[key] = rt_mean
-                flag2 += 1
-            flag1 += 1
-        x_ticks_list = list(x_ticks_dict.keys())
-        x_ticks_list.sort()
-        return matrix_dict,x_ticks_list,y_ticks_list
-
-    def df_bin(self, df, col, bins):
-        df_copy = df.copy()
-        df_copy[f'{col}_bins'] = pd.cut(df[col], bins=bins)
-        df_group = df_copy.groupby([f'{col}_bins'],observed=True)
-        bins_name = df_group.groups.keys()
-        bins_name_list = list(bins_name)
-        bins_list_str = [str(i) for i in bins_name_list]
-        # for name,df_group_i in df_group:
-        #     vals = df_group_i[col].tolist()
-        #     mean = np.nanmean(vals)
-        #     err,_,_ = self.uncertainty_err(SM)
-        #     # x_list.append(name)
-        #     y_list.append(mean)
-        #     err_list.append(err)
-        return df_group, bins_list_str
-
-
-    def plot_df_bin_2d_matrix(self,matrix_dict,vmin,vmax,x_ticks_list,y_ticks_list,cmap='RdBu',
-                              is_only_return_matrix=False):
-        print(x_ticks_list)
-        keys = list(matrix_dict.keys())
-        r_list = []
-        c_list = []
-        for r, c in keys:
-            r_list.append(r)
-            c_list.append(c)
-        r_list = set(r_list)
-        c_list = set(c_list)
-
-        row = len(r_list)
-        col = len(c_list)
-        spatial = []
-        for r in range(row):
-            temp = []
-            for c in range(col):
-                key = (r, c)
-                if key in matrix_dict:
-                    val_pix = matrix_dict[key]
-                    temp.append(val_pix)
-                else:
-                    temp.append(np.nan)
-            spatial.append(temp)
-
-        matrix = np.array(spatial, dtype=float)
-        matrix = matrix[::-1]
-        if is_only_return_matrix:
-            return matrix
-        plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
-        plt.xticks(range(len(c_list)), x_ticks_list)
-        plt.yticks(range(len(r_list)), y_ticks_list[::-1])
 
 
 def main():
 
     # bivariate_analysis().run()
-    build_dataframe().run()
-    # greening_CV_relationship().run()
+    # build_dataframe().run()
+    greening_CV_relationship().run()
     # heatmap().run()
+
 
 
 

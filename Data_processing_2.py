@@ -2926,12 +2926,12 @@ class greening_analysis():
         # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
-        self.trend_analysis_simply_linear()
+        # self.trend_analysis_simply_linear()
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
         # self.plot_robinson()
-        # self.plot_significant_percentage_area()
+        self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
@@ -3851,17 +3851,17 @@ class greening_analysis():
 
     def plot_significant_percentage_area(self):  ### insert bar plot for all spatial map to calculate percentage
 
-        dff=result_root+rf'3mm\Dataframe\anomaly\\anomaly.df'
+        dff=result_root+rf'\3mm\bivariate_analysis\Dataframe\\Trend.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         # T.print_head_n(df); exit()
         ##plt histogram of LAI
-        variable='LAI4g'
-        df=df[df[f'{variable}_trend_whole']<0.1]
-        df=df[df[f'{variable}_trend_whole']>-0.1]
+        variable='SNU_LAI'
+        df=df[df[f'{variable}_relative_change_trend']<50]
+        df=df[df[f'{variable}_relative_change_trend']>-50]
 
 
-        vals_p_value = df[f'{variable}_p_value_whole'].values
+        vals_p_value = df[f'{variable}_relative_change_p_value'].values
         significant_browning_count = 0
         non_significant_browning_count = 0
         significant_greening_count = 0
@@ -3869,12 +3869,12 @@ class greening_analysis():
 
         for i in range(len(vals_p_value)):
             if vals_p_value[i] < 0.05:
-                if df[f'{variable}_second_trend_relative_change'].values[i] > 0:
+                if df[f'{variable}_relative_change_trend'].values[i] > 0:
                     significant_greening_count = significant_greening_count + 1
                 else:
                     significant_browning_count = significant_browning_count + 1
             else:
-                if df[f'{variable}_second_trend_relative_change'].values[i] > 0:
+                if df[f'{variable}_relative_change_trend'].values[i] > 0:
                     non_significant_browning_count = non_significant_browning_count + 1
                 else:
                     non_significant_greening_count = non_significant_greening_count + 1
@@ -8635,7 +8635,7 @@ def main():
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_beta().run()
@@ -8644,7 +8644,7 @@ def main():
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
-    CV_disentangle().run()
+
 
 
 
