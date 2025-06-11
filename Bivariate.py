@@ -818,6 +818,8 @@ class greening_CV_relationship():
         pass
 
     def run(self):
+
+        # self.generate_bivarite_map()
         # self.statistic_bar()
         self.heatmap()
 
@@ -843,13 +845,16 @@ class greening_CV_relationship():
         df=T.load_df(dff)
         df=self.df_clean(df)
         print(len(df))
-        df=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
-        df=df[df['SNU_LAI_relative_change_p_value']<0.05]
+        # df=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
+        # df=df[df['SNU_LAI_relative_change_p_value']<0.05]
+
+        df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        df = df[df['LAI4g_p_value'] < 0.05]
 
         # print(len(df));exit()
-        SNU_LAI_trend_values = df['SNU_LAI_relative_change_trend'].tolist()
+        SNU_LAI_trend_values = df['LAI4g_trend'].tolist()
 
-        SNU_LAI_CV_values = df['SNU_LAI_CV'].tolist()
+        SNU_LAI_CV_values = df['LAI4g_detrend_CV_trend'].tolist()
 
 
         SNU_LAI_trend_values = np.array(SNU_LAI_trend_values)
@@ -888,15 +893,15 @@ class greening_CV_relationship():
     def generate_bivarite_map(self):  ##
 
         import xymap
-        tif_rainfall = result_root + rf'3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\trend\\\\detrended_SNU_LAI_CV_trend.tif'
+        tif_rainfall = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\\\LAI4g_detrend_CV_trend.tif'
         # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-        tif_sensitivity= result_root + rf'3mm\extract_SNU_LAI_phenology_year\trend\\SNU_LAI_relative_change_trend.tif'
+        tif_sensitivity= result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\trend_analysis_simple_linear\\LAI4g_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
         outdir = result_root + rf'3mm\\\bivariate_analysis\\'
         T.mk_dir(outdir, force=True)
-        outtif = outdir + rf'\\CV_greening_bivariate.tif'
+        outtif = outdir + rf'\\CV_greening_bivariate_LAI4g.tif'
         T.mk_dir(result_root + rf'bivariate_analysis\\')
         tif1 = tif_rainfall
         tif2 = tif_sensitivity
@@ -935,20 +940,29 @@ class greening_CV_relationship():
         df=T.load_df(dff)
         df=self.df_clean(df)
         print(len(df))
-        df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
-        # print(len(df));exit()
+        # df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
+        df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        # # print(len(df));exit()
 
 
         # plt.show();exit()
 
         T.print_head_n(df)
-        x_var = 'detrended_SNU_LAI_min_trend'
-        y_var = 'detrended_SNU_LAI_max_trend'
-        z_var = 'SNU_LAI_CV'
+        # x_var = 'SNU_LAI_relative_change_detrend_min_trend'
+        # y_var = 'SNU_LAI_relative_change_detrend_max_trend'
+        # z_var = 'SNU_LAI_CV'
 
-        bin_y = np.linspace(-0.02, 0.02, 11)
+        x_var = 'LAI4g_detrend_min_trend'
+        y_var = 'LAI4g_detrend_max_trend'
+        z_var = 'LAI4g_detrend_CV_trend'
+        plt.hist(df[x_var])
+        plt.show()
+        plt.hist(df[y_var])
+        plt.show()
 
-        bin_x = np.linspace(-0.02, 0.02, 11)
+        bin_x = np.linspace(-2, 1.5,11, )
+
+        bin_y = np.linspace(-2, 1.5, 11)
         # percentile_list=np.linspace(0,100,7)
         # bin_x=np.percentile(df[x_var],percentile_list)
         # print(bin_x)
@@ -1003,8 +1017,8 @@ class greening_CV_relationship():
         for x,y in matrix_dict_count_normalized:
             plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
 
-        plt.xlabel('Trend in LAImin (unitless)')
-        plt.ylabel('Trend in LAImax (unitless)')
+        plt.xlabel('Trend in LAImin (%)')
+        plt.ylabel('Trend in LAImax (%)')
 
         plt.show()
         # plt.savefig(outf)
@@ -1201,8 +1215,8 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.add_detrend_zscore_to_df(df)
-        df=self.append_attributes(df)
-        # df=self.add_trend_to_df(df)
+        # df=self.append_attributes(df)
+        df=self.add_trend_to_df(df)
 
 
         # df=self.add_aridity_to_df(df)
@@ -1684,10 +1698,10 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\trend\\'
+        fdir=rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_min_max_anaysis\trend\\'
         for f in os.listdir(fdir):
-            if not 'relative' in f:
-                continue
+            # if not 'LAI4g_detrend_CV_p_value' in f:
+            #     continue
 
 
             if not f.endswith('.tif'):
@@ -2032,7 +2046,7 @@ def main():
     # bivariate_analysis().run()
     # build_dataframe().run()
     greening_CV_relationship().run()
-    # heatmap().run()
+
 
 
 

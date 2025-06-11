@@ -3789,18 +3789,18 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'\3mm\extract_SNU_LAI_phenology_year\\'
+        fdir_all = self.result_root + rf'\3mm\relative_change_growing_season\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'\3mm\extract_SNU_LAI_phenology_year\\\moving_window_extraction\\'
+        outdir = self.result_root + rf'\3mm\relative_change_growing_season\\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'SNU_LAI_relative_change_detrend' in f:
+            if not 'LAI4g_detrend' in f:
                 continue
 
             if not f.endswith('.npy'):
@@ -4128,17 +4128,17 @@ class moving_window():
         window_size = 15
 
 
-        fdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\\moving_window_min_max_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'SNU_LAI_relative_change_detrend' in f:
+            if not 'LAI4g_detrend' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
 
             slides = 38 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_min.npy'
+            outf = outdir + f.split('.')[0] + f'_max.npy'
             print(outf)
 
             trend_dic = {}
@@ -4167,7 +4167,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmin(time_series)
+                    average=np.nanmax(time_series)
                     # print(average)
 
                     trend_list.append(average)
@@ -4296,13 +4296,11 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_min_max_anaysis\\'
+        outdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_min_max_anaysis\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'relative' in f:
-                continue
 
 
             # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',
