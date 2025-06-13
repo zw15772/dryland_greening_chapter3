@@ -674,9 +674,9 @@ class build_dataframe():
 
     def __init__(self):
 
-        self.this_class_arr = (result_root+rf'\3mm\NDVI_LAI\dataframe\moving_window\\')
+        self.this_class_arr = (result_root+rf'3mm\product_consistency\\dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window.df'
+        self.dff = self.this_class_arr + rf'relative_change.df'
 
         pass
 
@@ -694,7 +694,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -900,7 +900,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\NDVI_LAI\LAI4g_predict\average_LAI4g_phenology_year\moving_window_extraction\\LAI4g_predict_detrend_CV.npy'
+        f = rf'D:\Project3\Result\3mm\\extract_composite_phenology_year\\composite_LAI_relative_change_mean.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -915,7 +915,7 @@ class build_dataframe():
         for pix in tqdm(dic):
             time_series = dic[pix]
 
-            y = 0
+            y = 1983
             for val in time_series:
                 pix_list.append(pix)
                 change_rate_list.append(val)
@@ -927,7 +927,7 @@ class build_dataframe():
 
         df['year'] = year
         # df['window'] = 'VPD_LAI4g_00'
-        df['LAI4g_predict_CV'] = change_rate_list
+        df['composite_LAI_relative_change_mean'] = change_rate_list
         return df
 
     def foo2(self, df):  # 新建trend
@@ -1025,14 +1025,16 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'D:\Project3\Result\3mm\NDVI_LAI\LAI4g_predict\average_LAI4g_phenology_year\moving_window_extraction\\'
+        fdir=rf'D:\Project3\Result\3mm\relative_change_growing_season\whole_period\\'
 
 
         for f in os.listdir(fdir):
             variable=f.split('.')[0]
             print(variable)
-            if not 'CV' in variable:
-                continue
+            # if not 'relative_change' in variable:
+            #     continue
+            # if 'detrend' in variable:
+            #     continue
 
 
 
@@ -1067,7 +1069,9 @@ class build_dataframe():
 
 
 
-                v1= vals[year - 0]
+
+
+                v1= vals[year - 1983]
                 # print(v1,year,len(vals))
 
                 NDVI_list.append(v1)
@@ -1599,12 +1603,8 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'detrended_GIMMS_plus_NDVI_CV_trend': 'GIMMS_plus_NDVI_detrend_CV_trend',
-                                'detrended_GIMMS_plus_NDVI_CV_p_value': 'GIMMS_plus_NDVI_detrend_CV_p_value',
-                                'detrended_NDVI4g_CV_p_value': 'NDVI4g_detrend_CV_p_value',
-                                'detrended_NDVI4g_CV_trend': 'NDVI4g_detrend_CV_trend',
-                                'detrended_NDVI_trend': 'NDVI_detrend_trend',
-                                'detrended_NDVI_p_value': 'NDVI_detrend_p_value',
+        df = df.rename(columns={'composite_LAI_median': 'composite_LAI_median_CV',
+
 
 
 
@@ -1858,6 +1858,7 @@ class PLOT_dataframe():
         pass
     def run (self):
         self.plot_raw_LAI()
+        self.plot_relative_change_LAI()
         pass
 
     def df_clean(self, df):
@@ -1876,7 +1877,7 @@ class PLOT_dataframe():
     def plot_raw_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'3mm\NDVI_LAI\dataframe\moving_window\\moving_window.df')
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -1889,10 +1890,9 @@ class PLOT_dataframe():
         color_list = ['grey'] * 16
         color_list[0] = 'green'
 
-        color_list = ['green', 'blue', 'red', 'orange', 'aqua', 'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+        color_list = ['green', 'blue',  'orange', 'red','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [1] * 16
-        linewidth_list[0] = 2
+        linewidth_list = [0.5,0.5,0.5,2,2]
 
         fig = plt.figure()
         i = 1
@@ -1902,7 +1902,8 @@ class PLOT_dataframe():
         #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
         variable_list=[
-                       'LAI4g_detrend_CV','LAI4g_predict_detrend_CV']
+                       'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
+            'GLOBMAP_LAI_detrend_CV','composite_LAI_CV','composite_LAI_median_CV']
         year_list=range(0,25)
 
 
@@ -1921,21 +1922,86 @@ class PLOT_dataframe():
         ##dic to df
 
         df_new = pd.DataFrame(result_dic)
+        flag=0
 
         for var in variable_list:
-            plt.plot(year_list, df_new[var], label=var)
+            plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag])
+            flag=flag+1
         # plt.ylabel('raw LAI (m2/m2)')
-        plt.ylabel('relative change (%)')
-        plt.xlabel('year')
+        plt.ylabel('CV (%)')
+        plt.xlabel('window')
+        plt.grid(True)
+
+        plt.legend()
+        plt.show()
+
+    def plot_relative_change_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\relative_change.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['grey'] * 16
+        color_list[0] = 'green'
+
+        color_list = ['green', 'blue',  'orange', 'red','purple', 'aqua', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [0.5,0.5,0.5,2,2]
+
+
+
+        fig = plt.figure()
+        i = 1
+
+        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
+        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
+        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
+
+        variable_list = ['LAI4g', 'SNU_LAI_relative_change', 'GLOBMAP_LAI_relative_change',
+                         'composite_LAI_relative_change_mean',
+                         'composite_LAI_relative_change_median']
+        year_list=range(1983,2021)
+
+
+        result_dic = {}
+        for var in variable_list:
+
+            result_dic[var] = {}
+            data_dic = {}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                data_dic[year] = np.nanmean(vals)
+            result_dic[var] = data_dic
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+        flag=0
+
+        for var in variable_list:
+            plt.plot(year_list, df_new[var], label=var,linewidth=linewidth_list[flag], color=color_list[flag])
+            flag=flag+1
+        plt.ylabel('Relative change LAI (%)')
+        plt.grid(True)
+
 
         plt.legend()
         plt.show()
 def main():
 
 
-    build_dataframe().run()
+    # build_dataframe().run()
 
-    # PLOT_dataframe().run()
+    PLOT_dataframe().run()
     # NDVI_LAI().run()
 
 if __name__ == '__main__':

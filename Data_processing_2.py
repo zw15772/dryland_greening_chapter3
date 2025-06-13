@@ -92,10 +92,15 @@ class Data_processing_2:
         # self.scale()
 
         # self.aggregate()
+        # self.aggregate_GlobMAP()
+        # self.unify_TIFF()
+
         # self.extract_dryland_tiff()
 
-        self.tif_to_dic()
+        # self.tif_to_dic()
         # self.interpolation()
+        # self.zscore()
+        self.composite_LAI()
 
 
 
@@ -324,8 +329,8 @@ class Data_processing_2:
 
         pass
     def resample(self):
-        fdir=rf'D:\Project3\Data\SNU_LAI\TIFF\\'
-        outdir=rf'D:\Project3\Data\SNU_LAI\resample\\'
+        fdir=rf'D:\Project3\Data\GLOBMAP\1981-1990_TIFF\\'
+        outdir=rf'D:\Project3\Data\GLOBMAP\\resample\\'
         T.mk_dir(outdir)
         for f in T.listdir(fdir):
             fpath=fdir+f
@@ -340,8 +345,8 @@ class Data_processing_2:
                 pass
     def scale(self):
 
-        fdir = rf'D:\Project3\Data\MODIS_LAI_2002-2024\aggregate\\'
-        outdir = rf'D:\Project3\Data\MODIS_LAI_2002-2024\scale\\'
+        fdir = rf'D:\Project3\Data\GLOBMAP\resample\\'
+        outdir = rf'D:\Project3\Data\GLOBMAP\scale\\'
         Tools().mk_dir(outdir, force=True)
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.tif'):
@@ -349,9 +354,10 @@ class Data_processing_2:
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
             array = np.array(array, dtype=float)
             # array[array == 65535] = np.nan
-            array[array == 249] = np.nan
-            array = array * 0.1
+            # array[array == 249] = np.nan
+            array = array * 0.01
             array[array > 10] = np.nan
+            array[array < 0] = np.nan
             # array=array/10000
 
 
@@ -366,10 +372,10 @@ class Data_processing_2:
         array_mask[array_mask < 0] = np.nan
 
 
-        fdir_all = rf'D:\Project3\Data\SNU_LAI\\'
+        fdir_all = rf'D:\Project3\Data\GLOBMAP\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'resample' in fdir:
+            if not 'unify' in fdir:
                 continue
 
 
@@ -429,10 +435,78 @@ class Data_processing_2:
 
         pass
 
+    def aggregate_GlobMAP(self):
+        ##every four days to biweekly
+
+
+
+        fdir=rf'D:\Project3\Data\GLOBMAP\scale\\'
+        outdir=rf'D:\Project3\Data\GLOBMAP\aggregate\\'
+        month_list=['01','02','03','04','05','06','07','08','09','10','11','12']
+        yearlist=list(range(1982,2021))
+        T.mk_dir(outdir, force=True)
+
+
+
+        for year in yearlist:
+            for month in month_list:
+                data_aggregate_list=[]
+                for f in tqdm(T.listdir(fdir)):
+                    if not f.endswith('.tif'):
+                        continue
+                    date = f.split('.')[1][1:8]
+
+                    datatime = self.parse_doy_date(int(date))
+                    year_f = datatime.year
+                    month_f = datatime.month
+                    month_f = f'{month_f:02d}'
+                    if year_f==year and month_f==month:
+
+
+                        array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
+                        array = np.array(array, dtype=float)
+                        array[array < -99] = np.nan
+                        data_aggregate_list.append(array)
+                average_array = np.nanmax(data_aggregate_list, axis=0)
+                outf=join(outdir,f'{year}{month}.tif')
+                ToRaster().array2raster(outf, originX, originY, pixelWidth, pixelHeight, average_array)
+
+    def parse_doy_date(self,date_int):
+        from datetime import datetime, timedelta
+        """Convert date in the format YYYYDDD to datetime"""
+        year = int(str(date_int)[:4])
+        doy = int(str(date_int)[4:])
+
+
+        return datetime(year, 1, 1) + timedelta(days=doy - 1)
+
+
+
+
+        pass
+
+
+    def unify_TIFF(self):
+        fdir_all=rf'D:\Project3\Data\GLOBMAP\aggregate\\'
+        outdir=rf'D:\Project3\Data\GLOBMAP\unify\\'
+        Tools().mk_dir(outdir, force=True)
+
+
+        for f in os.listdir(join(fdir_all)):
+            fpath=join(fdir_all,f)
+            outpath=join(outdir,f)
+
+            if not f.endswith('.tif'):
+                continue
+            if f.startswith('._'):
+                continue
+            unify_tiff=DIC_and_TIF().unify_raster(fpath,outpath,0.5)
+
+
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\SNU_LAI\\'
+        fdir_all = rf'D:\Project3\Data\GLOBMAP\\'
 
         year_list = list(range(1982, 2021))
 
@@ -511,6 +585,110 @@ class Data_processing_2:
                     np.save(outdir + '\\per_pix_dic_%03d' % (flag / 10000), temp_dic)
                     temp_dic = {}
             np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
+
+    def zscore(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
+        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\\dryland\extraction_LAI4g\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+
+            if  'detrend' in f:
+                continue
+            if 'relative' in f:
+                continue
+
+
+
+            outf = outdir + f.split('.')[0]+'_zscore.npy'
+            if isfile(outf):
+                continue
+            print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+
+
+                time_series = np.array(time_series)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                relative_change = (time_series - mean) / mean
+                anomaly = time_series - mean
+                zscore_dic[pix] = relative_change
+                # plot
+                # plt.plot(anomaly)
+                # plt.legend(['anomaly'])
+                # plt.show()
+                #
+                # plt.plot(relative_change)
+                # plt.legend(['relative_change'])
+                # # plt.legend(['anomaly','relative_change'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
+    def composite_LAI(self):
+        f_1=rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\\SNU_LAI_relative_change.npy'
+        f_2=rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\GLOBMAP_LAI_relative_change.npy'
+        f_3=rf'D:\Project3\Result\3mm\relative_change_growing_season\whole_period\\LAI4g.npy'
+        dic1=np.load(f_1,allow_pickle=True).item()
+        dic2=np.load(f_2,allow_pickle=True).item()
+        dic3=np.load(f_3,allow_pickle=True).item()
+        average_dic= {}
+
+        for pix in dic1:
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1=dic1[pix]
+            value2=dic2[pix]
+            value3=dic3[pix]
+
+
+            value1=np.array(value1)
+            value2=np.array(value2)
+            value3=np.array(value3)
+            if len(value1)!=38 or len(value2)!=38 or len(value3)!=38:
+                print(pix,len(value1),len(value2),len(value3))
+                continue
+
+
+            average_val=np.nanmean([value1,value2,value3],axis=0)
+            # print(average_val)
+            average_dic[pix]=average_val
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+
+        np.save(rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\composite_LAI_relative_change_mean.npy',average_dic)
+
+        pass
 
     def interpolation(self):
 
@@ -2923,7 +3101,7 @@ class greening_analysis():
         # self.anomaly_two_period()
         # self.long_term_mean()
         # self.weighted_average_LAI()
-        # self.plot_time_series()
+        self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis_simply_linear()
@@ -2931,7 +3109,7 @@ class greening_analysis():
         # self.heatmap()
         # self.heatmap()
         # self.plot_robinson()
-        self.plot_significant_percentage_area()
+        # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
         # self.plot_spatial_barplot_period()
         # self.plot_spatial_histgram_period()
@@ -2944,15 +3122,17 @@ class greening_analysis():
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\extract_SNU_LAI_phenology_year\\'
-        outdir = result_root + rf'3mm\extract_SNU_LAI_phenology_year\\'
+        fdir = result_root + rf'3mm\extract_GLOBMAP_phenology_year\\'
+        outdir = result_root + rf'3mm\extract_GLOBMAP_phenology_year\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
 
-            if  'detrended' in f:
+            if  'detrend' in f:
+                continue
+            if 'zscore' in f:
                 continue
 
 
@@ -3191,7 +3371,7 @@ class greening_analysis():
 
         return df
     def plot_time_series(self):
-        df=T.load_df(rf'D:\Project3\Result\3mm\Dataframe\relative_change_growing_season\\relative_change_growing_season_yearly.df')
+        df=T.load_df(rf'D:\Project3\Result\3mm\product_consistency\dataframe\\relative_change.df')
         df=self.df_clean(df)
 
         year_range = range(1983, 2021)
@@ -3199,7 +3379,9 @@ class greening_analysis():
 
         variable_list=['NDVI4g','GIMMS_plus_NDVI','NDVI',]
         # variable_list=['LAI4g']
-        variable_list = ['SNU_LAI_relative_change']
+        variable_list = ['LAI4g','SNU_LAI_relative_change','GLOBMAP_LAI_relative_change',
+                         'composite_LAI_relative_change_mean',
+                         'composite_LAI_relative_change_median']
 
 
         for var in variable_list:
@@ -3253,12 +3435,12 @@ class greening_analysis():
         #     print(slope,intercept)
         # exit()
         ## plot subplot
-        fig, ax1 = plt.subplots(1, 3, figsize=(self.map_width*3, self.map_height*1.1))
+        fig, ax1 = plt.subplots(2, 2, figsize=(self.map_width*3, self.map_height*1.1))
         flag = 0
 
         for var in variable_list:
 
-            ax1 = plt.subplot(1, 3, flag + 1)
+            ax1 = plt.subplot(3, 2, flag + 1)
 
 
             # Plot the first dataset (38-year data)
@@ -3281,6 +3463,7 @@ class greening_analysis():
             average_value_yearly_smooth = SMOOTH().smooth_convolve(data_range_dic[var], window_len=15)
             ax1.plot(year_list, average_value_yearly_smooth, color='grey',
                      lw=2, alpha=0.5,label='Fitting curve')
+            plt.ylim(-10,10)
             plt.legend()
 
             ## add y=0
@@ -3471,8 +3654,8 @@ class greening_analysis():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\\3mm\extract_SNU_LAI_phenology_year\\'
-        outdir = result_root + rf'3mm\extract_SNU_LAI_phenology_year\\\\trend\\'
+        fdir = result_root+rf'3mm\extract_GLOBMAP_phenology_year\\'
+        outdir = result_root + rf'3mm\extract_GLOBMAP_phenology_year\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
