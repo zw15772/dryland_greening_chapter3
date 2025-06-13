@@ -1857,7 +1857,7 @@ class PLOT_dataframe():
     def __init__(self):
         pass
     def run (self):
-        self.plot_raw_LAI()
+        self.plot_CV_LAI()
         self.plot_relative_change_LAI()
         pass
 
@@ -1874,7 +1874,7 @@ class PLOT_dataframe():
 
         return df
 
-    def plot_raw_LAI(self):  ##### plot for 4 clusters
+    def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
             result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
@@ -1922,15 +1922,41 @@ class PLOT_dataframe():
         ##dic to df
 
         df_new = pd.DataFrame(result_dic)
-        flag=0
+
+        flag = 0
 
         for var in variable_list:
             plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag])
-            flag=flag+1
-        # plt.ylabel('raw LAI (m2/m2)')
-        plt.ylabel('CV (%)')
-        plt.xlabel('window')
-        plt.grid(True)
+            flag = flag + 1
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        # plt.xticks(range(0, 23, 4))
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        # plt.xticks(range(0, 23, 3))
+
+
+        plt.ylabel(f'LAI CV (%)')
+
+        plt.grid(which='major', alpha=0.5)
+
+        # plt.show()
+        # out_pdf_fdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\trend\\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
 
         plt.legend()
         plt.show()
