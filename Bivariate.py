@@ -85,7 +85,7 @@ class multi_regression_beta():
         self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
 
         self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var = ['SNU_LAI_relative_change_detrend']
+        self.y_var = ['GLOBMAP_LAI_relative_change_detrend']
 
 
     def run(self):
@@ -94,7 +94,7 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_GLOMAP\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
@@ -108,7 +108,7 @@ class multi_regression_beta():
         # #
         #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
         ###step 2 crate individial files
-#         self.plt_multi_regression_result(outdir,self.y_var)
+        # self.plt_multi_regression_result(outdir,self.y_var)
 # #
         # ##step 3 covert to time series
 
@@ -116,7 +116,8 @@ class multi_regression_beta():
         ### step 4 build dataframe using build Dataframe function and then plot here
         # self.plot_moving_window_time_series()
         ## spatial trends of sensitivity
-        self.calculate_trend_trend()
+        self.calculate_trend_trend(outdir)
+        # self.composite_beta()
         # plot robinson
         # self.plot_robinson()
         # self.plot_sensitivity_preicipation_trend()
@@ -681,7 +682,7 @@ class multi_regression_beta():
         # plt.legend()
 
         plt.show()
-    def calculate_trend_trend(self):  ## calculate the trend of trend
+    def calculate_trend_trend(self,outdir):  ## calculate the trend of trend
 
     ## here input is the npy file
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -693,10 +694,12 @@ class multi_regression_beta():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\npy_time_series\\'
-        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\npy_time_series\\trend\\'
+        fdir=outdir+'\\npy_time_series\\'
+        outdir_trend=outdir+'\\trend\\'
+        T.mk_dir(outdir_trend,force=True)
 
-        T.mkdir(outdir,force=True)
+
+
 
         for f in os.listdir(fdir):
             if not f.endswith('npy'):
@@ -741,7 +744,7 @@ class multi_regression_beta():
             # plt.imshow(arr_trend)
             # plt.colorbar()
             # plt.show()
-            outf = outdir + f.split('.')[0] + '_trend.tif'
+            outf = outdir_trend + f.split('.')[0] + f'_trend.tif'
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend,outf)
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_p_value, outf + '_p_value.tif')
                 ## save
@@ -749,6 +752,52 @@ class multi_regression_beta():
             # np.save(outf+'_p_value', p_value_dic)
 
             ##tiff
+
+    def composite_beta(self):
+        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_SNU_LAI\npy_time_series\\sum_rainfall_detrend.npy'
+        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_LAI4g\npy_time_series\sum_rainfall_detrend.npy'
+        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_GLOMAP\\npy_time_series\\sum_rainfall_detrend.npy'
+        dic1=np.load(f_1,allow_pickle=True).item()
+        dic2=np.load(f_2,allow_pickle=True).item()
+        dic3=np.load(f_3,allow_pickle=True).item()
+        average_dic= {}
+
+        for pix in dic1:
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1=dic1[pix]
+            value2=dic2[pix]
+            value3=dic3[pix]
+            value1[value1<-999]=np.nan
+            value2[value2<-999]=np.nan
+            value3[value3<-999]=np.nan
+
+
+
+            value1=np.array(value1)
+            value2=np.array(value2)
+            value3=np.array(value3)
+            if np.isnan(np.nanmean(value1)) or np.isnan(np.nanmean(value2)) or np.isnan(np.nanmean(value3)):
+                continue
+            if len(value1)!=24 or len(value2)!=24 or len(value3)!=24:
+                print(pix,len(value1),len(value2),len(value3))
+                continue
+
+
+            average_val=np.nanmean([value1,value2,value3],axis=0)
+            # print(average_val)
+            average_dic[pix]=average_val
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+
+        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
+
 
 
     def plot_robinson(self):
@@ -2821,7 +2870,8 @@ def main():
 
     # bivariate_analysis().run()
     # build_dataframe().run()
-    greening_CV_relationship().run()
+    # greening_CV_relationship().run()
+    multi_regression_beta().run()
 
 
 

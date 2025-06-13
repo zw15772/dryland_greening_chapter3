@@ -3246,7 +3246,7 @@ class extract_LAI_phenology():
 
     def detrend(self):  ## detrend LAI4g
 
-        f = result_root+rf'\3mm\extract_GLOBMAP_phenology_year\\GLOBMAP_LAI_zscore.npy'
+        f = result_root+rf'\3mm\extract_GLOBMAP_phenology_year\\GLOBMAP_LAI_relative_change.npy'
         outdir = result_root+rf'3mm\\extract_GLOBMAP_phenology_year\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
@@ -3800,7 +3800,7 @@ class moving_window():
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'detrend' in f:
+            if not 'GLOBMAP_LAI_relative_change_detrend' in f:
                 continue
 
             if not f.endswith('.npy'):
@@ -4296,8 +4296,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\\\\multiresult\\multi_regression_result_detrend_ecosystem_year_composite_LAI\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
