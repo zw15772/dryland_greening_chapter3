@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import urllib3
 from __init__ import *
-import ee
+# import ee
 
 import math
 import pprint
@@ -11,28 +11,62 @@ import pprint
 # exit()
 
 this_script_root = join(this_root, 'ERA5')
+class download_ERA5_land:
+    def __init__(self):
+       pass
+    def run(self):
+        self.download()
+    def download(self):
+        import cdsapi
+
+        yearlist = list(range(2000, 2001))
+        monthlist=list(range(1,13))
+
+        for year in yearlist:
+            for month in monthlist:
+                print(year, month)
+                dataset = "reanalysis-era5-land-monthly-means"
+                request = {
+                    "product_type": ["monthly_averaged_reanalysis"],
+                    "variable": [
+                        "2m_temperature",
+                        "surface_net_solar_radiation",
+                        "potential_evaporation",
+                        "total_evaporation"
+                    ],
+                    "year": [f"{year}"],
+                    "month": [
+                        f"{month:02d}"
+                    ],
+                    "time": ["00:00"],
+                    "data_format": "netcdf",
+                    "download_format": "zip"
+                }
+
+                client = cdsapi.Client()
+                client.retrieve(dataset, request).download()
 
 
 class ERA5_daily:
 
-    def __init__(self):
-        # self.this_class_arr, self.this_class_tif, self.this_class_png = T.mk_class_dir(
-        #     'ERA5_daily',
-        #     this_script_root, mode=2)
-        ee.Initialize()
+    # def __init__(self):
+    #     # self.this_class_arr, self.this_class_tif, self.this_class_png = T.mk_class_dir(
+    #     #     'ERA5_daily',
+    #     #     this_script_root, mode=2)
+    #     # ee.Initialize()
 
     def run(self):
-        # for year in range(2013,2014):
+        # for year in range(1982,2021):
         #     self.download_images(year)
         # self.download_images()
-        # self.unzip()
+        self.unzip()
         # self.resample_ERA5()
         # self.extract_dryland_tiff()
         # self.tiff_to_dict()
         # self.reproj()
         # self.statistic()
         # self.transform_ERA()
-        self.deseasonal()
+        # self.deseasonal()
         # self.detrend_deseasonal()
         # self.check_dic()
         # self.spatial_average()
@@ -45,7 +79,7 @@ class ERA5_daily:
         pass
 
     def download_images(self,year):
-        outdir = rf'C:\Users\wenzhang1\Desktop\ERA5\min_temp\raw\\{year}\\'
+        outdir = rf'D:\Project3\Data\\raw\\{year}\\'
         T.mk_dir(outdir,force=True)
         startDate = f'{year}-01-01'
         endDate = f'{year+1}-01-01'
@@ -107,20 +141,24 @@ class ERA5_daily:
             f.write(body)
 
     def unzip(self):
-        fdir = rf'C:\Users\wenzhang1\Desktop\max_temp_05\raw\\'
-        outdir = rf'E:\Project3\ERA5\\Tmax\\unzip\\'
+        fdir = rf'D:\Project3\Data\SM_T\\raw\\'
+        outdir = rf'D:\Project3\Data\SM_T\\unzip\\'
         T.mk_dir(outdir)
-        for folder in T.listdir(fdir):
-            print(folder)
-
-            fdir_i = join(fdir,folder)
-
-
-            outdir_i = join(outdir,folder)
-            if isdir(outdir_i):
-                continue
-            T.unzip(fdir_i,outdir_i)
+        # for folder in T.listdir(fdir):
+        #     print(folder)
+        #
+        #     fdir_i = join(fdir,folder)
+        #     print(fdir_i)
+        #
+        #
+        #     outdir_i = join(outdir,folder)
+        #     if isdir(outdir_i):
+        #         continue
+        # T.unzip(fdir_i,outdir_i)
+        T.unzip(fdir, outdir)
         pass
+
+
 
     def wkt(self):
         wkt = '''
@@ -3014,6 +3052,7 @@ class MSWEP():
 
 
 def main():
+    # download_ERA5_land().run()
     ERA5_daily().run()
 
     # extract_temperature().run()

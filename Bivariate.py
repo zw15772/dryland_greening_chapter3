@@ -905,12 +905,18 @@ class bivariate_analysis():
     def __init__(self):
         pass
     def run(self):
+        ## step1
         # self.generate_bivarite_map()
+    ## Step2
         # self.generate_df()
-        # build_dataframe().run()
-        # self.generate_three_dimension()
 
-        self.plot_figure1d_new()
+        ## step3
+        # build_dataframe().run()
+
+        ## step4
+        self.generate_three_dimension()
+
+        # self.plot_figure1d_new()
         # self.plot_robinson()
 
     def generate_bivarite_map(self):  ##
@@ -918,14 +924,14 @@ class bivariate_analysis():
         import xymap
         tif_rainfall = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\detrended_sum_rainfall_CV_trend.tif'
         # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-        tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year_SNU_LAI\npy_time_series\\sum_rainfall_detrend_trend.tif'
+        tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\\composite_LAI_beta_mean_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
-        outdir = result_root + rf'3mm\\\bivariate_analysis\\'
+        outdir = result_root + rf'3mm\\\bivariate_analysis\\composite_LAI\\'
         T.mk_dir(outdir, force=True)
         outtif = outdir + rf'\\interannual_CVrainfall_beta.tif'
-        T.mk_dir(result_root + rf'bivariate_analysis\\')
+
         tif1 = tif_rainfall
         tif2 = tif_sensitivity
 
@@ -959,20 +965,21 @@ class bivariate_analysis():
 
     def generate_df(self):
         ##rainfall_trend +sensitivity+ greening
-        ftiff=result_root + rf'3mm\bivariate_analysis\\interannual_CVrainfall_beta.tif'
+        variable='composite_LAI'
+        ftiff=result_root + rf'3mm\bivariate_analysis\\{variable}\\interannual_CVrainfall_beta.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(ftiff)
 
         dic_beta_CVrainfall=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(array)
 
-        f_CVLAItiff=result_root+rf'3mm\\extract_SNU_LAI_phenology_year\moving_window_extraction\trend\\detrended_SNU_LAI_CV_trend.tif'
+        f_CVLAItiff=result_root+rf'3mm\extract_composite_phenology_year\trend\\composite_LAI_CV_trend.tif'
         array_CV_LAI,originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_CVLAItiff)
         dic_CV_LAI=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(array_CV_LAI)
 
 
-        df=T.spatial_dics_to_df({'CVrainfall_beta':dic_beta_CVrainfall,'SNU_LAI_CV':dic_CV_LAI})
+        df=T.spatial_dics_to_df({'CVrainfall_beta':dic_beta_CVrainfall,f'{variable}_CV':dic_CV_LAI})
 
-        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.df')
-        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.xlsx')
+        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.df')
+        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.xlsx')
         exit()
 
 
@@ -980,14 +987,15 @@ class bivariate_analysis():
 
 
     def generate_three_dimension(self):
-        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.df'
+        variable='composite_LAI'
+        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.df'
         df=T.load_df(dff)
         self.df_clean(df)
         df=df[df['CVrainfall_beta']>=0]
 
 
 
-        df["SNU_LAI_trends"] = df["SNU_LAI_CV"].apply(lambda x: "increaseCV" if x >= 0 else "decreaseCV")
+        df[f"{variable}_CV_trends"] = df[f"{variable}_CV"].apply(lambda x: "increaseCV" if x >= 0 else "decreaseCV")
 
         category_mapping = {
             ("increaseCV", 1): 1,
@@ -1002,14 +1010,15 @@ class bivariate_analysis():
 
         # Apply the mapping to create a new column 'new_category'
         df["CV_rainfall_beta_LAI"] = df.apply(
-            lambda row: category_mapping[(row["SNU_LAI_trends"], row["CVrainfall_beta"])],
+            lambda row: category_mapping[(row[f"{variable}_CV_trends"""], row["CVrainfall_beta"])],
             axis=1)
         # T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.df')
         # T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.xlsx')
 
         # Display the result
         print(df)
-        outdir = result_root + rf'\3mm\bivariate_analysis\\'
+        outdir = result_root + rf'\3mm\bivariate_analysis\\{variable}\\'
+        T.mk_dir(outdir, force=True)
         outf = outdir + rf'CV_rainfall_beta_LAI.tif'
 
         spatial_dic = T.df_to_spatial_dic(df, 'CV_rainfall_beta_LAI')
@@ -1022,7 +1031,8 @@ class bivariate_analysis():
 
 
     def plot_figure1d_new(self):
-        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Trend.df'
+        variable='GLOBMAP_CV'
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Trend_{variable}.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
         df_sig=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
@@ -2031,7 +2041,7 @@ class build_dataframe():
 
         self.this_class_arr = (result_root+rf'\3mm\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend.df'
+        self.dff = self.this_class_arr + rf'Trend_composite_LAI.df'
 
         pass
 
@@ -2044,15 +2054,15 @@ class build_dataframe():
         df=self.add_trend_to_df(df)
 
 
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+
+        df=self.add_lat_lon_to_df(df)
 
 
 
@@ -2523,10 +2533,10 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_min_max_anaysis\trend\\'
+        fdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\trend\\'
         for f in os.listdir(fdir):
-            # if not 'LAI4g_detrend_CV_p_value' in f:
-            #     continue
+            if not 'composite_LAI_CV' in f:
+                continue
 
 
             if not f.endswith('.tif'):
@@ -2868,10 +2878,10 @@ class build_dataframe():
 
 def main():
 
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
-    multi_regression_beta().run()
+    # multi_regression_beta().run()
 
 
 

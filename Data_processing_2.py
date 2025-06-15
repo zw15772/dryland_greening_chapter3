@@ -88,6 +88,7 @@ class Data_processing_2:
         # self.reclassification_koppen()
         # self.aggregation_soil()
         # self.nc_to_tif_time_series_fast()
+
         # self.resample()
         # self.scale()
 
@@ -100,7 +101,7 @@ class Data_processing_2:
         # self.tif_to_dic()
         # self.interpolation()
         # self.zscore()
-        self.composite_LAI()
+        # self.composite_LAI()
 
 
 
@@ -263,8 +264,8 @@ class Data_processing_2:
 
     def nc_to_tif_time_series_fast(self):
 
-        fdir=rf'D:\Project3\Data\SNU_LAI\\nc\\'
-        outdir=rf'D:\Project3\Data\SNU_LAI\\TIFF\\'
+        fdir=rf'D:\Project3\Data\SM_T\unzip\\'
+        outdir=rf'D:\Project3\Data\SM_T\\TIFF\\'
         Tools().mk_dir(outdir,force=True)
         for f in tqdm(os.listdir(fdir)):
 
@@ -297,6 +298,8 @@ class Data_processing_2:
             except Exception as e:
                 print(e)
                 continue
+
+
 
 
     def aggregation_soil(self):
@@ -8029,6 +8032,13 @@ class TRENDY_CV:
         pass
 
 
+class SM_Tcoupling():
+    def __init__(self):
+        pass
+    def run(self):
+        pass
+
+
 
 
 
@@ -8036,13 +8046,13 @@ class TRENDY_CV:
 
 
 def main():
-    # Data_processing_2().run()
+    Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
-    greening_analysis().run()
+    # greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_beta().run()

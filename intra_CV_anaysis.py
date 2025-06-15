@@ -567,9 +567,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\GLOBMAP\dic\\'
+        fdir = rf'D:\Project3\Data\SM_T\TIFF\evapotranspiration_unify\dic\\'
 
-        outdir = rf'D:\Project3\Data\GLOBMAP\phenology_year_extraction_dryland\\'
+        outdir = rf'D:\Project3\Data\SM_T\TIFF\extract_phenology_monthly_variables_evapotranspiration\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -3184,15 +3184,16 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        # self.extract_phenology_LAI_mean()
-        self.detrend()
+        self.extract_phenology_LAI_mean()
+        # self.detrend()
         # self.trend_analysis()
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir =rf'D:\Project3\Data\GLOBMAP\phenology_year_extraction_dryland\\'
+        fdir =rf'D:\Project3\Data\SM_T\TIFF\extract_phenology_monthly_variables_solar_radiation\\'
 
-        outdir_CV = result_root+rf'\3mm\\\extract_GLOBMAP_phenology_year\\'
+        outdir_CV = result_root+rf'\3mm\\\SM_T\\extract_solar_radiation_phenology_year\\'
+        # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -3240,7 +3241,7 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'GLOBMAP_LAI.npy'
+        outf = outdir_CV + 'solar_radiation.npy'
 
         np.save(outf, result_dic)
 
@@ -5875,12 +5876,12 @@ def main():
     # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()  ## use this
-    # extract_LAI_phenology().run()  ## use this
+    extract_LAI_phenology().run()  ## use this
     # TRENDY_model().run()
     # check_correlation().run()
 
 
-    moving_window().run()
+    # moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()
