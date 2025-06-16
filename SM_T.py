@@ -85,7 +85,11 @@ class data_processing():
         # self.scale()
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
+        # self.plot_sptial()
+        # self.calculate_Hp()
+        # self.zscore()
+        self.SM_T()
 
     def nc_to_tif_time_series_ERA5land(self):
 
@@ -213,6 +217,8 @@ class data_processing():
             unify_tiff=DIC_and_TIF().unify_raster(fpath,outpath,0.5)
 
 
+
+
     def extract_dryland_tiff(self):
         self.datadir=rf'D:\Project3\Data\\'
         NDVI_mask_f = join(self.datadir, 'Base_data', 'dryland_mask05.tif')
@@ -331,68 +337,182 @@ class data_processing():
                     temp_dic = {}
             np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
 
+    def calculate_Hp(self):
+        ## H = Rn - lambda_ * E
+        # Hp = Rn - lambda_ * Ep
+        # lambda_ = 2.45(MJ / kg)
+        ## Rn unit =j/m2  E unit = cm
+
+        f_Rn=result_root + rf'\3mm\SM_T\extract_solar_radiation_phenology_year\solar_radiation.npy'
+        f_E=result_root + rf'\3mm\SM_T\extract_evapotranspiration_phenology_year\\evapotranspiration.npy'
+        f_PET=result_root + rf'\3mm\SM_T\extract_PET_phenology_year\\\PET.npy'
+
+        Rn_dic=T.load_npy(f_Rn)  ### 38 year data
+        E_dic=T.load_npy(f_E)
+        Ep_dic=T.load_npy(f_PET)
+        result_H={}
+        result_Hp={}
+
+        for pix in Rn_dic:
+            if not pix in E_dic:
+                continue
+            if not pix in Ep_dic:
+                continue
+            Rn=Rn_dic[pix]['growing_season']
+            E=E_dic[pix]['growing_season']
+            Ep=Ep_dic[pix]['growing_season']
+            Rn=np.array(Rn)
+            E=np.array(E)
+            Ep=np.array(Ep)
+
+            ## Convert Rn from J to MJ
+            Rn_MJ = Rn / 1e6
+            # Convert E, Ep from cm to mm
+            E_mm = E * 10
+            Ep_mm = Ep * 10
+
+            # Compute H and Hp
+            H = Rn_MJ - 2.45 * E_mm
+            Hp = Rn_MJ - 2.45 * Ep_mm
+            result_H[pix]=H
+            result_Hp[pix]=Hp
+
+            # plt.plot(H)
+            # plt.plot(Hp)
+            # plt.legend(['H','Hp'])
+            # plt.show()
+        outdir=result_root + rf'\3mm\SM_T\H_Hp\\'
+        Tools().mk_dir(outdir,force=True)
+        T.save_npy(result_Hp,outdir+f'Hp.npy',)
+        T.save_npy(result_H,outdir+f'H.npy',)
+
+
+
+
+
+
+        pass
+
     def zscore(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
-        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\\dryland\extraction_LAI4g\\'
+        fdir = result_root + rf'\3mm\SM_T\extract_temperature_phenology_year\\'
+        outdir = result_root + rf'3mm\SM_T\extract_temperature_phenology_year\zscore\\'
         Tools().mk_dir(outdir, force=True)
+        # growing_season_list=['growing_season','ecosystem_year','non_growing_season']
+        growing_season_list = ['growing_season', ]
+        for season in growing_season_list:
 
-        for f in os.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-
-            if  'detrend' in f:
-                continue
-            if 'relative' in f:
-                continue
-
-
-
-            outf = outdir + f.split('.')[0]+'_zscore.npy'
-            if isfile(outf):
-                continue
-            print(outf)
-
-            dic = T.load_npy(fdir + f)
-
-            zscore_dic = {}
-
-            for pix in tqdm(dic):
-
-                if pix not in dic_dryland_mask:
+            for f in os.listdir(fdir):
+                if not f.endswith('.npy'):
                     continue
 
-                # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
 
 
-                time_series = np.array(time_series)
-                # time_series = time_series[3:37]
 
-                print(len(time_series))
 
-                if np.isnan(np.nanmean(time_series)):
+                outf = outdir + f.split('.')[0]+f'_{season}_zscore.npy'
+                if isfile(outf):
                     continue
+                print(outf)
 
-                time_series = time_series
-                mean = np.nanmean(time_series)
-                relative_change = (time_series - mean) / mean
-                anomaly = time_series - mean
-                zscore_dic[pix] = relative_change
-                # plot
-                # plt.plot(anomaly)
-                # plt.legend(['anomaly'])
-                # plt.show()
-                #
-                # plt.plot(relative_change)
-                # plt.legend(['relative_change'])
-                # # plt.legend(['anomaly','relative_change'])
-                # plt.show()
+                dic = T.load_npy(fdir + f)
 
-                ## save
-            np.save(outf, zscore_dic)
+                zscore_dic = {}
+
+                for pix in tqdm(dic):
+
+                    if pix not in dic_dryland_mask:
+                        continue
+
+                    print(len(dic[pix]))
+                    time_series = dic[pix][season]
+
+
+                    time_series = np.array(time_series)
+                    # time_series = time_series[3:37]
+
+                    print(len(time_series))
+
+                    if np.isnan(np.nanmean(time_series)):
+                        continue
+
+                    time_series = time_series
+                    mean = np.nanmean(time_series)
+                    std=np.nanstd(time_series)
+                    relative_change = (time_series - mean) / std
+                    anomaly = time_series - mean
+                    zscore_dic[pix] = relative_change
+                    # plot
+                    # plt.plot(time_series)
+                    # plt.legend(['raw'])
+                    # # plt.show()
+                    #
+                    # plt.plot(relative_change)
+                    # plt.legend(['raw', 'zscore'])
+                    # plt.show()
+
+                    ## save
+                np.save(outf, zscore_dic)
+
+    def plot_sptial(self):
+        ##['CABLE-POP_S2_lai',
+
+        fdir = result_root + rf'\3mm\SM_T\extract_temperature_phenology_year\temperature.npy'
+
+
+        dic=T.load_npy(fdir)
+
+
+        average_={}
+
+        for pix in dic:
+            r,c=pix
+            # (r,c)=(817,444)
+            # if not r==444:
+            #     continue
+            # if not c==817:
+            #     continue
+            # if r<480:
+            #     continue
+            vals=dic[pix]['growing_season']
+            average_[pix]=np.nanmean(vals)
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(average_)
+        plt.imshow(arr)
+        plt.show()
+
+    def SM_T(self):
+        f_Hp_zscore=result_root+rf'3mm\SM_T\H_Hp_phenology_year\zscore\\Hp_growing_season_zscore.npy'
+        f_H_zscore=result_root+rf'\3mm\SM_T\H_Hp_phenology_year\zscore\\H_growing_season_zscore.npy'
+        f_Temp_zscore=result_root+rf'\3mm\SM_T\extract_temperature_phenology_year\zscore\\temperature_growing_season_zscore.npy'
+
+        Hp_zscore=T.load_npy(f_Hp_zscore)
+        H_zscore=T.load_npy(f_H_zscore)
+        Temp_zscore=T.load_npy(f_Temp_zscore)
+
+        pi_dic={}
+        pi_average={}
+
+        for pix in Hp_zscore:
+            if pix not in H_zscore:
+                continue
+            if pix not in Temp_zscore:
+                continue
+
+            ## pi =(H-Hp)*T
+            pi_dic[pix]=(H_zscore[pix]-Hp_zscore[pix])*Temp_zscore[pix]
+            # print(pi_dic[pix])
+            pi_average[pix]=np.nanmean(pi_dic[pix])
+        array=DIC_and_TIF().pix_dic_to_spatial_arr(pi_average)
+        plt.imshow(array,vmin=0,vmax=1,cmap='jet')
+        plt.show()
+
+        T.save_npy(pi_dic,result_root+rf'\3mm\SM_T\pi.npy')
+
+
+
+        pass
 
 
 

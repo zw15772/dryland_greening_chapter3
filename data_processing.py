@@ -4,6 +4,8 @@ import xarray
 import lytools
 import pingouin
 import pingouin as pg
+from numpy.ma.extras import average
+
 # from green_driver_trend_contribution import *
 
 version = sys.version_info.major
@@ -13532,8 +13534,8 @@ class plt_moving_dataframe():
 
 class check_data():
     def run (self):
-        # self.plot_sptial()
-        self.pixel_inspection()
+        self.plot_sptial()
+        # self.pixel_inspection()
 
         # self.testrobinson()
         # self.plot_time_series()
@@ -13544,15 +13546,15 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = rf'E:\Project3\Data\Landsat\dic\\'
+        fdir = result_root + rf'\3mm\SM_T\extract_solar_radiation_phenology_year\solar_radiation.npy'
         # for f in os.listdir(fdir):
         #     if not 'global' in f:
         #         continue
 
 
 
-        dic=T.load_npy_dir(fdir)
-        # dic=T.load_npy(fdir)
+        # dic=T.load_npy_dir(fdir)
+        dic=T.load_npy(fdir)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -13562,6 +13564,7 @@ class check_data():
             #     dic.update(dic_i)
 
         len_dic={}
+        average_={}
 
         for pix in dic:
             r,c=pix
@@ -13573,6 +13576,10 @@ class check_data():
             # if r<480:
             #     continue
             vals=dic[pix]
+            average_[pix]=np.nanmean(vals)
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(average_)
+        plt.imshow()
+        plt.show()
 
             # date_list = []
             # date_base = datetime.datetime(1982, 1, 1)
