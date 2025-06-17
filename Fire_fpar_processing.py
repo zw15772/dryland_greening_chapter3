@@ -360,7 +360,7 @@ class Data_processing:
 
         # self.tif_to_dic()
         # self.extract_phenology_monthly_variables()
-        self.extract_phenology_fire_mean()
+        # self.extract_phenology_fire_mean()
         # self.weighted_fire()
         # self.interpolation()
 
@@ -1601,8 +1601,8 @@ class moving_window():
 def main():
 
     # download_fpar().run()
-    download_NOAA_AVHRR().run()
-    # Data_processing().run()
+    # download_NOAA_AVHRR().run()
+    Data_processing().run()
     # moving_window().run()
 
 

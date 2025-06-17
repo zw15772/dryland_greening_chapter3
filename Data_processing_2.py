@@ -87,7 +87,7 @@ class Data_processing_2:
         # self.resampleSOC()
         # self.reclassification_koppen()
         # self.aggregation_soil()
-        # self.nc_to_tif_time_series_fast()
+        self.nc_to_tif_time_series_fast2()
 
         # self.resample()
         # self.scale()
@@ -290,6 +290,47 @@ class Data_processing_2:
                 ToRaster().array2raster(outf, longitude_start, latitude_start,
                                         pixelWidth, pixelHeight, array, ndv=-999999)
                 # exit()
+
+
+            # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
+            try:
+                self.nc_to_tif_template(fdir+f, var_name='ndvi', outdir=outdir, yearlist=yearlist)
+            except Exception as e:
+                print(e)
+                continue
+
+    def nc_to_tif_time_series_fast2(self):
+
+        fdir=rf'D:\Project3\Data\GLEAM\\'
+        outdir=rf'D:\Project3\Data\GLEAM\\TIFF_AE\\'
+        Tools().mk_dir(outdir,force=True)
+        for f in tqdm(os.listdir(fdir)):
+            if not 'E_1980-2022_GLEAM_v3.8a_MO'in f:
+                continue
+
+
+
+            outdir_name = f.split('.')[0]
+            # print(outdir_name)
+
+            yearlist = list(range(1982, 2021))
+            fpath = join(fdir,f)
+            nc_in = xarray.open_dataset(fpath)
+            print(nc_in)
+            time_bnds = nc_in['time']
+            for t in range(len(time_bnds)):
+                date = time_bnds[t]['time']
+                date = pd.to_datetime(date.values)
+                date_str = date.strftime('%Y%m%d')
+                date_str = date_str.split()[0]
+                outf = join(outdir, f'{date_str}.tif')
+                array = nc_in['E'][t]
+                array = np.array(array)
+                array[array < 0] = np.nan
+                longitude_start, latitude_start, pixelWidth, pixelHeight = -180, 90, 0.25, -0.25
+                ToRaster().array2raster(outf, longitude_start, latitude_start,
+                                        pixelWidth, pixelHeight, array, ndv=-999999)
+                exit()
 
 
             # nc_to_tif_template(fdir+f,var_name='lai',outdir=outdir,yearlist=yearlist)
@@ -832,9 +873,9 @@ class Phenology():  ### plot site based phenology curve
 class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
-        self.this_class_arr = (rf'D:\Project3\Result\3mm\Dataframe\\moving_window_CV\\')
+        self.this_class_arr = (rf'D:\Project3\Result\3mm\SHAP_beta\\Dataframe\\\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'products_consistency.df'
+        self.dff = self.this_class_arr + rf'moving_window.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -960,7 +1001,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\LAI4g_detrend_CV.npy'
+        f = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy'
 
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
@@ -990,12 +1031,12 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['LAI4g_detrend_CV'] = change_rate_list
+        df['composite_LAI_beta'] = change_rate_list
         return df
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\extract_GIMMS3g_plus_NDVI_phenology_year\dryland\extraction_GIMMS3g_plus_NDVI\\'
+        fdir=rf'D:\Project3\Result\3mm\extract_fire_phenology_year\moving_window_extraction\\'
         print(fdir)
         print(self.dff)
         variable_list = [
@@ -1005,13 +1046,14 @@ class build_moving_window_dataframe():
                         'rainfall_intensity',
                        'detrended_sum_rainfall_CV',
              # 'detrended_sum_rainfall',
-            'CO2',
+
              'heat_event_frenquency',
+            'pi_average',
 
                         ]
-
+        #
         variable_list = [
-            'detrended_GIMMS_plus_NDVI'
+            'fire_ecosystem_year_average'
 
         ]
 
@@ -1046,16 +1088,16 @@ class build_moving_window_dataframe():
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
-                # print(vals)
+                print(vals)
                 vals[vals>999] = np.nan
                 vals[vals<-999] = np.nan
 
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 19:
+                if len(vals) == 22:
                     ## add twice nan at the end
-                    vals=np.append(vals,[np.nan,np.nan,np.nan,np.nan,np.nan])
+                    vals=np.append(vals,[np.nan,np.nan])
 
                     v1 = vals[y-0]
 
@@ -1072,8 +1114,8 @@ class build_moving_window_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                v1= vals[y-0]
-                NDVI_list.append(v1)
+                # v1= vals[y-0]
+                # NDVI_list.append(v1)
 
 
 
@@ -1208,9 +1250,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\\relative_change_growing_season\\')
+        self.this_class_arr = (result_root+rf'\3mm\SHAP_beta\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'relative_change_growing_season_yearly.df'
+        self.dff = self.this_class_arr + rf'moving_window.df'
 
         pass
 
@@ -1228,7 +1270,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -1238,19 +1280,19 @@ class build_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
-        # df=self.add_AI_classfication(df)
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # # df=self.add_continent_to_df(df)
-        # df=self.add_lat_lon_to_df(df)
-        # # df=self.add_soil_texture_to_df(df)
+
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+
+        df=self.add_lat_lon_to_df(df)
+        df=self.add_soil_texture_to_df(df)
         # # #
-        # # df=self.add_rooting_depth_to_df(df)
+        df=self.add_rooting_depth_to_df(df)
         # #
         # df=self.add_area_to_df(df)
 
@@ -1563,8 +1605,8 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'D:\Project3\Result\3mm\\extract_SNU_LAI_phenology_year\\'
-        variable_list=['SNU_LAI_relative_change']
+        fdir=rf'D:\Project3\Result\3mm\extract_fire_phenology_year\moving_window_extraction\\'
+        variable_list=['fire_weighted_ecosystem_year_average']
 
         for f in os.listdir(fdir):
 
@@ -8046,10 +8088,10 @@ class SM_Tcoupling():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

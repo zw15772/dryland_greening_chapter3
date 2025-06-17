@@ -567,9 +567,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\SM_T\TIFF\evapotranspiration_unify\dic\\'
+        fdir = rf'D:\Project3\Data\GLEAM\dic_AE\\'
 
-        outdir = rf'D:\Project3\Data\SM_T\TIFF\extract_phenology_monthly_variables_evapotranspiration\\'
+        outdir = rf'D:\Project3\Data\GLEAM\\extract_phenology_monthly_variables_AE\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -3190,9 +3190,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir =rf'D:\Project3\Data\SM_T\TIFF\extract_phenology_monthly_variables_solar_radiation\\'
+        fdir =rf'D:\Project3\Data\GLEAM\extract_phenology_monthly_variables_Ep\\'
 
-        outdir_CV = result_root+rf'\3mm\\\SM_T\\extract_solar_radiation_phenology_year\\'
+        outdir_CV = result_root+rf'\3mm\extract_phenology_monthly_variables_GLEAM\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -3241,7 +3241,7 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'solar_radiation.npy'
+        outf = outdir_CV + 'Ep.npy'
 
         np.save(outf, result_dic)
 
@@ -3778,11 +3778,11 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
         # self.robinson()
 
@@ -3790,19 +3790,17 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'\3mm\SM_T\\'
+        fdir_all = self.result_root + rf'3mm\extract_phenology_monthly_variables_GLEAM\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'\3mm\SM_T\\\moving_window_extraction\\'
+        outdir = self.result_root + rf'\3mm\extract_phenology_monthly_variables_GLEAM\\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'pi' in f:
-                continue
 
             if not f.endswith('.npy'):
                 continue
@@ -3823,7 +3821,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
 
                 time_series = np.array(time_series)
                 # if T.is_all_nan(time_series):
@@ -4076,8 +4074,8 @@ class moving_window():
         #
         #
         # for mode in growing_season_mode_list:
-        fdir = rf'D:\Project3\Result\3mm\SM_T\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\SM_T\moving_window_extraction\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_phenology_monthly_variables_GLEAM\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_phenology_monthly_variables_GLEAM\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -4113,10 +4111,14 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmean(time_series)
+                    #10^6
+                    average=np.nanmean(time_series)/1000000
                     # print(average)
 
                     trend_list.append(average)
+                plt.plot(trend_list)
+                # plt.ylabel('burn area km2')
+                # plt.show()
 
                 trend_dic[pix] = trend_list
 
@@ -5874,12 +5876,12 @@ def main():
     # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()  ## use this
-    # extract_LAI_phenology().run()  ## use this
+    extract_LAI_phenology().run()  ## use this
     # TRENDY_model().run()
     # check_correlation().run()
 
 
-    moving_window().run()
+    # moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()

@@ -80,16 +80,16 @@ class data_processing():
         pass
 
     def run(self):
-        # self.nc_to_tif_time_series_ERA5land()
+        self.nc_to_tif_time_series_ERA5land()
         # self.resample()
         # self.scale()
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
         # self.tif_to_dic()
         # self.plot_sptial()
-        # self.calculate_Hp()
+        self.calculate_Hp()
         # self.zscore()
-        self.SM_T()
+        # self.SM_T()
 
     def nc_to_tif_time_series_ERA5land(self):
 
@@ -163,8 +163,8 @@ class data_processing():
                 ToRaster().array2raster(outf_e, -180, 90, 0.1, -0.1, array_e, )
 
     def resample(self):
-        fdir=rf'D:\Project3\Data\SM_T\TIFF\solar_radiation\\'
-        outdir=rf'D:\Project3\Data\SM_T\TIFF\solar_radiation_resample\\'
+        fdir=rf'D:\Project3\Data\GLEAM\\TIFF_Ep\\'
+        outdir=rf'D:\Project3\Data\GLEAM_resample_Ep\\'
         T.mk_dir(outdir)
         for f in tqdm(T.listdir(fdir)):
             if not f.endswith('.tif'):
@@ -182,8 +182,8 @@ class data_processing():
 
 
     def scale(self):
-        fdir=rf'D:\Project3\Data\SM_T\\TIFF\\\solar_radiation_resample\\'
-        outdir=rf'D:\Project3\Data\SM_T\\TIFF\\solar_radiation_scale\\'
+        fdir=rf'D:\Project3\Data\GLEAM\GLEAM_resample_Ep\\'
+        outdir=rf'D:\Project3\Data\GLEAM\GLEAM_scale_Ep\\'
         T.mk_dir(outdir,force=True)
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.tif'):
@@ -193,7 +193,7 @@ class data_processing():
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
             array = np.array(array, dtype=float)
 
-            array = array - 273.15
+            array = array*30
             # array[array>0]=np.nan
             # array=abs(array) *100
 
@@ -226,16 +226,18 @@ class data_processing():
         array_mask[array_mask < 0] = np.nan
 
 
-        fdir_all = rf'D:\Project3\Data\SM_T\TIFF\\'
+        fdir_all = rf'D:\Project3\Data\GLEAM\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'unify' in fdir:
+            if  'GLEAM_scale_Ep' in fdir:
+                continue
+            if fdir.endswith('.nc'):
                 continue
 
 
             fdir_i = join(fdir_all, fdir)
 
-            outdir_i = join(fdir_i, 'dryland_tiff')
+            outdir_i = join(fdir_all, 'dryland_tiff_E')
 
             T.mk_dir(outdir_i)
             # print(outdir_i);exit()
@@ -257,15 +259,15 @@ class data_processing():
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\SM_T\TIFF\solar_radiation_unify\\'
+        fdir_all = rf'D:\Project3\Data\GLEAM\\'
 
         year_list = list(range(1982, 2021))
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'dryland_tiff' in fdir:
+            if not 'dryland_tiff_AE' in fdir:
                 continue
-            outdir=join(fdir_all, 'dic')
+            outdir=join(fdir_all, 'dic_AE')
 
 
             T.mk_dir(outdir, force=True)
@@ -343,9 +345,9 @@ class data_processing():
         # lambda_ = 2.45(MJ / kg)
         ## Rn unit =j/m2  E unit = cm
 
-        f_Rn=result_root + rf'\3mm\SM_T\extract_solar_radiation_phenology_year\solar_radiation.npy'
-        f_E=result_root + rf'\3mm\SM_T\extract_evapotranspiration_phenology_year\\evapotranspiration.npy'
-        f_PET=result_root + rf'\3mm\SM_T\extract_PET_phenology_year\\\PET.npy'
+        f_Rn=result_root + rf'\3mm\SM_T\ERA5\\extract_solar_radiation_phenology_year\solar_radiation.npy'
+        f_E=result_root + rf'3mm\SM_T\GLEAM\\AE.npy'
+        f_PET=result_root + rf'\3mm\SM_T\GLEAM\\\Ep.npy'
 
         Rn_dic=T.load_npy(f_Rn)  ### 38 year data
         E_dic=T.load_npy(f_E)
@@ -368,8 +370,11 @@ class data_processing():
             ## Convert Rn from J to MJ
             Rn_MJ = Rn / 1e6
             # Convert E, Ep from cm to mm
-            E_mm = E * 10
-            Ep_mm = Ep * 10
+            # E_mm = E * 10
+            # Ep_mm = Ep * 10
+
+            E_mm = E/30
+            Ep_mm = Ep/30
 
             # Compute H and Hp
             H = Rn_MJ - 2.45 * E_mm
@@ -377,11 +382,12 @@ class data_processing():
             result_H[pix]=H
             result_Hp[pix]=Hp
 
-            # plt.plot(H)
-            # plt.plot(Hp)
-            # plt.legend(['H','Hp'])
-            # plt.show()
-        outdir=result_root + rf'\3mm\SM_T\H_Hp\\'
+            plt.plot(H)
+            plt.plot(Hp)
+            plt.plot(Rn_MJ)
+            plt.legend(['H','Hp'])
+            plt.show()
+        outdir=result_root + rf'\3mm\SM_T\GLEAM\H_Hp\\'
         Tools().mk_dir(outdir,force=True)
         T.save_npy(result_Hp,outdir+f'Hp.npy',)
         T.save_npy(result_H,outdir+f'H.npy',)
