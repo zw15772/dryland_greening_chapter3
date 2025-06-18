@@ -85,7 +85,7 @@ class data_processing():
         # self.download_ERA_precip()
         # self.download_CCI_ozone()
 
-        # self.nc_to_tif_soil_texture()
+        self.nc_to_tif_soil_texture()
         # self.resample_soil_texture()
         # self.resample_majority_ly()
         # self.resample_majority_gdal()
@@ -111,7 +111,7 @@ class data_processing():
         # self.aggreate_AVHRR_LAI() ## this method is used to aggregate AVHRR LAI to monthly
         # self.unify_TIFF()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
+        # self.tif_to_dic()
         # self.aggreate_CO2()
         # self.average_temperature()
         # self.scales_Inversion()
@@ -3278,23 +3278,28 @@ class partial_correlation():
     def __init__(self):
         pass
 
-        self.fdir_X = result_root + rf'\anomaly\OBS_extend\\'
-        self.fdir_Y = result_root + rf'\anomaly\OBS_extend\\'
-        self.fy_list = ['LAI4g']
-        self.fx_list=['VPD','tmax','GPCC']
-        self.outdir = result_root + rf'\partial_correlation\anomaly\\'
+        self.fdir_X = result_root + rf'\3mm\RF_Multiregression\\'
+        self.fdir_Y = result_root + rf'\3mm\RF_Multiregression\\'
+        # self.xvar_list = ['fire_ecosystem_year_average', 'pi_average',
+        #                   'rainfall_frenquency', 'rainfall_intensity', 'rainfall_seasonality_all_year', ]
+        self.xvar_list = [
+                          'rainfall_frenquency', 'rainfall_intensity', ]
+
+        self.y_var = ['composite_LAI_beta_mean']
+        self.outdir = result_root + rf'\3mm\\RF_Multiregression\partial_correlation\\'
         T.mk_dir(self.outdir, force=True)
 
-        self.outpartial = result_root + rf'\partial_correlation\anomaly\\partial_corr.npy'
-        self.outpartial_pvalue = result_root + rf'\partial_correlation\anomaly\\partial_corr_pvalue.npy'
+        self.outpartial = self.outdir + rf'\partial_corr.npy'
+        self.outpartial_pvalue = self.outdir + rf'\partial_pvalue.npy'
 
     def run(self):
-        # df=self.build_df(self.fdir_X,self.fdir_Y,self.fx_list,self.fy_list)
-
-        # self.cal_partial_corr(df,self.fx_list)
+        # df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
+        # #
+        # self.cal_partial_corr(df,self.xvar_list, )
         # self.cal_single_correlation()
         # self.cal_single_correlation_ly()
         self.plot_partial_correlation()
+        # self.maximum_partial_corr()
 
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
@@ -3316,7 +3321,7 @@ class partial_correlation():
                 continue
             yvals = T.interp_nan(yvals)
             yvals = np.array(yvals)
-            yvals=yvals[0:38]
+            yvals=yvals[0:22]
             if yvals[0] == None:
                 continue
 
@@ -3345,7 +3350,7 @@ class partial_correlation():
                     continue
                 xvals = dic_x[pix]
                 xvals = np.array(xvals)
-                xvals = xvals[0:38]
+                xvals = xvals[0:22]
                 if len(xvals) == 0:
                     x_val_list.append([])
                     continue
@@ -3433,7 +3438,9 @@ class partial_correlation():
             partial_correlation_p_value = {}
             for x in x_var_list_valid_new:
                 x_var_list_valid_new_cov = copy.copy(x_var_list_valid_new)
+                # print(x_var_list_valid_new_cov)
                 x_var_list_valid_new_cov.remove(x)
+                # print(x_var_list_valid_new_cov)
                 r, p = self.partial_corr(df_new, x, 'y', x_var_list_valid_new_cov)
                 partial_correlation[x] = r
                 partial_correlation_p_value[x] = p
@@ -3547,15 +3554,17 @@ class partial_correlation():
 
     def plot_partial_correlation(self):
 
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
 
-        fdir = result_root + rf'partial_correlation\anomaly\\'
-        f_partial = fdir + 'partial_corr.npy'
-        f_pvalue = fdir + 'partial_corr_pvalue.npy'
+
+        f_partial = self.outpartial
+        f_pvalue = self.outpartial_pvalue
+        outdir= self.outdir
 
 
         partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
@@ -3567,6 +3576,9 @@ class partial_correlation():
 
             landcover_value = crop_mask[pix]
             if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+            modis_value= dic_modis_mask[pix]
+            if modis_value==12:
                 continue
 
             vals = partial_correlation_dic[pix]
@@ -3582,9 +3594,9 @@ class partial_correlation():
                     continue
                 val = dic_i[var_i]
                 spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, fdir + f'partial_corr_{var_i}.tif')
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'partial_corr_{var_i}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
             vmin = mean - std
@@ -3607,7 +3619,53 @@ class partial_correlation():
 
 
 
+    def maximum_partial_corr(self):
+        fdir=self.outdir
+        array_list=[]
+        array_arg={}
+        var_list=[]
 
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            var_list=f.split('.')[0]
+            print(f)
+            fpath = join(fdir, f)
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr = arr.astype(np.float32)
+
+            arr[arr <- 99] = np.nan
+            array_list.append(arr)
+        array_list = np.array(array_list)
+
+
+        abs_array = np.abs(array_list)
+        all_nan_mask = np.all(np.isnan(abs_array), axis=0)
+
+        array_max = np.full(abs_array.shape[1:], np.nan)
+        array_arg = np.full(abs_array.shape[1:], np.nan)
+
+        # 对非全NaN的像元计算 max 和 argmax
+        valid_mask = ~all_nan_mask
+        array_max[valid_mask] = np.nanmax(abs_array[:, valid_mask], axis=0)
+        array_arg[valid_mask] = np.nanargmax(abs_array[:, valid_mask], axis=0)
+
+        plt.imshow(array_arg)
+        plt.show()
+        array_flatten=array_arg.flatten()
+        array_flatten=array_flatten[~np.isnan(array_flatten)]
+
+        array_flat = array_flatten.astype(int)  # 转为整数索引
+        percentage=np.bincount(array_flat)/len(array_flat)*100
+        plt.bar(np.arange(len(percentage)), percentage)
+        plt.show()
+
+
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array_arg, self.outdir + f'maximum_partial_corr.tif')
+
+
+        pass
 
     def partial_corr(self, df, x, y, cov):
         df = pd.DataFrame(df)
@@ -13581,53 +13639,7 @@ class check_data():
         plt.imshow()
         plt.show()
 
-            # date_list = []
-            # date_base = datetime.datetime(1982, 1, 1)
-            # for i in range(len(vals)):
-            #     # date_list.append(date_base + datetime.timedelta(months=i))
-            #     date_obj = T.month_index_to_date_obj(i, date_base,)
-            #     date_list.append(date_obj)
-            # # exit()
             #
-            # plt.plot(date_list,vals)
-            # plt.title(pix)
-            # plt.figure()
-            # tif = r"D:\Project3\Data\monthly_data\CRU\unify\19900816.tif"
-            # arr = DIC_and_TIF().spatial_tif_to_arr(tif)
-            # arr[arr>999999] = np.nan
-            # plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmax=2000)
-            # plt.colorbar()
-            # plt.scatter(pix[1],pix[0],c='k',s=200)
-            # plt.show()
-
-
-
-            # if len(vals)<1:
-            #     continue
-            # if np.isnan(np.nanmean(vals)):
-            #     continue
-
-
-            # plt.plot(vals)
-            # plt.show()
-
-
-            # len_dic[pix]=np.nanmean(vals)
-            # len_dic[pix]=np.nanstd(vals)
-            vals=np.array(vals)
-
-            vals=vals[~np.isnan(vals)]
-
-            len_dic[pix] = len(vals)
-
-        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(len_dic)
-        arr[arr==0]=np.nan
-        arr = arr / 468 * 100
-
-        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=90)
-        plt.colorbar()
-        # plt.title(f)
-        plt.show()
 
 
     def pixel_inspection(self):
@@ -15240,13 +15252,13 @@ class moving_window():
 
 
 def main():
-    data_processing().run()
+    # data_processing().run()
     # statistic_analysis().run()
     # classification().run()
     # calculating_variables().run()
     # plot_response_function().run()
     # maximum_trend().run()
-    # partial_correlation().run()
+    partial_correlation().run()
     # single_correlation().run()
     # ResponseFunction().run()
     # bivariate_analysis().run()

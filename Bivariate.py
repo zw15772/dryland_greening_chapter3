@@ -85,7 +85,7 @@ class multi_regression_beta():
         self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
 
         self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var = ['GLOBMAP_LAI_relative_change_detrend']
+        self.y_var = ['SNU_LAI_relative_change_detrend']
 
 
     def run(self):
@@ -94,27 +94,27 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_GLOMAP\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
-        # for i in range(self.window):
-        #
-        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-        #     outf= outdir+rf'\\window{i:02d}.npy'
-        #     if os.path.isfile(outf):
-        #         continue
-        #     print(outf)
+        for i in range(self.window):
+
+            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
+            outf= outdir+rf'\\window{i:02d}.npy'
+            if os.path.isfile(outf):
+                continue
+            print(outf)
         # #
-        #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        ###step 2 crate individial files
-        # self.plt_multi_regression_result(outdir,self.y_var)
+        self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        # ##step 2 crate individial files
+        self.plt_multi_regression_result(outdir,self.y_var)
 # #
         # ##step 3 covert to time series
 
-        # self.convert_files_to_time_series(outdir,self.y_var)
+        self.convert_files_to_time_series(outdir,self.y_var)
         ### step 4 build dataframe using build Dataframe function and then plot here
-        # self.plot_moving_window_time_series()
+        self.plot_moving_window_time_series()
         ## spatial trends of sensitivity
         self.calculate_trend_trend(outdir)
         # self.composite_beta()
@@ -754,9 +754,9 @@ class multi_regression_beta():
             ##tiff
 
     def composite_beta(self):
-        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_SNU_LAI\npy_time_series\\sum_rainfall_detrend.npy'
-        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_LAI4g\npy_time_series\sum_rainfall_detrend.npy'
-        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_GLOMAP\\npy_time_series\\sum_rainfall_detrend.npy'
+        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_SNULAI\npy_time_series\\beta.npy'
+        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_LAI4g\npy_time_series\beta.npy'
+        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_GLOMAP\\npy_time_series\\beta.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -796,7 +796,7 @@ class multi_regression_beta():
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
 
-        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
+        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
 
 
 
@@ -2873,15 +2873,464 @@ class build_dataframe():
         return df
         pass
 
+class partial_correlation():
+    def __init__(self):
+        pass
+
+        self.fdir_X = result_root + rf'\3mm\RF_Multiregression\\'
+        self.fdir_Y = result_root + rf'\3mm\RF_Multiregression\\'
+        # self.xvar_list = ['fire_ecosystem_year_average', 'pi_average',
+        #                   'rainfall_frenquency', 'rainfall_intensity', 'rainfall_seasonality_all_year', ]
+        self.xvar_list = [
+                          'rainfall_frenquency', 'rainfall_intensity', ]
+
+        self.y_var = ['composite_LAI_beta_mean']
+        self.outdir = result_root + rf'\3mm\\RF_Multiregression\partial_correlation\\'
+        T.mk_dir(self.outdir, force=True)
+
+        self.outpartial = self.outdir + rf'\partial_corr.npy'
+        self.outpartial_pvalue = self.outdir + rf'\partial_pvalue.npy'
+
+    def run(self):
+        # df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
+        # #
+        # self.cal_partial_corr(df,self.xvar_list, )
+        # self.cal_single_correlation()
+        # self.cal_single_correlation_ly()
+        self.plot_partial_correlation()
+        # self.maximum_partial_corr()
+
+
+    def build_df(self,fdir_X,fdir_Y,fx_list,fy):
+        df = pd.DataFrame()
+
+        filey = fdir_Y + fy[0] + '.npy'
+        print(filey)
+
+        dic_y = T.load_npy(filey)
+        # array=np.load(filey)
+        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
+        pix_list = []
+        y_val_list = []
+
+        for pix in dic_y:
+            yvals = dic_y[pix]
+
+            if len(yvals) == 0:
+                continue
+            yvals = T.interp_nan(yvals)
+            yvals = np.array(yvals)
+            yvals=yvals[0:22]
+            if yvals[0] == None:
+                continue
+
+            pix_list.append(pix)
+            y_val_list.append(yvals)
+        df['pix'] = pix_list
+        df['y'] = y_val_list
+
+        # build x
+
+        for xvar in fx_list:
+
+            # print(var_name)
+            x_val_list = []
+            filex = fdir_X + xvar + '.npy'
+            # filex = fdir_X + xvar + f'_{period}.npy'
+
+            # print(filex)
+            # exit()
+            # x_arr = T.load_npy(filex)
+            dic_x = T.load_npy(filex)
+            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
+                pix = row.pix
+                if not pix in dic_x:
+                    x_val_list.append([])
+                    continue
+                xvals = dic_x[pix]
+                xvals = np.array(xvals)
+                xvals = xvals[0:22]
+                if len(xvals) == 0:
+                    x_val_list.append([])
+                    continue
+
+                xvals = T.interp_nan(xvals)
+                if xvals[0] == None:
+                    x_val_list.append([])
+                    continue
+
+                x_val_list.append(xvals)
+
+            # x_val_list = np.array(x_val_list)
+            df[xvar] = x_val_list
+        T.print_head_n(df)
+
+        # exit()
+
+        return df
+
+    def cal_partial_corr(self,df,x_var_list, ):
+
+
+        outf_corr = self.outpartial
+        outf_pvalue = self.outpartial_pvalue
+
+        partial_correlation_dic= {}
+        partial_p_value_dic = {}
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row.pix
+
+            y_vals = row['y']
+            # y_vals = T.remove_np_nan(y_vals)
+            # y_vals = T.interp_nan(y_vals)
+            if len(y_vals) == 0:
+                continue
+
+            # y_vals_detrend = signal.detrend(y_vals)
+            #  calculate partial derivative with multi-regression
+            df_new = pd.DataFrame()
+            x_var_list_valid = []
+
+            for x in x_var_list:
+
+                x_vals = row[x]
+
+                if len(x_vals) == 0:
+                    continue
+
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+                # x_vals = T.interp_nan(x_vals)
+                # if len(y_vals) == 18:
+                #     x_vals = x_vals[:-1]
+
+                if len(x_vals) != len(y_vals):
+                    continue
+                # print(x_vals)
+                if x_vals[0] == None:
+                    continue
+                # x_vals_detrend = signal.detrend(x_vals) #detrend
+                df_new[x] = x_vals
+                # df_new[x] = x_vals_detrend   #detrend
+
+                x_var_list_valid.append(x)
+            if len(df_new) <= 3:
+                continue
+
+            df_new['y'] = y_vals  # nodetrend
+
+            # T.print_head_n(df_new)
+            df_new = df_new.dropna(axis=1, how='all')
+            x_var_list_valid_new = []
+            for v_ in x_var_list_valid:
+                if not v_ in df_new:
+                    continue
+                else:
+                    x_var_list_valid_new.append(v_)
+            # T.print_head_n(df_new)
+
+            df_new = df_new.dropna()
+
+            if len(df_new) <= 3:
+                continue
+            partial_correlation = {}
+            partial_correlation_p_value = {}
+            for x in x_var_list_valid_new:
+                x_var_list_valid_new_cov = copy.copy(x_var_list_valid_new)
+                # print(x_var_list_valid_new_cov)
+                x_var_list_valid_new_cov.remove(x)
+                # print(x_var_list_valid_new_cov)
+                r, p = self.partial_corr(df_new, x, 'y', x_var_list_valid_new_cov)
+                partial_correlation[x] = r
+                partial_correlation_p_value[x] = p
+
+            partial_correlation_dic[pix] = partial_correlation
+            partial_p_value_dic[pix] = partial_correlation_p_value
+        T.save_npy(partial_correlation_dic, outf_corr)
+        T.save_npy(partial_p_value_dic, outf_pvalue)
+
+
+
+
+
+            # print(df_new)
+
+
+    def cal_single_correlation(self):
+        f_x= result_root + rf'\anomaly\OBS_extend\\wet_frequency_90th.npy'
+        f_y = result_root + rf'\anomaly\OBS_extend\\LAI4g.npy'
+        dic_x = T.load_npy(f_x)
+        dic_y = T.load_npy(f_y)
+
+        spatial_r_dic = {}
+
+        for pix in tqdm(dic_x):
+            if not pix in dic_y:
+                continue
+            x_val = dic_x[pix]
+
+            y_val = dic_y[pix]
+
+            x_val = T.interp_nan(x_val)
+            y_val = T.interp_nan(y_val)
+            if x_val[0] == None:
+                continue
+            y_val = y_val[0:38]
+
+            if len(y_val) == 0:
+                continue
+
+            if np.isnan(np.nanmean(x_val)):
+                continue
+            if len(x_val) != len(y_val):
+                continue
+            ## remove nan
+
+       ####
+            r, p = stats.pearsonr(x_val, y_val)
+            # print(r)
+            # print(p)
+            spatial_r_dic[pix] = r
+        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_r_dic)
+        plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
+        plt.colorbar()
+        plt.show()
+
+
+    def cal_single_correlation_ly(self):
+        f_x= result_root + rf'\anomaly\OBS_extend\\CV_rainfall.npy'
+        f_y = result_root + rf'\anomaly\OBS_extend\\LAI4g.npy'
+        outdir = join(result_root, 'anomaly', 'cal_single_correlation_ly')
+        T.mk_dir(outdir, force=True)
+        dic_x = T.load_npy(f_x)
+        dic_y = T.load_npy(f_y)
+
+        spatial_r_dic_cv = {}
+        spatial_r_dic_lai = {}
+        correlation_dict = {}
+
+        for pix in tqdm(dic_x):
+            if not pix in dic_y:
+                continue
+            x_val = dic_x[pix]
+
+            y_val = dic_y[pix]
+
+            x_val = T.interp_nan(x_val)
+            y_val = T.interp_nan(y_val)
+            if x_val[0] == None:
+                continue
+            y_val = y_val[0:38]
+
+            if len(y_val) == 0:
+                continue
+
+            if np.isnan(np.nanmean(x_val)):
+                continue
+            if len(x_val) != len(y_val):
+                continue
+            ## remove nan
+
+       ####
+            # r, p = stats.pearsonr(x_val, y_val)
+            # print(r)
+            r_lai,_ = stats.pearsonr(list(range(len(y_val))), y_val)
+            r_cv,_ = stats.pearsonr(list(range(len(x_val))), x_val)
+            r,p = stats.pearsonr(x_val, y_val)
+            # print(p)
+            # spatial_r_dic[pix] = r
+            spatial_r_dic_cv[pix] = r_cv
+            spatial_r_dic_lai[pix] = r_lai
+            correlation_dict[pix] = r
+        outf_cv = join(outdir, 'CV_trend.tif')
+        outf_lai = join(outdir, 'LAI_trend.tif')
+        outf_corr = join(outdir, 'correlation.tif')
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(spatial_r_dic_cv, outf_cv)
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(spatial_r_dic_lai, outf_lai)
+        DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(correlation_dict, outf_corr)
+
+
+
+    def plot_partial_correlation(self):
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+
+
+        f_partial = self.outpartial
+        f_pvalue = self.outpartial_pvalue
+        outdir= self.outdir
+
+
+        partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
+        partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
+
+
+        var_list = []
+        for pix in partial_correlation_dic:
+
+            landcover_value = crop_mask[pix]
+            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+            modis_value= dic_modis_mask[pix]
+            if modis_value==12:
+                continue
+
+            vals = partial_correlation_dic[pix]
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in partial_correlation_dic:
+
+                dic_i = partial_correlation_dic[pix]
+                if not var_i in dic_i:
+                    continue
+                val = dic_i[var_i]
+                spatial_dic[pix] = val
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'partial_corr_{var_i}.tif')
+            std = np.nanstd(arr)
+            mean = np.nanmean(arr)
+            vmin = mean - std
+            vmax = mean + std
+            plt.figure()
+            # arr[arr > 0.1] = 1
+            plt.imshow(arr, vmin=-1, vmax=1)
+
+            plt.title(var_i)
+            plt.colorbar()
+
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+    def maximum_partial_corr(self):
+        fdir=self.outdir
+        array_list=[]
+        array_arg={}
+        var_list=[]
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            var_list=f.split('.')[0]
+            print(f)
+            fpath = join(fdir, f)
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr = arr.astype(np.float32)
+
+            arr[arr <- 99] = np.nan
+            array_list.append(arr)
+        array_list = np.array(array_list)
+
+
+        abs_array = np.abs(array_list)
+        all_nan_mask = np.all(np.isnan(abs_array), axis=0)
+
+        array_max = np.full(abs_array.shape[1:], np.nan)
+        array_arg = np.full(abs_array.shape[1:], np.nan)
+
+        # 对非全NaN的像元计算 max 和 argmax
+        valid_mask = ~all_nan_mask
+        array_max[valid_mask] = np.nanmax(abs_array[:, valid_mask], axis=0)
+        array_arg[valid_mask] = np.nanargmax(abs_array[:, valid_mask], axis=0)
+
+        plt.imshow(array_arg)
+        plt.show()
+        array_flatten=array_arg.flatten()
+        array_flatten=array_flatten[~np.isnan(array_flatten)]
+
+        array_flat = array_flatten.astype(int)  # 转为整数索引
+        percentage=np.bincount(array_flat)/len(array_flat)*100
+        plt.bar(np.arange(len(percentage)), percentage)
+        plt.show()
+
+
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array_arg, self.outdir + f'maximum_partial_corr.tif')
+
+
+        pass
+
+    def partial_corr(self, df, x, y, cov):
+        df = pd.DataFrame(df)
+        df = df.replace([np.inf, -np.inf], np.nan)
+        # print(df)
+        df = df.dropna()
+        # try:
+        # print(x)
+        # print(y)
+        stats_result = pg.partial_corr(data=df, x=x, y=y, covar=cov, method='pearson').round(3)
+        r = float(stats_result['r'])
+        p = float(stats_result['p-val'])
+        return r, p
+
+
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def maximum_trend(self):
+        fdir = result_root + rf'extract_GS_return_monthly_data\OBS_LAI\\'
+        outdir = result_root + rf'extract_GS_return_monthly_data\OBS_LAI_maximum_trend\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            dic_maximum_trend = {}
+            for pix in tqdm(dic, desc=f):
+                time_series = dic[pix]
+                if len(time_series) == 0:
+                    pass
 
 
 
 def main():
 
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
-    # multi_regression_beta().run()
+    multi_regression_beta().run()
 
 
 

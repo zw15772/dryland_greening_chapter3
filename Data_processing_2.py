@@ -87,7 +87,7 @@ class Data_processing_2:
         # self.resampleSOC()
         # self.reclassification_koppen()
         # self.aggregation_soil()
-        self.nc_to_tif_time_series_fast2()
+        # self.nc_to_tif_time_series_fast2()
 
         # self.resample()
         # self.scale()
@@ -100,7 +100,7 @@ class Data_processing_2:
 
         # self.tif_to_dic()
         # self.interpolation()
-        # self.zscore()
+        self.zscore()
         # self.composite_LAI()
 
 
@@ -634,18 +634,19 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\extraction_LAI4g\\'
-        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\\\dryland\extraction_LAI4g\\'
+        fdir = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
+            if not 'sum_rainfall' in f:
+                continue
+            if 'detrend' in f:
+                continue
 
-            if  'detrend' in f:
-                continue
-            if 'relative' in f:
-                continue
+
 
 
 
@@ -664,7 +665,7 @@ class Data_processing_2:
                     continue
 
                 # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]['ecosystem_year']
 
 
                 time_series = np.array(time_series)
@@ -1036,31 +1037,15 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\extract_fire_phenology_year\moving_window_extraction\\'
+        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         print(fdir)
         print(self.dff)
-        variable_list = [
-                        'rainfall_seasonality_all_year',
-                       'rainfall_frenquency',
-                       #
-                        'rainfall_intensity',
-                       'detrended_sum_rainfall_CV',
-             # 'detrended_sum_rainfall',
 
-             'heat_event_frenquency',
-            'pi_average',
-
-                        ]
-        #
-        variable_list = [
-            'fire_ecosystem_year_average'
-
-        ]
 
         for f in os.listdir(fdir):
 
             variable= f.split('.')[0]
-            if variable not in variable_list:
+            if not 'dry_spell' in variable:
                 continue
 
             print(variable)
@@ -1088,7 +1073,7 @@ class build_moving_window_dataframe():
 
                 vals = val_dic[pix]
                 vals=np.array(vals)
-                print(vals)
+                # print(vals)
                 vals[vals>999] = np.nan
                 vals[vals<-999] = np.nan
 
@@ -1114,8 +1099,8 @@ class build_moving_window_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                # v1= vals[y-0]
-                # NDVI_list.append(v1)
+                v1= vals[y-0]
+                NDVI_list.append(v1)
 
 
 
@@ -1277,20 +1262,20 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
 
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-
-        df=self.add_lat_lon_to_df(df)
-        df=self.add_soil_texture_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        #
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_soil_texture_to_df(df)
         # # #
         df=self.add_rooting_depth_to_df(df)
         # #
@@ -1512,7 +1497,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis_simple_linear_0206\LAI4g_trend.tif'
+        f = result_root + rf'3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\composite_LAI_beta_mean_trend.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2101,7 +2086,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=data_root+ rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
+        fdir=result_root+ rf'\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\\'
         for f in os.listdir(fdir):
 
 
@@ -3141,12 +3126,12 @@ class greening_analysis():
 
     def run(self):
 
-        # self.relative_change()
+        self.relative_change()
         # self.anomaly()
         # self.anomaly_two_period()
         # self.long_term_mean()
         # self.weighted_average_LAI()
-        self.plot_time_series()
+        # self.plot_time_series()
         # self.plot_time_series_spatial()
         # self.annual_growth_rate()
         # self.trend_analysis_simply_linear()

@@ -3184,8 +3184,8 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        self.extract_phenology_LAI_mean()
-        # self.detrend()
+        # self.extract_phenology_LAI_mean()
+        self.detrend()
         # self.trend_analysis()
         pass
 
@@ -3247,8 +3247,8 @@ class extract_LAI_phenology():
 
     def detrend(self):  ## detrend LAI4g
 
-        f = result_root+rf'\3mm\extract_GLOBMAP_phenology_year\\GLOBMAP_LAI_relative_change.npy'
-        outdir = result_root+rf'3mm\\extract_GLOBMAP_phenology_year\\'
+        f = result_root+rf'\3mm\extract_SNU_LAI_phenology_year\\SNU_LAI_zscore.npy'
+        outdir = result_root+rf'\3mm\extract_SNU_LAI_phenology_year\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         spatial_leng_dic={}
@@ -3778,11 +3778,11 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -3790,19 +3790,21 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'3mm\extract_phenology_monthly_variables_GLEAM\\'
+        fdir_all = self.result_root + rf'\3mm\extract_SNU_LAI_phenology_year\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'\3mm\extract_phenology_monthly_variables_GLEAM\\\moving_window_extraction\\'
+        outdir = self.result_root + rf'\3mm\moving_window_multi_regression\moving_window\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
 
             if not f.endswith('.npy'):
+                continue
+            if not 'SNU_LAI_zscore_detrend' in f:
                 continue
 
             outf = outdir + f.split('.')[0] + '.npy'
@@ -3821,7 +3823,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
 
                 time_series = np.array(time_series)
                 # if T.is_all_nan(time_series):
@@ -4074,8 +4076,8 @@ class moving_window():
         #
         #
         # for mode in growing_season_mode_list:
-        fdir = rf'D:\Project3\Result\3mm\extract_phenology_monthly_variables_GLEAM\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_phenology_monthly_variables_GLEAM\moving_window_extraction\\'
+        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\moving_window_extraction_ecosystem_year\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -4297,11 +4299,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\SM_T\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\\SM_T\moving_window_extraction\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
 
 
             # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',
@@ -5874,14 +5878,14 @@ def main():
 
     #extract_heatevent().run()
     # extract_water_year().run()  ## extract water year and phenology year
-    # extract_rainfall_annual_based_on_daily().run()
+    extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()  ## use this
-    extract_LAI_phenology().run()  ## use this
+    # extract_LAI_phenology().run()  ## use this
     # TRENDY_model().run()
     # check_correlation().run()
 
 
-    # moving_window().run()
+    moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()
