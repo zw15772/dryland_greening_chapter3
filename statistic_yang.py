@@ -2338,19 +2338,19 @@ class SHAP_CV():
         # plt.figure()
 
         ## random sample
-        seed = np.random.seed(1)
-        [35318, 84714, 74782, ..., 58371, 99838, 53471]
+        # seed = np.random.seed(1)
+        # [35318, 84714, 74782, ..., 58371, 99838, 53471]
 
-        sample_indices = np.random.choice(X.shape[0], size=500, replace=False)
+        # sample_indices = np.random.choice(X.shape[0], size=500, replace=False)
         # pprint(sample_indices)
         # exit()
-        X_sample = X.iloc[sample_indices]
+        # X_sample = X.iloc[sample_indices]
         explainer = shap.TreeExplainer(model)
         # pprint(X_sample);exit()
 
         # shap_values = explainer.shap_values(X) ##### not use!!!
-        # shap_values=explainer(X)
-        shap_values = explainer(X_sample)
+        shap_values=explainer(X)
+        # shap_values = explainer(X_sample)
         outf_shap = join(outdir, self.y_variable + '.shap')
 
         T.save_dict_to_binary(shap_values, outf_shap)

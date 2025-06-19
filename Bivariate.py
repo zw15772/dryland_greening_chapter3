@@ -916,9 +916,13 @@ class bivariate_analysis():
 
         ## step4
         # self.generate_three_dimension()
+        # self.plot_figure1d()
 
-        self.plot_figure1d_new()
+
         # self.plot_robinson()
+        self.LAImin_LAImax_index_()
+
+
 
     def generate_bivarite_map(self):  ##
 
@@ -1031,11 +1035,15 @@ class bivariate_analysis():
 
 
 
-    def plot_figure1d_new(self):
-        variable='GLOMAP'
+
+
+    def plot_figure1d(self):
+
+        variable='SNU'
         dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Three_dimension.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df=df.dropna()
         # df_sig=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
         dic_label = {1: 'CVLAI+_CVrainfall+_posbeta', 2: 'CVLAI+_CVrainfall+_negbeta', 3: 'CVLAI+_CVrainfall-posbeta',
                      4: 'CVLAI+_CVrainfall-negbeta',
@@ -1043,99 +1051,87 @@ class bivariate_analysis():
                      8: 'CVLAI-_CVrainfall-negbeta'}
         dic = {}
 
-        greening_list = []
-        browning_list = []
 
 
-        df_greening=df[df['CV_rainfall_beta_LAI4g']<5]
-        count = len(df_greening)
-        greening_list.append(count)
+        df_greening = df[df[f'CV_rainfall_beta_LAI_{variable}'] < 5]
+        count_green = len(df_greening)
 
-        df_browning=df[df['CV_rainfall_beta_LAI4g']>=5]
-        count = len(df_browning)
-        browning_list.append(count)
 
-        greening_sum = np.sum(greening_list)
-        browning_sum = np.sum(browning_list)
-        greening_percentage = greening_sum / len(df)
-        browning_percentage = browning_sum / len(df)
+        df_browning = df[df[f'CV_rainfall_beta_LAI_{variable}'] >= 5]
+        count_brown = len(df_browning)
+
+
+
+        greening_percentage = count_green / len(df)
+        browning_percentage = count_brown / len(df)
         # print(greening_percentage,browning_percentage);exit()
         # print(greening_sum,browning_sum)
 
-        color_list2 = [
-
-                '#006400',
-                '#66CDAA',
-                '#008080',
-                '#AFEEEE',
-
-
-        ]
-
-        color_list1 = [
-               '#8B0000',
-                '#FFA500',
-                '#800080',
-                '#FFFF00',
-        ]
 
         ## count the number of pixels
         for i in range(1, 9):
 
             if i < 5:
-                df_i=df[df['CV_rainfall_beta_LAI4g']==i]
-                count=len(df_i)
-                dic[i]=count/greening_sum*100
+                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}'] == i]
+                count = len(df_i)
+                dic[i] = count / count_green * 100
 
             else:
-                df_i=df[df['CV_rainfall_beta_LAI4g']==i]
-                count=len(df_i)
-                dic[i]=count/browning_sum*100
+                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}'] == i]
+                count = len(df_i)
+                dic[i] = count / count_brown * 100
         pprint(dic)
+        ## I want to index 1234 to 5678 and 5678 to 1234
 
-        dic[5] = -dic[5]
-        dic[6] = -dic[6]
-        dic[7] = -dic[7]
-        dic[8] = -dic[8]
-        print(dic)
 
-        group_labels = ['CVinterannualrainfall+', 'CVinterannualrainfall-', 'CVinterannualrainfall+',
-                        'CVinterannualrainfall-']
-        group_data = [
-            [dic[1], dic[2]],
-            [dic[3], dic[4]],
-            [dic[5], dic[6]],
-            [dic[7], dic[8]],
-        ]
 
-        # 拆分上下部分
+        # Colors from your color scheme
+        colors = ['','#a6cee3', '#1f78b4', '#33a02c', '#fb9a99', '#fdbf6f', '#ff7f00', '#6a3d9a', '#b15928']
 
-        bottoms = [0 if v[0] >= 0 else v[0] for v in group_data]
-        heights1 = [v[0] for v in group_data]
-        heights2 = [v[1] for v in group_data]
 
-        x = np.arange(len(group_labels))
-        bar_width = 0.5
+        # Assign segments to two bars: Wetting and Drying
+        CVrainfall_pos_indices = [ 6,5, 1, 2,]  # Class 1,2,5,6
+        CVrainfall_neg_indices = [8,7, 3, 4]
 
-        fig, ax = plt.subplots(figsize=(12 * centimeter_factor, 8 * centimeter_factor))
+        # Prepare stacked bar data
+        wetting_values = [dic[i] for i in CVrainfall_pos_indices]
+        drying_values = [dic[i] for i in CVrainfall_neg_indices]
+        wetting_colors = [colors[i] for i in CVrainfall_pos_indices]
+        drying_colors = [colors[i] for i in CVrainfall_neg_indices]
 
-        # 第一层
+        # Plot
+        fig, ax = plt.subplots(figsize=(8, 5))
 
-        bars1 = ax.bar(x, heights1, width=bar_width, color=color_list1)
+        # Plot wetting (upper bar)
+        left = 0
+        for val, color in zip(wetting_values, wetting_colors):
+            ax.barh(y=1, width=val, left=left, color=color, edgecolor='black', height=0.2)
+            left += val
 
-        # 第二层堆叠
-        bars2 = ax.bar(x, heights2, width=bar_width, bottom=heights1, color=color_list2)
+        # Plot drying (lower bar)
+        left = 0
+        for val, color in zip(drying_values, drying_colors):
+            ## barheight
+            ax.barh(y=0, width=val, left=left, color=color, edgecolor='black', height=0.2)
+            left += val
 
-        # 坐标轴 & 图例
-        ax.set_xticks(x)
-        ax.set_xticklabels(group_labels)
-        ax.set_ylabel('Percentage (%)')
+        # Aesthetics
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels(['CVrainfall+', 'CVrainfall-'])
+        ax.set_xlabel('%')
+        ax.set_xlim(0, 150)
 
-        ax.axhline(0, color='black', linewidth=0.8)
-        plt.show()
+        # Optional: Add vertical line at 50% or labels
 
         # plt.tight_layout()
-        # plt.savefig(rf'D:\Project3\Result\3mm\FIGURE\CV_rainfall_beta_LAI.pdf')
+        # plt.show()
+        outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
+        T.mk_dir(outdir, force=True)
+        ## save the figure
+        plt.savefig(outdir + rf'{variable}.pdf')
+
+
+        pass
     def plot_robinson(self):
 
         fdir_trend = result_root + rf'\3mm\bivariate_analysis\SNU\\'
@@ -1276,6 +1272,155 @@ class bivariate_analysis():
         plt.show()
         # plt.savefig(outf)
         # plt.close()
+
+    def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
+        df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
+        matrix_dict = {}
+        y_ticks_list = []
+        x_ticks_dict = {}
+        flag1 = 0
+        for name_y, df_group_y_i in df_group_y:
+            matrix_i = []
+            y_ticks = (name_y[0].left + name_y[0].right) / 2
+            y_ticks = np.round(y_ticks, round_y)
+            y_ticks_list.append(y_ticks)
+            df_group_x, _ = self.df_bin(df_group_y_i, col_name_x, bin_x)
+            flag2 = 0
+            for name_x, df_group_x_i in df_group_x:
+                vals = df_group_x_i[val_col_name].tolist()
+                rt_mean = len(vals)
+                matrix_i.append(rt_mean)
+                x_ticks = (name_x[0].left + name_x[0].right) / 2
+                x_ticks = np.round(x_ticks, round_x)
+                x_ticks_dict[x_ticks] = 0
+                key = (flag1, flag2)
+                matrix_dict[key] = rt_mean
+                flag2 += 1
+            flag1 += 1
+        x_ticks_list = list(x_ticks_dict.keys())
+        x_ticks_list.sort()
+        return matrix_dict,x_ticks_list,y_ticks_list
+
+    def df_bin(self, df, col, bins):
+        df_copy = df.copy()
+        df_copy[f'{col}_bins'] = pd.cut(df[col], bins=bins)
+        df_group = df_copy.groupby([f'{col}_bins'],observed=True)
+        bins_name = df_group.groups.keys()
+        bins_name_list = list(bins_name)
+        bins_list_str = [str(i) for i in bins_name_list]
+        # for name,df_group_i in df_group:
+        #     vals = df_group_i[col].tolist()
+        #     mean = np.nanmean(vals)
+        #     err,_,_ = self.uncertainty_err(SM)
+        #     # x_list.append(name)
+        #     y_list.append(mean)
+        #     err_list.append(err)
+        return df_group, bins_list_str
+    def plot_df_bin_2d_matrix(self,matrix_dict,vmin,vmax,x_ticks_list,y_ticks_list,cmap='RdBu',
+                              is_only_return_matrix=False):
+        print(x_ticks_list)
+        keys = list(matrix_dict.keys())
+        r_list = []
+        c_list = []
+        for r, c in keys:
+            r_list.append(r)
+            c_list.append(c)
+        r_list = set(r_list)
+        c_list = set(c_list)
+
+        row = len(r_list)
+        col = len(c_list)
+        spatial = []
+        for r in range(row):
+            temp = []
+            for c in range(col):
+                key = (r, c)
+                if key in matrix_dict:
+                    val_pix = matrix_dict[key]
+                    temp.append(val_pix)
+                else:
+                    temp.append(np.nan)
+            spatial.append(temp)
+
+        matrix = np.array(spatial, dtype=float)
+        matrix = matrix[::-1]
+        if is_only_return_matrix:
+            return matrix
+        plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
+        plt.xticks(range(len(c_list)), x_ticks_list)
+        plt.yticks(range(len(r_list)), y_ticks_list[::-1])
+
+    def LAImin_LAI_index(self,):
+        ## generate LAImin and LAImax
+        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_max_trend.npy'
+        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_min_trend.npy'
+        outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
+        LAImax=np.load(fLAImax,allow_pickle=True)
+        LAImin=np.load(fLAImin,allow_pickle=True)
+        spatial_dic={}
+        LAImax_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImax)
+        LAImin_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImin)
+        for pix in LAImax_dic:
+            LAImax=LAImax_dic[pix]
+            LAImax=np.array(LAImax)
+            LAImax[LAImax<-99]=np.nan
+            if not pix in LAImin_dic:
+                continue
+            LAImin = LAImin_dic[pix]
+            LAImin = np.array(LAImin)
+            LAImin[LAImin < -99] = np.nan
+            if abs(LAImax)+abs(LAImin)==0:
+                continue
+
+            index=(LAImax-LAImin)/abs(LAImax)+abs(LAImin)
+            spatial_dic[pix]=index
+        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        array[array<-99]=np.nan
+        array[array>99]=np.nan
+        array_flatten=np.array(array).flatten()
+        plt.hist(array_flatten)
+        plt.show()
+        plt.imshow(array,interpolation='nearest',cmap='RdBu',vmin=-1,vmax=1)
+        plt.show()
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_index.tif')
+
+
+
+
+        pass
+
+    def LAImin_LAImax_index_(self,):
+        ## generate LAImin and LAImax
+        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_max.npy'
+        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_min.npy'
+        outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
+        LAImax_dic=T.load_npy(fLAImax)
+        LAImin_dic=T.load_npy(fLAImin)
+        spatial_dic={}
+
+        window_size=15
+        for pix in LAImax_dic:
+
+            LAImax=LAImax_dic[pix]
+            LAImin=LAImin_dic[pix]
+
+            if not pix in LAImin_dic:
+                continue
+
+
+            index=(LAImax-LAImin)/abs(LAImax)+abs(LAImin)
+            slope,intercept,r_value,p_value,std_err=stats.linregress(np.arange(len(index)),index)
+
+            spatial_dic[pix]=slope
+        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        array[array<-99]=np.nan
+        array[array>99]=np.nan
+        array_flatten=np.array(array).flatten()
+        plt.hist(array_flatten)
+        plt.show()
+        plt.imshow(array,interpolation='nearest',cmap='jet_r',vmin=-1,vmax=1)
+        plt.show()
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_index2.tif')
 
 
     def df_clean(self, df):
@@ -1953,88 +2098,6 @@ class greening_CV_relationship():
 
 
         # plt.close()
-
-    def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
-        df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
-        matrix_dict = {}
-        y_ticks_list = []
-        x_ticks_dict = {}
-        flag1 = 0
-        for name_y, df_group_y_i in df_group_y:
-            matrix_i = []
-            y_ticks = (name_y[0].left + name_y[0].right) / 2
-            y_ticks = np.round(y_ticks, round_y)
-            y_ticks_list.append(y_ticks)
-            df_group_x, _ = self.df_bin(df_group_y_i, col_name_x, bin_x)
-            flag2 = 0
-            for name_x, df_group_x_i in df_group_x:
-                vals = df_group_x_i[val_col_name].tolist()
-                rt_mean = len(vals)
-                matrix_i.append(rt_mean)
-                x_ticks = (name_x[0].left + name_x[0].right) / 2
-                x_ticks = np.round(x_ticks, round_x)
-                x_ticks_dict[x_ticks] = 0
-                key = (flag1, flag2)
-                matrix_dict[key] = rt_mean
-                flag2 += 1
-            flag1 += 1
-        x_ticks_list = list(x_ticks_dict.keys())
-        x_ticks_list.sort()
-        return matrix_dict,x_ticks_list,y_ticks_list
-
-    def df_bin(self, df, col, bins):
-        df_copy = df.copy()
-        df_copy[f'{col}_bins'] = pd.cut(df[col], bins=bins)
-        df_group = df_copy.groupby([f'{col}_bins'],observed=True)
-        bins_name = df_group.groups.keys()
-        bins_name_list = list(bins_name)
-        bins_list_str = [str(i) for i in bins_name_list]
-        # for name,df_group_i in df_group:
-        #     vals = df_group_i[col].tolist()
-        #     mean = np.nanmean(vals)
-        #     err,_,_ = self.uncertainty_err(SM)
-        #     # x_list.append(name)
-        #     y_list.append(mean)
-        #     err_list.append(err)
-        return df_group, bins_list_str
-
-
-    def plot_df_bin_2d_matrix(self,matrix_dict,vmin,vmax,x_ticks_list,y_ticks_list,cmap='RdBu',
-                              is_only_return_matrix=False):
-        print(x_ticks_list)
-        keys = list(matrix_dict.keys())
-        r_list = []
-        c_list = []
-        for r, c in keys:
-            r_list.append(r)
-            c_list.append(c)
-        r_list = set(r_list)
-        c_list = set(c_list)
-
-        row = len(r_list)
-        col = len(c_list)
-        spatial = []
-        for r in range(row):
-            temp = []
-            for c in range(col):
-                key = (r, c)
-                if key in matrix_dict:
-                    val_pix = matrix_dict[key]
-                    temp.append(val_pix)
-                else:
-                    temp.append(np.nan)
-            spatial.append(temp)
-
-        matrix = np.array(spatial, dtype=float)
-        matrix = matrix[::-1]
-        if is_only_return_matrix:
-            return matrix
-        plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
-        plt.xticks(range(len(c_list)), x_ticks_list)
-        plt.yticks(range(len(r_list)), y_ticks_list[::-1])
-
-
-
 
 class build_dataframe():
 
