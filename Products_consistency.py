@@ -85,9 +85,11 @@ class products_check():
     def run(self):
         # self.check_consistency()  ### selected regions showing differences
 
-        self.calculate_significance_count()
+        # self.calculate_significance_count()
+        # self.statistic_trend_CV()
         # self.plot_products_pdf()
-        # self.plot_time_series()
+        self.plot_time_series()
+
 
 
 
@@ -237,40 +239,6 @@ class products_check():
 
 
         pass
-    def plot_time_series(self):
-        dff=rf'D:\Project3\Result\3mm\Dataframe\moving_window_CV\\products_consistency.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        T.print_head_n(df)
-
-        year_range = range(1983, 2021)
-
-
-        variable_list=['LAI4g_detrend_CV','detrended_AVHRR_solely_CV','NDVI4g_detrend_CV','NDVI_detrend_CV',
-                       'detrended_GIMMS_plus_NDVI',]
-        result_dic = {}
-        for var in variable_list:
-
-            result_dic[var] = {}
-            data_dic = {}
-
-            for year in year_range:
-                df_i = df[df['year'] == year]
-
-                vals = df_i[f'{var}'].tolist()
-                data_dic[year] = np.nanmean(vals)
-            result_dic[var] = data_dic
-        ##dic to df
-
-        df_new = pd.DataFrame(result_dic)
-
-        for var in variable_list:
-            plt.plot(year_range, df_new[var], label=var)
-        plt.ylabel('raw LAI (m2/m2)')
-        plt.xlabel('year')
-
-        plt.legend()
-        plt.show()
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -286,6 +254,7 @@ class products_check():
 
 
         return df
+
 class NDVI_LAI():
 
     def __init__(self):
@@ -1857,8 +1826,12 @@ class PLOT_dataframe():
     def __init__(self):
         pass
     def run (self):
-        self.plot_CV_LAI()
-        self.plot_relative_change_LAI()
+        # self.plot_CV_LAI()
+        # self.plot_relative_change_LAI()
+        # self.statistic_trend_CV_bar()
+        self.statistic_trend_bar()
+
+
         pass
 
     def df_clean(self, df):
@@ -1903,7 +1876,7 @@ class PLOT_dataframe():
 
         variable_list=[
                        'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
-            'GLOBMAP_LAI_detrend_CV','composite_LAI_CV','composite_LAI_median_CV']
+            'GLOBMAP_LAI_detrend_CV','composite_LAI_CV',]
         year_list=range(0,25)
 
 
@@ -1943,7 +1916,7 @@ class PLOT_dataframe():
                 break
             year_range_str.append(f'{start_year}-{end_year}')
         # plt.xticks(range(0, 23, 4))
-        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=0, ha='right')
         # plt.xticks(range(0, 23, 3))
 
 
@@ -1992,7 +1965,7 @@ class PLOT_dataframe():
 
         variable_list = ['LAI4g', 'SNU_LAI_relative_change', 'GLOBMAP_LAI_relative_change',
                          'composite_LAI_relative_change_mean',
-                         'composite_LAI_relative_change_median']
+                         ]
         year_list=range(1983,2021)
 
 
@@ -2022,10 +1995,164 @@ class PLOT_dataframe():
 
         plt.legend()
         plt.show()
+
+
+    def statistic_trend_CV_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\\CV\\'
+        variable_list=['composite_LAI_CV','GlOBMAP_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                '#a6dba0',
+
+                '#c2a5cf',
+                '#7b3294',
+            ]
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
+
+    def statistic_trend_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
+        variable_list=['GLOBMAP_LAI_relative_change','LAI4g','composite_LAI_relative_change_mean','SNU_LAI_relative_change']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                '#a6dba0',
+
+                '#c2a5cf',
+                '#7b3294',
+            ]
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
+
+
 def main():
 
 
     # build_dataframe().run()
+    # products_check().run()
 
     PLOT_dataframe().run()
     # NDVI_LAI().run()

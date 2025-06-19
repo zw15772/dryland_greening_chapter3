@@ -8,6 +8,7 @@ from openpyxl.styles.builtins import percent
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
+from sympy.abc import alpha
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -81,11 +82,11 @@ class multi_regression_beta():
         self.data_root = 'D:/Project3/Data/'
         self.result_root = 'D:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
-        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
+        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
+        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
 
-        self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var = ['SNU_LAI_relative_change_detrend']
+        self.xvar_list = ['sum_rainfall_zscore_detrend','Tmax_zscore_detrend','VPD_zscore_detrend']
+        self.y_var = ['GLOBALMAP_zscore_detrend']
 
 
     def run(self):
@@ -94,30 +95,30 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
-        for i in range(self.window):
-
-            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-            outf= outdir+rf'\\window{i:02d}.npy'
-            if os.path.isfile(outf):
-                continue
-            print(outf)
-        # #
-        self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        # for i in range(self.window):
+        #
+        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
+        #     outf= outdir+rf'\\window{i:02d}.npy'
+        #     if os.path.isfile(outf):
+        #         continue
+        #     print(outf)
+        # # #
+        #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
         # ##step 2 crate individial files
-        self.plt_multi_regression_result(outdir,self.y_var)
+        # self.plt_multi_regression_result(outdir,self.y_var)
 # #
         # ##step 3 covert to time series
 
-        self.convert_files_to_time_series(outdir,self.y_var)
+        # self.convert_files_to_time_series(outdir,self.y_var) ## 这里乘以100
         ### step 4 build dataframe using build Dataframe function and then plot here
-        self.plot_moving_window_time_series()
+        # self.plot_moving_window_time_series() not use
         ## spatial trends of sensitivity
-        self.calculate_trend_trend(outdir)
-        # self.composite_beta()
+        # self.calculate_trend_trend(outdir)
+        self.composite_beta()
         # plot robinson
         # self.plot_robinson()
         # self.plot_sensitivity_preicipation_trend()
@@ -578,7 +579,7 @@ class multi_regression_beta():
 
 
 
-        variable_list = ['sum_rainfall_detrend']
+        variable_list = ['sum_rainfall_zscore_detrend']
 
 
 
@@ -624,7 +625,7 @@ class multi_regression_beta():
 
                 time_series=dic[pix]
                 time_series = np.array(time_series)
-                time_series = time_series*100  ###currently no multiply %/100mm
+                time_series = time_series  ###currently no multiply %/100mm
                 result_dic[pix]=time_series
                 if np.nanmean(dic[pix])<=5:
                     continue
@@ -754,9 +755,9 @@ class multi_regression_beta():
             ##tiff
 
     def composite_beta(self):
-        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_SNULAI\npy_time_series\\beta.npy'
-        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_LAI4g\npy_time_series\beta.npy'
-        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_GLOMAP\\npy_time_series\\beta.npy'
+        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\SNU_LAI\npy_time_series\\beta.npy'
+        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\LAI4g\npy_time_series\beta.npy'
+        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\\GLOBALMAP\npy_time_series\\beta.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -796,7 +797,7 @@ class multi_regression_beta():
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
 
-        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
+        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
 
 
 
@@ -1656,7 +1657,7 @@ class greening_CV_relationship():
 
         # self.generate_bivarite_map()
         # self.statistic_bar()
-        self.heatmap()
+        self.heatmap_LAImin_max_CV()
 
         pass
 
@@ -1769,14 +1770,15 @@ class greening_CV_relationship():
         DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
 
 
-    def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
+    def heatmap_LAImin_max_CV(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
-        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend.df'
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
         print(len(df))
         # df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
-        df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        # df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        df = df[df['GlOBMAP_detrend_CV_p_value'] < 0.05]
         # # print(len(df));exit()
 
 
@@ -1787,17 +1789,17 @@ class greening_CV_relationship():
         # y_var = 'SNU_LAI_relative_change_detrend_max_trend'
         # z_var = 'SNU_LAI_CV'
 
-        x_var = 'LAI4g_detrend_min_trend'
-        y_var = 'LAI4g_detrend_max_trend'
-        z_var = 'LAI4g_detrend_CV_trend'
+        x_var = 'GLOBMAP_LAI_relative_change_detrend_min_trend'
+        y_var = 'GLOBMAP_LAI_relative_change_detrend_max_trend'
+        z_var = 'GlOBMAP_detrend_CV_trend'
         plt.hist(df[x_var])
         plt.show()
         plt.hist(df[y_var])
         plt.show()
 
-        bin_x = np.linspace(-2, 1.5,11, )
+        bin_x = np.linspace(-1.5, 1.5,11, )
 
-        bin_y = np.linspace(-2, 1.5, 11)
+        bin_y = np.linspace(-1.5, 1.5, 11)
         # percentile_list=np.linspace(0,100,7)
         # bin_x=np.percentile(df[x_var],percentile_list)
         # print(bin_x)
@@ -2897,8 +2899,10 @@ class partial_correlation():
         # self.cal_partial_corr(df,self.xvar_list, )
         # self.cal_single_correlation()
         # self.cal_single_correlation_ly()
-        self.plot_partial_correlation()
+        # self.plot_partial_correlation()
         # self.maximum_partial_corr()
+        # self.statistic_corr()
+        self.statistic_trend()
 
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
@@ -3166,12 +3170,12 @@ class partial_correlation():
         outdir= self.outdir
 
 
-        partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
+        # partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
         partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
 
 
         var_list = []
-        for pix in partial_correlation_dic:
+        for pix in partial_correlation_p_value_dic:
 
             landcover_value = crop_mask[pix]
             if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
@@ -3180,22 +3184,25 @@ class partial_correlation():
             if modis_value==12:
                 continue
 
-            vals = partial_correlation_dic[pix]
+            # vals = partial_correlation_dic[pix]
+            vals = partial_correlation_p_value_dic[pix]
+
+
             for var_i in vals:
                 var_list.append(var_i)
         var_list = list(set(var_list))
         for var_i in var_list:
             spatial_dic = {}
-            for pix in partial_correlation_dic:
+            for pix in partial_correlation_p_value_dic:
 
-                dic_i = partial_correlation_dic[pix]
+                dic_i = partial_correlation_p_value_dic[pix]
                 if not var_i in dic_i:
                     continue
                 val = dic_i[var_i]
                 spatial_dic[pix] = val
             arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
 
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'partial_corr_{var_i}.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'partial_pvalue_{var_i}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
             vmin = mean - std
@@ -3283,27 +3290,153 @@ class partial_correlation():
     pass
 
 
+    def statistic_corr(self):
+        fdir = result_root + rf'3mm\RF_Multiregression\partial_correlation\\'
+        variable_list=['partial_corr_rainfall_intensity','partial_corr_rainfall_frenquency']
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            result_dic={}
+            variable=f.split('.')[0]
+            if not variable in variable_list:
+                continue
+            fpath_corr = join(fdir, f)
+            fpath_pvalue=fdir+f.replace('partial_corr','partial_pvalue')
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_corr)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_pvalue)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
 
 
 
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = ['red', 'red', 'green', 'green']
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
 
 
 
+    def statistic_trend(self):
+        fdir = result_root + rf'\3mm\RF_Multiregression\trend\\'
+        variable_list=['rainfall_intensity_trend','rainfall_frenquency_trend']
+        for f in os.listdir(fdir):
+            if not f.endswith('.tif'):
+                continue
+            result_dic={}
+            variable=f.split('.')[0]
+            if not variable in variable_list:
+                continue
+            fpath_corr = join(fdir, f)
+            fpath_pvalue=fdir+f.replace('trend','p_value')
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_corr)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_pvalue)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
 
 
 
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = ['red', 'red', 'green', 'green']
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
 
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
 
-
-
-
-
-
-
-
-
-
-
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
 
 
 
@@ -3329,8 +3462,10 @@ def main():
 
     # bivariate_analysis().run()
     # build_dataframe().run()
-    # greening_CV_relationship().run()
-    multi_regression_beta().run()
+    greening_CV_relationship().run()
+    # multi_regression_beta().run()
+
+    # partial_correlation().run()
 
 
 

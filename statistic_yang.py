@@ -1796,10 +1796,10 @@ class SHAP_CV():
 
     def run(self):
         # self.check_df_attributes()
-
-
+        # #
+        # #
         # self.check_variables_ranges()
-
+        #
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
@@ -1978,6 +1978,13 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
+            # 'rainfall_frenquency_trend',
+            # 'rainfall_intensity_trend',
+            'pi_average_trend',
+            # 'fire_ecosystem_year_average_trend',
+            # 'rainfall_seasonality_all_year_trend',
+
+
 
 
             # 'nitrogen',
@@ -1986,8 +1993,7 @@ class SHAP_CV():
             # 'cec',
             'sand',
              # 'soc',
-            # 'S_CEC_CLAY',
-            # 'AWC_CLASS',
+
             'rainfall_intensity',
             # 'dry_spell',
 
@@ -1995,13 +2001,11 @@ class SHAP_CV():
 
             'rainfall_seasonality_all_year',
 
-            # 'detrended_sum_rainfall_CV',
 
                 # 'Aridity',
-                # 'FVC',
-                'pi_average',
+                # 'pi_average',
              'fire_ecosystem_year_average',
-            # 'VPD',
+
 
             'rooting_depth',
 
@@ -2051,13 +2055,18 @@ class SHAP_CV():
             'soc': [0, 600],
 
             'fire_ecosystem_year_average': [0,30],
+            'fire_ecosystem_year_average_trend': [-1, 1],
 
             'dry_spell': [1,3],
             'rainfall_intensity': [0, 25],
+            'rainfall_intensity_trend': [-0.1, 0.1],
 
             'rainfall_frenquency': [0, 100],
+            'rainfall_frenquency_trend': [-0.5,1],
+
 
     'rainfall_seasonality_all_year': [20, 70],
+            'rainfall_seasonality_all_year_trend': [-0.5, 0.5],
 
 
             'detrended_sum_rainfall_CV':[0,60],
@@ -2066,6 +2075,7 @@ class SHAP_CV():
 
             'rooting_depth': [0, 20],
             'pi_average': [0, 2],
+            'pi_average_trend': [-0.1,0.1],
 
 
     }
@@ -2076,7 +2086,7 @@ class SHAP_CV():
         vars_list = self.x_variable_list
         df = df[vars_list]
         ## add LAI4g_raw
-        df['composite_LAI_beta'] = T.load_df(dff)['composite_LAI_beta']
+        df['composite_LAI_beta_mean_zscore'] = T.load_df(dff)['composite_LAI_beta_mean_zscore']
         ## plot heat map to show the colinear variables
 
         name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
@@ -2171,7 +2181,7 @@ class SHAP_CV():
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
         df=df[df['LC_max']<20]
-        df = df[df['composite_LAI_beta_mean_trend_zscore'] >0]
+        # df = df[df['composite_LAI_beta_mean_trend_zscore'] >0]
         # print(len(df))
         # exit()
 
@@ -2218,6 +2228,7 @@ class SHAP_CV():
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
         df = self.valid_range_df(df)
+        # print('len(df):',len(df));exit()
 
         pix_list = df['pix'].tolist()
         unique_pix_list = list(set(pix_list))
@@ -2280,7 +2291,7 @@ class SHAP_CV():
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
         plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
         plt.colorbar()
-        plt.show()
+        # plt.show()
 
 
         X = all_vars_df[x_variable_list]
@@ -2321,32 +2332,29 @@ class SHAP_CV():
         plt.bar(x_, y_)
         plt.xticks(rotation=45)
         # plt.tight_layout()
-        plt.title('RF')
+        plt.title('Xgboost feature importance')
         plt.show()
         # exit()
         # plt.figure()
 
         ## random sample
+        seed = np.random.seed(1)
+        [35318, 84714, 74782, ..., 58371, 99838, 53471]
 
-        sample_indices = np.random.choice(X.shape[0], size=20000, replace=False)
+        sample_indices = np.random.choice(X.shape[0], size=500, replace=False)
+        # pprint(sample_indices)
+        # exit()
         X_sample = X.iloc[sample_indices]
         explainer = shap.TreeExplainer(model)
+        # pprint(X_sample);exit()
 
-
-        # ### round R2
-
-        # # x_variable_range_dict = self.x_variable_range_dict
-        # y_base = explainer.expected_value
-        # print('y_base', y_base)
-        # print('y_mean', np.mean(y))
         # shap_values = explainer.shap_values(X) ##### not use!!!
+        # shap_values=explainer(X)
         shap_values = explainer(X_sample)
         outf_shap = join(outdir, self.y_variable + '.shap')
-        # ## how to resever X and Y before the shap
-        #
-
 
         T.save_dict_to_binary(shap_values, outf_shap)
+
         ## save model
 
         T.save_dict_to_binary(model, join(outdir, self.y_variable + '.model'))
@@ -2569,7 +2577,7 @@ class SHAP_CV():
             #     err,_,_ = self.uncertainty_err(SM)
             # print(df_i)
             # exit()
-            plt.subplot(4, 3, flag)
+            plt.subplot(4, 4, flag)
             plt.scatter(scatter_x_list, scatter_y_list, alpha=0.2, c='gray', marker='.', s=1, zorder=-1)
             # print(data_i[0])
             # exit()
@@ -2585,7 +2593,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-1, 1)
+            plt.ylim(-2, 2)
 
         plt.suptitle(self.y_variable)
 
@@ -2714,8 +2722,17 @@ class SHAP_CV():
 
                   'cwdx80_05':'Rooting zone water storage capacity (mm)',
                   'pi_average':'SM-Tcoupling (unitless)',
-                  'fire_weighted_ecosystem_year_average':'Fire  (unitless)',
+                  'fire_weighted_ecosystem_year_average':'Fire  (km2)',
                   'rooting_depth':'Rooting depth (mm)',
+                  'rainfall_intensity_trend':'Rainfall intensity trend (mm/events/yr)',
+                  'rainfall_frenquency_trend':'Rainfall frequency trend (events/yr)',
+                  'pi_average_trend':'SM-Tcoupling trend (unitless/yr)',
+                  'fire_ecosystem_year_average_trend':'burn area trend (km2/yr)',
+                  'rainfall_seasonality_all_year_trend':'Rainfall seasonality trend (unitless/yr)',
+
+
+
+
 
                   'sand':'Sand (g/kg)',
 
@@ -2789,6 +2806,7 @@ class SHAP_CV():
             fig,ax = plt.subplots(1,1,figsize=(8*centimeter_factor,5*centimeter_factor))
             ax.vlines(percentile_values, -5, 5, color='gray', linestyle='--', alpha=1)
 
+
             y_lims = {
                 "rainfall_intensity": [-5, 5],
                 "rainfall_frenquency": [-8, 8],
@@ -2798,8 +2816,14 @@ class SHAP_CV():
                 "sand": [-0.5, 2],
                 "cwdx80_05": [-1, 1],
                 'pi_average': [-1, 1],
-                'fire_weighted_ecosystem_year_average':[-1,1],
-                'rooting_depth':[-1,2]
+                'fire_ecosystem_year_average':[-1,1],
+                'rooting_depth':[-1,2],
+                'pi_average_trend':[-1,1],
+                'fire_ecosystem_year_average_trend':[-1,1],
+                'rainfall_seasonality_all_year_trend':[-1,1],
+                'rainfall_intensity_trend':[-1,1],
+                'rainfall_frenquency_trend':[-1,1],
+
             }
 
             if scatter:
@@ -2829,7 +2853,7 @@ class SHAP_CV():
             plt.close()
 
 
-
+        #
         # plt.tight_layout()
         # plt.show()
 
@@ -3146,12 +3170,15 @@ class SHAP_CV():
                   'detrended_sum_rainfall_CV':r'CV$_{\mathrm{interannual\ rainfall}}$ (%)',
                   'heat_event_frenquency':'Heat event frequency (events/year)',
                   'cwdx80_05':'Rooting zone water storage capacity (mm)',
+                  'fire_ecosystem_year_average':'Fire burn area (%/year)',
+                  'pi_average':'SM-T coupling (unitless)',
 
                   'sand':'Sand (g/kg)',
+                  'rooting_depth':'Rooting depth (cm)',
 
         }
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -3181,7 +3208,7 @@ class SHAP_CV():
         ## use new name from dictionary
         x_list_sort = [name_dic[x] for x in x_list_sort]
         y_list_sort = [x[1] for x in imp_dict_sort]
-        print(y_list_sort);exit()
+        # print(y_list_sort);exit()
         # pprint(imp_dict_sort);exit()
         # plt.barh(x_variable_list[::-1], y_list[::-1], color='grey', alpha=0.5)
         plt.barh(x_list_sort, y_list_sort, color='grey', alpha=0.5,edgecolor='black')
@@ -3190,7 +3217,7 @@ class SHAP_CV():
         plt.xticks(fontsize=12)
         plt.xlabel('Importance (%)', fontsize=12)
         ## add text R2=0.89 in (0.5, 0.5)
-        plt.text(15, 0.1, 'R2=0.86', fontsize=12)
+        plt.text(15, 0.1, 'R2=0.69', fontsize=12)
 
 
 
@@ -3205,8 +3232,10 @@ class SHAP_CV():
     def spatial_shapely(self):  #### spatial plot
 
         dff = self.dff
-        outdir = rf'E:\Project3\Result\3mm\SHAP\RF_LAI4g_detrend_CV_\pdp_shap_CV\\spatial_shapely\\'
+        outdir =self.this_class_png
         T.mk_dir(outdir, force=True)
+        sample_indices_f = join('xxxxx')
+        sample_indices = T.load_dict_from_binary(sample_indices_f)
         # T.open_path_and_file(outdir)
         # exit()
 
@@ -3217,10 +3246,10 @@ class SHAP_CV():
         # plt.show()
         df_origin = T.load_df(dff)
         df_origin = self.df_clean(df_origin)
-        # df_origin = self.valid_range_df(df_origin)
+        df_origin = self.valid_range_df(df_origin)
+        df_origin = df_origin.iloc(sample_indices)
 
 
-        # all_vars=copy.copy(all_vars_vif)
         pix_list = T.get_df_unique_val_list(df_origin, 'pix')
         spatial_dict = {}
         for pix in pix_list:
@@ -3241,11 +3270,11 @@ class SHAP_CV():
 
         print(len(df_origin))
         x_variable_list = self.x_variable_list
-        inf_shap = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta', self.y_variable + '.shap.pkl')
         # print(inf_shap);exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values.shape)
-        # T.print_head_n(df_origin);exit()
+        T.print_head_n(df_origin)
         i=0
         for x_var in x_variable_list:
             print(x_var)
@@ -3253,8 +3282,7 @@ class SHAP_CV():
             # shap_values_mat = shap_values[:, x_var]
 
             col_name = f'{x_var}_shap'
-
-            all_vars_df[col_name]= shap_values[:, i]
+            all_vars_df[col_name] = shap_values[:, x_var].values
 
             i+=1
         all_vars_df = all_vars_df.dropna(subset=x_variable_list, how='all')
@@ -3279,7 +3307,7 @@ class SHAP_CV():
             DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dict, outf)
 
         T.open_path_and_file(outdir)
-        # exit()
+        exit()
 
     def variable_contributions(self):  ## each variable contribution and the max one
         r2 = .86
@@ -3473,7 +3501,7 @@ class SHAP_CV():
         # rf.fit(X_train, y_train) # train the model
         # r2 = rf.score(X_test,y_test)
         # model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
-        #                        max_depth=7, eta=0.1, random_state=42, n_jobs=14,  )
+        #                        max_depth=13, eta=0.1, random_state=42, n_jobs=14,  )
         model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=14)
         # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
