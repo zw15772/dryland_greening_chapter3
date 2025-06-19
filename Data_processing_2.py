@@ -1285,7 +1285,7 @@ class build_dataframe():
 
         self.this_class_arr = (result_root+rf'3mm\\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend_ALL.df'
+        self.dff = self.this_class_arr + rf'Three_dimension.df'
 
         pass
 
@@ -1310,17 +1310,17 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         #
 
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
         # #
         # df=self.add_lat_lon_to_df(df)
 
@@ -1545,7 +1545,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\trend\GLOBMAP_LAI_relative_change_detrend_min_trend.tif'
+        f = result_root + rf'\3mm\bivariate_analysis\SNU\CV_rainfall_beta_LAI_SNU.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2134,13 +2134,13 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'\3mm\extract_composite_phenology_year\\trend\\'
+        fdir=result_root+ rf'\3mm\bivariate_analysis\LAI4g\\'
         for f in os.listdir(fdir):
 
 
             if not f.endswith('.tif'):
                 continue
-            if not 'min' in f:
+            if not 'CV_rainfall_beta_LAI4g' in f:
                 continue
 
             variable = (f.split('.')[0])

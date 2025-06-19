@@ -915,9 +915,9 @@ class bivariate_analysis():
         # build_dataframe().run()
 
         ## step4
-        self.generate_three_dimension()
+        # self.generate_three_dimension()
 
-        # self.plot_figure1d_new()
+        self.plot_figure1d_new()
         # self.plot_robinson()
 
     def generate_bivarite_map(self):  ##
@@ -1032,11 +1032,11 @@ class bivariate_analysis():
 
 
     def plot_figure1d_new(self):
-        variable='GLOBMAP_CV'
-        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Trend_{variable}.df'
+        variable='GLOMAP'
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Three_dimension.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
-        df_sig=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
+        # df_sig=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
         dic_label = {1: 'CVLAI+_CVrainfall+_posbeta', 2: 'CVLAI+_CVrainfall+_negbeta', 3: 'CVLAI+_CVrainfall-posbeta',
                      4: 'CVLAI+_CVrainfall-negbeta',
                      5: 'CVLAI-_CVrainfall+_posbeta', 6: 'CVLAI-_CVrainfall+_negbeta', 7: 'CVLAI-_CVrainfall-posbeta',
@@ -1047,11 +1047,11 @@ class bivariate_analysis():
         browning_list = []
 
 
-        df_greening=df_sig[df_sig['CV_rainfall_beta_LAI']<5]
+        df_greening=df[df['CV_rainfall_beta_LAI4g']<5]
         count = len(df_greening)
         greening_list.append(count)
 
-        df_browning=df_sig[df_sig['CV_rainfall_beta_LAI']>=5]
+        df_browning=df[df['CV_rainfall_beta_LAI4g']>=5]
         count = len(df_browning)
         browning_list.append(count)
 
@@ -1063,34 +1063,32 @@ class bivariate_analysis():
         # print(greening_sum,browning_sum)
 
         color_list2 = [
-            '#75b1d3',
 
-            '#e7f4cb',
+                '#006400',
+                '#66CDAA',
+                '#008080',
+                '#AFEEEE',
 
-            '#fdba6e',
-            '#d7191c',
 
         ]
 
         color_list1 = [
-            '#2c7bb6',
-
-            '#b7dee3',
-
-            '#fee8a4',
-            '#ed6e43',
+               '#8B0000',
+                '#FFA500',
+                '#800080',
+                '#FFFF00',
         ]
 
         ## count the number of pixels
         for i in range(1, 9):
 
             if i < 5:
-                df_i=df_sig[df_sig['CV_rainfall_beta_LAI']==i]
+                df_i=df[df['CV_rainfall_beta_LAI4g']==i]
                 count=len(df_i)
                 dic[i]=count/greening_sum*100
 
             else:
-                df_i=df_sig[df_sig['CV_rainfall_beta_LAI']==i]
+                df_i=df[df['CV_rainfall_beta_LAI4g']==i]
                 count=len(df_i)
                 dic[i]=count/browning_sum*100
         pprint(dic)
@@ -1140,8 +1138,8 @@ class bivariate_analysis():
         # plt.savefig(rf'D:\Project3\Result\3mm\FIGURE\CV_rainfall_beta_LAI.pdf')
     def plot_robinson(self):
 
-        fdir_trend = result_root + rf'\3mm\bivariate_analysis\\'
-        temp_root = result_root + rf'\3mm\bivariate_analysis\\temp\\'
+        fdir_trend = result_root + rf'\3mm\bivariate_analysis\SNU\\'
+        temp_root = result_root + rf'\3mm\bivariate_analysis\\SNU\\temp\\'
         outdir = result_root + rf'\3mm\bivariate_analysis\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
@@ -1153,9 +1151,9 @@ class bivariate_analysis():
 
             fname = f.split('.')[0]
 
-            # fpath = fdir_trend + f
+            fpath = fdir_trend + f
 
-            fpath = rf"D:\Project3\Result\3mm\bivariate_analysis\CV_rainfall_beta_LAI.tif"
+
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
             # m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=8, cmap='RdYlBu_r',)
 
@@ -1181,12 +1179,104 @@ class bivariate_analysis():
             m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=9, is_discrete=True, colormap_n=9,
                                                    cmap='Paired', )
 
-            plt.title(f'{fname}')
-            plt.show()
-            outf = outdir + 'CV_rainfall_beta_LAI_new.pdf'
-            # plt.savefig(outf)
-            # plt.close()
+            # plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + 'CV_rainfall_beta_LAI_SNU.pdf'
+            plt.savefig(outf)
+            plt.close()
             # exit()
+
+    def heatmap_LAImin_max_CV(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        # df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
+        # df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        df = df[df['GlOBMAP_detrend_CV_p_value'] < 0.05]
+        # # print(len(df));exit()
+
+
+        # plt.show();exit()
+
+        T.print_head_n(df)
+        # x_var = 'SNU_LAI_relative_change_detrend_min_trend'
+        # y_var = 'SNU_LAI_relative_change_detrend_max_trend'
+        # z_var = 'SNU_LAI_CV'
+
+        x_var = 'GLOBMAP_LAI_relative_change_detrend_min_trend'
+        y_var = 'GLOBMAP_LAI_relative_change_detrend_max_trend'
+        z_var = 'GlOBMAP_detrend_CV_trend'
+        plt.hist(df[x_var])
+        plt.show()
+        plt.hist(df[y_var])
+        plt.show()
+
+        bin_x = np.linspace(-1.5, 1.5,11, )
+
+        bin_y = np.linspace(-1.5, 1.5, 11)
+        # percentile_list=np.linspace(0,100,7)
+        # bin_x=np.percentile(df[x_var],percentile_list)
+        # print(bin_x)
+        # bin_y=np.percentile(df[y_var],percentile_list)
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
+                    col_name_x=x_var,
+                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y,round_x=4,round_y=4)
+        # pprint(matrix_dict);exit()
+
+        my_cmap = T.cmap_blend(color_list = ['#000000','r', 'b'])
+        my_cmap = 'RdBu'
+        self.plot_df_bin_2d_matrix(matrix_dict,-1,1,x_ticks_list,y_ticks_list,cmap=my_cmap,
+                              is_only_return_matrix=False)
+        plt.colorbar()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        pprint(matrix_dict)
+        # plt.show()
+
+
+        matrix_dict_count, x_ticks_list, y_ticks_list = self.df_bin_2d_count(df, val_col_name=z_var,
+                                                              col_name_x=x_var,
+                                                              col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
+        pprint(matrix_dict_count)
+        scatter_size_dict = {
+            (1,20): 5,
+            (20,50): 20,
+            (50,100): 50,
+            (100,200): 75,
+            (200,400): 100,
+            (400,800): 200,
+            (800,np.inf): 250
+        }
+        matrix_dict_count_normalized = {}
+        # Normalize counts for circle size
+        for key in matrix_dict_count:
+            num = matrix_dict_count[key]
+            for key2 in scatter_size_dict:
+                if num >= key2[0] and num < key2[1]:
+                    matrix_dict_count_normalized[key] = scatter_size_dict[key2]
+                    break
+        pprint(matrix_dict_count_normalized)
+        reverse_x = list(range(len(bin_y)-1))[::-1]
+        reverse_x_dict = {}
+        for i in range(len(bin_y)-1):
+            reverse_x_dict[i] = reverse_x[i]
+        # print(reverse_x_dict);exit()
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='gray',edgecolors='none',alpha=.5)
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
+
+        plt.xlabel('Trend in LAImin (%)')
+        plt.ylabel('Trend in LAImax (%)')
+
+        plt.show()
+        # plt.savefig(outf)
+        # plt.close()
+
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -1770,96 +1860,6 @@ class greening_CV_relationship():
         DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(result_dic, outtif)
 
 
-    def heatmap_LAImin_max_CV(self):  ## plot trend as function of Aridity and precipitation trend
-        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
-        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        print(len(df))
-        # df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
-        # df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
-        df = df[df['GlOBMAP_detrend_CV_p_value'] < 0.05]
-        # # print(len(df));exit()
-
-
-        # plt.show();exit()
-
-        T.print_head_n(df)
-        # x_var = 'SNU_LAI_relative_change_detrend_min_trend'
-        # y_var = 'SNU_LAI_relative_change_detrend_max_trend'
-        # z_var = 'SNU_LAI_CV'
-
-        x_var = 'GLOBMAP_LAI_relative_change_detrend_min_trend'
-        y_var = 'GLOBMAP_LAI_relative_change_detrend_max_trend'
-        z_var = 'GlOBMAP_detrend_CV_trend'
-        plt.hist(df[x_var])
-        plt.show()
-        plt.hist(df[y_var])
-        plt.show()
-
-        bin_x = np.linspace(-1.5, 1.5,11, )
-
-        bin_y = np.linspace(-1.5, 1.5, 11)
-        # percentile_list=np.linspace(0,100,7)
-        # bin_x=np.percentile(df[x_var],percentile_list)
-        # print(bin_x)
-        # bin_y=np.percentile(df[y_var],percentile_list)
-        plt.figure(figsize=(self.map_width, self.map_height))
-
-        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
-                    col_name_x=x_var,
-                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y,round_x=4,round_y=4)
-        # pprint(matrix_dict);exit()
-
-        my_cmap = T.cmap_blend(color_list = ['#000000','r', 'b'])
-        my_cmap = 'RdBu'
-        self.plot_df_bin_2d_matrix(matrix_dict,-1,1,x_ticks_list,y_ticks_list,cmap=my_cmap,
-                              is_only_return_matrix=False)
-        plt.colorbar()
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        pprint(matrix_dict)
-        # plt.show()
-
-
-        matrix_dict_count, x_ticks_list, y_ticks_list = self.df_bin_2d_count(df, val_col_name=z_var,
-                                                              col_name_x=x_var,
-                                                              col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
-        pprint(matrix_dict_count)
-        scatter_size_dict = {
-            (1,20): 5,
-            (20,50): 20,
-            (50,100): 50,
-            (100,200): 75,
-            (200,400): 100,
-            (400,800): 200,
-            (800,np.inf): 250
-        }
-        matrix_dict_count_normalized = {}
-        # Normalize counts for circle size
-        for key in matrix_dict_count:
-            num = matrix_dict_count[key]
-            for key2 in scatter_size_dict:
-                if num >= key2[0] and num < key2[1]:
-                    matrix_dict_count_normalized[key] = scatter_size_dict[key2]
-                    break
-        pprint(matrix_dict_count_normalized)
-        reverse_x = list(range(len(bin_y)-1))[::-1]
-        reverse_x_dict = {}
-        for i in range(len(bin_y)-1):
-            reverse_x_dict[i] = reverse_x[i]
-        # print(reverse_x_dict);exit()
-        for x,y in matrix_dict_count_normalized:
-            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='gray',edgecolors='none',alpha=.5)
-        for x,y in matrix_dict_count_normalized:
-            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
-
-        plt.xlabel('Trend in LAImin (%)')
-        plt.ylabel('Trend in LAImax (%)')
-
-        plt.show()
-        # plt.savefig(outf)
-        # plt.close()
 
 
     def mode(self):  ## plot trend as function of Aridity and precipitation trend
@@ -3460,9 +3460,9 @@ class partial_correlation():
 
 def main():
 
-    # bivariate_analysis().run()
+    bivariate_analysis().run()
     # build_dataframe().run()
-    greening_CV_relationship().run()
+    # greening_CV_relationship().run()
     # multi_regression_beta().run()
 
     # partial_correlation().run()
