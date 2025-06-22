@@ -4,6 +4,7 @@ import sys
 import lytools
 import pingouin
 import pingouin as pg
+from numba.cuda.libdevice import fdiv_rd
 from openpyxl.styles.builtins import percent
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
@@ -921,6 +922,8 @@ class bivariate_analysis():
 
         # self.plot_robinson()
         self.LAImin_LAImax_index_()
+        # self.classfication_LAImin_LAImax_index()
+        # self.statistic_trend_bar()
 
 
 
@@ -1350,55 +1353,27 @@ class bivariate_analysis():
         plt.xticks(range(len(c_list)), x_ticks_list)
         plt.yticks(range(len(r_list)), y_ticks_list[::-1])
 
-    def LAImin_LAI_index(self,):
+
+
+    def LAImin_LAImax_index_2(self,):
         ## generate LAImin and LAImax
-        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_max_trend.npy'
-        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_min_trend.npy'
+        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\trend\\composite_LAI_detrend_relative_change_max_trend.npy'
+        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\\trend\\composite_LAI_detrend_relative_change_min_trend.npy'
         outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
-        LAImax=np.load(fLAImax,allow_pickle=True)
-        LAImin=np.load(fLAImin,allow_pickle=True)
-        spatial_dic={}
-        LAImax_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImax)
-        LAImin_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImin)
-        for pix in LAImax_dic:
-            LAImax=LAImax_dic[pix]
-            LAImax=np.array(LAImax)
-            LAImax[LAImax<-99]=np.nan
-            if not pix in LAImin_dic:
-                continue
-            LAImin = LAImin_dic[pix]
-            LAImin = np.array(LAImin)
-            LAImin[LAImin < -99] = np.nan
-            if abs(LAImax)+abs(LAImin)==0:
-                continue
+        LAImax_arr=np.load(fLAImax)
+        LAImax_arr[LAImax_arr<-99]=np.nan
+        LAImax_arr[LAImax_arr>99]=np.nan
 
-            index=(LAImax-LAImin)/abs(LAImax)+abs(LAImin)
-            spatial_dic[pix]=index
-        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-        array[array<-99]=np.nan
-        array[array>99]=np.nan
-        array_flatten=np.array(array).flatten()
-        plt.hist(array_flatten)
-        plt.show()
-        plt.imshow(array,interpolation='nearest',cmap='RdBu',vmin=-1,vmax=1)
-        plt.show()
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_index.tif')
+        LAImin_arr=np.load(fLAImin)
+        LAImin_arr[LAImin_arr<-99]=np.nan
+        LAImin_arr[LAImin_arr>99]=np.nan
+        spatial_diff_dic={}
+
+        LAImax_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImax_arr)
+        LAImin_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImin_arr)
 
 
 
-
-        pass
-
-    def LAImin_LAImax_index_(self,):
-        ## generate LAImin and LAImax
-        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_max.npy'
-        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_min.npy'
-        outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
-        LAImax_dic=T.load_npy(fLAImax)
-        LAImin_dic=T.load_npy(fLAImin)
-        spatial_dic={}
-
-        window_size=15
         for pix in LAImax_dic:
 
             LAImax=LAImax_dic[pix]
@@ -1406,21 +1381,219 @@ class bivariate_analysis():
 
             if not pix in LAImin_dic:
                 continue
+            difference=LAImax-LAImin
+            spatial_diff_dic[pix]=difference
 
 
-            index=(LAImax-LAImin)/abs(LAImax)+abs(LAImin)
-            slope,intercept,r_value,p_value,std_err=stats.linregress(np.arange(len(index)),index)
+        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_diff_dic)
 
-            spatial_dic[pix]=slope
-        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
         array[array<-99]=np.nan
         array[array>99]=np.nan
+
         array_flatten=np.array(array).flatten()
         plt.hist(array_flatten)
         plt.show()
         plt.imshow(array,interpolation='nearest',cmap='jet_r',vmin=-1,vmax=1)
         plt.show()
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_index2.tif')
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_difference.tif')
+
+    def LAImin_LAImax_index_(self,):
+        ## generate LAImin and LAImax
+        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_max.npy'
+        fLAImin=result_root+rf'3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_min.npy'
+        outdir=result_root+rf'\3mm\extract_composite_phenology_year\\'
+
+
+        LAImax_dic=T.load_npy(fLAImax)
+        LAImin_dic=T.load_npy(fLAImin)
+
+        spatial_ratio_dic={}
+        spatial_p_value_dic={}
+
+        for pix in LAImax_dic:
+
+            LAImax=LAImax_dic[pix]
+            if not pix in LAImin_dic:
+                continue
+            LAImin=LAImin_dic[pix]
+            LAImin=np.array(LAImin)
+            LAImax=np.array(LAImax)
+            if np.nanmean(LAImin)==0:
+                continue
+            if np.nanmean(LAImax)==0:
+                continue
+            if np.nanmean(LAImin)==0:
+                continue
+
+            ratio_array=LAImax-LAImin
+            # plt.plot(np.arange(len(ratio_array)),LAImin)
+            # plt.plot(np.arange(len(ratio_array)),LAImax)
+            # plt.plot(np.arange(len(ratio_array)),ratio_array)
+            # plt.show()
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(ratio_array)), ratio_array)
+
+            spatial_ratio_dic[pix]=slope
+            spatial_p_value_dic[pix]=p_value
+
+
+        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_ratio_dic)
+        array_pvalue=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_p_value_dic)
+
+
+        array[array<-99]=np.nan
+        array[array>99]=np.nan
+
+        array_flatten=np.array(array).flatten()
+        # plt.hist(array_flatten)
+        # plt.show()
+        # plt.imshow(array,interpolation='nearest',cmap='jet_r',vmin=-0.1,vmax=0.1)
+        # plt.show()
+        outslope=outdir+'\composite_LAI_detrend_relative_change_max_min_ratio_slope.tif'
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outslope)
+        outp_value=outdir+'\composite_LAI_detrend_relative_change_max_min_ratio_pvalue.tif'
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array_pvalue,outp_value)
+
+
+
+
+    def classfication_LAImin_LAImax_index(self):
+        fmax=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_max_trend.tif'
+        fmin=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_min_trend.tif'
+        array_max, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fmax)
+        array_min, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fmin)
+        array_max[array_max<-99]=np.nan
+        array_max[array_max>99]=np.nan
+        array_min[array_min<-99]=np.nan
+        array_min[array_min>99]=np.nan
+
+
+        trend_max=np.array(array_max).flatten()
+        trend_min=np.array(array_min).flatten()
+        delta=trend_max-trend_min
+
+
+        # 设置一个微小阈值来判断是否为 "接近于0"
+        eps_trend = 0.0001
+        eps_delta = 0.0001
+
+        # 初始化类别图
+        category = np.full(trend_max.shape, np.nan)
+
+        # 类别 1：max↑ min↑ 幅度相近
+        category[(trend_max > eps_trend) & (trend_min > eps_trend) & (np.abs(delta) < eps_delta)] = 1
+
+        # 类别 2：max↑ min↓ 且差值较大
+        category[(trend_max > eps_trend) & (trend_min < -eps_trend) & (delta > eps_delta)] = 2
+
+        # 类别 3：max↓ min↑ 且差值较大（负）
+        category[(trend_max < -eps_trend) & (trend_min > eps_trend) & (delta < -eps_delta)] = 3
+
+        # 类别 4：max↓ min↓ 幅度相近
+        category[(trend_max < -eps_trend) & (trend_min < -eps_trend) & (np.abs(delta) < eps_delta)] = 4
+
+        # 类别 5：max↑ min↑ 但 max 多
+        category[(trend_max > eps_trend) & (trend_min > eps_trend) & (delta > eps_delta)] = 5
+
+        # 类别 6：max↑ min↑ 但 min 多
+        category[(trend_max > eps_trend) & (trend_min > eps_trend) & (delta < -eps_delta)] = 6  # min≈0, max变
+        ## calculate the percentage of each category
+        category_temp=category
+        category_temp=category_temp[~np.isnan(category_temp)]
+        category_count = np.unique(category_temp, return_counts=True)
+
+        category_percentage = category_count[1] / len(category_temp)*100
+
+        plt.bar(category_count[0], category_percentage)
+        plt.show()
+
+        ## reshape
+        category=category.reshape(array_max.shape)
+        # plt.imshow(category,interpolation='nearest',cmap='jet_r',vmin=1,vmax=6)
+        # plt.show()
+        outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(category,outdir+'delta_category.tif')
+
+
+
+        pass
+
+
+    def statistic_trend_bar(self):
+        fdir = result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
+        variable='LAImin_LAImax_index2'
+
+        f_trend_path=fdir+f'{variable}_trend.tif'
+        f_pvalue_path=fdir+f'{variable}_pvalue.tif'
+
+
+        arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+        arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+        arr_corr[arr_corr<-99]=np.nan
+        arr_corr[arr_corr>99]=np.nan
+        arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+        arr_pvalue[arr_pvalue<-99]=np.nan
+        arr_pvalue[arr_pvalue>99]=np.nan
+        arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+        ## corr negative and positive
+        arr_corr = arr_corr.flatten()
+        arr_pvalue = arr_pvalue.flatten()
+        arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+        arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+        ## significant positive and negative
+        ## 1 is significant and 2 positive or negative
+
+        mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+        mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+        # 满足条件的像元数
+        count_positive_sig = np.sum(mask_pos)
+        count_negative_sig = np.sum(mask_neg)
+
+        # 百分比
+        significant_positive = (count_positive_sig / len(arr_corr)) * 100
+        significant_negative = (count_negative_sig / len(arr_corr)) * 100
+        result_dic = {
+
+            'sig neg': significant_negative,
+            'non sig neg': arr_neg,
+            'non sig pos': arr_pos,
+            'sig pos': significant_positive
+
+
+
+        }
+        # df_new=pd.DataFrame(result_dic,index=[variable])
+        # ## plot
+        # df_new=df_new.T
+        # df_new=df_new.reset_index()
+        # df_new.columns=['Variable','Percentage']
+        # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+        # plt.show()
+        color_list = [
+            '#008837',
+            '#a6dba0',
+
+            '#c2a5cf',
+            '#7b3294',
+        ]
+        width = 0.4
+        alpha_list = [1, 0.5, 0.5, 1]
+
+        # 逐个画 bar
+        for i, (key, val) in enumerate(result_dic.items()):
+            plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+            plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+            plt.ylabel('Percentage')
+            plt.title(variable)
+
+        plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+        plt.show()
+
 
 
     def df_clean(self, df):
@@ -1884,15 +2057,16 @@ class Plot_Robinson:
 
 class greening_CV_relationship():
     def __init__(self):
-        self.map_width = 15.3 * centimeter_factor
+        self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
         pass
 
     def run(self):
 
         # self.generate_bivarite_map()
+        self.generate_bivarite_map_2()
         # self.statistic_bar()
-        self.heatmap_LAImin_max_CV()
+
 
         pass
 
@@ -1909,6 +2083,93 @@ class greening_CV_relationship():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+    def generate_bivarite_map_2(self):
+        f_trend=rf'D:\Project3\Result\3mm\relative_change_growing_season\trend_analysis\\LAI4g_trend.tif'
+        f_cv=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\LAI4g_detrend_CV_trend.tif'
+
+        array_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend)
+        array_cv, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_cv)
+
+        array_trend[array_trend < -999] = np.nan
+        array_cv[array_cv < -999] = np.nan
+        plt.hist(array_trend.flatten())
+        plt.show()
+        plt.hist(array_cv.flatten())
+        plt.show()
+        # exit()
+        mask = ~np.isnan(array_trend) & ~np.isnan(array_cv)
+        trend_map_valid = array_trend[mask]
+        cv_map_valid = array_cv[mask]
+
+
+
+        n_bins =5
+
+        cv_bins=np.linspace(-1,1,n_bins)
+        trend_bins=np.linspace(-0.5,0.5,n_bins)
+        # 5. Combine into a DataFrame
+        df = pd.DataFrame({'CV': cv_map_valid, 'Trend': trend_map_valid})
+        df=df.dropna()
+
+        result_dic={}
+        ###
+        x_tick_list=[]
+        percent_matrix = np.zeros((n_bins - 1, n_bins - 1))
+
+
+        for i in range(n_bins):
+            if i == n_bins - 1:
+                continue
+            df_group=df[(df['CV'] > cv_bins[i]) & (df['CV'] <= cv_bins[i + 1])]
+            print(len(df_group))
+
+            x_tick_list.append([i, 0])
+            for j in range(n_bins):
+                if j == n_bins - 1:
+                    continue
+                df_groupii=df_group[(df_group['Trend'] > trend_bins[j]) & (df_group['Trend'] <= trend_bins[j + 1])]['Trend']
+
+                count=len(df_groupii)/len(df_group) *100
+
+                percent_matrix[i,j]=count
+
+
+
+        # print(result_dic);exit()
+        x_label_list=['strongly CV-','moderately CV-','slight CV-','slight CV+','moderately CV+','strongly CV+']
+
+
+        ## plt result
+        # x轴标签 = CV组（主分组）
+        x_labels = [f"{cv_bins[i]:.2f}~{cv_bins[i + 1]:.2f}" for i in range(n_bins - 1)]
+        trend_labels = [f"{trend_bins[i]:.2f}~{trend_bins[i + 1]:.2f}" for i in range(n_bins - 1)]
+
+        x = np.arange(len(x_labels))  # 每个主组位置
+        width = 0.2  # 每个子柱宽度
+
+        plt.figure(figsize=(self.map_width, self.map_height))
+        color_list=['brown','red',   'green', 'blue', 'purple']
+        flag=0
+
+        for j in range(n_bins - 1):  # 对于每个 trend 组
+
+            plt.bar(x + j * width, percent_matrix[:, j], width, label=f"Trend {trend_labels[j]}", color=color_list[flag])
+            flag+=1
+
+        plt.xticks(x + width * ((n_bins - 2) / 2), x_labels, rotation=45)
+        plt.ylabel('Percentage (%)')
+
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        plt.show()
+
+
+
+
+
 
 
     def statistic_bar(self):

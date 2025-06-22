@@ -13604,15 +13604,16 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = result_root + rf'\3mm\SM_T\extract_solar_radiation_phenology_year\solar_radiation.npy'
-        # for f in os.listdir(fdir):
-        #     if not 'global' in f:
-        #         continue
+        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            if not 'SDGVM_S2_lai_detrend_CV' in f:
+                continue
 
 
 
-        # dic=T.load_npy_dir(fdir)
-        dic=T.load_npy(fdir)
+            dic=T.load_npy(fdir+f)
 
             # for f in os.listdir(fdir):
             #     if not f.endswith(('.npy')):
@@ -13621,25 +13622,27 @@ class check_data():
             #     dic_i=T.load_npy(fdir+f)
             #     dic.update(dic_i)
 
-        len_dic={}
-        average_={}
+            len_dic={}
+            average_={}
 
-        for pix in dic:
-            r,c=pix
-            # (r,c)=(817,444)
-            # if not r==444:
-            #     continue
-            # if not c==817:
-            #     continue
-            # if r<480:
-            #     continue
-            vals=dic[pix]
-            average_[pix]=np.nanmean(vals)
-        arr=DIC_and_TIF().pix_dic_to_spatial_arr(average_)
-        plt.imshow()
-        plt.show()
+            for pix in dic:
+                r,c=pix
+                # (r,c)=(817,444)
+                # if not r==444:
+                #     continue
+                # if not c==817:
+                #     continue
+                # if r<480:
+                #     continue
+                vals=dic[pix]
+                average_[pix]=np.nanmean(vals)
+                len_dic[pix]=len(vals)
+            arr=DIC_and_TIF().pix_dic_to_spatial_arr(len_dic)
+            plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=23)
+            plt.title(f)
+            plt.show()
 
-            #
+                #
 
 
     def pixel_inspection(self):
@@ -15258,7 +15261,7 @@ def main():
     # calculating_variables().run()
     # plot_response_function().run()
     # maximum_trend().run()
-    partial_correlation().run()
+    # partial_correlation().run()
     # single_correlation().run()
     # ResponseFunction().run()
     # bivariate_analysis().run()
@@ -15279,7 +15282,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    # check_data().run()
+    check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 

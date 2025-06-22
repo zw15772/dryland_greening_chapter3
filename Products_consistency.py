@@ -2128,11 +2128,11 @@ class PLOT_dataframe():
             # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
             # plt.show()
             color_list = [
-                '#008837',
-                '#a6dba0',
+                 '#844000',
+            '#fc9831',
 
-                '#c2a5cf',
-                '#7b3294',
+            '#86b9d2',
+            '#064c6c',
             ]
             width = 0.4
             alpha_list = [1, 0.5, 0.5, 1]

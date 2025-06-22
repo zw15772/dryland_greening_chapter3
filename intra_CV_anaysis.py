@@ -3779,10 +3779,10 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
-        # self.moving_window_max_min_anaysis()
+        self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
         # self.robinson()
 
@@ -4136,13 +4136,13 @@ class moving_window():
         outdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'GLOBMAP_LAI_relative_change_detrend' in f:
+            if  'relative_change' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
 
             slides = 38 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_min.npy'
+            outf = outdir + f.split('.')[0] + f'_max_raw.npy'
             print(outf)
 
             trend_dic = {}
@@ -4171,7 +4171,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmin(time_series)
+                    average=np.nanmax(time_series)
                     # print(average)
 
                     trend_list.append(average)

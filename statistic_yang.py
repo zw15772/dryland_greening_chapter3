@@ -1803,12 +1803,12 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        self.pdp_shap()
+        # self.pdp_shap()
         self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## for paper use
         # self.plot_relative_importance()
-        # self.plot_pdp_shap_all_models_SI()
+        self.plot_pdp_shap_all_models_SI()
         # self.plot_pdp_shap_all_models_main()
         # self.plot_heatmap_ranking()
         # self.plot_interaction_manual()
@@ -1979,34 +1979,37 @@ class SHAP_CV():
 
         self.x_variable_list_CRU = [
             # 'rainfall_frenquency_trend',
-            # 'rainfall_intensity_trend',
+            'rainfall_intensity_trend',
             'pi_average_trend',
+            'sand_rainfall_intensity',
+            # 'sand_rainfall_frenquency',
+            'sum_rainfall_trend',
+            # 'VPD_trend',
+            # 'VPD',
+            # 'Tmax',
             # 'fire_ecosystem_year_average_trend',
             # 'rainfall_seasonality_all_year_trend',
 
 
 
-
             # 'nitrogen',
             # 'zroot_cwd80_05',
-            'cwdx80_05',
+            # 'cwdx80_05',
+            # 'cwdx80_05_rainfall_intensity',
+            # 'cwdx80_05_rainfall_frenquency',
             # 'cec',
             'sand',
-             # 'soc',
-
+            'soc',
             'rainfall_intensity',
             # 'dry_spell',
 
             'rainfall_frenquency',
 
-            'rainfall_seasonality_all_year',
-
+            'rainfall_seasonality_all_year_trend',
 
                 # 'Aridity',
                 # 'pi_average',
              'fire_ecosystem_year_average',
-
-
             'rooting_depth',
 
 
@@ -2053,6 +2056,8 @@ class SHAP_CV():
             'cec': [0, 400],
             'sand': [200, 800],
             'soc': [0, 600],
+            'sand_rainfall_intensity': [-2000, 2000],
+            'sand_rainfall_frenquency': [-2000,2000],
 
             'fire_ecosystem_year_average': [0,30],
             'fire_ecosystem_year_average_trend': [-1, 1],
@@ -2214,7 +2219,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta')
+        outdir = join(self.this_class_png, 'pdp_shap_beta2')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2227,7 +2232,7 @@ class SHAP_CV():
         # print('len(df):',len(df))
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
-        df = self.valid_range_df(df)
+        # df = self.valid_range_df(df)
         # print('len(df):',len(df));exit()
 
         pix_list = df['pix'].tolist()
@@ -2291,7 +2296,7 @@ class SHAP_CV():
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
         plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
         plt.colorbar()
-        # plt.show()
+        plt.show()
 
 
         X = all_vars_df[x_variable_list]
@@ -2338,8 +2343,8 @@ class SHAP_CV():
         # plt.figure()
 
         ## random sample
-        # seed = np.random.seed(1)
-        # [35318, 84714, 74782, ..., 58371, 99838, 53471]
+        seed = np.random.seed(1)
+       # [35318, 84714, 74782, ..., 58371, 99838, 53471]
 
         # sample_indices = np.random.choice(X.shape[0], size=500, replace=False)
         # pprint(sample_indices)
@@ -2507,7 +2512,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta2', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2583,7 +2588,7 @@ class SHAP_CV():
             # exit()
             # interp_model = interpolate.interp1d(x_mean_list, y_mean_list, kind='cubic')
             # y_interp = interp_model(x_mean_list)
-            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=11)
+            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
             plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
 
             # exit()
@@ -2713,31 +2718,34 @@ class SHAP_CV():
         # plt.savefig(outf,dpi=300)
         # plt.close()
 
-    def plot_pdp_shap_density_cloud_individual(self,line=False    ,scatter=True   ):
+    def plot_pdp_shap_density_cloud_individual(self,line=False    ,scatter=True  ):
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+
+
         x_variable_list = self.x_variable_list
 
         name_dic={'rainfall_intensity':'Rainfall intensity (mm/events)',
                   'rainfall_frenquency':'Rainfall frequency (events/year)',
                   'rainfall_seasonality_all_year':'Rainfall seasonality (unitless)',
+                  'soc':'Soil organic carbon (g/kg)',
+                  'sand_rainfall_intensity':'Sand-rainfall intensity (mm/events)',
+
 
                   'cwdx80_05':'Rooting zone water storage capacity (mm)',
                   'pi_average':'SM-Tcoupling (unitless)',
-                  'fire_weighted_ecosystem_year_average':'Fire  (km2)',
+                  'fire_ecosystem_year_average':'Fire  (km2)',
                   'rooting_depth':'Rooting depth (mm)',
                   'rainfall_intensity_trend':'Rainfall intensity trend (mm/events/yr)',
                   'rainfall_frenquency_trend':'Rainfall frequency trend (events/yr)',
-                  'pi_average_trend':'SM-Tcoupling trend (unitless/yr)',
+                  'pi_average_trend':'SM-T coupling trend (unitless/yr)',
                   'fire_ecosystem_year_average_trend':'burn area trend (km2/yr)',
                   'rainfall_seasonality_all_year_trend':'Rainfall seasonality trend (unitless/yr)',
-
-
-
 
 
                   'sand':'Sand (g/kg)',
 
         }
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta2', self.y_variable + '.shap.pkl')
 
 
         # print(isfile(inf_shap));exit()
@@ -2808,17 +2816,15 @@ class SHAP_CV():
 
 
             y_lims = {
-                "rainfall_intensity": [-5, 5],
+                "rainfall_intensity": [-4, 2.5],
                 "rainfall_frenquency": [-8, 8],
-
-
-                "rainfall_seasonality_all_year": [-1, 1],
-                "sand": [-0.5, 2],
+                "rainfall_seasonality_all_year": [-0.5, 0.5],
+                "sand": [-1, 1],
                 "cwdx80_05": [-1, 1],
                 'pi_average': [-1, 1],
-                'fire_ecosystem_year_average':[-1,1],
-                'rooting_depth':[-1,2],
-                'pi_average_trend':[-1,1],
+                'fire_ecosystem_year_average':[-0.5,0.5],
+                'rooting_depth':[-1,1],
+                'pi_average_trend':[-1,2],
                 'fire_ecosystem_year_average_trend':[-1,1],
                 'rainfall_seasonality_all_year_trend':[-1,1],
                 'rainfall_intensity_trend':[-1,1],
@@ -2831,7 +2837,9 @@ class SHAP_CV():
                 plt.axis('off')
 
             if line:
-                y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
+                # y_mean_list= lowess(y_mean_list, x_mean_list, frac=0.1)
+                y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=13)
+                # y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
                 ax.plot(x_mean_list, y_mean_list, c='red', alpha=1)
 
                 # ax.set_title(name_dic[x_var], fontsize=12)
@@ -2845,7 +2853,7 @@ class SHAP_CV():
 
             # plt.show()
 
-            outdir=join(self.this_class_png, 'pdp_shap_beta', 'pdf_cloud')
+            outdir=join(self.this_class_png, 'pdp_shap_beta2', 'pdf_cloud')
             T.mk_dir(outdir, force=True)
 
             outf = join(outdir, f'{x_var}.png')
@@ -2877,7 +2885,6 @@ class SHAP_CV():
             fdir = join(fdir_all, rf'RF_{model}_detrend_CV_')
 
             for fdir_ii in T.listdir(fdir):
-
 
 
                 for f in T.listdir(join(fdir, fdir_ii)):
@@ -3500,9 +3507,9 @@ class SHAP_CV():
         # model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=-1,) # build a random forest model
         # rf.fit(X_train, y_train) # train the model
         # r2 = rf.score(X_test,y_test)
-        # model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
-        #                        max_depth=13, eta=0.1, random_state=42, n_jobs=14,  )
-        model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=14)
+        model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
+                               max_depth=13, eta=0.1, random_state=42, n_jobs=14,  )
+        # model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=14)
         # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
         model.fit(X_train, y_train)
