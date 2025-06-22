@@ -4,6 +4,7 @@ import sys
 import lytools
 import pingouin
 import pingouin as pg
+from matplotlib.pyplot import xticks
 from numba.cuda.libdevice import fdiv_rd
 from openpyxl.styles.builtins import percent
 # from green_driver_trend_contribution import *
@@ -921,7 +922,8 @@ class bivariate_analysis():
 
 
         # self.plot_robinson()
-        self.LAImin_LAImax_index_()
+        # self.LAImin_LAImax_index_3()
+        self.LAImin_LAImax_index_ratio_group()
         # self.classfication_LAImin_LAImax_index()
         # self.statistic_trend_bar()
 
@@ -1355,104 +1357,209 @@ class bivariate_analysis():
 
 
 
-    def LAImin_LAImax_index_2(self,):
+
+
+
+    def LAImin_LAImax_index_ratio_group(self,):
+
+        import matplotlib.cm as cm
+
+        fdir_max=result_root+rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\'
+        fdir_min=result_root+rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\min\trend_analysis\\'
+        outdir=result_root+rf'\3mm\relative_change_growing_season\\moving_window_min_max_anaysis\\ratio\\'
+        T.mk_dir(outdir,force=True)
+
+        variables_list = ['composite_LAI', 'TRENDY_ensemble',
+                            'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+
+        dic_label_name = {'composite_LAI': 'Composite LAI',
+                          'TRENDY_ensemble': 'TRENDY ensemble',
+            'CABLE-POP_S2_lai': 'CABLE-POP',
+                          'CLASSIC_S2_lai': 'CLASSIC',
+                          'CLM5': 'CLM5',
+                          'DLEM_S2_lai': 'DLEM',
+                          'IBIS_S2_lai': 'IBIS',
+                          'ISAM_S2_lai': 'ISAM',
+                          'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                          'JSBACH_S2_lai': 'JSBACH',
+                          'JULES_S2_lai': 'JULES',
+                          'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                          'LPX-Bern_S2_lai': 'LPX-Bern',
+                          'ORCHIDEE_S2_lai': 'ORCHIDEE',
+
+                          'YIBs_S2_Monthly_lai': 'YIBs',
+
+                          }
+        result_dic={}
+
+        for variable in variables_list:
+            percentage_dic={}
+
+
+            lai_max_trend_path = fdir_max+f'{variable}_detrend_max_trend.tif'
+            lai_min_trend_path = fdir_min+f'{variable}_detrend_min_trend.tif'
+
+            output_classification_path = outdir + f'{variable}_detrend_relative_change_ratio_classification.tif'
+
+            LAImax_arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(lai_max_trend_path)
+            LAImax_arr[LAImax_arr < -99] = np.nan
+            LAImax_arr[LAImax_arr > 99] = np.nan
+
+            LAImin_arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(lai_min_trend_path)
+            LAImin_arr[LAImin_arr < -99] = np.nan
+            LAImin_arr[LAImin_arr > 99] = np.nan
+
+
+
+            # === Initialize classification map ===
+            class_map = np.full_like(LAImax_arr, np.nan, dtype=np.uint8)
+
+            # === Define classification logic ===
+            ratio = np.full_like(LAImax_arr, np.nan, dtype=np.float32)
+            valid_mask = (~np.isnan(LAImax_arr)) & (~np.isnan(LAImin_arr)) & (np.abs(LAImin_arr) > 0.001)
+            ratio[valid_mask] = LAImax_arr[valid_mask] / LAImin_arr[valid_mask]
+
+            # Case 1: both +, ratio > 1
+            class_map[(LAImax_arr > 0) & (LAImin_arr > 0) & (ratio > 1)] = 1
+
+            # Case 2: both +, ratio ≈ 1
+            class_map[(LAImax_arr > 0) & (LAImin_arr > 0) & (np.isclose(ratio, 1, atol=0.1))] = 2
+
+            # Case 3: both +, ratio < 1
+            class_map[(LAImax_arr > 0) & (LAImin_arr > 0) & (ratio < 1)] = 3
+
+            # Case 4: max +, min -
+            class_map[(LAImax_arr > 0) & (LAImin_arr < 0)] = 4
+
+            # Case 5: max -, min +
+            class_map[(LAImax_arr < 0) & (LAImin_arr > 0)] = 5
+
+            # Case 6: both -, ratio > 1
+            class_map[(LAImax_arr < 0) & (LAImin_arr < 0) & (ratio > 1)] = 6
+
+
+            # Case 7: both -, ratio ≈ 1
+            class_map[(LAImax_arr < 0) & (LAImin_arr < 0) & (np.isclose(ratio, 1, atol=0.1))] = 7
+
+            # Case 8: both -, ratio < 1
+            class_map[(LAImax_arr < 0) & (LAImin_arr < 0) & (ratio < 1)] = 8
+
+            # Case 9: denominator ≈ 0 (unstable)
+            class_map[np.abs(LAImin_arr) < 0.001] = 9
+
+            class_map = class_map.astype(np.float32)
+            class_map[class_map == 0] = np.nan
+
+            # === Save the classification map ===
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(class_map, output_classification_path)
+            class_map[class_map<-99]=np.nan
+
+            total_valid = np.count_nonzero(~np.isnan(class_map))
+            for k in range(1, 10):
+                percentage = np.count_nonzero(class_map == k) / total_valid * 100
+                percentage_dic[k] = percentage
+
+
+            result_dic[variable] = percentage_dic
+
+
+        alpha_list = [1] + [1] + [0.7] * 14
+
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        df_new=pd.DataFrame(result_dic)
+        df_new=df_new.T
+        df_new=df_new.reset_index()
+        df_new.columns = ['variable'] + [str(i) for i in range(1, 10)]
+
+        df_melted = df_new.melt(
+            id_vars='variable',
+            value_vars=[str(i) for i in range(1, 10)],
+
+            var_name='class',
+            value_name='percentage'
+        )
+
+
+        variables = df_melted['variable'].unique()
+        classes = sorted(df_melted['class'].unique())
+
+        cmap = cm.get_cmap('Set3', len(classes))  # 也可以用 'viridis', 'cool', 'turbo' 等
+        color_list = [cmap(i) for i in range(len(classes))]
+
+        # 初始化底部为 0
+        bottom = np.zeros(len(variables))
+
+        for i, cls in enumerate(classes):
+            df_class = df_melted[df_melted['class'] == cls].set_index('variable').reindex(variables)
+            values = df_class['percentage'].values
+
+            ax.bar(
+                variables,
+                values,
+                bottom=bottom,
+                width=0.6,
+                label=f'Class {cls}',
+                alpha=0.8,
+                color=color_list[i],
+                edgecolor='black'
+
+            )
+
+            # 更新底部
+            bottom += values
+
+
+        # 设置图例和格式
+        ax.set_ylabel('Percentage (%)', fontsize=10,font='Arial')
+        ## set xticks dicname
+        ax.set_xticks(range(len(variables)))
+        ax.set_xticklabels(dic_label_name.values(), rotation=90, fontsize=10,font='Arial')
+
+        ax.legend(title="Class")
+        plt.tight_layout()
+        plt.show()
+
+
+
+    def LAImin_LAImax_index_3(self,):
         ## generate LAImin and LAImax
-        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\trend\\composite_LAI_detrend_relative_change_max_trend.npy'
-        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\\trend\\composite_LAI_detrend_relative_change_min_trend.npy'
+        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_max_trend.tif'
+        fLAImin=result_root+rf'\3mm\extract_composite_phenology_year\\trend\\composite_LAI_detrend_relative_change_min_trend.tif'
         outdir=result_root+rf'\3mm\extract_composite_phenology_year\trend\\'
-        LAImax_arr=np.load(fLAImax)
+        LAImax_arr,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(fLAImax)
         LAImax_arr[LAImax_arr<-99]=np.nan
         LAImax_arr[LAImax_arr>99]=np.nan
 
-        LAImin_arr=np.load(fLAImin)
+        LAImin_arr,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(fLAImin)
         LAImin_arr[LAImin_arr<-99]=np.nan
         LAImin_arr[LAImin_arr>99]=np.nan
-        spatial_diff_dic={}
-
-        LAImax_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImax_arr)
-        LAImin_dic=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(LAImin_arr)
 
 
+        min_threshold=0.001
 
-        for pix in LAImax_dic:
-
-            LAImax=LAImax_dic[pix]
-            LAImin=LAImin_dic[pix]
-
-            if not pix in LAImin_dic:
-                continue
-            difference=LAImax-LAImin
-            spatial_diff_dic[pix]=difference
+        mask_valid = (~np.isnan(LAImax_arr)) & (~np.isnan(LAImin_arr)) & (np.abs(LAImax_arr) > min_threshold)
+        ratio = np.full_like(LAImax_arr, np.nan)
+        ratio[mask_valid] = LAImax_arr[mask_valid] / LAImin_arr[mask_valid]
+        ratio[ratio>100]=np.nan
+        ratio[ratio<-100]=np.nan
 
 
-        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_diff_dic)
 
-        array[array<-99]=np.nan
-        array[array>99]=np.nan
+        array_flatten=np.array(ratio).flatten()
 
-        array_flatten=np.array(array).flatten()
         plt.hist(array_flatten)
         plt.show()
-        plt.imshow(array,interpolation='nearest',cmap='jet_r',vmin=-1,vmax=1)
+        plt.imshow(ratio,interpolation='nearest',cmap='jet_r',vmin=-1,vmax=1)
         plt.show()
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outdir+'LAImin_LAImax_difference.tif')
-
-    def LAImin_LAImax_index_(self,):
-        ## generate LAImin and LAImax
-        fLAImax=result_root+rf'\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_max.npy'
-        fLAImin=result_root+rf'3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_min.npy'
-        outdir=result_root+rf'\3mm\extract_composite_phenology_year\\'
-
-
-        LAImax_dic=T.load_npy(fLAImax)
-        LAImin_dic=T.load_npy(fLAImin)
-
-        spatial_ratio_dic={}
-        spatial_p_value_dic={}
-
-        for pix in LAImax_dic:
-
-            LAImax=LAImax_dic[pix]
-            if not pix in LAImin_dic:
-                continue
-            LAImin=LAImin_dic[pix]
-            LAImin=np.array(LAImin)
-            LAImax=np.array(LAImax)
-            if np.nanmean(LAImin)==0:
-                continue
-            if np.nanmean(LAImax)==0:
-                continue
-            if np.nanmean(LAImin)==0:
-                continue
-
-            ratio_array=LAImax-LAImin
-            # plt.plot(np.arange(len(ratio_array)),LAImin)
-            # plt.plot(np.arange(len(ratio_array)),LAImax)
-            # plt.plot(np.arange(len(ratio_array)),ratio_array)
-            # plt.show()
-
-            slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(ratio_array)), ratio_array)
-
-            spatial_ratio_dic[pix]=slope
-            spatial_p_value_dic[pix]=p_value
-
-
-        array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_ratio_dic)
-        array_pvalue=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_p_value_dic)
-
-
-        array[array<-99]=np.nan
-        array[array>99]=np.nan
-
-        array_flatten=np.array(array).flatten()
-        # plt.hist(array_flatten)
-        # plt.show()
-        # plt.imshow(array,interpolation='nearest',cmap='jet_r',vmin=-0.1,vmax=0.1)
-        # plt.show()
-        outslope=outdir+'\composite_LAI_detrend_relative_change_max_min_ratio_slope.tif'
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array,outslope)
-        outp_value=outdir+'\composite_LAI_detrend_relative_change_max_min_ratio_pvalue.tif'
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(array_pvalue,outp_value)
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(ratio,outdir+'LAImin_LAImax_ratio.tif')
 
 
 

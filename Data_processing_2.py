@@ -7103,8 +7103,8 @@ class TRENDY_CV:
         # self.moving_window_CV_anaysis()
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
-        self.trend_analysis()
-        # self.TRENDY_ensemble()
+        # self.trend_analysis()
+        self.TRENDY_ensemble()
         # self.plot_robinson()
         # self.plt_basemap()
 
@@ -7418,11 +7418,12 @@ class TRENDY_CV:
 
                       'YIBs_S2_Monthly_lai']
 
-        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\trend_analysis\\'
+
+        fdir = result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\'
         arr_list=[]
 
         for model in model_list:
-            fpath = fdir + model + '_detrend_CV_trend.tif'
+            fpath = fdir + model + '_detrend_max_trend.tif'
 
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
             arr[arr>99]=np.nan
@@ -7437,7 +7438,7 @@ class TRENDY_CV:
         plt.colorbar()
         plt.show()
 
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\TRENDY_ensemble_mean_detrend_CV_trend.tif')
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, result_root + rf'\3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif')
 
 
 
