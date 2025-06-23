@@ -887,8 +887,9 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
+        self.rescale_to_df(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1117,6 +1118,18 @@ class build_moving_window_dataframe():
         # df[f'{variable}_ecosystem_year'] = NDVI_list
         # exit()
         return df
+    def rescale_to_df(self,df):
+        # T.print_head_n(df);exit()
+
+
+
+        df['sand']=df['sand']*100
+        df['soc'] = df['soc'] *100
+        # df['sand_rainfall_frenquency'] = df['sand'] * df['rainfall_frenquency_average_zscore']
+        # df['sand_rainfall_intensity'] = df['sand'] * df['rainfall_intensity_average_zscore']
+
+        return df
+
     def add_interaction_to_df(self,df):
         # T.print_head_n(df);exit()
 
@@ -1288,9 +1301,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\Dataframe\Trend_new\\')
+        self.this_class_arr = (result_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta2\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend_2.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
 
         pass
 
@@ -1299,7 +1312,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1319,15 +1332,15 @@ class build_dataframe():
         # # df=self.add_mean_to_df(df)
         # #
         #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # #
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        #
+        df=self.add_lat_lon_to_df(df)
 
         # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -1335,7 +1348,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         df=self.show_field(df)
 
@@ -2139,7 +2152,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        fdir=result_root+ rf'\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta2\variable_contributions\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2147,8 +2160,7 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
-            if not 'TRENDY_ensemble_mean_detrend_CV_trend' in f:
-                continue
+
 
 
             if not f.endswith('.tif'):
@@ -8305,12 +8317,12 @@ def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()
