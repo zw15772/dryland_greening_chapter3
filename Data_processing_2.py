@@ -1301,9 +1301,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta2\\')
+        self.this_class_arr = (result_root+rf'\3mm\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Trend_all.df'
 
         pass
 
@@ -1328,7 +1328,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # # df=self.add_mean_to_df(df)
         # #
         #
@@ -2155,7 +2155,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'\3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\\'
+        fdir=result_root+ rf'3mm\extract_composite_phenology_year\trend\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2163,10 +2163,9 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
-            if not 'composite_LAI_beta_mean' in f:
+            if not 'composite_LAI_relative_change_mean' in f:
                 continue
-            if 'zscore' in f:
-                continue
+
 
 
 
@@ -7123,12 +7122,12 @@ class TRENDY_CV:
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
-        self.TRENDY_ensemble()
+        # self.TRENDY_ensemble()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        # self.plot_CV_trend_among_models()
+        self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8323,13 +8322,13 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

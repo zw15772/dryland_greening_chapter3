@@ -1814,10 +1814,10 @@ class SHAP_CV():
         # self.plot_interaction_manual()
         # self.spatial_shapely()   ### spatial plot
         # self.variable_contributions()
-        # self.plot_dominant_factors_bar()
+        self.plot_dominant_factors_bar()
         # self.plot_robinson()
         # self.max_contributions()
-        self.disentangle()
+        # self.disentangle()
 
 
         pass
@@ -3554,6 +3554,7 @@ class SHAP_CV():
 
         plt.xticks(rotation=45, ha='right')
         plt.ylabel('Percentage')
+        plt.tight_layout()
         plt.show()
 
         ## plot
