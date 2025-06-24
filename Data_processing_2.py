@@ -1312,7 +1312,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1328,19 +1328,20 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # # df=self.add_mean_to_df(df)
         # #
         #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        #
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # #
+        # df=self.add_lat_lon_to_df(df)
+        df=self.add_continent_to_df(df)
 
         # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -1426,9 +1427,11 @@ class build_dataframe():
 
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+ rf'\3mm\relative_change_growing_season\TRENDY\\'
+        fdir = result_root+ rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
+                continue
+            if not 'rainfall_intensity' in f:
                 continue
 
             # array=np.load(fdir+f)
@@ -1839,7 +1842,7 @@ class build_dataframe():
 
         return df
     def add_continent_to_df(self, df):
-        tiff = rf'E:\Project3\Data\Base_data\\continent_05.tif'
+        tiff = rf'D:\Project3\Data\Base_data\\continent_05.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2152,7 +2155,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta2\variable_contributions\\'
+        fdir=result_root+ rf'\3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2160,6 +2163,10 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
+            if not 'composite_LAI_beta_mean' in f:
+                continue
+            if 'zscore' in f:
+                continue
 
 
 
@@ -8316,8 +8323,8 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
