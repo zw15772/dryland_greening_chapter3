@@ -1301,7 +1301,7 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\bivariate_analysis\Dataframe\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\LAImin_LAImax_all_models\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + rf'Trend_all.df'
 
@@ -1328,20 +1328,20 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # # df=self.add_mean_to_df(df)
         # #
         #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
         # #
-        # df=self.add_lat_lon_to_df(df)
-        df=self.add_continent_to_df(df)
+        df=self.add_lat_lon_to_df(df)
+        # df=self.add_continent_to_df(df)
 
         # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -1566,7 +1566,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\TRENDY_ensemble_composite_time_series_detrend_CV_trend.tif'
+        f = result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2155,7 +2155,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'3mm\extract_composite_phenology_year\trend\\'
+        fdir=result_root+ rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\min\trend_analysis\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2163,10 +2163,6 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
-            if not 'composite_LAI_relative_change_mean' in f:
-                continue
-
-
 
 
             if not f.endswith('.tif'):
@@ -5751,7 +5747,7 @@ class multi_regression():  ###linaer regression for CO2 effects.
 
         self.cal_multi_regression_beta(df,self.xvar_list)  # 修改参数
         # ###step 2 crate individial files
-        # self.plt_multi_regression_result(outdir,self.y_var)
+        self.plt_multi_regression_result(outdir,self.y_var)
 #
 
 
@@ -7901,14 +7897,16 @@ class TRENDY_CV:
 
     def plot_CV_trend_among_models(self):  ##plot CV and trend
 
-        color_list = ['black','deepskyblue', 'slateblue', 'red', 'blue', 'aqua', 'orange', 'greenyellow',
-                      'yellow', 'pink', 'brown', 'cyan', 'magenta', 'goldenrod', 'teal', 'lime',
-                      'red', 'navy', ]
+        color_list = ['green','#297270', '#299d8f', '#8ab07c', '#e66d50', '#a1a9d0',
+                      '#f0988c', '#b883d3','#ffff33', '#c4a5de',
+                      '#E7483D', '#984ea3','#e41a1c',
+
+                      '#9e9e9e', '#cfeaf1', '#f6cae5',
+                      '#98cccb', '#5867AF','#8FC751' ]
+        ## I want use set 3 color
+
         mark_size_list=[200]+[50]*3+[200]+[50]*14
         alpha_list=[1]+[0.7]*3+[1]+[0.7]*14
-        # color list 4 blue and 14 grey
-
-        # color_list =['black']+ ['#1f77b4'] * 3 +['#ff7f0e'] + ['#a9a9a9'] * 14
 
 
 
@@ -7920,7 +7918,8 @@ class TRENDY_CV:
         ## print column names
         # print(df.columns)
         # exit()
-        marker_list=['^','s', 'P','D','X']*4
+        marker_list=['^','s', 'P','X','D',]*4
+        marker_list = ['^', ] * 4 + ['s']*14
 
         variables_list = ['composite_LAI_mean','LAI4g', 'GLOBMAP_LAI',
                           'SNU_LAI',
@@ -7965,8 +7964,14 @@ class TRENDY_CV:
             vals_CV = vals_CV[~np.isnan(vals_CV)]
             vals_trend_list.append(np.nanmean(vals_trend))
             vals_CV_list.append(np.nanmean(vals_CV))
-            err_trend_list.append(np.nanstd(vals_trend))
-            err_CV_list.append(np.nanstd(vals_CV))
+            if variable in ['composite_LAI_mean','TRENDY_ensemble_mean']:
+                err_trend_list.append(np.nanstd(vals_trend))
+                err_CV_list.append(np.nanstd(vals_CV))
+            else:
+                err_trend_list.append(np.nan)
+                err_CV_list.append(np.nan)
+
+
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
         # plt.show()
         ##plot error bar
@@ -7975,18 +7980,19 @@ class TRENDY_CV:
         self.map_width = 13 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
 
-        err_trend_list = np.array(err_trend_list) / 8
-        err_CV_list = np.array(err_CV_list) / 8
+        err_trend_list = np.array(err_trend_list)
+        err_CV_list = np.array(err_CV_list)
         for i, (x, y, marker,color,var,mark_size,alpha) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list,mark_size_list,alpha_list)):
-            plt.scatter(x, y, marker=marker,color=color_list[i], label=var, s=mark_size, alpha=alpha,edgecolors='black',)
-            # plt.errorbar(x, y, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
+            plt.scatter(y, x, marker=marker,color=color_list[i], label=var, s=mark_size, alpha=alpha,edgecolors='black',)
+            # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
+
 
             ##markerborderwidth=1
 
-            plt.xlabel('Trend (%/year)', fontsize=12)
-            plt.ylabel('CV (%/year)', fontsize=12)
-            plt.xlim(-0.03, 0.2)
-            plt.ylim(-0.4, 0.5)
+            plt.ylabel('Trend (%/year)', fontsize=12)
+            plt.xlabel('CV (%/year)', fontsize=12)
+            plt.ylim(-0.02,0.18)
+            plt.xlim(-0.3, 0.5)
             plt.xticks(fontsize=12)
             plt.yticks(fontsize=12)
             plt.legend()

@@ -1,6 +1,7 @@
 # coding='utf-8'
 import sys
 
+
 import lytools
 import pingouin
 import pingouin as pg
@@ -89,7 +90,7 @@ class multi_regression_beta():
         self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
 
         self.xvar_list = ['sum_rainfall_zscore_detrend','Tmax_zscore_detrend','VPD_zscore_detrend']
-        self.y_var = ['GLOBALMAP_zscore_detrend']
+        self.y_var = ['SNULAI_zscore_detrend']
 
 
     def run(self):
@@ -98,7 +99,7 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
@@ -116,12 +117,12 @@ class multi_regression_beta():
 # #
         # ##step 3 covert to time series
 
-        # self.convert_files_to_time_series(outdir,self.y_var) ## 这里乘以100
+        self.convert_files_to_time_series(outdir,self.y_var) ## 这里乘以100
         ### step 4 build dataframe using build Dataframe function and then plot here
         # self.plot_moving_window_time_series() not use
         ## spatial trends of sensitivity
-        # self.calculate_trend_trend(outdir)
-        self.composite_beta()
+        self.calculate_trend_trend(outdir)
+        # self.composite_beta()
         # plot robinson
         # self.plot_robinson()
         # self.plot_sensitivity_preicipation_trend()
@@ -582,7 +583,7 @@ class multi_regression_beta():
 
 
 
-        variable_list = ['sum_rainfall_zscore_detrend']
+        variable_list = ['sum_rainfall_detrend']
 
 
 
@@ -628,7 +629,7 @@ class multi_regression_beta():
 
                 time_series=dic[pix]
                 time_series = np.array(time_series)
-                time_series = time_series  ###currently no multiply %/100mm
+                time_series = time_series*100  ###currently no multiply %/100mm
                 result_dic[pix]=time_series
                 if np.nanmean(dic[pix])<=5:
                     continue
@@ -921,8 +922,9 @@ class bivariate_analysis():
 
         ## step4
         # self.generate_three_dimension()
-        self.plot_figure1d()
+        # self.plot_figure1d()
         # self.heatmap_LAImin_max_CV()
+        self.TRENDY_LAImin_LAImax()
 
 
         # self.plot_robinson()
@@ -1529,9 +1531,6 @@ class bivariate_analysis():
 
 
 
-
-
-
     def classfication_LAImin_LAImax_index(self):
         fmax=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_max_trend.tif'
         fmin=result_root+rf'\3mm\extract_composite_phenology_year\trend\\composite_LAI_detrend_relative_change_min_trend.tif'
@@ -1668,6 +1667,7 @@ class bivariate_analysis():
 
         plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
         plt.show()
+
 
 
 
@@ -2133,7 +2133,10 @@ class greening_CV_relationship():
     def run(self):
 
         # self.generate_bivarite_map()
-        self.statistic_bar_CV_greening()
+        # self.statistic_bar_CV_greening()
+        # self.CV_greening_heatmap()
+
+        self.CV_greening_heatmap2()
         # self.statistic_bar()
 
 
@@ -2154,8 +2157,8 @@ class greening_CV_relationship():
         return df
 
     def statistic_bar_CV_greening(self):
-        f_trend=rf'D:\Project3\Result\3mm\relative_change_growing_season\\TRENDY\trend_analysis\\LAI4g_trend.tif'
-        f_cv=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\LAI4g_detrend_CV_trend.tif'
+        f_trend=rf'D:\Project3\Result\3mm\relative_change_growing_season\\TRENDY\trend_analysis\\composite_LAI_mean_trend.tif'
+        f_cv=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\trend\composite_LAI_CV_trend.tif'
 
         array_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend)
         array_cv, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_cv)
@@ -2235,12 +2238,144 @@ class greening_CV_relationship():
 
         plt.show()
 
-    def CV_greening_LAImin_LAImax(self):
+    def CV_greening_heatmap2(self):
         dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
+        df=df[df['composite_LAI_CV_p_value']<0.05]
+        df=df[df['composite_LAI_relative_change_mean_p_value']<0.05]
+        df=df.dropna()
+
+        df['Group'] = df.apply(self.classify, axis=1)
+
+            # Group and compute average LAImin trend
+        result_dic_value={}
+        result_pixel_percentage={}
+        for group in df['Group'].unique():
+            if group==2:
+                print(df[df['Group']==group]['composite_LAI_detrend_relative_change_min_trend'])
+                print(np.nanmean(df[df['Group']==group]['composite_LAI_detrend_relative_change_max_trend']))
+
+            df_group = df[df['Group'] == group]
+            LAImax = df_group['composite_LAI_detrend_relative_change_max_trend'].tolist()
+            LAImin = df_group['composite_LAI_detrend_relative_change_min_trend'].tolist()
+            LAImax_mean=np.nanmean(LAImax)
+            LAImin_mean=np.nanmean(LAImin)
+            df_group_percentage=len(df_group)/len(df)*100
+
+
+            result_dic_value[group]=[LAImax_mean,LAImin_mean]
+            result_pixel_percentage[group]=df_group_percentage
+
+        ## plot LAImin and LAImax at the same time for all gropus
+        dic_name={1:'CV+ & Greening',2:'CV+ & Browning',3:'CV- & Greening',4:'CV- & Browning'}
+
+        plt.figure(figsize=(self.map_width, self.map_height))
+        for i in range(1,5):
+            plt.bar(i,result_dic_value[i][0],color='blue',width=0.2)
+            plt.bar(i,result_dic_value[i][1],color='red',width=0.2)
+        plt.xticks([1,2,3,4],list(dic_name.values()),rotation=0)
+        ## add y=0 line
+        plt.axhline(y=0, color='grey', linestyle='-')
+        ## add text of percentage
+        for i in range(1,5):
+            plt.text(i,result_dic_value[i][0],f'{result_pixel_percentage[i]:.2f}',ha='center',va='top')
+
+        plt.ylabel('Trend (%/yr)')
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+
+        # Count how many pixels per group (optional)
+
+
+
+
+
+    def classify(self,row):
+        if row['composite_LAI_CV_trend'] > 0 and row['composite_LAI_relative_change_mean_trend'] > 0:
+            return 1
+        elif row['composite_LAI_CV_trend'] > 0 and row['composite_LAI_relative_change_mean_trend'] < 0:
+            return 2
+        elif row['composite_LAI_CV_trend'] < 0 and row['composite_LAI_relative_change_mean_trend'] > 0:
+            return 3
+        elif row['composite_LAI_CV_trend'] < 0 and row['composite_LAI_relative_change_mean_trend'] < 0:
+            return 4
+        else:
+            return 'Other'
+
+        # Apply classification
+
+
+    def CV_greening_heatmap(self):
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        df=df[df['composite_LAI_CV_p_value']<0.05]
+        df=df[df['composite_LAI_relative_change_mean_p_value']<0.05]
         composite_LAI_relative_change_mean_values = df['composite_LAI_relative_change_mean_trend'].tolist()
         ## LAImaxincrease and LAImin decrease and LAImax magnitude> LAImin decrease magnitude
+        composite_LAICV=df['composite_LAI_CV_trend'].tolist()
+        ## calculate each group percentage
+
+        composite_LAI_relative_change_mean_values = np.array(composite_LAI_relative_change_mean_values)
+        composite_LAICV = np.array(composite_LAICV)
+        n_bins=11
+
+        cv_bins=np.linspace(-0.7,0.7,n_bins)
+        trend_bins=np.linspace(-0.5,0.5,n_bins)
+        # 5. Combine into a DataFrame
+        df = pd.DataFrame({'CV': composite_LAICV, 'Trend': composite_LAI_relative_change_mean_values})
+        df=df.dropna()
+        # plt.hist(df['CV'])
+        # plt.show()
+        # plt.hist(df['Trend'])
+        # plt.show()
+
+
+
+
+        percent_matrix = np.zeros((n_bins - 1, n_bins - 1))
+
+        for i in range(n_bins - 1):  # row (y-axis)
+            df_group = df[(df['CV'] > cv_bins[i]) & (df['CV'] <= cv_bins[i + 1])]
+            if len(df_group) == 0:
+                continue
+            for j in range(n_bins - 1):  # column (x-axis)
+                df_sub = df_group[(df_group['Trend'] > trend_bins[j]) & (df_group['Trend'] <= trend_bins[j + 1])]
+                percent = len(df_sub) / len(df_group) * 100
+                percent_matrix[i, j] = percent
+
+        # 绘图
+        plt.figure(figsize=(5, 5))
+        im = plt.imshow(percent_matrix, origin='lower', cmap='YlGnBu',
+                        extent=[cv_bins[0], cv_bins[-1], trend_bins[0], trend_bins[-1]], aspect='auto',
+                        vmin=0, vmax=50
+                        )
+        plt.colorbar(im, label='Percentage (%)')
+        # sns.heatmap(percent_matrix, cmap='Spectral', vmin=0, vmax=30,
+        #             xticklabels=[f"{cv_bins[i]:.2f}~{cv_bins[i + 1]:.2f}" for i in range(n_bins - 1)],
+        #             yticklabels=[f"{trend_bins[i]:.2f}~{trend_bins[i + 1]:.2f}" for i in range(n_bins - 1)])
+
+
+        plt.xlabel('CVLAI Trend')
+        plt.ylabel('LAI Trend')
+
+        plt.xticks(cv_bins)
+        plt.yticks(trend_bins)
+        plt.grid(False)
+        # plt.tight_layout()
+        plt.show()
+
+
 
 
         pass
@@ -3842,30 +3977,32 @@ class multi_regression_beta_TRENDY():
         # # ####step 1 build dataframe
         for y_var in self.y_var_list:
 
-            outdir = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\\multiresult_relative_change_detrend_ecosystem_year\{y_var}\\'
-            if os.path.isdir(outdir):
-                continue
-            T.mk_dir(outdir, force=True)
-            for i in range(self.window):
 
-                df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
-                outf= outdir+rf'\\window{i:02d}.npy'
-                if os.path.isfile(outf):
-                    continue
-                print(outf)
-            # #
-                self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+
+            outdir = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\\multiresult_relative_change_detrend_ecosystem_year\{y_var}\\'
+            # if os.path.isdir(outdir):
+            #     continue
+            T.mk_dir(outdir, force=True)
+            # for i in range(self.window):
+            #
+            #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
+            #     outf= outdir+rf'\\window{i:02d}.npy'
+            #     if os.path.isfile(outf):
+            #         continue
+            #     print(outf)
+            # # #
+            #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
             ##step 2 crate individial files
-                # self.plt_multi_regression_result(outdir,y_var)
+            # self.plt_multi_regression_result(outdir,y_var)
 #
         # ##step 3 covert to time series
 
-                # self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
+            # self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
             # ## step 4 build dataframe using build Dataframe function and then plot here
-            # self.plot_moving_window_time_series() not use
+
             # # spatial trends of sensitivity
             # self.calculate_trend_trend(outdir)
-            # self.composite_beta()
+            self.composite_beta()
             # plot robinson
             # self.plot_robinson()
             # self.plot_sensitivity_preicipation_trend()
@@ -4098,8 +4235,11 @@ class multi_regression_beta_TRENDY():
 
             if len(dic_y[pix]) == 0:
                 continue
+            # print(len(dic_y[pix]))
+            if len(dic_y[pix]) != self.window:
+                continue
             vals = dic_y[pix][w]
-            # print(vals)
+
             # exit()
             if len(vals) == 0:
                 continue
@@ -4377,7 +4517,7 @@ class multi_regression_beta_TRENDY():
 
                 time_series=dic[pix]
                 time_series = np.array(time_series)
-                time_series = time_series  ###currently no multiply %/100mm
+                time_series = time_series*100  ###currently no multiply %/100mm
                 result_dic[pix]=time_series
                 if np.nanmean(dic[pix])<=5:
                     continue
@@ -4443,14 +4583,17 @@ class multi_regression_beta_TRENDY():
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+
         MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
         fdir=outdir+'\\npy_time_series\\'
+
+
+
         outdir_trend=outdir+'\\trend\\'
         T.mk_dir(outdir_trend,force=True)
-
 
 
 
@@ -4475,6 +4618,20 @@ class multi_regression_beta_TRENDY():
             for pix in tqdm(dic):
 
                 time_series_all = dic[pix]
+                # print(time_series_all)
+
+                threshold = 1e-28
+                time_series_all[np.abs(time_series_all) < threshold] = 0.0
+                if np.isnan(np.nanmean(time_series_all)):
+                    continue
+                MODID_LUCC_value = dic_modis_mask[pix]
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+
+                if MODID_LUCC_value == 12:
+                    continue
+
                 dryland_value=dic_dryland_mask[pix]
                 if np.isnan(dryland_value):
                     continue
@@ -4507,49 +4664,41 @@ class multi_regression_beta_TRENDY():
             ##tiff
 
     def composite_beta(self):
-        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\SNU_LAI\npy_time_series\\beta.npy'
-        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\LAI4g\npy_time_series\beta.npy'
-        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\\GLOBALMAP\npy_time_series\\beta.npy'
-        dic1=np.load(f_1,allow_pickle=True).item()
-        dic2=np.load(f_2,allow_pickle=True).item()
-        dic3=np.load(f_3,allow_pickle=True).item()
-        average_dic= {}
+        fdir=result_root+rf'3mm\moving_window_multi_regression\TRENDY\multiresult_relative_change_detrend_ecosystem_year\\'
+        variables_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+                          'YIBs_S2_Monthly_lai']
+        outf=fdir+'TRENDY_ensemble_LAI_beta_mean.tif'
 
-        for pix in dic1:
-            if not pix in dic2:
-                continue
-            if not pix in dic3:
-                continue
-            value1=dic1[pix]
-            value2=dic2[pix]
-            value3=dic3[pix]
-            value1[value1<-999]=np.nan
-            value2[value2<-999]=np.nan
-            value3[value3<-999]=np.nan
+        average_list = []
+
+        for va in variables_list:
+            fdir_i=join(fdir,va,'trend')
+            fpath=join(fdir_i,'sum_rainfall_detrend_trend.tif')
 
 
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
 
-            value1=np.array(value1)
-            value2=np.array(value2)
-            value3=np.array(value3)
-            if np.isnan(np.nanmean(value1)) or np.isnan(np.nanmean(value2)) or np.isnan(np.nanmean(value3)):
-                continue
-            if len(value1)!=24 or len(value2)!=24 or len(value3)!=24:
-                print(pix,len(value1),len(value2),len(value3))
-                continue
+            average_list.append(arr)
+        average_list=np.array(average_list)
+        average_list=np.nanmean(average_list,axis=0)
+        # plt.imshow(average_list)
+        # plt.colorbar()
+        # plt.show()
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(average_list,outf)
 
 
-            average_val=np.nanmean([value1,value2,value3],axis=0)
-            # print(average_val)
-            average_dic[pix]=average_val
-            # plt.plot(value1,color='blue')
-            # plt.plot(value2,color='green')
-            # plt.plot(value3,color='orange')
-            # plt.plot(average_val,color='red')
-            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
-            # plt.show()
 
-        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
+
+
+
+
+
+
+        # np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
 
 
 
@@ -4654,14 +4803,97 @@ class multi_regression_beta_TRENDY():
 
         plt.show()
 
+class Figure5():
+    def run(self):
+        pass
+
+
+    def TRENDY_LAImin_LAImax(self):
+        dff=result_root+rf'3mm\Dataframe\LAImin_LAImax_all_models\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+        variables_list = ['composite_LAI',
+                          'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+        values_max_list=[]
+        values_min_list=[]
+
+        for variable in variables_list:
+            values_min=df[f'{variable}_detrend_min_trend'].values
+            values_max=df[f'{variable}_detrend_max_trend'].values
+            values_max_list.append(values_max)
+            values_min_list.append(values_min)
+        values_min_list=np.array(values_min_list)
+        values_max_list=np.array(values_max_list)
+        values_max_list_mean=np.nanmean(values_max_list,axis=1)
+        values_min_list_mean=np.nanmean(values_min_list,axis=1)
+        ## add legend
+
+        fig, ax = plt.subplots(figsize=(self.map_width*1.5, self.map_height))
+        dic_label_name = {'composite_LAI': 'Composite LAI',
+                          'TRENDY_ensemble': 'TRENDY ensemble',
+                          'CABLE-POP_S2_lai': 'CABLE-POP',
+                          'CLASSIC_S2_lai': 'CLASSIC',
+                          'CLM5': 'CLM5',
+                          'DLEM_S2_lai': 'DLEM',
+                          'IBIS_S2_lai': 'IBIS',
+                          'ISAM_S2_lai': 'ISAM',
+                          'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                          'JSBACH_S2_lai': 'JSBACH',
+                          'JULES_S2_lai': 'JULES',
+                          'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                          'LPX-Bern_S2_lai': 'LPX-Bern',
+                          'ORCHIDEE_S2_lai': 'ORCHIDEE',
+
+                          'YIBs_S2_Monthly_lai': 'YIBs',
+
+                          }
+
+        plt.bar(variables_list,values_max_list_mean,color='#96cccb',width=0.7,edgecolor='black',label='Trend in LAImax',)
+        plt.bar(variables_list,values_min_list_mean,color='#f6cae5',width=0.7,edgecolor='black',label='Trend in LAImin',)
+        plt.legend()
+
+        plt.xticks(np.arange(len(variables_list)),variables_list,rotation=45)
+        ## add y=0
+        plt.hlines(0, -0.5, len(variables_list) - 0.5, colors='black', linestyles='dashed')
+        plt.ylabel('(%/yr)')
+        plt.axhline(y=0, color='grey', linestyle='-')
+        ax.set_xticks(range(len(variables_list)))
+        ax.set_xticklabels(dic_label_name.values(), rotation=90, fontsize=10, font='Arial')
+        plt.tight_layout()
+        plt.show()
+        print(values_max_list_mean)
+        print(values_min_list_mean)
+        print(variables_list)
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
 
 def main():
 
-    bivariate_analysis().run()
+    # bivariate_analysis().run()
     # build_dataframe().run()
-    #  greening_CV_relationship().run()
+    # greening_CV_relationship().run()
     # multi_regression_beta().run()
-    # multi_regression_beta_TRENDY().run()
+    multi_regression_beta_TRENDY().run()
 
     # partial_correlation().run()
 
