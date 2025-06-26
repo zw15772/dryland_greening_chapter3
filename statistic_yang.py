@@ -1806,7 +1806,8 @@ class SHAP_CV():
         # self.pdp_shap()
         # self.plot_pdp_shap()
         # self.plot_pdp_shap_density_cloud()
-        # self.plot_pdp_shap_density_cloud_individual()  ## for paper use
+        # self.plot_pdp_shap_density_cloud_individual()  ## paper use
+        self.plot_pdp_shap_density_cloud_individual_test()
         # self.plot_relative_importance()
         # self.plot_pdp_shap_all_models_SI()
         # self.plot_pdp_shap_all_models_main()
@@ -1814,7 +1815,7 @@ class SHAP_CV():
         # self.plot_interaction_manual()
         # self.spatial_shapely()   ### spatial plot
         # self.variable_contributions()
-        self.plot_dominant_factors_bar()
+        # self.plot_dominant_factors_bar()
         # self.plot_robinson()
         # self.max_contributions()
         # self.disentangle()
@@ -1979,6 +1980,7 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
+            # 'Burn_area_mean',
             'rainfall_frenquency_trend',
             'rainfall_intensity_trend',
             'rainfall_seasonality_all_year',
@@ -2040,6 +2042,7 @@ class SHAP_CV():
         }
 
         self.x_variable_range_dict_global_CRU = {
+            'Burn_area_mean':[0,100000000],
             'nitrogen': [0, 400],
             'zroot_cwd80_05': [0, 25000],
             'cwdx80_05': [0, 600],
@@ -2209,7 +2212,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta2')
+        outdir = join(self.this_class_png, 'pdp_shap_beta4')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2502,7 +2505,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta2', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta4', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2854,6 +2857,160 @@ class SHAP_CV():
         #
         # plt.tight_layout()
         # plt.show()
+
+    def plot_pdp_shap_density_cloud_individual_test(self,line=True    ,scatter=False  ):
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+
+
+        x_variable_list = self.x_variable_list
+
+        name_dic={'rainfall_intensity':'Rainfall intensity (mm/events)',
+                  'rainfall_frenquency':'Rainfall frequency (events/year)',
+                  'rainfall_seasonality_all_year':'Rainfall seasonality (unitless)',
+                  'soc':'Soil organic carbon (%)',
+                  'sand':'Sand (%)',
+
+                  'pi_average_trend':'SM-T coupling trend (unitless/yr)',
+                  'fire_ecosystem_year_average':'Fire burn area(km2)',
+                  'rooting_depth':'Rooting depth (cm)',
+                  'rainfall_intensity_trend':'Rainfall intensity trend (mm/events/yr)',
+                  'rainfall_frenquency_trend':'Rainfall frequency trend (events/yr)',
+
+                  'fire_ecosystem_year_average_trend':'Fire burn area trend (km2/yr)',
+                  'rainfall_seasonality_all_year_trend':'Rainfall seasonality trend (unitless/yr)',
+
+
+
+        }
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta2', self.y_variable + '.shap.pkl')
+
+
+        # print(isfile(inf_shap));exit()
+        shap_values = T.load_dict_from_binary(inf_shap)
+        print(shap_values)
+
+        imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
+        x_list = []
+        y_list = []
+        for key in imp_dict.keys():
+            x_list.append(key)
+            y_list.append(imp_dict[key])
+
+        flag = 1
+        centimeter_factor = 1 / 2.54
+        # plt.figure(figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+        # fig, axs = plt.subplots(4, 2,
+        #                         figsize=(18 * centimeter_factor, 14 * centimeter_factor))
+        # print(axs);exit()
+        # axs = axs.flatten()
+        for x_var in x_list:
+            shap_values_mat = shap_values[:, x_var]
+            data_i = shap_values_mat.data
+            value_i = shap_values_mat.values
+            df_i = pd.DataFrame({x_var: data_i, 'shap_v': value_i})
+            # pprint(df_i);exit()
+            df_i_random = df_i.sample(n=len(df_i) )
+            df_i = df_i_random
+
+            ## redefine start, end
+            start, end = self.x_variable_range_dict[x_var]
+
+            bins = np.linspace(start, end, 50)
+            df_group, bins_list_str = T.df_bin(df_i, x_var, bins)
+            y_mean_list = []
+            x_mean_list = []
+            y_err_list = []
+            df_i_copy = copy.copy(df_i)
+            df_i_copy = df_i_copy[df_i_copy[x_var]>start]
+            df_i_copy = df_i_copy[df_i_copy[x_var]<end]
+            scatter_x_list = df_i_copy[x_var].tolist()
+            scatter_y_list = df_i_copy['shap_v'].tolist()
+            for name, df_group_i in df_group:
+                x_i = name[0].left
+                # print(x_i)
+                # exit()
+                vals = df_group_i['shap_v'].tolist()
+
+                if len(vals) == 0:
+                    continue
+                # mean = np.nanmean(vals)
+                mean = np.nanmedian(vals)
+                err = np.nanstd(vals)
+                y_mean_list.append(mean)
+                x_mean_list.append(x_i)
+                y_err_list.append(err)
+
+            percentiles_95 = [5, 95]
+            ## datapoints percentile
+            percentile_95_values = np.percentile(scatter_x_list, percentiles_95)
+            print(percentile_95_values)
+            percentiles_75=[25,75]
+            percentiles_75_values=np.percentile(scatter_x_list,percentiles_75)
+
+
+            # plt.subplot(4, 3, flag)
+            # ax = axs[flag-1]
+            # fig = plt.figure(figsize=(5*centimeter_factor,3*centimeter_factor))
+            fig,ax = plt.subplots(1,1,figsize=(8*centimeter_factor,5*centimeter_factor))
+            # ax.vlines(percentile_values, -5, 5, color='gray', linestyle='--', alpha=1)
+            ax.vlines(percentiles_75_values, -5, 5, color='gray', linestyle='--', alpha=1)
+
+
+        ## set x_lims
+            y_lims = {
+                "rainfall_intensity": [-4, 4],
+                "rainfall_frenquency": [-6, 6],
+                "rainfall_seasonality_all_year": [-1, 1],
+                "sand": [-2, 2],
+                'soc':[-4,4],
+
+                'pi_average_trend': [-1,1.5],
+                'fire_ecosystem_year_average':[-1,1],
+                'rooting_depth':[-0.5,0.5],
+
+                'fire_ecosystem_year_average_trend':[-0.5,0.5],
+                'rainfall_seasonality_all_year_trend':[-2,2],
+                'rainfall_intensity_trend':[-1,1],
+                'rainfall_frenquency_trend':[-1,1],
+
+            }
+
+            if scatter:
+                KDE_plot().plot_scatter(scatter_x_list, scatter_y_list,ax=ax )
+                plt.axis('off')
+
+            if line:
+                # y_mean_list= lowess(y_mean_list, x_mean_list, frac=0.1)
+                y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=9)
+                # y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=7)
+                ax.plot(x_mean_list, y_mean_list, c='red', alpha=1)
+                ax.hlines(0, x_mean_list[0], x_mean_list[-1], color='gray', linestyle='--', alpha=1)
+
+
+                # ax.set_title(name_dic[x_var], fontsize=12)
+                ax.set_xlabel(name_dic[x_var], fontsize=12)
+                ax.set_ylabel(r'Beta (%/100mm)', fontsize=12)
+
+            # flag += 1
+            ax.set_ylim(y_lims[x_var])
+            ax.set_xlim(percentile_95_values[0],percentile_95_values[1])
+            ## add line when y=0
+            # ax.axhline(0, c='black', linestyle='-', alpha=1)
+
+            # plt.show()
+
+            outdir=join(self.this_class_png, 'pdp_shap_beta_new', 'pdf_cloud')
+            T.mk_dir(outdir, force=True)
+
+            outf = join(outdir, f'{x_var}.pdf')
+            plt.savefig(outf,dpi=300)
+            plt.close()
+
+
+        #
+        # plt.tight_layout()
+        # plt.show()
+
 
 
 

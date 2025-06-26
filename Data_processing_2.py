@@ -889,7 +889,8 @@ class build_moving_window_dataframe():
         # df=self.foo1(df)
         # df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
-        self.rescale_to_df(df)
+        # self.rescale_to_df(df)
+        self.add_fire(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1201,6 +1202,39 @@ class build_moving_window_dataframe():
             # T.print_head_n(df)
             df=T.add_spatial_dic_to_df(df,dic,key_name)
         return df
+    def add_fire(self,df):
+        fpath=  result_root+rf'\3mm\extract_fire_phenology_year\\fire_ecosystem_year.npy'
+
+        val_dic = T.load_npy(fpath)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            window = row.window
+            # pix = row.pix
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+
+
+            vals = val_dic[pix]['ecosystem_year']
+            vals = np.array(vals)
+            mean_burn_area=np.nanmean(vals)
+            if mean_burn_area < -99:
+                val_list.append(np.nan)
+                continue
+
+            val_list.append(mean_burn_area)
+
+
+        df['Burn_area_mean']=val_list
+
+
+
+        pass
     def add_columns(self, df):
         df['window'] = df['window'].str.extract(r'(\d+)').astype(int)
 
@@ -1208,6 +1242,7 @@ class build_moving_window_dataframe():
 
 
         return df
+
 
     def rename_columns(self, df):
         df = df.rename(columns={'rainfall_intensity_zscore_average_zscore': 'rainfall_intensity_zscore_average',
@@ -1301,7 +1336,7 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\LAImin_LAImax_all_models\\')
+        self.this_class_arr = (result_root+rf'\3mm\Dataframe\LAImin_LAImax_all_models_beta\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + rf'Trend_all.df'
 
@@ -1328,19 +1363,19 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # # df=self.add_mean_to_df(df)
         # #
         #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # #
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # #
+        # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
 
         # # #
@@ -2155,7 +2190,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\min\trend_analysis\\'
+        fdir=result_root+ rf'3mm\moving_window_multi_regression\TRENDY\multiresult_relative_change_detrend_ecosystem_year\trend\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2163,6 +2198,8 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
+            if not 'composite_LAI_beta_trend' in f:
+                continue
 
 
             if not f.endswith('.tif'):
@@ -8311,6 +8348,32 @@ class TRENDY_CV:
         ## NDVI and LAI CV showing sign:
         pass
 
+def rename():
+    fdir=rf'D:\Project3\Result\3mm\moving_window_multi_regression\TRENDY\multiresult_relative_change_detrend_ecosystem_year\\'
+
+    variable_list=['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+    'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+    'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+    'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+    'ORCHIDEE_S2_lai',
+
+    'YIBs_S2_Monthly_lai']
+    outdir=result_root+rf'\3mm\moving_window_multi_regression\\TRENDY\\multiresult_relative_change_detrend_ecosystem_year\\trend\\'
+    T.mk_dir(outdir,force=True)
+
+    for variable in variable_list:
+        fdiri=join(fdir, variable,'trend')
+        fpath=join(fdiri, 'sum_rainfall_detrend_trend.tif')
+
+        fnew_name=variable+'_beta_trend.tif'
+        outf=join(outdir, fnew_name)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, outf)
+
+
+
+
+
 
 class SM_Tcoupling():
     def __init__(self):
@@ -8329,18 +8392,19 @@ def main():
     # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()
     # visualize_SHAP().run()
     # PLOT_dataframe().run()
     # Plot_Robinson().robinson_template()
+    # rename()
 
 
 
