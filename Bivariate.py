@@ -8,7 +8,7 @@ import pingouin as pg
 from matplotlib.pyplot import xticks
 from numba.core.compiler_machinery import pass_info
 from numba.cuda.libdevice import fdiv_rd
-from openpyxl.styles.builtins import percent
+from openpyxl.styles.builtins import percent, total
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
@@ -908,10 +908,14 @@ class multi_regression_beta():
 
 class Figure1():
     def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.bivariate_map()
-        self.Figure1c_robinson()
+        self.bivariate_map()
+        self.bivariate_scheme3()
+        # self.Figure1c_robinson()
+        # self.heatmap_LAImin_max_CV_Figure1d()
 
 
 
@@ -925,18 +929,18 @@ class Figure1():
 
         T.mkdir(outdir)
 
-        # outtif = join(outdir,'CV_trend.tif')
-        outtif = join(outdir, 'LAImin_LAImax.tif')
+        outtif = join(outdir,'CV_trend2.tif')
+        # outtif = join(outdir, 'LAImin_LAImax.tif')
 
-        fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
-        # fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
-        fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
-        # fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
+        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
+        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
 
         #1
-        tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
+        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
         #2
-        # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
+        tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
 
         #1
         # min1, max1 = -1, 1
@@ -964,23 +968,24 @@ class Figure1():
         # plt.show()
 
         # choice 1
-        upper_left_color = (193,92,156)
-        upper_right_color =(112, 196, 181)
-        lower_left_color = (237, 125, 49)
-        lower_right_color = (0, 0, 110)
-        center_color = (240, 240, 240)
-
-        ## CV greening option
-
-        # upper_left_color = (148, 202, 112)
-        # upper_right_color = (255, 202, 202)
-        # lower_left_color = (110, 0, 0)
+        # upper_left_color = (193,92,156)
+        # upper_right_color =(112, 196, 181)
+        # lower_left_color = (237, 125, 49)
         # lower_right_color = (0, 0, 110)
         # center_color = (240, 240, 240)
 
+        ## CV greening option
 
-        xymap.Bivariate_plot_1(res = 11,
-                         alpha = 200,
+        upper_left_color = (194, 0, 120)
+        upper_right_color = (0,170,237)
+        lower_left_color = (233, 55, 43)
+        # lower_right_color = (160, 108, 168)
+        lower_right_color = (234, 233, 46)
+        center_color = (240, 240, 240)
+
+
+        xymap.Bivariate_plot_1(res = 7,
+                         alpha = 255,
                          upper_left_color = upper_left_color, #
                          upper_right_color = upper_right_color, #
                          lower_left_color = lower_left_color, #
@@ -991,20 +996,110 @@ class Figure1():
                                                                     min1, max1,
                                                                     min2, max2,
                                                                     outtif,
-                                                                    n_x = 4, n_y = 4
+                                                                    n_x = 5, n_y = 5
                                                                     )
 
         T.open_path_and_file(outdir)
 
+    def RGBA_to_tif(self,blend_arr,outf,originX, originY, pixelWidth, pixelHeight):
+        import PIL.Image as Image
+        img = Image.fromarray(blend_arr.astype('uint8'), 'RGBA')
+        img.save(outf)
+        # define a projection and extent
+        raster = gdal.Open(outf)
+        geotransform = raster.GetGeoTransform()
+        raster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+        outRasterSRS = osr.SpatialReference()
+        projection = self.wkt_84()
+        # outRasterSRS.ImportFromEPSG(4326)
+        # outRasterSRS.ImportFromEPSG(projection)
+        # raster.SetProjection(outRasterSRS.ExportToWkt())
+        raster.SetProjection(projection)
+        pass
+
+    def bivariate_scheme2(self):
+        import xymap
+
+        fdir = result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
+
+        outdir = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+
+        T.mkdir(outdir)
+
+        outtif = join(outdir, 'CV_trend3.tif')
+        # outtif = join(outdir, 'LAImin_LAImax.tif')
+
+        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath1 = join(fdir, 'composite_LAI_CV_trend.tif')
+        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath2 = join(fdir, 'composite_LAI_relative_change_mean_trend.tif')
+
+        # 1
+        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
+        # 2
+        tif1_label, tif2_label = 'LAI_CV_trend', 'LAI_relative_change_mean_trend'
+
+
+        # 2
+        min1, max1 = -.3, .3
+        min2, max2 = -.5, .5
+
+        arr1 = ToRaster().raster2array(fpath1)[0]
+        arr2 = ToRaster().raster2array(fpath2)[0]
+
+        arr1[arr1 < -9999] = np.nan
+        arr2[arr2 < -9999] = np.nan
+
+        dict1 = DIC_and_TIF().spatial_arr_to_dic(arr1)
+        dict2 = DIC_and_TIF().spatial_arr_to_dic(arr2)
+        dict_list = {'LAI_CV_trend': dict1, 'LAI_trend': dict2}
+        df_new = T.spatial_dics_to_df(dict_list)
+        ##
+
+        ## add color
+        for i, row in df_new.iterrows():
+
+            if row['LAI_CV_trend'] > 0.5 and row['LAI_trend'] > 0.3:
+                df_new.loc[i, 'color'] = '#e34a33'  # red
+            elif row['LAI_CV_trend'] > 0.5 and row['LAI_trend'] < 0.3:
+                df_new.loc[i, 'color'] = '#fdbb84'  # pink
+            elif row['LAI_CV_trend'] < 0.5 and row['LAI_trend'] > 0.3:
+                df_new.loc[i, 'color'] = '#2b8cbe'  # blue
+            elif row['LAI_CV_trend'] < 0.5 and row['LAI_trend'] < 0.3:
+                df_new.loc[i, 'color'] = '#a6bddb'  # green
+            else:
+                df_new.loc[i, 'color'] = '#cccccc'  # grey = mixed or unknown
+
+        arr = np.ones((360,720,4))*0
+        for i, row in tqdm(df_new.iterrows(),total=len(df_new)):
+            pix = row['pix']
+            color = row['color']
+            r,g,b = int(color[1:3],16),int(color[3:5],16),int(color[5:7],16)
+            a = 255
+            arr[pix] = np.array([r,g,b,a])
+        self.RGBA_to_tif(arr,outtif,-180, 90, 0.5, -0.5)
+        T.open_path_and_file(outdir)
+
+
+
+
+
+
+
+
+
+
     def Figure1c_robinson(self):
 
-        fdir_trend = result_root + rf'\3mm\bivariate_analysis\composite_LAI\\'
-        temp_root = result_root + rf'\3mm\bivariate_analysis\\composite_LAI\\temp\\'
-        outdir = result_root + rf'\3mm\bivariate_analysis\\ROBINSON\\'
+        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
+        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
+            if not 'CV_trend_test' in f:
+                continue
 
             if not f.endswith('.tif'):
                 continue
@@ -1012,27 +1107,80 @@ class Figure1():
             fname = f.split('.')[0]
 
             fpath = fdir_trend + f
+            outf=outdir + fname + '.tif'
+            srcSRS=self.wkt_84()
+            dstSRS=self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath,outf, 50000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
 
 
-            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=9, )
+    def wkt_robinson(self):
+        wkt='''PROJCRS["World_Robinson",
+    BASEGEOGCRS["WGS 84",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["World_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",54030]]
+        '''
+        return wkt
 
 
+    def wkt_84(self):
+        wkt = '''GEOGCRS["WGS 84",
+    ENSEMBLE["World Geodetic System 1984 ensemble",
+        MEMBER["World Geodetic System 1984 (Transit)"],
+        MEMBER["World Geodetic System 1984 (G730)"],
+        MEMBER["World Geodetic System 1984 (G873)"],
+        MEMBER["World Geodetic System 1984 (G1150)"],
+        MEMBER["World Geodetic System 1984 (G1674)"],
+        MEMBER["World Geodetic System 1984 (G1762)"],
+        MEMBER["World Geodetic System 1984 (G2139)"],
+        ELLIPSOID["WGS 84",6378137,298.257223563,
+            LENGTHUNIT["metre",1]],
+        ENSEMBLEACCURACY[2.0]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    USAGE[
+        SCOPE["Horizontal component of 3D system."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["EPSG",4326]]'''
+        return wkt
 
 
-            # arr = ToRaster().raster2array(fpath)[0]
-            # arr[arr<-999]=np.nan
-            # plt.imshow(arr,cmap=my_cmap,vmin=1,vmax=8,interpolation='nearest')
-            # plt.colorbar()
-            # plt.show()
-
-
-            # plt.title(f'{fname}')
-            # plt.show()
-            outf = outdir + 'CV_rainfall_beta_LAI_composite.pdf'
-            plt.savefig(outf)
-            plt.close()
-            # exit()
 
     def heatmap_LAImin_max_CV_Figure1d(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
@@ -1202,13 +1350,30 @@ class Figure1():
         plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
         plt.xticks(range(len(c_list)), x_ticks_list)
         plt.yticks(range(len(r_list)), y_ticks_list[::-1])
+        # plt.colorbar()
+        # plt.show()
+        #
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
 
 
 
 
 
 
-class Figure2():
+
+class Figure3():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -1222,14 +1387,16 @@ class Figure2():
         ## step3
         # build_dataframe().run()
 
+
         ## step4
         # self.generate_three_dimension()
-        # self.plot_figure1d()
-        # self.heatmap_LAImin_max_CV()
-        self.TRENDY_LAImin_LAImax()
+
+        self.plot_figure2b()
 
 
-        # self.plot_robinson()
+
+
+
 
         # self.LAImin_LAImax_index_ratio_group()
         # self.classfication_LAImin_LAImax_index()
@@ -1393,9 +1560,8 @@ class Figure2():
                 df_i = df[df[f'CV_rainfall_beta_LAI_{variable}'] == i]
                 count = len(df_i)
                 dic[i] = count / count_brown * 100
-        pprint(dic);exit()
+        # pprint(dic);exit()
         ## I want to index 1234 to 5678 and 5678 to 1234
-
 
 
         # Colors from your color scheme
@@ -1441,12 +1607,12 @@ class Figure2():
 
         # Optional: Add vertical line at 50% or labels
 
-        # plt.tight_layout()
-        # plt.show()
-        outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
-        T.mk_dir(outdir, force=True)
-        ## save the figure
-        plt.savefig(outdir + rf'{variable}.pdf')
+        plt.tight_layout()
+        plt.show()
+        # outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
+        # T.mk_dir(outdir, force=True)
+        # ## save the figure
+        # plt.savefig(outdir + rf'{variable}.pdf')
 
 
         pass
@@ -2254,7 +2420,7 @@ class Plot_Robinson:
         plt.xticks(range(len(c_list)), x_ticks_list)
         plt.yticks(range(len(r_list)), y_ticks_list[::-1])
 
-class greening_CV_relationship():
+class Figure2():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -2264,9 +2430,11 @@ class greening_CV_relationship():
 
         # self.generate_bivarite_map()
         # self.statistic_bar_CV_greening()
-        # self.CV_greening_heatmap()
 
-        self.CV_greening_heatmap2()
+
+        self.Figure2b()
+
+        # self.CV_greening_heatmap2()
         # self.statistic_bar()
 
 
@@ -2444,8 +2612,210 @@ class greening_CV_relationship():
 
         # Apply classification
 
+    def bivariate_scheme3(self):
 
-    def CV_greening_heatmap(self):
+        fdir = result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
+
+        outdir = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        self.plot_legend(outdir)
+
+        T.mkdir(outdir)
+
+        outtif = join(outdir, 'CV_trend_test.tif')
+        # outtif = join(outdir, 'LAImin_LAImax.tif')
+
+        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath1 = join(fdir, 'composite_LAI_CV_trend.tif')
+        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath2 = join(fdir, 'composite_LAI_relative_change_mean_trend.tif')
+
+        # 1
+        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
+        # 2
+        tif1_label, tif2_label = 'LAI_CV_trend', 'LAI_trend'
+
+        # 2
+        bins_x = np.array([-np.inf, -0.5, 0, 0.5, np.inf])
+        bins_y = np.array([-np.inf, -0.3, 0, 0.3, np.inf])
+
+        arr1 = ToRaster().raster2array(fpath1)[0]
+        arr2 = ToRaster().raster2array(fpath2)[0]
+
+        arr1[arr1 < -9999] = np.nan
+        arr2[arr2 < -9999] = np.nan
+
+        dict1 = DIC_and_TIF().spatial_arr_to_dic(arr1)
+        dict2 = DIC_and_TIF().spatial_arr_to_dic(arr2)
+        dict_list = {'LAI_CV_trend': dict1, 'LAI_trend': dict2}
+        df_new = T.spatial_dics_to_df(dict_list)
+        df_new = df_new.dropna(how='any')
+        ##
+        T.print_head_n(df_new)
+
+        arr = np.ones((360, 720, 4)) * 0
+        for i, row in tqdm(df_new.iterrows(), total=len(df_new)):
+            pix = row['pix']
+            x = row[tif1_label]
+            y = row[tif2_label]
+            color_idx, color = self.get_color(x, y, bins_x, bins_y)
+            # print('binsx',bins_x)
+            # print('binsy',bins_y)
+            # print(x,y,color_idx,color);exit()
+
+            r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+            a = 255
+            arr[pix] = np.array([r, g, b, a])
+        self.RGBA_to_tif(arr, outtif, -180, 90, 0.5, -0.5)
+        T.open_path_and_file(outdir)
+
+    def statistics_greening_CV(self):
+        pass
+
+    def get_color(self, x, y, bins_x, bins_y):
+        # color_array = [
+        #     ['#f26d21 ', '#f598a1', '#ec1d8f', '#ec1d0f'],
+        #     ['#c7e86e', '#7BC8F6', '#d3a3cb', '#f26d21'],
+        #     ['#0e6b3f ', '#98cdd2', '#5d4a8d', '#f598a1'],
+        #     ['#0e6b3f ', '#98cdd2', '#5d4a8d', '#7BC8F6'],
+        # ][::-1]
+        color_idx_array = self.color_idx_array
+        color_dict = self.color_dict
+        color_idx_array = np.array(color_idx_array)
+        idx_x = np.digitize(x, bins_x) - 1
+        idx_y = np.digitize(y, bins_y) - 1
+        color_idx = color_idx_array[idx_y][idx_x]
+        color = color_dict[color_idx]
+        return color_idx, color
+
+    def plot_legend(self, outdir):
+        self.color_idx_array = [
+                                   [1, 2, 3, 4],
+                                   [5, 6, 7, 8],
+                                   [9, 10, 11, 12],
+                                   [13, 14, 15, 16]
+                               ][::-1]
+        self.color_dict = {
+            4: '#3182bd',
+            3: '#6baed6',
+            2: '#9ecae1',
+            1: '#c6dbef',
+            8: '#e6550d',
+            7: '#fd8d3c',
+            6: '#fdae6b',
+            5: '#fdd0a2',
+            12: '#31a354',
+            11: '#74c476',
+            10: '#a1d99b',
+            9: '#c7e9c0',
+            16: '#756bb1',
+            15: '#9e9ac8',
+            14: '#bcbddc',
+            13: '#dadaeb'
+        }
+        color_array = []
+        for row in self.color_idx_array:
+            color_array_i = []
+            for col in row:
+                color = self.color_dict[col]
+                rgb_color = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+                color_array_i.append(rgb_color)
+            color_array.append(color_array_i)
+        color_array = np.array(color_array)
+        plt.imshow(color_array)
+        plt.savefig(join(outdir, 'legend.pdf'))
+        plt.close()
+        pass
+
+    def Figure1c_robinson(self):
+
+        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
+        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+            if not 'CV_trend_test' in f:
+                continue
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+            outf = outdir + fname + '.tif'
+            srcSRS = self.wkt_84()
+            dstSRS = self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath, outf, 50000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
+
+    def wkt_robinson(self):
+        wkt = '''PROJCRS["World_Robinson",
+       BASEGEOGCRS["WGS 84",
+           DATUM["World Geodetic System 1984",
+               ELLIPSOID["WGS 84",6378137,298.257223563,
+                   LENGTHUNIT["metre",1]]],
+           PRIMEM["Greenwich",0,
+               ANGLEUNIT["Degree",0.0174532925199433]]],
+       CONVERSION["World_Robinson",
+           METHOD["Robinson"],
+           PARAMETER["Longitude of natural origin",0,
+               ANGLEUNIT["Degree",0.0174532925199433],
+               ID["EPSG",8802]],
+           PARAMETER["False easting",0,
+               LENGTHUNIT["metre",1],
+               ID["EPSG",8806]],
+           PARAMETER["False northing",0,
+               LENGTHUNIT["metre",1],
+               ID["EPSG",8807]]],
+       CS[Cartesian,2],
+           AXIS["(E)",east,
+               ORDER[1],
+               LENGTHUNIT["metre",1]],
+           AXIS["(N)",north,
+               ORDER[2],
+               LENGTHUNIT["metre",1]],
+       USAGE[
+           SCOPE["Not known."],
+           AREA["World."],
+           BBOX[-90,-180,90,180]],
+       ID["ESRI",54030]]
+           '''
+        return wkt
+
+    def wkt_84(self):
+        wkt = '''GEOGCRS["WGS 84",
+       ENSEMBLE["World Geodetic System 1984 ensemble",
+           MEMBER["World Geodetic System 1984 (Transit)"],
+           MEMBER["World Geodetic System 1984 (G730)"],
+           MEMBER["World Geodetic System 1984 (G873)"],
+           MEMBER["World Geodetic System 1984 (G1150)"],
+           MEMBER["World Geodetic System 1984 (G1674)"],
+           MEMBER["World Geodetic System 1984 (G1762)"],
+           MEMBER["World Geodetic System 1984 (G2139)"],
+           ELLIPSOID["WGS 84",6378137,298.257223563,
+               LENGTHUNIT["metre",1]],
+           ENSEMBLEACCURACY[2.0]],
+       PRIMEM["Greenwich",0,
+           ANGLEUNIT["degree",0.0174532925199433]],
+       CS[ellipsoidal,2],
+           AXIS["geodetic latitude (Lat)",north,
+               ORDER[1],
+               ANGLEUNIT["degree",0.0174532925199433]],
+           AXIS["geodetic longitude (Lon)",east,
+               ORDER[2],
+               ANGLEUNIT["degree",0.0174532925199433]],
+       USAGE[
+           SCOPE["Horizontal component of 3D system."],
+           AREA["World."],
+           BBOX[-90,-180,90,180]],
+       ID["EPSG",4326]]'''
+        return wkt
+
+    def Figure2b(self):
         dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
@@ -5110,8 +5480,8 @@ class Figure5():
 
 
 def main():
-    bivariate_map().run()
-    # bivariate_analysis().run()
+    Figure1().run()
+    # Figure2().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
     # multi_regression_beta().run()
