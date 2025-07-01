@@ -3190,9 +3190,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir =rf'D:\Project3\Data\GLEAM\extract_phenology_monthly_variables_Ep\\'
+        fdir =rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_phenology_monthly_variables_GLEAM\\'
+        outdir_CV = result_root+rf'\3mm\extract_phenology_VOD\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -3241,14 +3241,14 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'Ep.npy'
+        outf = outdir_CV + 'VOD.npy'
 
         np.save(outf, result_dic)
 
     def detrend(self):  ## detrend LAI4g
 
-        f = result_root+rf'\3mm\extract_SNU_LAI_phenology_year\\SNU_LAI_zscore.npy'
-        outdir = result_root+rf'\3mm\extract_SNU_LAI_phenology_year\\'
+        f = data_root+rf'VCF\dryland_tiff\dic_interpolation\Tree cover.npy'
+        outdir = result_root+rf'\3mm\VCF\\'
         Tools().mk_dir(outdir, force=True)
         annual_spatial_dict = {}
         spatial_leng_dic={}
@@ -3779,10 +3779,10 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
-        self.moving_window_max_min_anaysis()
+        # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -3790,22 +3790,22 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = self.result_root + rf'\3mm\moving_window_multi_regression\moving_window\zscore\\'
+        fdir_all = rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
+        outdir = self.result_root + rf'3mm\VCF\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
 
             if not f.endswith('.npy'):
                 continue
-            if not '_zscore' in f:
-                continue
+            # if not '_detrend' in f:
+            #     continue
             #
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -4077,14 +4077,14 @@ class moving_window():
         #
         #
         # for mode in growing_season_mode_list:
-        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\zscore\\'
-        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\moving_window\zscore\\'
+        fdir = rf'D:\Project3\Result\3mm\VCF\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\VCF\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
             dic = T.load_npy(fdir + f)
 
-            slides = 38 - window_size+1   ## revise!!
+            slides = 35 - window_size+1   ## revise!!
             outf = outdir + f.split('.')[0] + f'_average.npy'
             print(outf)
 
@@ -4104,7 +4104,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<24:
+                    if len(time_series_all)<21:
                         continue
 
 
@@ -4132,17 +4132,16 @@ class moving_window():
         window_size = 15
 
 
-        fdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\\moving_window_min_max_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if  'relative_change' in f:
-                continue
+
 
             dic = T.load_npy(fdir + f)
 
-            slides = 38 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_max_raw.npy'
+            slides = 32 - window_size+1   ## revise!!
+            outf = outdir + f.split('.')[0] + f'_min.npy'
             print(outf)
 
             trend_dic = {}
@@ -4161,7 +4160,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<24:
+                    if len(time_series_all)<18:
                         continue
 
 
@@ -4171,7 +4170,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmax(time_series)
+                    average=np.nanmin(time_series)
                     # print(average)
 
                     trend_list.append(average)
@@ -4300,14 +4299,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\moving_window_min_max_anaysis\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\moving_window_min_max_anaysis\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
-                continue
-            if not 'max' in f:
                 continue
 
 

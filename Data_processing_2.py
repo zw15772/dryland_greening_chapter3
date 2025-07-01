@@ -90,7 +90,7 @@ class Data_processing_2:
         # self.aggregation_soil()
         # self.nc_to_tif_time_series_fast2()
 
-        # self.resample()
+        self.resample()
         # self.scale()
 
         # self.aggregate()
@@ -100,9 +100,10 @@ class Data_processing_2:
         # self.extract_dryland_tiff()
 
         # self.tif_to_dic()
+        # self.interpolate_VCF()
         # self.interpolation()
         # self.zscore()
-        self.composite_LAI()
+        # self.composite_LAI()
 
 
 
@@ -374,8 +375,8 @@ class Data_processing_2:
 
         pass
     def resample(self):
-        fdir=rf'D:\Project3\Data\GLOBMAP\1981-1990_TIFF\\'
-        outdir=rf'D:\Project3\Data\GLOBMAP\\resample\\'
+        fdir=rf'D:\Project3\Data\VCF\\'
+        outdir=rf'D:\Project3\Data\VCF\\resample\\'
         T.mk_dir(outdir)
         for f in T.listdir(fdir):
             fpath=fdir+f
@@ -417,27 +418,29 @@ class Data_processing_2:
         array_mask[array_mask < 0] = np.nan
 
 
-        fdir_all = rf'D:\Project3\Data\GLOBMAP\\'
+        fdir_all = rf'D:\Project3\Data\VCF\\'
 
         for fdir in T.listdir(fdir_all):
-            if not 'unify' in fdir:
+            if not 'resample' in fdir:
                 continue
 
 
             fdir_i = join(fdir_all, fdir)
 
-            outdir_i = join(fdir_all, 'dryland_tiff')
+            outdir_i = join(fdir_all,'drylang_tiff','Tree cover', )
 
-            T.mk_dir(outdir_i)
+            T.mk_dir(outdir_i, force=True)
             for fi in tqdm(T.listdir(fdir_i), desc=fdir):
                 if not fi.endswith('.tif'):
                     continue
                 fpath = join(fdir_i, fi)
-                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr, originX, originY, pixelWidth, pixelHeight =self.raster2array(fpath)
+                arr = arr.astype(float)
+                arr[arr==0]=np.nan
                 arr[np.isnan(array_mask)] = np.nan
                 # plt.imshow(arr)
                 # plt.show()
-                fname=fi.split('_')[-1].split('.')[0]
+                fname=fi.split('_')[1]
                 # print(fname);exit()
                 # outpath = join(outdir_i, fi)
                 outpath = join(outdir_i, fname+'.tif')
@@ -445,6 +448,26 @@ class Data_processing_2:
                 ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
 
         pass
+
+    def raster2array(self, rasterfn):
+        '''
+        create array from raster
+        Agrs:
+            rasterfn: tiff file path
+        Returns:
+            array: tiff data, an 2D array
+        '''
+        raster = gdal.Open(rasterfn)
+        geotransform = raster.GetGeoTransform()
+        originX = geotransform[0]
+        originY = geotransform[3]
+        pixelWidth = geotransform[1]
+        pixelHeight = geotransform[5]
+        band = raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+        array = np.asarray(array)
+        del raster
+        return array, originX, originY, pixelWidth, pixelHeight
     def aggregate(self):
         ##every four days to biweekly
         fdir=rf'D:\Project3\Data\GEODES_AVHRR_LAI\tif_average\\'
@@ -551,15 +574,15 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\GLOBMAP\\'
+        fdir_all = rf'D:\Project3\Data\VCF\dryland_tiff\\'
 
         year_list = list(range(1982, 2021))
 
         # 作为筛选条件
         for fdir in os.listdir(fdir_all):
-            if not 'dryland_tiff' in fdir:
+            if not 'Non tree vegetation' in fdir:
                 continue
-            outdir=join(fdir_all, 'dic')
+            outdir=join(fdir_all, 'dic', 'Non tree vegetation')
 
 
             T.mk_dir(outdir, force=True)
@@ -581,10 +604,10 @@ class Data_processing_2:
                               :720]
 
                 array_unify[array_unify < -999] = np.nan
-                array_unify[array_unify > 10] = np.nan
+                # array_unify[array_unify > 10] = np.nan
                 # array[array ==0] = np.nan
 
-                # array_unify[array_unify < 0] = np.nan
+                array_unify[array_unify < 0] = np.nan
 
                 #
                 #
@@ -692,9 +715,9 @@ class Data_processing_2:
             np.save(outf, zscore_dic)
 
     def composite_LAI(self):
-        f_1=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\\LAI4g_detrend_relative_change_min.npy'
-        f_2=rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\\GLOBMAP_LAI_relative_change_detrend_min.npy'
-        f_3=rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\SNU_LAI_relative_change_detrend_min.npy'
+        f_1=rf'D:\Project3\Result\3mm\Long_term_CV\\\long_term_LAI4g_detrend_CV.npy'
+        f_2=rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_GLOBMAP_LAI_detrend_CV.npy'
+        f_3=rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_detrended_SNU_LAI_CV.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -713,9 +736,9 @@ class Data_processing_2:
             value1=np.array(value1)
             value2=np.array(value2)
             value3=np.array(value3)
-            if len(value1)!=24 or len(value2)!=24 or len(value3)!=24:
-                print(pix,len(value1),len(value2),len(value3))
-                continue
+            # if len(value1)!=24 or len(value2)!=24 or len(value3)!=24:
+            #     print(pix,len(value1),len(value2),len(value3))
+            #     continue
 
 
             average_val=np.nanmean([value1,value2,value3],axis=0)
@@ -734,9 +757,58 @@ class Data_processing_2:
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
 
-        np.save(rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\composite_LAI_detrend_relative_change_min.npy',average_dic)
+        np.save(rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_composite_CV.npy',average_dic)
 
         pass
+    def interpolate_VCF(self):
+        fdir=rf'D:\Project3\Data\VCF\dryland_tiff\dic\Non vegetatated\\'
+        outfir=rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\\'
+        T.mk_dir(outfir,True)
+        dic=T.load_npy_dir(fdir)
+        year_list=list(range(1982,2017))
+        year_list_actual=copy.copy(year_list)
+        year_list_actual.remove(1994)
+        year_list_actual.remove(2000)
+        year_list_actual_reshape=np.reshape(year_list_actual,(-1,1))
+        result_dic={}
+        # print(year_list_actual);exit()
+        for pix in dic:
+            val=dic[pix]
+            if T.is_all_nan(val) or np.isnan(val).sum() > 0:
+                continue
+
+            ## if any nan in val continue
+            new_val=T.interp_nan(val)
+            if len(new_val) != len(year_list_actual):
+                print("长度不一致！", len(new_val), len(year_list_actual))
+                continue
+            val_reshape=np.reshape(new_val,(-1,1))
+            # print(val)
+            print(len(year_list_actual), len(val))  # 二者应相等
+
+            model=LinearRegression()
+            model.fit(year_list_actual_reshape,val_reshape)
+
+            val_1994=model.predict([[1994]])[0]
+            val_2000=model.predict([[2000]])[0]
+            new_value=np.insert(val,12,val_1994)
+            new_value=np.insert(new_value,18,val_2000)
+            new_year_list=np.insert(year_list_actual,12,1994)
+            new_year_list=np.insert(new_year_list,18,2000)
+
+            #
+            result_dic[pix]=new_value
+        outf=outfir+f'''Non vegetatated.npy'''
+        T.save_npy(result_dic,outf)
+            # print(len(new_value))
+
+
+
+
+
+
+        pass
+
 
     def interpolation(self):
 
@@ -887,10 +959,10 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
-        self.add_fire(df)
+        # self.add_fire(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1043,18 +1115,17 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\moving_window_min_max_anaysis\\'
         print(fdir)
         print(self.dff)
 
 
         for f in os.listdir(fdir):
+            if not 'max' in f:
+                continue
 
             variable= f.split('.')[0]
-            if   not 'VPD' in variable:
-                continue
-            # if not 'average_zscore' in variable:
-            #     continue
+
 
             print(variable)
 
@@ -1085,25 +1156,27 @@ class build_moving_window_dataframe():
                 # plt.show()
 
                 # print(vals)
-                vals[vals>999] = np.nan
-                vals[vals<-999] = np.nan
+                vals[vals>9999] = np.nan
+                vals[vals<-9999] = np.nan
 
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 22:
+                if len(vals) == 18:
                     ## add twice nan at the end
-                    vals=np.append(vals,[np.nan,np.nan])
+                    vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
+                    # vals=np.append(vals,[np.nan,np.nan])
+
 
                     v1 = vals[y-0]
 
                     NDVI_list.append(v1)
 
 
-                if len(vals) !=24:
-
-                    NDVI_list.append(np.nan)
-                    continue
+                # if len(vals) !=24:
+                #
+                #     NDVI_list.append(np.nan)
+                #     continue
 
 
                 if len(vals) ==0:
@@ -1336,9 +1409,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Dataframe\LAImin_LAImax_all_models_beta\\')
+        self.this_class_arr = (result_root+rf'3mm\SHAP_beta\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend_all.df'
+        self.dff = self.this_class_arr + rf'Trend.df'
 
         pass
 
@@ -1363,8 +1436,8 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
-        # # df=self.add_mean_to_df(df)
+        # df=self.add_trend_to_df(df)
+        # df=self.add_mean_to_df(df)
         # #
         #
         # df=self.add_aridity_to_df(df)
@@ -1376,7 +1449,7 @@ class build_dataframe():
         # df=self.add_row(df)
         # # #
         # df=self.add_lat_lon_to_df(df)
-        # df=self.add_continent_to_df(df)
+        df=self.add_continent_to_df(df)
 
         # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -2190,7 +2263,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'3mm\moving_window_multi_regression\TRENDY\multiresult_relative_change_detrend_ecosystem_year\trend\\'
+        fdir=result_root+ rf'3mm\VCF\trend\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2198,12 +2271,10 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
-            if not 'composite_LAI_beta_trend' in f:
-                continue
-
 
             if not f.endswith('.tif'):
                 continue
+
 
             variable = (f.split('.')[0])
             print(variable)
@@ -2247,13 +2318,12 @@ class build_dataframe():
 
 
     def add_mean_to_df(self, df):
-        fdir=rf'D:\Project3\Result\state_variables\mean\\'
+        fdir=rf'D:\Project3\Result\3mm\Long_term_CV\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
             variable = (f.split('.')[0])
-            if not 'GPCC' in variable:
-                continue
+
 
 
             val_dic=T.load_npy(fdir+f)
@@ -2276,8 +2346,8 @@ class build_dataframe():
                     val_list.append(np.nan)
                     continue
                 val_list.append(val)
-            # df[f'{f_name}'] = val_list
-            df['MAP'] = val_list
+            df[f'{f_name}'] = val_list
+
 
 
         return df
@@ -8391,8 +8461,8 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

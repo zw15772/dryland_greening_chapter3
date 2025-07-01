@@ -8653,21 +8653,17 @@ class Seasonal_sensitivity:
 class multi_regression_anomaly():
     def __init__(self):
 
-        self.fdirX = result_root+rf'extract_GS\OBS_LAI_extend\\'
-        self.fdirY = result_root+rf'extract_GS\OBS_LAI_extend\\'
+        self.fdirX = result_root+rf'\3mm\multiregression_long_term\\'
+        self.fdirY = result_root+rf'\3mm\multiregression_long_term\\'
 
-        self.period = ('1982_2020')
-        # self.period=('1982_2001')
-        # self.period=('2002_2020')
-        # self.y_var = [f'LAI4g_{self.period}']
-        # self.xvar = [f'Tmax_{self.period}', f'CRU_{self.period}', f'CO2_{self.period}', f'VPD_{self.period}']
-        self.y_var = ['LAI4g']
-        self.xvar = [ 'CO2', 'CRU']
 
-        self.multi_regression_result_dir = result_root + rf'multi_regression\\original\\{self.period}\\'
+        self.y_var = ['LAI4g_relative_change_detrend']
+        self.xvar = [ 'Tmax_detrend', 'VPD_detrend','sum_rainfall_detrend']
+
+        self.multi_regression_result_dir = result_root + rf'\3mm\\multiregression_long_term\\1982_2000\\'
         T.mk_dir(self.multi_regression_result_dir, force=True)
 
-        self.multi_regression_result_f = result_root + rf'multi_regression\\original\\{self.period}\\{self.y_var[0]}.npy'
+        self.multi_regression_result_f = self.multi_regression_result_dir+f'{self.y_var[0]}.npy'
 
         pass
 
@@ -8675,14 +8671,13 @@ class multi_regression_anomaly():
 
         # step 1 build dataframe
 
-        # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
+        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
 
         # # # step 2 cal correlation
-        self.cal_multi_regression_beta()
+        self.cal_multi_regression_beta(df)
 
         # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0],self.period)
-
+        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
         ## step 4 convert m2/m2/ppm to %/100ppm
         # self.convert_CO2_sensitivity_unit()
 
@@ -8705,7 +8700,7 @@ class multi_regression_anomaly():
         y_val_list = []
 
         for pix in dic_y:
-            yvals = dic_y[pix]
+            yvals = dic_y[pix][0:19]
 
             if len(yvals) == 0:
                 continue
@@ -8737,7 +8732,7 @@ class multi_regression_anomaly():
                 if not pix in dic_x:
                     x_val_list.append([])
                     continue
-                xvals = dic_x[pix]
+                xvals = dic_x[pix][0:19]
                 xvals = np.array(xvals)
                 if len(xvals) == 0:
                     x_val_list.append([])
@@ -8779,13 +8774,12 @@ class multi_regression_anomaly():
         r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
         return a, b, r
 
-    def cal_multi_regression_beta(self):
+    def cal_multi_regression_beta(self,df):
         import statsmodels.api as sm
         import statsmodels.formula.api as smf
         import pandas as pd
         import joblib
 
-        df = T.load_df(rf'D:\Project3\Result\\multi_regression\original\1982_2020\\LAI4g.df')
 
         x_var_list = self.xvar
 
@@ -8851,12 +8845,11 @@ class multi_regression_anomaly():
             df_new = df_new.dropna()
             ## build multiregression model and consider interactioon
 
-            # model = smf.ols('y ~ CO2 + CRU +  CO2:CRU ',
-            #                 data=df_new).fit()
-            model = smf.ols('y ~ CO2 + CRU ',
-                            data=df_new).fit()
+            linear_model = LinearRegression()
+            # print(df_new['y'])
 
-            coef_ = np.array(model.params)
+            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+            coef_ = np.array(linear_model.coef_)
             coef_dic = dict(zip(x_var_list_valid_new, coef_))
             # print(df_new['y'])
             # exit()
@@ -8865,12 +8858,12 @@ class multi_regression_anomaly():
 
     pass
 
-    def plt_multi_regression_result(self, multi_regression_result_dir, y_var, period):
-        NDVI_mask_f = data_root + rf'/Base_data/dryland_mask.tif'
+    def plt_multi_regression_result(self, multi_regression_result_dir, y_var):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
@@ -8890,7 +8883,7 @@ class multi_regression_anomaly():
             spatial_dic = {}
             for pix in dic:
                 r, c = pix
-                if r < 120:
+                if r < 60:
                     continue
 
                 landcover_value = crop_mask[pix]
@@ -8904,18 +8897,13 @@ class multi_regression_anomaly():
                 if not var_i in dic_i:
                     continue
                 val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+                spatial_dic[pix] = val*100
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
             arr = arr * array_mask
             print(var_i)
-            if var_i=='tmax:CRU':
-                var_i = 'tmax_CRU'
-            elif var_i=='CO2:CRU':
-                var_i = 'CO2_CRU'
-            else:
-                var_i = var_i
 
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_{y_var}_{period}.tif')
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_{y_var}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
             vmin = mean - std
@@ -15269,7 +15257,7 @@ def main():
     # calculating_variables().run()
     # pick_event().run()
     # selection().run()
-    # multi_regression_anomaly().run()
+    multi_regression_anomaly().run()
     # multi_regression_detrended_anomaly().run()
     # data_preprocess_for_random_forest().run()
 

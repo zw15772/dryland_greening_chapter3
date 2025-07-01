@@ -4,6 +4,9 @@ import sys
 import lytools
 import pingouin
 import pingouin as pg
+
+from upload_version_drrland_greening import trend_analysis
+
 # from green_driver_trend_contribution import *
 
 version = sys.version_info.major
@@ -1430,6 +1433,164 @@ class TRENDY_CV():
         # plt.show()
 
         return m
+class PLOT_Climate_factors():
+    def run(self):
+        self.trend_analysis_plot()
+        pass
+    def trend_analysis_plot(self):
+        outdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\Robinson\\'
+
+        T.mk_dir(outdir,True)
+        temp_root = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\temp_root\\'
+
+        model_list = ['pi_average',  'heavy_rainfall_days', 'rainfall_seasonality_all_year',
+                      'sum_rainfall', 'VOD_detrend_min', 'fire_ecosystem_year_average',
+                      'VPD_max',
+                      'Non tree vegetation']
+
+        dic_name = {'pi_average': 'SM-T coupling',
+                    'heavy_rainfall_days': 'Heavy rainfall days',
+                    'rainfall_seasonality_all_year': 'Rainfall seasonality',
+                    'sum_rainfall': 'Total rainfall',
+                    'VOD_detrend_min': 'VOD_min',
+                    'fire_ecosystem_year_average': 'Fire burn area',
+                    'VPD_max': 'VPD_max',
+
+                    'Non tree vegetation': 'Non tree vegetation',
+                    }
+
+
+
+        fdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend2\\'
+        count = 1
+        for model in model_list:
+
+
+            fpath= fdir+f'{model}_trend.tif'
+            f_p_value = fdir + f'{model}_p_value.tif'
+
+
+            # ax = plt.subplot(3, 2, count)
+            # print(count, f)
+            count = count + 1
+            # if not count == 9:
+            #     continue
+
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr = Tools().mask_999999_arr(arr, warning=False)
+            arr_m = ma.masked_where(np.isnan(arr), arr)
+            lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+            plt.figure(figsize=(5, 3))
+
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
+                        resolution='l',)
+
+            m = self.plot_sig_scatter(
+                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
+                s=1,
+                c='k', marker='x',
+                zorder=100, res=4
+            )
+            plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
+
+            m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
+            dic_vmin={'pi_average': -0.1,
+                       'heavy_rainfall_days': -0.3,
+                       'rainfall_seasonality_all_year': -0.5,
+                       'sum_rainfall': -5,
+                      'VOD_detrend_min': -0.005,
+                      'fire_ecosystem_year_average': -1,
+                      'VPD_max': -0.01,
+                      'Non tree vegetation': -0.5
+
+
+            }
+
+            dic_vmax={'pi_average': 0.1,
+                       'heavy_rainfall_days': .3,
+                       'rainfall_seasonality_all_year': .5,
+                       'sum_rainfall': 5,
+                      'VOD_detrend_min': 0.005,
+                      'fire_ecosystem_year_average': 1,
+                      'VPD_max': 0.01,
+                      'Non tree vegetation': 0.5}
+
+            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=dic_vmin[model], vmax=dic_vmax[model])
+
+
+            # plt.show()
+        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
+        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
+        # # cb.set_label(f'{model}_CV_trend', labelpad=-40)
+            outf = outdir + rf'trend_analysis_plot_{model}.png'
+
+            plt.subplots_adjust(hspace=0.055, wspace=0.038)
+            #
+            plt.savefig(outf, dpi=600)
+            plt.close()
+        # plt.show()
+        T.open_path_and_file(outdir)
+        # exit()
+    pass
+
+    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
+                                               s=20,
+                                               c='k', marker='x',
+                                               zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
+
+        # arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        #
+        os.remove(fpath_clip)
+        # os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+        # exit()
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list) + res/2
+        lat_list = np.array(lat_list) - res/2
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        # lon_list = lon_list + pixelWidth / 2
+        # lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        # print(lat_list);exit()
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+        # ax.scatter(lon_list,lat_list)
+        # plt.show()
+
+        return m
+
 
 class SHAP_CV():
 
@@ -4174,17 +4335,38 @@ class Trend_CV():
         plt.bar([1,2,3], [np.nanmean(CV_greening_pixels),np.nanmean(CV_browning_pixels),np.nanmean(CV_middle_pixels)],color=['green','red','blue'])
         plt.show()
 
+class calculate_longterm_CV():
+    def __init__(self):
+        pass
+    def run (self):
+        self.calculate_long_term_CV()
+        pass
+    def calculate_long_term_CV(self):
+        fpath=result_root+rf'3mm\extract_LAI4g_phenology_year\dryland\detrend_TRENDY\\LAI4g_detrend.npy'
+        dic=T.load_npy(fpath)
+        result_dic={}
+        for pix in dic:
+            vals=dic[pix]
+            mean=np.nanmean(vals)
+            std=np.nanstd(vals)
+            CV=std/mean*100
+            result_dic[pix]=CV
+        outf=result_root+rf'3mm\extract_LAI4g_phenology_year\dryland\detrend_TRENDY\\long_term_LAI4g_detrend_CV.npy'
+        np.save(outf,result_dic)
 
+        pass
 
 def main():
     # greening_analysis().run()
     # climate_variables().run()
     # TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
+    # PLOT_Climate_factors().run()
+    calculate_longterm_CV().run()
     # SHAP_CV().run()
     # SHAP_rainfall_seasonality().run()
     # SHAP_CO2_interaction().run()
-    Bivariate_analysis().run()
+    # Bivariate_analysis().run()
     # Trend_CV().run()
 
 
