@@ -1797,18 +1797,18 @@ class SHAP_CV():
 
     def run(self):
         # self.check_df_attributes()
-        # #
-        # #
+        # # #
+        # # #
         # self.check_variables_ranges()
         #
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
         # self.pdp_shap()
-        # # #
+        # # # #
         # self.plot_pdp_shap()
-        self.shapely_df_generation()
-        # self.plot_pdp_shap_test()
+        # self.shapely_df_generation()
+        self.plot_pdp_shap_test()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## paper use
         # self.plot_pdp_shap_density_cloud_individual_test()
@@ -1990,6 +1990,8 @@ class SHAP_CV():
 
             'VPD',
             'Burn_area_mean',
+            # 'FVC_average',
+            'SM_average',
             # 'Short_vegetation_change_1982-2016',
 
             # 'Non tree vegetation_trend',
@@ -2064,6 +2066,8 @@ class SHAP_CV():
 
         self.x_variable_range_dict_global_CRU = {
             'Aridity': [0, 0.65],
+            'FVC_average': [0, 0.8],
+            'SM_average': [0, 0.4],
             'VOD_detrend_min': [0, 1.4],
             'VOD_detrend_min_trend': [-0.01, 0.01],
             'VPD': [0, 3.5],
@@ -2213,6 +2217,7 @@ class SHAP_CV():
         df=df[df['LC_max']<20]
         # df = df[df['extraction_mask'] == 1]
         df=df[df['composite_LAI_beta_mean_trend'] > 0]
+        df=df[df['sum_rainfall_p_value'] < 0.05]
         df=df[df['wet_dry'] =='drying']
         # df = df[df['wet_dry'] == 'wetting']
 
@@ -2247,7 +2252,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_drying')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_drying_sig')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2261,7 +2266,7 @@ class SHAP_CV():
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
         df = self.valid_range_df(df)
-        outdf=join(outdir,'drying_origin.df')
+        outdf=join(outdir,'drying_origin_sig.df')
         T.save_df(df, outdf)
         # print('len(df):',len(df));exit()
 
@@ -2536,27 +2541,95 @@ class SHAP_CV():
         # exit()
 
     def plot_pdp_shap_test(self):
-        x_variable_list = self.x_variable_list
-        dff = self.dff
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        df=df.dropna()
-        # T.print_head_n(df);exit()
-        # df_temp, start_dic, end_dic = self.filter_percentile(df)
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+        dff=results_root+rf'3mm\SHAP_beta\Dataframe\\wetting_drying_sig.df'
+        df=T.load_df(dff)
         class_list=['wetting','drying']
-        shap_dic={}
-        # X_variable_list=['sand','soc','Aridity','rooting_depth','pi_average_trend','Non tree vegetation_trend']
-
-        inf_shap_drying = join(self.this_class_png, 'pdp_shap_beta_drying', self.y_variable + '.shap.pkl')
-        inf_shap_wetting = join(self.this_class_png, 'pdp_shap_beta_wetting', self.y_variable + '.shap.pkl')
-
-        shap_values_drying = T.load_dict_from_binary(inf_shap_drying)
-        shap_values_wetting = T.load_dict_from_binary(inf_shap_wetting)
+        shap_dic_var={}
+        stats_dic_var={}
+        X_variable_list=self.x_variable_list
 
 
+        for variable in X_variable_list:
+
+            shap_dic_mode = {}
+            shap_dic_mode_stat={}
+
+            for class_ in class_list:
+
+                df_temp=df[df['mode']==class_]
+
+                shap_value=df_temp[f'{variable}_shap'].tolist()
+                X=df_temp[variable].tolist()
+                X_arr=np.array(X)
+                shap_value_arr=np.array(shap_value)
+                # smoothed = lowess(shap_value_arr, X_arr, frac=0.1, return_sorted=False)
 
 
 
+                # y_mean_list.append(mean)
+                # sem = stats.sem(shap_value_arr)  # Standard error of the mean
+                # conf_int = stats.t.interval(confidence=0.95, df=len(shap_value_arr) - 1, loc=mean, scale=sem)
+                # CI_list.append(conf_int)
+
+
+                shap_dic_mode[class_]=[X_arr,shap_value_arr]
+                # shap_dic_mode_stat[class_]=[smoothed]
+
+            shap_dic_var[variable]=shap_dic_mode
+            stats_dic_var[variable]=shap_dic_mode_stat
+
+
+
+        for variable in X_variable_list:
+            xbins=np.linspace(df[variable].min(),df[variable].max(),100)
+            X_wetting=shap_dic_var[variable]['wetting'][0]
+            X_drying=shap_dic_var[variable]['drying'][0]
+            Y_wetting=shap_dic_var[variable]['wetting'][1]
+            Y_drying=shap_dic_var[variable]['drying'][1]
+            df_wetting=pd.DataFrame({'X':X_wetting,'Y':Y_wetting})
+            df_drying=pd.DataFrame({'X':X_drying,'Y':Y_drying})
+            df_group_wetting, bins_list_str_wetting=T.df_bin(df_wetting,'X',xbins)
+            df_group_drying, bins_list_str_drying=T.df_bin(df_drying,'X',xbins)
+            plt.scatter(X_wetting,Y_wetting,c='b',alpha=0.5,label='wetting',s=.1)
+            plt.scatter(X_drying,Y_drying,c='r',alpha=0.5,label='drying',s=.1)
+
+            Y_list_mean_wetting=[]
+            X_list_wetting=[]
+
+            for name,df_group_i in df_group_wetting:
+
+                left=name[0].left
+                X_list_wetting.append(left)
+                vals = df_group_i['Y'].tolist()
+                mean = np.nanmean(vals)
+                sem = stats.sem(vals)  # Standard error of the mean
+                conf_int = stats.t.interval(confidence=0.95, df=len(vals) - 1, loc=mean, scale=sem)
+                Y_list_mean_wetting.append(mean)
+
+            Y_list_mean_drying=[]
+            X_list_drying=[]
+
+            for name,df_group_i in df_group_drying:
+                left = name[0].left
+                X_list_drying.append(left)
+                vals = df_group_i['Y'].tolist()
+                mean = np.nanmean(vals)
+                sem = stats.sem(vals)  # Standard error of the mean
+                conf_int = stats.t.interval(confidence=0.95, df=len(vals) - 1, loc=mean, scale=sem)
+                Y_list_mean_drying.append(mean)
+            Y_list_mean_wetting=SMOOTH().smooth_convolve(Y_list_mean_wetting,window_len=21)
+            Y_list_mean_drying=SMOOTH().smooth_convolve(Y_list_mean_drying,window_len=21)
+
+
+
+
+            plt.plot(X_list_wetting,Y_list_mean_wetting,color='black')
+
+            plt.plot(X_list_drying,Y_list_mean_drying,color='purple')
+            plt.xlabel(variable)
+            plt.ylim(-3,3)
+            plt.show()
 
 
 
@@ -2570,7 +2643,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_wetting', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_drying_sig', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -3620,18 +3693,18 @@ class SHAP_CV():
         T.open_path_and_file(outdir)
         # exit()
     def shapely_df_generation(self):
-        dff_orgin_wet = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting\wetting_origin.df'
+        dff_orgin_wet = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting_sig\wetting_origin_sig.df'
         df_origin_wet = T.load_df(dff_orgin_wet)
 
-        dff_orgin_dry = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying\drying_origin.df'
+        dff_orgin_dry = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying_sig\drying_origin_sig.df'
         df_origin_dry = T.load_df(dff_orgin_dry)
 
-        outff = results_root+rf'3mm\SHAP_beta\Dataframe\wetting_drying_origin.df'
+        outff = results_root+rf'3mm\SHAP_beta\Dataframe\wetting_drying_sig.df'
 
         x_variable_list = self.x_variable_list
 
-        inf_shap_wetting= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting\composite_LAI_beta.shap.pkl'
-        inf_shap_drying= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying\composite_LAI_beta.shap.pkl'
+        inf_shap_wetting= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting_sig\composite_LAI_beta.shap.pkl'
+        inf_shap_drying= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying_sig\composite_LAI_beta.shap.pkl'
         shap_values_wetting = T.load_dict_from_binary(inf_shap_wetting)
         shap_values_drying = T.load_dict_from_binary(inf_shap_drying)
 

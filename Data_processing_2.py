@@ -417,37 +417,32 @@ class Data_processing_2:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
 
-
-        fdir_all = rf'D:\Project3\Data\VCF\\'
+        fdir_all =data_root+ rf'\GLEAM_SMRoot_tif_05\\'
+        outdir = join(fdir_all, 'drylang_tiff')
+        T.mk_dir(outdir, force=True)
 
         for fdir in T.listdir(fdir_all):
-            if not 'resample' in fdir:
+            if not 'tif_05' in fdir_all:
                 continue
+            for f in T.listdir(join(fdir_all, fdir)):
 
-
-            fdir_i = join(fdir_all, fdir)
-
-            outdir_i = join(fdir_all,'drylang_tiff','Tree cover', )
-
-            T.mk_dir(outdir_i, force=True)
-            for fi in tqdm(T.listdir(fdir_i), desc=fdir):
-                if not fi.endswith('.tif'):
+                if not f.endswith('.tif'):
                     continue
-                fpath = join(fdir_i, fi)
+                fpath = join(fdir_all, fdir, f)
                 arr, originX, originY, pixelWidth, pixelHeight =self.raster2array(fpath)
                 arr = arr.astype(float)
                 arr[arr==0]=np.nan
                 arr[np.isnan(array_mask)] = np.nan
                 # plt.imshow(arr)
                 # plt.show()
-                fname=fi.split('_')[1]
+                fname=f.split('.')[0]
                 # print(fname);exit()
                 # outpath = join(outdir_i, fi)
-                outpath = join(outdir_i, fname+'.tif')
+                outpath = join(outdir, fname + '.tif')
 
                 ToRaster().array2raster(outpath, originX, originY, pixelWidth, pixelHeight, arr)
 
-        pass
+            pass
 
     def raster2array(self, rasterfn):
         '''
@@ -574,85 +569,81 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\VCF\dryland_tiff\\'
+        fdir_all = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\drylang_tiff\\'
+        outdir=rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\dic_05\\'
+        T.mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
 
         # 作为筛选条件
-        for fdir in os.listdir(fdir_all):
-            if not 'Non tree vegetation' in fdir:
+
+        all_array = []  #### so important  it should be go with T.mk_dic
+
+        for f in os.listdir(fdir_all):
+            if not f.endswith('.tif'):
                 continue
-            outdir=join(fdir_all, 'dic', 'Non tree vegetation')
+            if int(f.split('.')[0][0:4]) not in year_list:
+                continue
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, f))
+            array = np.array(array, dtype=float)
 
 
-            T.mk_dir(outdir, force=True)
-            all_array = []  #### so important  it should be go with T.mk_dic
+            # array_unify = array[:720][:720,
+            #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
+            array_unify = array[:360][:360,
+                          :720]
 
-            for f in os.listdir(fdir_all+fdir):
-                if not f.endswith('.tif'):
-                    continue
-                if int(f.split('.')[0][0:4]) not in year_list:
-                    continue
+            array_unify[array_unify < -999] = np.nan
+            # array_unify[array_unify > 10] = np.nan
+            # array[array ==0] = np.nan
 
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all, fdir, f))
-                array = np.array(array, dtype=float)
+            array_unify[array_unify < 0] = np.nan
 
+            #
+            #
+            # plt.imshow(array_unify)
+            # plt.show()
+            # array_mask = np.array(array_mask, dtype=float)
+            # plt.imshow(array_mask)
+            # plt.show()
 
-                # array_unify = array[:720][:720,
-                #               :1440]  # PAR是361*720   ####specify both a row index and a column index as [row_index, column_index]
-                array_unify = array[:360][:360,
-                              :720]
+            array_dryland = array_unify
+            # plt.imshow(array_dryland)
+            # plt.show()
 
-                array_unify[array_unify < -999] = np.nan
-                # array_unify[array_unify > 10] = np.nan
-                # array[array ==0] = np.nan
+            all_array.append(array_dryland)
 
-                array_unify[array_unify < 0] = np.nan
+        row = len(all_array[0])
+        col = len(all_array[0][0])
+        key_list = []
+        dic = {}
 
-                #
-                #
-                # plt.imshow(array_unify)
-                # plt.show()
-                # array_mask = np.array(array_mask, dtype=float)
-                # plt.imshow(array_mask)
-                # plt.show()
+        for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
+            for c in range(col):
+                dic[(r, c)] = []
+                key_list.append((r, c))
+        # print(dic_key_list)
 
-                array_dryland = array_unify
-                # plt.imshow(array_dryland)
-                # plt.show()
-
-                all_array.append(array_dryland)
-
-            row = len(all_array[0])
-            col = len(all_array[0][0])
-            key_list = []
-            dic = {}
-
-            for r in tqdm(range(row), desc='构造key'):  # 构造字典的键值，并且字典的键：值初始化
-                for c in range(col):
-                    dic[(r, c)] = []
-                    key_list.append((r, c))
-            # print(dic_key_list)
-
-            for r in tqdm(range(row), desc='构造time series'):  # 构造time series
-                for c in range(col):
-                    for arr in all_array:
-                        value = arr[r][c]
-                        dic[(r, c)].append(value)
-                    # print(dic)
-            time_series = []
-            flag = 0
-            temp_dic = {}
-            for key in tqdm(key_list, desc='output...'):  # 存数据
-                flag = flag + 1
-                time_series = dic[key]
-                time_series = np.array(time_series)
-                temp_dic[key] = time_series
-                if flag % 10000 == 0:
-                    # print(flag)
-                    np.save(outdir + '\\per_pix_dic_%03d' % (flag / 10000), temp_dic)
-                    temp_dic = {}
-            np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
+        for r in tqdm(range(row), desc='构造time series'):  # 构造time series
+            for c in range(col):
+                for arr in all_array:
+                    value = arr[r][c]
+                    dic[(r, c)].append(value)
+                # print(dic)
+        time_series = []
+        flag = 0
+        temp_dic = {}
+        for key in tqdm(key_list, desc='output...'):  # 存数据
+            flag = flag + 1
+            time_series = dic[key]
+            time_series = np.array(time_series)
+            temp_dic[key] = time_series
+            if flag % 10000 == 0:
+                # print(flag)
+                np.save(outdir + '\\per_pix_dic_%03d' % (flag / 10000), temp_dic)
+                temp_dic = {}
+        np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
 
     def zscore(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -1114,7 +1105,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=rf'D:\Project3\Result\3mm\GLEAM_SM\moving_window_extraction\\'
         print(fdir)
         print(self.dff)
         variable_list=['VPD','heavy_rainfall_days',
@@ -1124,7 +1115,7 @@ class build_moving_window_dataframe():
 
 
         for f in os.listdir(fdir):
-            if not 'VPD_max' in f:
+            if not 'average' in f:
                 continue
 
 
@@ -8477,10 +8468,10 @@ class SM_Tcoupling():
 
 
 def main():
-    # Data_processing_2().run()
+    Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

@@ -567,9 +567,9 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\GLEAM\dic_AE\\'
+        fdir = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\dic_05\\'
 
-        outdir = rf'D:\Project3\Data\GLEAM\\extract_phenology_monthly_variables_AE\\'
+        outdir = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\\extract_phenology_monthly_variables_SM\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
@@ -3184,15 +3184,15 @@ class extract_LAI_phenology():
     def __init__(self):
         pass
     def run(self):
-        # self.extract_phenology_LAI_mean()
-        self.detrend()
+        self.extract_phenology_LAI_mean()
+        # self.detrend()
         # self.trend_analysis()
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir =rf'D:\Project3\Data\VODCA_CXKu\VODCA_CXKu\daily_images_VODCA_CXKu\\phenology_year_extraction_dryland\\'
+        fdir =rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\extract_phenology_monthly_variables_SM\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_phenology_VOD\\'
+        outdir_CV = result_root+rf'\3mm\GLEAM_SM\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -3790,14 +3790,14 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\\'
+        fdir_all = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'3mm\VCF\\moving_window_extraction\\'
+        outdir = self.result_root + rf'3mm\glass_fvc_avhrr\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -3823,7 +3823,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
 
 
                 time_series = np.array(time_series)
@@ -4077,14 +4077,14 @@ class moving_window():
         #
         #
         # for mode in growing_season_mode_list:
-        fdir = rf'D:\Project3\Result\3mm\VCF\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\VCF\moving_window_extraction\\'
+        fdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
             dic = T.load_npy(fdir + f)
 
-            slides = 35 - window_size+1   ## revise!!
+            slides = 36 - window_size+1   ## revise!!
             outf = outdir + f.split('.')[0] + f'_average.npy'
             print(outf)
 
@@ -4104,7 +4104,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<21:
+                    if len(time_series_all)<22:
                         continue
 
 
@@ -4132,8 +4132,8 @@ class moving_window():
         window_size = 15
 
 
-        fdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_phenology_VOD\\moving_window_min_max_anaysis\\'
+        fdir = rf'\3mm\extract_FVC_phenology_year\moving_window_extraction\\'
+        outdir = rf'\3mm\extract_FVC_phenology_year\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -4141,7 +4141,7 @@ class moving_window():
             dic = T.load_npy(fdir + f)
 
             slides = 32 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_min.npy'
+            outf = outdir + f.split('.')[0] + f'_max.npy'
             print(outf)
 
             trend_dic = {}
@@ -4170,7 +4170,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmin(time_series)
+                    average=np.nanmax(time_series)
                     # print(average)
 
                     trend_list.append(average)
@@ -4299,15 +4299,16 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\'
-        outdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'average' in f:
+                continue
             if not f.endswith('.npy'):
                 continue
-            if not 'VPD' in f:
-                continue
+
 
 
             # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',

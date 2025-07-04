@@ -4408,9 +4408,9 @@ class partial_correlation():
     def __init__(self):
         pass
 
-        self.fdir_X = result_root + rf'3mm\Multiregression\zscore\\'
-        self.fdir_Y = result_root + rf'\3mm\Multiregression\\zscore\\'
-        self.xvar_list = [ 'fire_ecosystem_year_average',
+        self.fdir_X = result_root + rf'3mm\Multiregression\input\\'
+        self.fdir_Y = result_root + rf'\3mm\Multiregression\\input\\'
+        self.xvar_list = [ 'fire_ecosystem_year_average','sum_rainfall',
                         'rainfall_seasonality_all_year','VPD', ]
 
 
@@ -4422,12 +4422,12 @@ class partial_correlation():
         self.outpartial_pvalue = self.outdir + rf'\partial_pvalue.npy'
 
     def run(self):
-        df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
+        # df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
         # # #
-        self.cal_partial_corr(df,self.xvar_list, )
-        # self.cal_single_correlation()
+        # self.cal_partial_corr(df,self.xvar_list, )
+        self.cal_single_correlation()
         # self.cal_single_correlation_ly()
-        self.plot_partial_correlation()
+        # self.plot_partial_correlation()
         # self.maximum_partial_corr()
         # self.statistic_corr()
         # self.statistic_trend()
@@ -4436,7 +4436,7 @@ class partial_correlation():
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
         df = pd.DataFrame()
 
-        filey = fdir_Y + fy[0] + '_zscore.npy'
+        filey = fdir_Y + fy[0] + '.npy'
         print(filey)
 
         dic_y = T.load_npy(filey)
@@ -4467,7 +4467,7 @@ class partial_correlation():
 
             # print(var_name)
             x_val_list = []
-            filex = fdir_X + xvar + '_zscore.npy'
+            filex = fdir_X + xvar + '.npy'
             # filex = fdir_X + xvar + f'_{period}.npy'
 
             # print(filex)
@@ -4589,8 +4589,10 @@ class partial_correlation():
 
 
     def cal_single_correlation(self):
-        f_x= result_root + rf'\anomaly\OBS_extend\\wet_frequency_90th.npy'
-        f_y = result_root + rf'\anomaly\OBS_extend\\LAI4g.npy'
+        f_x= result_root + rf'\3mm\Multiregression\input\\sum_rainfall.npy'
+        f_y = result_root + rf'\3mm\Multiregression\input\\composite_LAI_beta_mean.npy'
+        outdir=join(result_root, 'Multiregression', 'correlation')
+        T.mk_dir(outdir, force=True)
         dic_x = T.load_npy(f_x)
         dic_y = T.load_npy(f_y)
 
@@ -4607,7 +4609,7 @@ class partial_correlation():
             y_val = T.interp_nan(y_val)
             if x_val[0] == None:
                 continue
-            y_val = y_val[0:38]
+            y_val = y_val[0:24]
 
             if len(y_val) == 0:
                 continue
@@ -4623,7 +4625,10 @@ class partial_correlation():
             # print(r)
             # print(p)
             spatial_r_dic[pix] = r
-        arr=DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_r_dic)
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_r_dic)
+
+        outf=outdir+'\\sum_rainfall.tif'
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr,outf)
         plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
         plt.colorbar()
         plt.show()
@@ -6015,11 +6020,56 @@ class Figure5():
 
         return df
 
+class GAM():
+    def __init__(self):
+        pass
+    def run(self):
+        pass
+    def df_clean(self, df):
+        # T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        print('original len(df):',len(df))
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df=df[df['LC_max']<20]
+        # df = df[df['extraction_mask'] == 1]
+        df=df[df['composite_LAI_beta_mean_trend'] > 0]
+        df=df[df['sum_rainfall_p_value'] < 0.05]
+        df=df[df['wet_dry'] =='drying']
+        # df = df[df['wet_dry'] == 'wetting']
+
+
+        df = df[df['MODIS_LUCC'] != 12]
+        # df=df[df['landcover_classfication'] != 'Cropland']
+        print('filtered len(df):',len(df))
+        # exit()
+
+
+        # #
+        # df = df[df['lon'] > -125]
+        # df = df[df['lon'] < -105]
+        # df = df[df['lat'] > 0]
+        # df = df[df['lat'] < 45]
+        # print(len(df))
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def GAM_model(self):
+        dff=rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window2.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+
+        pass
+
 
 def main():
     # CCI_landcover_preprocess().run()
 
-    Figure1().run()
+    # Figure1().run()
     # Figure2().run()
     # Figure3().run()
     # Figure4().run()
@@ -6029,7 +6079,7 @@ def main():
     # multi_regression_beta_TRENDY().run()
     # Figure5().run()
 
-    # partial_correlation().run()
+    partial_correlation().run()
 
 
 

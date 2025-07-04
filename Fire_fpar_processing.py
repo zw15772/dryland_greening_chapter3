@@ -92,6 +92,7 @@ class download_FVC():
         # Target URL
         for year in year_list:
             base_url = f"http://www.glass.umd.edu/05D/FVC/glass_fvc_avhrr_netcdf/{year}/"
+
             output_dir = data_root + f"glass_fvc_avhrr\\netcdf/{year}/"
             T.mk_dir(output_dir, force=True)
 
