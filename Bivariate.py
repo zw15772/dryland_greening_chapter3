@@ -12,6 +12,7 @@ from openpyxl.styles.builtins import percent, total
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
+from statsmodels.sandbox.regression.gmm import results_class_dict
 from sympy.abc import alpha
 
 version = sys.version_info.major
@@ -79,7 +80,95 @@ centimeter_factor = 1/2.54
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
 result_root = 'D:/Project3/Result/'
+class CCI_landcover_preprocess():
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+    def run(self):
+        self.CCI_landcover_preprocess()
+        pass
+    def CCI_landcover_preprocess(self):
+        fdir_all=data_root+'\ESA_CCI_LC_tif05\\'
+        dic_composite={'SHRUBS-BD':'shrubs',
+                       'SHRUBS-BE':'shrubs',
+                       'SHRUBS-ND':'shrubs',
+                       'SHRUBS-NE':'shrubs',
+                       'GRASS-MAN':'grass',
+                       'GRASS-NAT':'grass',
+                       'TREES-BD':'trees',
+                       'TREES-BE':'trees',
+                       'TREES-ND':'trees',
+                       'TREES-NE':'trees',
+                       'BARE':'bare',
+                       'WATER':'water',
+                       'BUILT':'built',
 
+
+                       }
+
+
+        ## each landcover group I want to append and sum them
+
+        for fdir in os.listdir(fdir_all):
+            outdir=join(fdir_all,fdir,'composite')
+            T.mk_dir(outdir,force=True)
+            shrubslist = []
+            grasslist = []
+            trees_list = []
+            water_list=[]
+            built_list=[]
+            bare_list=[]
+
+            results_class_dict={}
+            for f in os.listdir(fdir_all+fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if 'LAND' in f:
+                    continue
+                if 'SNOWICE' in f:
+                    continue
+
+                fpath=join(fdir_all+fdir,f)
+                landcover=f.split('_')[-1].split('.')[0]
+                landcover=dic_composite[landcover]
+
+                if landcover=='shrubs':
+                    shrubslist.append(fpath)
+                elif landcover=='grass':
+                    grasslist.append(fpath)
+                elif landcover=='trees':
+                    trees_list.append(fpath)
+                elif landcover=='water':
+                    water_list.append(fpath)
+                elif landcover=='built':
+                    built_list.append(fpath)
+                elif landcover=='bare':
+                    bare_list.append(fpath)
+                else:
+                    raise
+            results_class_dict['shrubs'] = shrubslist
+            results_class_dict['grass'] = grasslist
+            results_class_dict['trees'] = trees_list
+            results_class_dict['water'] = water_list
+            results_class_dict['built'] = built_list
+            results_class_dict['bare'] = bare_list
+
+            for key in results_class_dict.keys():
+                array_list=[]
+
+                outf = join(outdir, key + '.tif')
+                for f in results_class_dict[key]:
+                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+                    array_list.append(array)
+                array_list=np.array(array_list)
+                array_sum=np.sum(array_list,axis=0)
+                DIC_and_TIF().arr_to_tif(array_sum, outf)
+
+
+
+
+        pass
 class multi_regression_beta():
     def __init__(self):
         self.this_root = 'D:\Project3\\'
@@ -914,7 +1003,8 @@ class Figure1():
     def run (self):
         # self.bivariate_map()
         # self.Aridity_CV()
-        self.Aridity_beta()
+        # self.Aridity_beta()
+        self.figure1f()
 
         # self.Figure1c_robinson()
         # self.heatmap_LAImin_max_CV_Figure1d()
@@ -1373,6 +1463,42 @@ class Figure1():
         # plt.savefig(outf)
         # plt.close()
 
+    def figure1f(self):
+
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        print(len(df))
+
+        df = df[df['composite_LAI_CV_p_value'] < 0.05]
+        # # print(len(df));exit()
+
+        # plt.show();exit()
+
+        T.print_head_n(df)
+        x_var = 'composite_LAI_detrend_relative_change_min_trend'
+        y_var = 'composite_LAI_detrend_relative_change_max_trend'
+
+        df_LAImax_pos=df[df['composite_LAI_detrend_relative_change_max_trend']>0]
+        df_LAImax_neg=df[df['composite_LAI_detrend_relative_change_max_trend']<0]
+        values_pos_LAImin=df_LAImax_pos['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        values_neg_LAImin=df_LAImax_neg['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        values_pos_LAImin_array=np.array(values_pos_LAImin)
+        values_neg_LAImin_array=np.array(values_neg_LAImin)
+
+        sns.kdeplot(values_pos_LAImin_array, fill=True,color='#785187',label='LAImax>0')
+        sns.kdeplot(values_neg_LAImin_array, fill=True,color='#e66d50',label='LAImax<0')
+        plt.axvline(np.nanmean(values_pos_LAImin_array), color='purple', linestyle='--', linewidth=1)
+        plt.axvline(np.nanmean(values_neg_LAImin_array), color='orange', linestyle='--', linewidth=1)
+        plt.xlabel('Trends in LAImin')
+        plt.xlim(-2.5,2.5)
+        plt.legend()
+
+
+        plt.show()
+
+        pass
+
     def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
         df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
         matrix_dict = {}
@@ -1490,8 +1616,8 @@ class Figure3():
         ## step4
         # self.generate_three_dimension()
 
-        self.plot_figure2b_test()
-
+        # self.plot_figure2b_test()
+        self.plot_figure2c()
 
 
 
@@ -1867,6 +1993,60 @@ class Figure3():
 
 
         pass
+
+
+    def plot_figure2c(self):
+        ## here plot wetting--different landcover dring different landcover beta
+        dff=result_root + rf'3mm\bivariate_analysis\Dataframe\Three_dimension.df'
+        df=T.load_df(dff)
+        T.print_head_n(df)
+        df=self.df_clean(df)
+        df.dropna()
+        ## get landcover unique list
+        landcover_list=df['landcover_classfication'].unique()
+        ## if there is nan, remove
+        new_landcover_list=[]
+        for i in range(len(landcover_list)):
+            landcover=landcover_list[i]
+            if landcover==-999:
+                continue
+            new_landcover_list.append(landcover)
+
+        wetter_dryer_group_list=['wetting','drying']
+
+        beta_list=['beta+','beta-']
+
+        result_beta_dic={}
+        for beta in beta_list:
+            df_temp=df[df['beta_class']==beta]
+            result_beta_dic[beta]={}
+
+            for wetter_dryer_group in wetter_dryer_group_list:
+                df_wetter_dryer=df_temp[df_temp['wet_dry']==wetter_dryer_group]
+                result_beta_dic[beta][wetter_dryer_group]={}
+                ## calculate each landcover group
+                for landcover in landcover_list:
+                    df_landcover=df_wetter_dryer[df_wetter_dryer['landcover_classfication']==landcover]
+                    if len(df_landcover)==0:
+                        continue
+                    result_beta_dic[beta][wetter_dryer_group][landcover]=len(df_landcover)/len(df_wetter_dryer)
+
+
+        ## plot bar
+        for beta in beta_list:
+            for wetter_dryer_group in wetter_dryer_group_list:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                ax.bar(new_landcover_list, [result_beta_dic[beta][wetter_dryer_group][landcover] for landcover in new_landcover_list])
+                ax.set_xticklabels(new_landcover_list, rotation=45, ha='right')
+                ax.set_xlabel('Landcover')
+                ax.set_ylabel('Count')
+                ax.set_title(f'{wetter_dryer_group}--{beta}')
+                plt.tight_layout()
+                plt.show()
+
+
+
+
     def plot_figure2a(self):
 
         fdir_trend = result_root + rf'\3mm\bivariate_analysis\composite_LAI\\'
@@ -2264,17 +2444,17 @@ class Figure4:
 
         return df
     def plot_X_Y(self):
-        # dff=result_root+rf'3mm\SHAP_beta\Dataframe\\Trend.df'
-        dff=result_root+rf'\3mm\SHAP_beta\Dataframe\\moving_window.df'
+        dff=result_root+rf'3mm\SHAP_beta\Dataframe\\Trend.df'
+        # dff=result_root+rf'\3mm\SHAP_beta\Dataframe\\moving_window.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
         # df=df[df['continent']=='Africa']
         df=df[df['extraction_mask']==1]
-        df=df[df['composite_LAI_beta']>-5]
-        df=df[df['composite_LAI_beta']<5]
+        # df=df[df['composite_LAI_beta']>-5]
+        # df=df[df['composite_LAI_beta']<5]
 
-        Y=df['composite_LAI_beta'].tolist()
-        X=df['soc'].tolist()
+        Y=df['composite_LAI_beta_mean_trend'].tolist()
+        X=df['sand'].tolist()
         Y=np.array(Y)
         X=np.array(X)
         mask = (~np.isnan(X)) & (~np.isnan(Y))
@@ -2285,7 +2465,8 @@ class Figure4:
         plt.plot(X, intercept + slope * X, color='r')
         plt.text(0.5, 0.5, f'r={r_value:.2f}, p={p_value:.2e}', transform=plt.gca().transAxes)
 
-        plt.scatter(X,Y)
+        KDE_plot().plot_scatter(X,Y)
+        plt.ylim(-.5,.5)
         plt.xlabel('')
         plt.ylabel('composite_LAI_beta')
         plt.show()
@@ -2745,7 +2926,7 @@ class Figure2():
         # self.Figure2a_robinson()
 
 
-        # self.Figure2b_test()
+        self.Figure2b_test()
 
         # self.CV_greening_heatmap2()
         # self.statistic_bar()
@@ -4227,12 +4408,11 @@ class partial_correlation():
     def __init__(self):
         pass
 
-        self.fdir_X = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
-        self.fdir_Y = result_root + rf'\3mm\Multiregression\\'
-        self.xvar_list = ['fire_ecosystem_year_average', 'pi_average',
-                           'sum_rainfall', 'rainfall_seasonality_all_year','VOD_detrend_min' ]
-        # self.xvar_list = [
-        #                   'rainfall_frenquency', 'rainfall_intensity', ]
+        self.fdir_X = result_root + rf'3mm\Multiregression\zscore\\'
+        self.fdir_Y = result_root + rf'\3mm\Multiregression\\zscore\\'
+        self.xvar_list = [ 'fire_ecosystem_year_average',
+                        'rainfall_seasonality_all_year','VPD', ]
+
 
         self.y_var = ['composite_LAI_beta_mean']
         self.outdir = result_root + rf'\3mm\\Multiregression\partial_correlation\\'
@@ -4256,7 +4436,7 @@ class partial_correlation():
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
         df = pd.DataFrame()
 
-        filey = fdir_Y + fy[0] + '.npy'
+        filey = fdir_Y + fy[0] + '_zscore.npy'
         print(filey)
 
         dic_y = T.load_npy(filey)
@@ -4266,7 +4446,7 @@ class partial_correlation():
         y_val_list = []
 
         for pix in dic_y:
-            yvals = dic_y[pix]
+            yvals = dic_y[pix][0:22]
 
             if len(yvals) == 0:
                 continue
@@ -4287,7 +4467,7 @@ class partial_correlation():
 
             # print(var_name)
             x_val_list = []
-            filex = fdir_X + xvar + '.npy'
+            filex = fdir_X + xvar + '_zscore.npy'
             # filex = fdir_X + xvar + f'_{period}.npy'
 
             # print(filex)
@@ -4299,7 +4479,7 @@ class partial_correlation():
                 if not pix in dic_x:
                     x_val_list.append([])
                     continue
-                xvals = dic_x[pix]
+                xvals = dic_x[pix][0:22]
                 xvals = np.array(xvals)
                 xvals = xvals
                 if len(xvals) == 0:
@@ -4345,7 +4525,7 @@ class partial_correlation():
 
             for x in x_var_list:
 
-                x_vals = row[x]
+                x_vals = row[x][0:22]
 
                 if len(x_vals) == 0:
                     continue
@@ -5837,10 +6017,12 @@ class Figure5():
 
 
 def main():
-    # Figure1().run()
+    # CCI_landcover_preprocess().run()
+
+    Figure1().run()
     # Figure2().run()
     # Figure3().run()
-    Figure4().run()
+    # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
     # multi_regression_beta().run()

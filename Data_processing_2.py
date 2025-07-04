@@ -90,7 +90,7 @@ class Data_processing_2:
         # self.aggregation_soil()
         # self.nc_to_tif_time_series_fast2()
 
-        self.resample()
+        # self.resample()
         # self.scale()
 
         # self.aggregate()
@@ -102,7 +102,7 @@ class Data_processing_2:
         # self.tif_to_dic()
         # self.interpolate_VCF()
         # self.interpolation()
-        # self.zscore()
+        self.zscore()
         # self.composite_LAI()
 
 
@@ -658,8 +658,8 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\'
-        outdir = result_root + rf'\3mm\moving_window_multi_regression\multiresult_raw_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\'
+        fdir = result_root + rf'\3mm\Multiregression\\input\\'
+        outdir = result_root + rf'\3mm\Multiregression\\zscore\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -951,7 +951,7 @@ class build_moving_window_dataframe():
         self.threshold = '1mm'
         self.this_class_arr = (rf'D:\Project3\Result\3mm\SHAP_beta\\Dataframe\\\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window.df'
+        self.dff = self.this_class_arr + rf'moving_window2.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1080,8 +1080,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy'
-
+        f = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1115,19 +1114,26 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\moving_window_min_max_anaysis\\'
+        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         print(fdir)
         print(self.dff)
+        variable_list=['VPD','heavy_rainfall_days',
+        'pi_average','rainfall_seasonality_all_year',
+        'dry_spell', 'VPD','pi_average', 'heat_event_frenquency',
+                 'Tmax','sum_rainfall'   ]
 
 
         for f in os.listdir(fdir):
-            if not 'max' in f:
+            if not 'VPD_max' in f:
                 continue
 
+
             variable= f.split('.')[0]
+            # if not variable in variable_list:
+            #     continue
 
 
-            print(variable)
+            # print(variable)
 
 
             if not f.endswith('.npy'):
@@ -1162,10 +1168,10 @@ class build_moving_window_dataframe():
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 18:
+                if len(vals) == 22:
                     ## add twice nan at the end
-                    vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
-                    # vals=np.append(vals,[np.nan,np.nan])
+                    # vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
+                    vals=np.append(vals,[np.nan,np.nan])
 
 
                     v1 = vals[y-0]
@@ -1189,7 +1195,7 @@ class build_moving_window_dataframe():
 
 
             df[f'{variable}'] = NDVI_list
-        # df[f'{variable}_ecosystem_year'] = NDVI_list
+            # df[f'{variable}_ecosystem_year'] = NDVI_list
         # exit()
         return df
     def rescale_to_df(self,df):
@@ -1207,11 +1213,10 @@ class build_moving_window_dataframe():
     def add_interaction_to_df(self,df):
         # T.print_head_n(df);exit()
 
-
-        # df['sand_rainfall_frenquency'] = df['sand']*df['rainfall_frenquency_average_zscore']
-        # df['sand_rainfall_intensity'] = df['sand']*df['rainfall_intensity_average_zscore']
-        df['cwdx80_05_rainfall_intensity']=df['cwdx80_05']*df['rainfall_intensity_average_zscore']
-        df['cwdx80_05_rainfall_frenquency'] = df['cwdx80_05']*df['rainfall_frenquency_average_zscore']
+        # df['CO2_rainfall']=df['CO2']*df['rainfall_intensity_average_zscore']
+        df['wet_dry'] = 'unknown'
+        df.loc[df['sum_rainfall_trend'] > 0, 'wet_dry'] = 'wetting'
+        df.loc[df['sum_rainfall_trend'] < 0, 'wet_dry'] = 'drying'
         return df
 
 
@@ -1409,9 +1414,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\SHAP_beta\Dataframe\\')
+        self.this_class_arr = (result_root+rf'3mm\\\SHAP_beta\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend.df'
+        self.dff = self.this_class_arr + rf'moving_window2.df'
 
         pass
 
@@ -1433,13 +1438,13 @@ class build_dataframe():
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
+        # df=self.add_new_field_to_df(df)
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        #
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
@@ -1447,9 +1452,9 @@ class build_dataframe():
         # df=self.add_landcover_classfication_to_df(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # # #
+        # # # #
         # df=self.add_lat_lon_to_df(df)
-        df=self.add_continent_to_df(df)
+        # df=self.add_continent_to_df(df)
 
         # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -1457,7 +1462,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         df=self.show_field(df)
 
@@ -1881,6 +1886,15 @@ class build_dataframe():
         # exit()
         return df
 
+    def add_new_field_to_df(self,df):
+        # T.print_head_n(df);exit()
+
+        # df['CO2_rainfall']=df['CO2']*df['rainfall_intensity_average_zscore']
+        df['wet_dry'] = 'unknown'
+        df.loc[df['sum_rainfall_trend'] > 0, 'wet_dry'] = 'wetting'
+        df.loc[df['sum_rainfall_trend'] < 0, 'wet_dry'] = 'drying'
+        return df
+
 
 
     def add_lc_composition_to_df(self, df):  ##add landcover composition to df
@@ -2263,7 +2277,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'3mm\VCF\trend\\'
+        fdir=data_root+ rf'Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2278,6 +2292,9 @@ class build_dataframe():
 
             variable = (f.split('.')[0])
             print(variable)
+            # if  not 'sum_rainfall' in variable:
+            #     continue
+
 
             #
             # if variable not in variables_list:
@@ -2357,9 +2374,8 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'GLOBMAP_detrend_CV_trend': 'GLOBMAP_LAI_detrend_CV_trend',
+        df = df.rename(columns={'fire_ecosystem_year_average_ecosystem_year': 'fire_ecosystem_year',
 
-                                'GlOBMAP_detrend_CV_p_value': 'GLOBMAP_LAI_detrend_CV_p_value',
 
 
 
@@ -2467,24 +2483,26 @@ class build_dataframe():
             landcover=row['landcover_GLC']
             if landcover==0 or landcover==4:
                 val_list.append('Evergreen')
-            elif landcover==2 or landcover==4 or landcover==5:
+            elif landcover==2 or landcover==3 or landcover==5:
                 val_list.append('Deciduous')
             elif landcover==6:
                 val_list.append('Mixed')
             elif landcover==11 or landcover==12:
                 val_list.append('Shrub')
-            elif landcover==13 or landcover==14 or landcover==15:
+            elif landcover==13 or landcover==14:
                 val_list.append('Grass')
             elif landcover==16 or landcover==17 or landcover==18:
                 val_list.append('Cropland')
+            elif landcover==19 :
+                val_list.append('Bare')
             else:
-                val_list.append(np.nan)
+                val_list.append(-999)
         df['landcover_classfication']=val_list
 
         return df
 
 
-        pass
+
     def add_maxmium_LC_change(self, df): ##
 
         f = data_root+rf'\Base_data\lc_trend\\max_trend.tif'
@@ -8461,8 +8479,8 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

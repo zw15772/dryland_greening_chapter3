@@ -1773,7 +1773,8 @@ class SHAP_CV():
         T.mk_dir(self.this_class_png, force=True)
 
         # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
-        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window.df'
+        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window2.df'
+
         self.variable_list_rt()
         self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -1804,7 +1805,10 @@ class SHAP_CV():
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
         # self.pdp_shap()
-        self.plot_pdp_shap()
+        # # #
+        # self.plot_pdp_shap()
+        self.shapely_df_generation()
+        # self.plot_pdp_shap_test()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## paper use
         # self.plot_pdp_shap_density_cloud_individual_test()
@@ -1815,6 +1819,7 @@ class SHAP_CV():
         # self.plot_interaction_manual()
         # self.spatial_shapely_vs_aridity()
         # self.spatial_shapely()   ### spatial plot
+
 
         # self.variable_contributions()
         # self.plot_dominant_factors_bar()
@@ -1982,41 +1987,42 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
-            'VOD_detrend_min',
-            # 'VOD_detrend_min_trend',
 
             'VPD',
-            # 'Non tree vegetation_average',
-            # 'Tree cover_average',
+            'Burn_area_mean',
+            # 'Short_vegetation_change_1982-2016',
 
             # 'Non tree vegetation_trend',
 
             # 'rainfall_frenquency_trend',
             # 'rainfall_intensity_trend',
-            # 'rainfall_seasonality_all_year',
+            # 'rainfall_seasonality_all_year_trend',
             # 'heavy_rainfall_days',
-            # 'pi_average_trend',
-            'pi_average',
+            # 'pi_average',
+
 
             # 'sand_rainfall_intensity',
             # 'sand_rainfall_frenquency',
             # 'sum_rainfall_trend',
+            # 'cwdx80_05',
 
             # 'fire_ecosystem_year_average_trend',
             'sum_rainfall',
 
-            'Aridity',
-            # 'dry_spell',
-
-            'sand',
-            'soc',
+             # 'Aridity',
+            'heat_event_frenquency'  ,
+            # 'dry_spell_trend',
+            # 'Tmax_trend',
+            # #
+            # 'sand',
+            # 'soc',
             # 'rainfall_intensity',
 
-         # 'rainfall_frenquency',
+          # 'rainfall_frenquency',
             #
-            # 'rainfall_seasonality_all_year_trend',
-
-             'fire_ecosystem_year_average',
+            'rainfall_seasonality_all_year',
+              #
+              # 'fire_ecosystem_year',
             # 'rooting_depth',
 
 
@@ -2061,26 +2067,28 @@ class SHAP_CV():
             'VOD_detrend_min': [0, 1.4],
             'VOD_detrend_min_trend': [-0.01, 0.01],
             'VPD': [0, 3.5],
+            'VPD_max': [0, 3.5],
             'Non tree vegetation_trend': [-1,1],
             'Non vegetatated_average': [0, 100],
             'Burn_area_mean':[0,100000000],
             'nitrogen': [0, 400],
             'zroot_cwd80_05': [0, 25000],
-            'cwdx80_05': [0, 600],
+            'cwdx80_05': [0, 1000],
             'cec': [0, 400],
-            'sand': [10, 80],
-            'soc': [0, 60],
+            'sand': [0, 800],
+            'soc': [0, 600],
             'sand_rainfall_intensity': [-2, 2],
             'sum_rainfall': [0, 1500],
             'sum_rainfall_trend': [-5, 5],
             'sand_rainfall_frenquency': [-2 ,2],
 
-            'fire_ecosystem_year_average': [0,30],
+            'fire_ecosystem_year': [0,50],
             'fire_ecosystem_year_average_trend': [-1, 1],
 
             'dry_spell': [1,3],
             'rainfall_intensity': [0, 25],
             'rainfall_intensity_trend': [-0.1, 0.1],
+            'heat_event_frenquency':[0,6],
 
             'rainfall_frenquency': [0, 100],
             'rainfall_frenquency_trend': [-0.5,1],
@@ -2108,7 +2116,7 @@ class SHAP_CV():
         vars_list = self.x_variable_list
         df = df[vars_list]
         ## add LAI4g_raw
-        df['composite_LAI_beta_mean_zscore'] = T.load_df(dff)['composite_LAI_beta_mean_zscore']
+        # df['composite_LAI_beta_mean_zscore'] = T.load_df(dff)['composite_LAI_beta_mean_zscore']
         ## plot heat map to show the colinear variables
 
         name_dic = {'rainfall_intensity': 'Rainfall intensity (mm/events)',
@@ -2203,12 +2211,14 @@ class SHAP_CV():
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
         df=df[df['LC_max']<20]
-        df = df[df['extraction_mask'] == 1]
-        # df = df[df['composite_LAI_beta_mean_trend_zscore'] >0]
-        # print(len(df))
-        # exit()
+        # df = df[df['extraction_mask'] == 1]
+        df=df[df['composite_LAI_beta_mean_trend'] > 0]
+        df=df[df['wet_dry'] =='drying']
+        # df = df[df['wet_dry'] == 'wetting']
+
 
         df = df[df['MODIS_LUCC'] != 12]
+        # df=df[df['landcover_classfication'] != 'Cropland']
         print('filtered len(df):',len(df))
         # exit()
 
@@ -2237,7 +2247,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta1')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_drying')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2250,7 +2260,9 @@ class SHAP_CV():
         # print('len(df):',len(df))
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
-        # df = self.valid_range_df(df)
+        df = self.valid_range_df(df)
+        outdf=join(outdir,'drying_origin.df')
+        T.save_df(df, outdf)
         # print('len(df):',len(df));exit()
 
         pix_list = df['pix'].tolist()
@@ -2523,6 +2535,34 @@ class SHAP_CV():
         T.save_dict_to_binary(model, join(outdir, self.y_variable + '.model'))
         # exit()
 
+    def plot_pdp_shap_test(self):
+        x_variable_list = self.x_variable_list
+        dff = self.dff
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df=df.dropna()
+        # T.print_head_n(df);exit()
+        # df_temp, start_dic, end_dic = self.filter_percentile(df)
+        class_list=['wetting','drying']
+        shap_dic={}
+        # X_variable_list=['sand','soc','Aridity','rooting_depth','pi_average_trend','Non tree vegetation_trend']
+
+        inf_shap_drying = join(self.this_class_png, 'pdp_shap_beta_drying', self.y_variable + '.shap.pkl')
+        inf_shap_wetting = join(self.this_class_png, 'pdp_shap_beta_wetting', self.y_variable + '.shap.pkl')
+
+        shap_values_drying = T.load_dict_from_binary(inf_shap_drying)
+        shap_values_wetting = T.load_dict_from_binary(inf_shap_wetting)
+
+
+
+
+
+
+
+
+
+
+
     def plot_pdp_shap(self):
         x_variable_list = self.x_variable_list
         dff = self.dff
@@ -2530,7 +2570,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta1', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_wetting', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2606,7 +2646,8 @@ class SHAP_CV():
             # exit()
             # interp_model = interpolate.interp1d(x_mean_list, y_mean_list, kind='cubic')
             # y_interp = interp_model(x_mean_list)
-            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=3)
+            # print(y_mean_list)
+            y_mean_list = SMOOTH().smooth_convolve(y_mean_list, window_len=11)
             plt.plot(x_mean_list, y_mean_list, c='red', alpha=1)
 
             # exit()
@@ -2616,7 +2657,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-2, 2)
+            plt.ylim(-3, 3)
 
         plt.suptitle(self.y_variable)
 
@@ -2901,13 +2942,18 @@ class SHAP_CV():
                   'VPD':'VPD (kPa)',
                   'sum_rainfall':'Total rainfall (mm)',
                   'Aridity':'Aridity (unitless)',
+                  'pi_average_trend':'SM-T coupling trend (unitless/yr)',
+                  'heat_event_frenquency':'Heat event frequency (events/year)',
 
 
                   'pi_average':'SM-T coupling(unitless)',
-                  'fire_ecosystem_year_average':'Fire burn area(km2)',
+                  'fire_ecosystem_year':'Fire burn area(km2)',
                   'rooting_depth':'Rooting depth (cm)',
                   'rainfall_intensity_trend':'Rainfall intensity trend (mm/events/yr)',
                   'rainfall_frenquency_trend':'Rainfall frequency trend (events/yr)',
+                  'cwdx80_05':'S0 (mm)',
+                  'Burn_area_mean':'Fire burn area(km2)',
+                  'Non tree vegetation_trend':'Non tree vegetation trend (unitless/yr)',
 
                   'fire_ecosystem_year_average_trend':'Fire burn area trend (km2/yr)',
                   'rainfall_seasonality_all_year_trend':'Rainfall seasonality trend (unitless/yr)',
@@ -2915,7 +2961,7 @@ class SHAP_CV():
 
 
         }
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta12', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_drying', self.y_variable + '.shap.pkl')
 
 
         # print(isfile(inf_shap));exit()
@@ -2996,19 +3042,23 @@ class SHAP_CV():
                 "rainfall_seasonality_all_year": [-1, 1],
                 "sand": [-0.5, 0.5],
                 'soc':[-0.5,0.5],
-                'VPD':[-2,2],
-                'sum_rainfall':[-5,5],
+                'VPD':[-2,2.5],
+                'sum_rainfall':[-6,6],
                 'VOD_detrend_min':[-3,3],
                 'Aridity':[-1,1],
+                'Non tree vegetation_trend':[-.2,.2],
+                'heat_event_frenquency':[-1,1],
 
-                'pi_average': [-0.5,0.5],
-                'fire_ecosystem_year_average':[-0.5,0.5],
+                'pi_average_trend': [-0.5,0.5],
+                'fire_ecosystem_year':[-1,0.5],
                 'rooting_depth':[-0.5,0.5],
+                'cwdx80_05':[-0.5,0.5],
 
                 'fire_ecosystem_year_average_trend':[-0.5,0.5],
                 'rainfall_seasonality_all_year_trend':[-2,2],
                 'rainfall_intensity_trend':[-1,1],
                 'rainfall_frenquency_trend':[-1,1],
+                'Burn_area_mean':[-0.5,0.5],
 
             }
 
@@ -3036,7 +3086,7 @@ class SHAP_CV():
 
             # plt.show()
 
-            outdir=join(self.this_class_png, 'pdp_shap_beta_new', 'pdf_cloud')
+            outdir=join(self.this_class_png, 'pdp_shap_beta_drying', 'pdf_cloud')
             T.mk_dir(outdir, force=True)
 
             outf = join(outdir, f'{x_var}.png')
@@ -3569,6 +3619,55 @@ class SHAP_CV():
 
         T.open_path_and_file(outdir)
         # exit()
+    def shapely_df_generation(self):
+        dff_orgin_wet = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting\wetting_origin.df'
+        df_origin_wet = T.load_df(dff_orgin_wet)
+
+        dff_orgin_dry = results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying\drying_origin.df'
+        df_origin_dry = T.load_df(dff_orgin_dry)
+
+        outff = results_root+rf'3mm\SHAP_beta\Dataframe\wetting_drying_origin.df'
+
+        x_variable_list = self.x_variable_list
+
+        inf_shap_wetting= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_wetting\composite_LAI_beta.shap.pkl'
+        inf_shap_drying= r'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying\composite_LAI_beta.shap.pkl'
+        shap_values_wetting = T.load_dict_from_binary(inf_shap_wetting)
+        shap_values_drying = T.load_dict_from_binary(inf_shap_drying)
+
+
+
+
+        for x_var in x_variable_list:
+            print(x_var)
+
+
+            shap_values_mat = shap_values_wetting[:, x_var]
+            # plt.scatter(shap_values_mat.data,shap_values_mat.values)
+            # plt.show()
+
+            col_name = f'{x_var}_shap'
+            df_origin_wet[col_name] =shap_values_mat.values
+
+        df_origin_wet['mode'] = 'wetting'
+
+
+        for x_var in x_variable_list:
+            print(x_var)
+
+            shap_values_mat = shap_values_drying[:, x_var]
+
+            col_name = f'{x_var}_shap'
+            df_origin_dry[col_name] =shap_values_mat.values
+
+        df_origin_dry['mode'] = 'drying'
+
+        ## concat
+        df_new = pd.concat([df_origin_wet, df_origin_dry])
+        T.save_df(df_new, outff)
+
+
+        pass
 
     def spatial_shapely_vs_aridity(self):  #### spatial plot
 
@@ -3981,8 +4080,8 @@ class SHAP_CV():
         # rf.fit(X_train, y_train) # train the model
         # r2 = rf.score(X_test,y_test)
         model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
-                               max_depth=13, eta=0.1, random_state=42, n_jobs=14,  )
-        # model = RandomForestRegressor(n_estimators=50, random_state=42,n_jobs=14)
+                               max_depth=15, eta=0.1, random_state=42, n_jobs=14,  )
+        # model = RandomForestRegressor(n_estimators=200, random_state=42,n_jobs=14)
         # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
         model.fit(X_train, y_train)
