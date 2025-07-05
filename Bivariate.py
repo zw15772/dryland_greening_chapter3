@@ -4422,12 +4422,13 @@ class partial_correlation():
         self.outpartial_pvalue = self.outdir + rf'\partial_pvalue.npy'
 
     def run(self):
-        # df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
+        df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
         # # #
         # self.cal_partial_corr(df,self.xvar_list, )
-        self.cal_single_correlation()
+        # self.cal_single_correlation()
         # self.cal_single_correlation_ly()
         # self.plot_partial_correlation()
+
         # self.maximum_partial_corr()
         # self.statistic_corr()
         # self.statistic_trend()
@@ -6024,6 +6025,8 @@ class GAM():
     def __init__(self):
         pass
     def run(self):
+        # self.VIF()
+        self.GAM_model()
         pass
     def df_clean(self, df):
         # T.print_head_n(df)
@@ -6034,10 +6037,7 @@ class GAM():
         df = df[df['Aridity'] < 0.65]
         df=df[df['LC_max']<20]
         # df = df[df['extraction_mask'] == 1]
-        df=df[df['composite_LAI_beta_mean_trend'] > 0]
-        df=df[df['sum_rainfall_p_value'] < 0.05]
-        df=df[df['wet_dry'] =='drying']
-        # df = df[df['wet_dry'] == 'wetting']
+
 
 
         df = df[df['MODIS_LUCC'] != 12]
@@ -6057,13 +6057,125 @@ class GAM():
 
         return df
 
+    def VIF(self):
+
+        from statsmodels.stats.outliers_influence import variance_inflation_factor
+        from statsmodels.tools.tools import add_constant
+
+        dff = rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window2.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_beta_mean_trend'] > 0]
+        df = df[df['sum_rainfall_p_value'] < 0.05]
+        df = df[df['wet_dry'] == 'drying']
+        # df = df[df['wet_dry'] == 'wetting']
+
+        # Example: Your data
+        # Suppose you have a DataFrame with columns:
+        # 'beta', 'landcover', 'aridity', 'sum_rainfall'
+
+        df.dropna(inplace=True)
+
+
+
+        X = df[['VPD', 'Aridity', 'sum_rainfall','heat_event_frenquency',
+                'rooting_depth','nitrogen','sand','cwdx80_05','Burn_area_mean','FVC_average',
+                'SM_average',]]
+        X_const = add_constant(X)
+
+
+
+        vif = pd.DataFrame()
+        vif["Variable"] = X.columns
+        vif["VIF"] = [variance_inflation_factor(X_const.values, i + 1) for i in range(len(X.columns))]  # skip intercept
+        print(vif)
+
     def GAM_model(self):
+        import pandas as pd
+        import numpy as np
+        from pygam import LinearGAM, s, f
+
         dff=rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window2.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
+        df = df[df['composite_LAI_beta_mean_trend'] > 0]
+        df = df[df['sum_rainfall_p_value'] < 0.05]
+        # df = df[df['wet_dry'] == 'drying']
+        df = df[df['wet_dry'] == 'wetting']
+
+        # Example: Your data
+        # Suppose you have a DataFrame with columns:
+        # 'beta', 'landcover', 'aridity', 'sum_rainfall'
+
+        df.dropna(inplace=True)
+
+        df_sample = df.sample(n=10000, random_state=42)
 
 
-        pass
+        # Convert categorical variable to codes
+        df_sample['landcovlandcover_classfication_code'] = pd.Categorical(df_sample['landcover_classfication']).codes
+
+        # Define response and predictors
+        y = df_sample['composite_LAI_beta'].values
+        # X = df_sample[['landcovlandcover_classfication_code','VPD', 'Aridity', 'sum_rainfall','heat_event_frenquency',
+        #         'rooting_depth','nitrogen','sand','cwdx80_05','Burn_area_mean','FVC_average',
+        #         'SM_average', 'Non tree vegetation_trend',
+        #
+        #         ]].values
+
+        X = df_sample[['landcovlandcover_classfication_code','VPD', 'sum_rainfall','cwdx80_05',
+                       'heavy_rainfall_days','Burn_area_mean'
+
+
+                       ]].values
+
+        # Build GAM model
+        # gam = LinearGAM(
+        #     f(0) +  # categorical: landcover_code
+        #     s(1) +  # smooth term: aridity
+        #     s(2)  +# smooth term: sum_rainfall
+        #     s(3)  +# smooth term: heat_event_frenquency
+        #     s(4)  +# smooth term: rooting_depth
+        #     s(5)  +# smooth term: nitrogen
+        #     s(6)  +# smooth term: sand
+        #     s(7)  +# smooth term: cwdx80_05
+        #     s(8)  +# smooth term: Burn_area_mean
+        #     s(9)  +# smooth term: FVC_average
+        #     s(10) # smooth term: SM_average
+        #
+        # ).fit(X, y)
+
+        gam = LinearGAM(
+            f(0) +  # categorical: landcover_code
+            s(1) +  # smooth term: aridity
+            s(2) + # smooth term: sum_rainfall
+            s(3)+
+            s(4)+
+            s(5)
+
+
+
+        ).fit(X, y)
+
+        gam.summary()
+
+        fig, axs = plt.subplots(2, 3, figsize=(15, 4))
+        titles = [ 'landcover','VPD', 'sum_rainfall', 'cwdx80_05','heat_event_frenquency']
+
+        for i in range(len(titles)):
+            ax = axs.flatten()[i]
+            XX = gam.generate_X_grid(term=i)
+            pd_mean, pd_ci = gam.partial_dependence(term=i, X=XX, width=0.95)
+
+            ax.plot(XX[:, i], pd_mean, label='Partial dependence')
+            ax.plot(XX[:, i], pd_ci, c='r', ls='--', label='95% CI')
+            ax.set_title(titles[i])
+            ax.grid(True)
+
+        plt.tight_layout()
+        plt.show()
+
+
 
 
 def main():
@@ -6079,7 +6191,8 @@ def main():
     # multi_regression_beta_TRENDY().run()
     # Figure5().run()
 
-    partial_correlation().run()
+    # partial_correlation().run()
+    GAM().run()
 
 
 

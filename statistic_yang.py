@@ -1804,11 +1804,12 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        # self.pdp_shap()
+        self.pdp_shap()
         # # # #
-        # self.plot_pdp_shap()
+        self.plot_pdp_shap()
+        # self.plot_bar_landcover()
         # self.shapely_df_generation()
-        self.plot_pdp_shap_test()
+        # self.plot_pdp_shap_test()
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## paper use
         # self.plot_pdp_shap_density_cloud_individual_test()
@@ -1990,8 +1991,10 @@ class SHAP_CV():
 
             'VPD',
             'Burn_area_mean',
+
+
             # 'FVC_average',
-            'SM_average',
+            # 'SM_average',
             # 'Short_vegetation_change_1982-2016',
 
             # 'Non tree vegetation_trend',
@@ -1999,24 +2002,25 @@ class SHAP_CV():
             # 'rainfall_frenquency_trend',
             # 'rainfall_intensity_trend',
             # 'rainfall_seasonality_all_year_trend',
-            # 'heavy_rainfall_days',
+            'CV_intraannual_rainfall',
             # 'pi_average',
 
 
             # 'sand_rainfall_intensity',
             # 'sand_rainfall_frenquency',
             # 'sum_rainfall_trend',
-            # 'cwdx80_05',
+            'cwdx80_05',
 
             # 'fire_ecosystem_year_average_trend',
             'sum_rainfall',
 
              # 'Aridity',
             'heat_event_frenquency'  ,
-            # 'dry_spell_trend',
+            # 'landcover_classfication',
+            # 'dry_spell_tre'd',
             # 'Tmax_trend',
             # #
-            # 'sand',
+            'sand',
             # 'soc',
             # 'rainfall_intensity',
 
@@ -2065,6 +2069,7 @@ class SHAP_CV():
         }
 
         self.x_variable_range_dict_global_CRU = {
+            'CV_intraannual_rainfall': [0, 7],
             'Aridity': [0, 0.65],
             'FVC_average': [0, 0.8],
             'SM_average': [0, 0.4],
@@ -2216,10 +2221,7 @@ class SHAP_CV():
         df = df[df['Aridity'] < 0.65]
         df=df[df['LC_max']<20]
         # df = df[df['extraction_mask'] == 1]
-        df=df[df['composite_LAI_beta_mean_trend'] > 0]
-        df=df[df['sum_rainfall_p_value'] < 0.05]
-        df=df[df['wet_dry'] =='drying']
-        # df = df[df['wet_dry'] == 'wetting']
+
 
 
         df = df[df['MODIS_LUCC'] != 12]
@@ -2235,7 +2237,7 @@ class SHAP_CV():
         # df = df[df['lat'] < 45]
         # print(len(df))
 
-        df = df[df['landcover_classfication'] != 'Cropland']
+        # df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
     def check_spatial_plot(self):
@@ -2252,7 +2254,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_drying_sig')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_wetting_sig')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2262,11 +2264,16 @@ class SHAP_CV():
         # plt.show()
         df = T.load_df(dff)
         df = self.df_clean(df)
+
+        df = df[df['composite_LAI_beta_mean_trend'] > 0]
+        df = df[df['sum_rainfall_p_value'] < 0.05]
+        # df = df[df['wet_dry'] == 'drying']
+        df = df[df['wet_dry'] == 'wetting']
         # print('len(df):',len(df))
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
-        df = self.valid_range_df(df)
-        outdf=join(outdir,'drying_origin_sig.df')
+        # df = self.valid_range_df(df)
+        outdf=join(outdir,'wetting_origin_sig.df')
         T.save_df(df, outdf)
         # print('len(df):',len(df));exit()
 
@@ -2304,7 +2311,27 @@ class SHAP_CV():
         all_vars.append('pix')
 
 
+
+
+
+
+        # df['landcover_classfication_raw'] = df['landcover_classfication']
+        # df = pd.get_dummies(df, columns=['landcover_classfication'], drop_first=True)
+        ## get landcover columns
+        # outdf=join(outdir,'wetting_origin_sig_landcover.df')
+        # T.save_df(df, outdf);exit()
+
+        # landcover_cols = [col for col in df.columns if 'landcover_classfication' in col]
+
+        # landcover_cols_clean = [col for col in landcover_cols if col != 'landcover_classfication_raw']
+        # x_variable_list = x_variable_list + landcover_cols_clean
+        ## all_vars_df should have landcover_classfication
+        # all_vars = all_vars + landcover_cols_clean
+
+
+
         all_vars_df = df[all_vars]  # get the dataframe with the x variables and the y variable
+
         all_vars_df = all_vars_df.dropna(subset=x_variable_list, how='any')
         all_vars_df = all_vars_df.dropna(subset=self.y_variable, how='any')
 
@@ -2334,8 +2361,10 @@ class SHAP_CV():
         plt.show()
 
 
-        X = all_vars_df[x_variable_list]
 
+
+
+        X = all_vars_df[x_variable_list]
         Y = all_vars_df[y_variable]
         train_data_X_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.X.df')
         train_data_y_path = join(self.this_class_png, 'pdp_shap_CV', self.y_variable + '.y.df')
@@ -2637,16 +2666,22 @@ class SHAP_CV():
 
 
     def plot_pdp_shap(self):
-        x_variable_list = self.x_variable_list
-        dff = self.dff
+
+        dff=self.dff
+
         df = T.load_df(dff)
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_drying_sig', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_wetting_sig', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
+        x_variable_list = self.x_variable_list
+        # landcover_cols = [col for col in df.columns if 'landcover_classfication' in col]
+        #
+        # landcover_cols_clean = [col for col in landcover_cols if col != 'landcover_classfication_raw']
+        # x_variable_list = x_variable_list + landcover_cols_clean
 
         imp_dict = self.feature_importances_shap_values(shap_values, x_variable_list)
         x_list = []
@@ -2738,6 +2773,31 @@ class SHAP_CV():
         plt.show()
         # plt.savefig(outf,dpi=300)
         # plt.close()
+
+    def plot_bar_landcover(self):
+        dff=results_root+rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_drying_sig\\drying_origin_sig_landcover.df'
+        df=T.load_df(dff)
+        landcover_cols = [col for col in df.columns if 'landcover_classfication' in col]
+        landcover_cols = [col for col in landcover_cols if col != 'landcover_classfication_raw']
+
+        inf_shap=join(self.this_class_png, 'pdp_shap_beta_drying_sig', self.y_variable + '.shap.pkl')
+        shap_values = T.load_dict_from_binary(inf_shap)
+        result_dic= {}
+        for landcover in landcover_cols:
+            shap_values_mat = shap_values[:, landcover]
+            data_i = shap_values_mat.data
+            value_i = shap_values_mat.values
+                # 对每个类别计算平均 SHAP 值
+            mean_shap = np.mean(value_i)
+            result_dic[landcover] = mean_shap
+
+        # 画柱状图
+        plt.bar(range(len(result_dic)), list(result_dic.values()), tick_label=list(result_dic.keys()))
+        plt.xlabel('Landcover')
+        plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=45)
+        plt.ylabel('SHAP value')
+        plt.title('SHAP values for landcover')
+        plt.show()
 
 
 

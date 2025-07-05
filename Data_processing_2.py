@@ -1105,23 +1105,23 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=rf'D:\Project3\Result\3mm\GLEAM_SM\moving_window_extraction\\'
+        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+
         print(fdir)
         print(self.dff)
-        variable_list=['VPD','heavy_rainfall_days',
-        'pi_average','rainfall_seasonality_all_year',
-        'dry_spell', 'VPD','pi_average', 'heat_event_frenquency',
-                 'Tmax','sum_rainfall'   ]
+        variable_list=['CV_intraannual_rainfall','heavy_rainfall_days',
+         'rainfall_seasonality_all_year',
+        'dry_spell',  'rainfall_frenquency','rainfall_intensity',
+                  'sum_rainfall'   ]
 
 
         for f in os.listdir(fdir):
-            if not 'average' in f:
-                continue
+
 
 
             variable= f.split('.')[0]
-            # if not variable in variable_list:
-            #     continue
+            if not variable in variable_list:
+                continue
 
 
             # print(variable)
@@ -1186,7 +1186,7 @@ class build_moving_window_dataframe():
 
 
             df[f'{variable}'] = NDVI_list
-            # df[f'{variable}_ecosystem_year'] = NDVI_list
+            # df[f'{variable}_growing_season'] = NDVI_list
         # exit()
         return df
     def rescale_to_df(self,df):
@@ -1441,7 +1441,8 @@ class build_dataframe():
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
-        # df=self.add_maxmium_LC_change(df)
+        # df=self.dummies(df)
+        # # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
         # # # #
         # df=self.add_lat_lon_to_df(df)
@@ -1453,8 +1454,8 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
-        # df = self.drop_field_df(df)
+        # df=self.rename_columns(df)
+        df = self.drop_field_df(df)
         df=self.show_field(df)
 
 
@@ -2384,12 +2385,15 @@ class build_dataframe():
         df = df.drop(columns=[
 
 
-                              'TRENDY_ensemble_detrend_CV_trend',
+                              'landcover_classfication_Bare',
 
-                              'TRENDY_ensemble_detrend_CV_p_value',
-            'TRENDY_ensemble_detrend_CV',
-            'TRENDY_ensemble_trend',
-            'TRENDY_ensemble_p_value'
+                              'landcover_classfication_-999',
+            'landcover_classfication_Deciduous',
+            'landcover_classfication_Evergreen',
+            'landcover_classfication_Grass',
+            'landcover_classfication_Mixed',
+            'landcover_classfication_Shrub',
+
 
 
 
@@ -2492,6 +2496,9 @@ class build_dataframe():
 
         return df
 
+    def dummies(self,df):
+        df=pd.get_dummies(df,columns=['landcover_classfication'])
+        return df
 
 
     def add_maxmium_LC_change(self, df): ##
@@ -8468,10 +8475,10 @@ class SM_Tcoupling():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
