@@ -1443,10 +1443,10 @@ class PLOT_Climate_factors():
         T.mk_dir(outdir,True)
         temp_root = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\temp_root\\'
 
-        model_list = ['pi_average',  'heavy_rainfall_days', 'rainfall_seasonality_all_year',
-                      'sum_rainfall', 'VOD_detrend_min', 'fire_ecosystem_year_average',
-                      'VPD_max',
-                      'Non tree vegetation']
+        model_list = [  'heavy_rainfall_days', 'rainfall_seasonality_all_year',
+                      'sum_rainfall',
+
+                     'CV_intraannual_rainfall',]
 
         dic_name = {'pi_average': 'SM-T coupling',
                     'heavy_rainfall_days': 'Heavy rainfall days',
@@ -1455,13 +1455,14 @@ class PLOT_Climate_factors():
                     'VOD_detrend_min': 'VOD_min',
                     'fire_ecosystem_year_average': 'Fire burn area',
                     'VPD_max': 'VPD_max',
+                    'CV_intraannual_rainfall': 'CV_intraannual_rainfall_trend',
 
                     'Non tree vegetation': 'Non tree vegetation',
                     }
 
 
 
-        fdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend2\\'
+        fdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\\'
         count = 1
         for model in model_list:
 
@@ -1503,7 +1504,8 @@ class PLOT_Climate_factors():
                       'VOD_detrend_min': -0.005,
                       'fire_ecosystem_year_average': -1,
                       'VPD_max': -0.01,
-                      'Non tree vegetation': -0.5
+                      'Non tree vegetation': -0.5,
+                      'CV_intraannual_rainfall': -0.1
 
 
             }
@@ -1515,7 +1517,8 @@ class PLOT_Climate_factors():
                       'VOD_detrend_min': 0.005,
                       'fire_ecosystem_year_average': 1,
                       'VPD_max': 0.01,
-                      'Non tree vegetation': 0.5}
+                      'Non tree vegetation': 0.5,
+                      'CV_intraannual_rainfall': 0.1}
 
             ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=dic_vmin[model], vmax=dic_vmax[model])
 
@@ -4361,8 +4364,8 @@ def main():
     # climate_variables().run()
     # TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    # PLOT_Climate_factors().run()
-    calculate_longterm_CV().run()
+    PLOT_Climate_factors().run()
+    # calculate_longterm_CV().run()
     # SHAP_CV().run()
     # SHAP_rainfall_seasonality().run()
     # SHAP_CO2_interaction().run()

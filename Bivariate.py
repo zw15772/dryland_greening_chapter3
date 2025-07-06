@@ -175,11 +175,11 @@ class multi_regression_beta():
         self.data_root = 'D:/Project3/Data/'
         self.result_root = 'D:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
-        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year_zscore\\'
+        self.fdirX=self.result_root+rf'3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\'
+        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\'
 
-        self.xvar_list = ['sum_rainfall_zscore_detrend','Tmax_zscore_detrend','VPD_zscore_detrend']
-        self.y_var = ['SNULAI_zscore_detrend']
+        self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
+        self.y_var = ['GLOBMAP_LAI_relative_change_detrend']
 
 
     def run(self):
@@ -188,21 +188,21 @@ class multi_regression_beta():
         # self.moving_window_extraction()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_ecosystem_year_SNU_LAI\\'
+        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_GLOBMAP_LAI\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
-        # for i in range(self.window):
-        #
-        #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-        #     outf= outdir+rf'\\window{i:02d}.npy'
-        #     if os.path.isfile(outf):
-        #         continue
-        #     print(outf)
-        # # #
-        #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        # ##step 2 crate individial files
-        # self.plt_multi_regression_result(outdir,self.y_var)
+        for i in range(self.window):
+
+            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
+            outf= outdir+rf'\\window{i:02d}.npy'
+            if os.path.isfile(outf):
+                continue
+            print(outf)
+        # #
+            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        ##step 2 crate individial files
+        self.plt_multi_regression_result(outdir,self.y_var)
 # #
         # ##step 3 covert to time series
 
@@ -1598,7 +1598,7 @@ class Figure1():
 
 
 
-class Figure3():
+class Figure3_beta():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -1614,33 +1614,31 @@ class Figure3():
 
 
         ## step4
-        # self.generate_three_dimension()
+        # self.generate_three_dimension()  ## generate three_dimension_growing_season.tif [8 class]
 
-        # self.plot_figure2b_test()
-        self.plot_figure2c()
+        # step 4 add field 8 class again to df reuse step 3
+
+        # step 5
+
+        # self.plot_figure2b()  ## 1-8 map +CV LAI trends + CV interannual rainfall trend
+        self.plot_figure2a_Robinson()
 
 
-
-
-
-        # self.LAImin_LAImax_index_ratio_group()
-        # self.classfication_LAImin_LAImax_index()
-        # self.statistic_trend_bar()
 
 
 
     def generate_bivarite_map(self):  ##
 
         import xymap
-        tif_rainfall = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\detrended_sum_rainfall_CV_trend.tif'
+        tif_rainfall = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\trend\\\detrended_sum_rainfall_CV_trend.tif'
         # tif_CV=  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\LAI4g_detrend_CV_trend.tif'
-        tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\multiresult\multi_regression_result_detrend_ecosystem_year_composite_LAI\trend\\composite_LAI_beta_mean_trend.tif'
+        tif_sensitivity = result_root + rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_composite\trend\\composite_LAI_beta_trend.tif'
         # print(isfile(tif_CRU_trend))
         # print(isfile(tif_CRU_CV))
         # exit()
         outdir = result_root + rf'3mm\\\bivariate_analysis\\composite_LAI\\'
         T.mk_dir(outdir, force=True)
-        outtif = outdir + rf'\\interannual_CVrainfall_beta.tif'
+        outtif = outdir + rf'\\interannual_CVrainfall_beta_growing_season.tif'
 
         tif1 = tif_rainfall
         tif2 = tif_sensitivity
@@ -1676,7 +1674,7 @@ class Figure3():
     def generate_df(self):
         ##rainfall_trend +sensitivity+ greening
         variable='composite_LAI'
-        ftiff=result_root + rf'3mm\bivariate_analysis\\{variable}\\interannual_CVrainfall_beta.tif'
+        ftiff=result_root + rf'3mm\bivariate_analysis\\{variable}\\interannual_CVrainfall_beta_growing_season.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(ftiff)
 
         dic_beta_CVrainfall=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(array)
@@ -1688,8 +1686,8 @@ class Figure3():
 
         df=T.spatial_dics_to_df({'CVrainfall_beta':dic_beta_CVrainfall,f'{variable}_CV':dic_CV_LAI})
 
-        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.df')
-        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.xlsx')
+        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_growing_season_growing_season.df')
+        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_growing_season_growing_season.xlsx')
         exit()
 
 
@@ -1698,7 +1696,7 @@ class Figure3():
 
     def generate_three_dimension(self):
         variable='composite_LAI'
-        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend_{variable}.df'
+        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_growing_season.df'
         df=T.load_df(dff)
         self.df_clean(df)
         df=df[df['CVrainfall_beta']>=0]
@@ -1729,7 +1727,7 @@ class Figure3():
         print(df)
         outdir = result_root + rf'\3mm\bivariate_analysis\\{variable}\\'
         T.mk_dir(outdir, force=True)
-        outf = outdir + rf'CV_rainfall_beta_LAI.tif'
+        outf = outdir + rf'CV_rainfall_beta_LAI_growing_season.tif'
 
         spatial_dic = T.df_to_spatial_dic(df, 'CV_rainfall_beta_LAI')
         DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic, outf)
@@ -1843,10 +1841,10 @@ class Figure3():
         pass
 
 
-    def plot_figure2b_test(self):
+    def plot_figure2b(self):
 
         variable='composite'
-        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Three_dimension.df'
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Three_dimension_growing_season.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         df=df.dropna()
@@ -1866,11 +1864,11 @@ class Figure3():
         # df.loc[(df['sum_rainfall_trend'] > 0) & (df['sum_rainfall_p_value'] < 0.05), 'wet_dry'] = 'wetting'
         # df.loc[(df['sum_rainfall_trend'] < 0) & (df['sum_rainfall_p_value'] < 0.05), 'wet_dry'] = 'drying'
 
-        df_greening = df[df[f'CV_rainfall_beta_LAI_{variable}'] < 5]
+        df_greening = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] < 5]
         count_green = len(df_greening)
 
 
-        df_browning = df[df[f'CV_rainfall_beta_LAI_{variable}'] >= 5]
+        df_browning = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] >= 5]
         count_brown = len(df_browning)
 
 
@@ -1880,7 +1878,7 @@ class Figure3():
         for i in range(1, 9):
 
             if i < 5:
-                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}'] == i]
+                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == i]
                 count = len(df_i)
                 dic[i] = count / len(df) * 100
                 wet_count=len(df_i[df_i['wet_dry']=='wetting'])
@@ -1890,7 +1888,7 @@ class Figure3():
                 wet_dry_ratio[i]=(wet_ratio,dry_ratio)
 
             else:
-                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}'] == i]
+                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == i]
                 count = len(df_i)
                 dic[i] = count / len(df) * 100
                 wet_count = len(df_i[df_i['wet_dry'] == 'wetting'])
@@ -1899,20 +1897,20 @@ class Figure3():
                 dry_ratio = dry_count / len(df_i) * 100
                 wet_dry_ratio[i] = (wet_ratio, dry_ratio)
         # pprint(dic);exit()
-        # pprint(wet_dry_ratio);exit()
+        pprint(wet_dry_ratio);exit()
         ## I want to add new column when df[df[f'CV_rainfall_beta_LAI_{variable}'] == 3] and df[df[f'wet_dry'] == 'drying']
         ## give this column a name is extraction
         df['extraction'] = -999
 
-        df.loc[(df[f'CV_rainfall_beta_LAI_{variable}'] == 3) & (df['wet_dry'] == 'drying'), 'extraction'] = 0
-        df.loc[(df[f'CV_rainfall_beta_LAI_{variable}'] == 3) & (df['wet_dry'] == 'wetting'), 'extraction'] = 1
+        df.loc[(df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == 3) & (df['wet_dry'] == 'drying'), 'extraction'] = 0
+        df.loc[(df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == 3) & (df['wet_dry'] == 'wetting'), 'extraction'] = 1
         ##
-        spatial_mask_dic=T.df_to_spatial_dic(df,'extraction')
+        # spatial_mask_dic=T.df_to_spatial_dic(df,'extraction')
 
-        outf = rf'D:\Project3\Result\3mm\bivariate_analysis\extraction_mask.tif'
-        array=DIC_and_TIF().pix_dic_to_spatial_arr(spatial_mask_dic)
-        array[array==-999]=np.nan
-        DIC_and_TIF().arr_to_tif(array,outf);exit()
+        # outf = rf'D:\Project3\Result\3mm\bivariate_analysis\extraction_mask.tif'
+        # array=DIC_and_TIF().pix_dic_to_spatial_arr(spatial_mask_dic)
+        # array[array==-999]=np.nan
+        # DIC_and_TIF().arr_to_tif(array,outf);exit()
 
 
 
@@ -1995,59 +1993,10 @@ class Figure3():
         pass
 
 
-    def plot_figure2c(self):
-        ## here plot wetting--different landcover dring different landcover beta
-        dff=result_root + rf'3mm\bivariate_analysis\Dataframe\Three_dimension.df'
-        df=T.load_df(dff)
-        T.print_head_n(df)
-        df=self.df_clean(df)
-        df.dropna()
-        ## get landcover unique list
-        landcover_list=df['landcover_classfication'].unique()
-        ## if there is nan, remove
-        new_landcover_list=[]
-        for i in range(len(landcover_list)):
-            landcover=landcover_list[i]
-            if landcover==-999:
-                continue
-            new_landcover_list.append(landcover)
-
-        wetter_dryer_group_list=['wetting','drying']
-
-        beta_list=['beta+','beta-']
-
-        result_beta_dic={}
-        for beta in beta_list:
-            df_temp=df[df['beta_class']==beta]
-            result_beta_dic[beta]={}
-
-            for wetter_dryer_group in wetter_dryer_group_list:
-                df_wetter_dryer=df_temp[df_temp['wet_dry']==wetter_dryer_group]
-                result_beta_dic[beta][wetter_dryer_group]={}
-                ## calculate each landcover group
-                for landcover in landcover_list:
-                    df_landcover=df_wetter_dryer[df_wetter_dryer['landcover_classfication']==landcover]
-                    if len(df_landcover)==0:
-                        continue
-                    result_beta_dic[beta][wetter_dryer_group][landcover]=len(df_landcover)/len(df_wetter_dryer)
-
-
-        ## plot bar
-        for beta in beta_list:
-            for wetter_dryer_group in wetter_dryer_group_list:
-                fig, ax = plt.subplots(figsize=(8, 5))
-                ax.bar(new_landcover_list, [result_beta_dic[beta][wetter_dryer_group][landcover] for landcover in new_landcover_list])
-                ax.set_xticklabels(new_landcover_list, rotation=45, ha='right')
-                ax.set_xlabel('Landcover')
-                ax.set_ylabel('Count')
-                ax.set_title(f'{wetter_dryer_group}--{beta}')
-                plt.tight_layout()
-                plt.show()
 
 
 
-
-    def plot_figure2a(self):
+    def plot_figure2a_Robinson(self):
 
         fdir_trend = result_root + rf'\3mm\bivariate_analysis\composite_LAI\\'
         temp_root = result_root + rf'\3mm\bivariate_analysis\\composite_LAI\\temp\\'
@@ -2061,13 +2010,17 @@ class Figure3():
                 continue
 
             fname = f.split('.')[0]
+            if not 'CV_rainfall_beta_LAI_composite_growing_season' in fname:
+                continue
 
             fpath = fdir_trend + f
+            ## use this  color_list = [ '#33a02c','#1f78b4',
+         #               '#fb9a99',  '#a6cee3', '#fdbf6f',
+         # '#ff7f00', '#6a3d9a', '#b15928']
 
 
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
             m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=8, is_discrete=True, colormap_n=9, )
-
 
 
 
@@ -2081,7 +2034,7 @@ class Figure3():
 
             # plt.title(f'{fname}')
             # plt.show()
-            outf = outdir + 'CV_rainfall_beta_LAI_composite.pdf'
+            outf = outdir + 'CV_rainfall_beta_LAI_composite_growing_season.pdf'
             plt.savefig(outf)
             plt.close()
             # exit()
@@ -2920,13 +2873,13 @@ class Figure2():
 
     def run(self):
 
-        # self.generate_bivarite_map()
+
         # self.statistic_bar_CV_greening()
         # self.bivariate_scheme3()
         # self.Figure2a_robinson()
 
 
-        self.Figure2b_test()
+        # self.Figure2b_test()
 
         # self.CV_greening_heatmap2()
         # self.statistic_bar()
@@ -3572,7 +3525,7 @@ class build_dataframe():
 
         self.this_class_arr = (result_root+rf'\3mm\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend_composite_LAI.df'
+        self.dff = self.this_class_arr + rf'three_dimension_growing_season.df'
 
         pass
 
@@ -3582,18 +3535,20 @@ class build_dataframe():
         df = self.__gen_df_init(self.dff)
         # df=self.add_detrend_zscore_to_df(df)
         # df=self.append_attributes(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
+        # df=self.add_wet_dry_to_df(df)
+        df=self.add_8class_to_df(df)
 
 
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        #
+        # df=self.add_lat_lon_to_df(df)
 
 
 
@@ -3706,7 +3661,14 @@ class build_dataframe():
             df[f'{variable}'] = NDVI_list
         # exit()
         return df
+    def add_wet_dry_to_df(self,df):
+        # T.print_head_n(df);exit()
 
+        # df['CO2_rainfall']=df['CO2']*df['rainfall_intensity_average_zscore']
+        df['wet_dry'] = 'unknown'
+        df.loc[df['sum_rainfall_trend'] > 0, 'wet_dry'] = 'wetting'
+        df.loc[df['sum_rainfall_trend'] < 0, 'wet_dry'] = 'drying'
+        return df
 
     def add_row(self, df):
         r_list = []
@@ -4064,10 +4026,58 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\trend\\'
+        fdir=rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\trend\\'
         for f in os.listdir(fdir):
-            if not 'composite_LAI_CV' in f:
+            if not 'sum_rainfall' in f:
                 continue
+            if 'detrend' in f:
+                continue
+
+
+            if not f.endswith('.tif'):
+                continue
+
+            variable = (f.split('.')[0])
+
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
+            array = np.array(array, dtype=float)
+
+            val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+            # val_array = np.load(fdir + f)
+            # val_dic=T.load_npy(fdir+f)
+
+            # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
+            f_name = f.split('.')[0]
+            print(f_name)
+
+            val_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+                pix = row['pix']
+                if not pix in val_dic:
+                    val_list.append(np.nan)
+                    continue
+                val = val_dic[pix]
+                if val < -99:
+                    val_list.append(np.nan)
+                    continue
+                # if val > 99:
+                #     val_list.append(np.nan)
+                #     continue
+                val_list.append(val)
+
+
+            df[f'{f_name}'] = val_list
+
+
+        return df
+
+    def add_8class_to_df(self, df):
+        fdir=rf'D:\Project3\Result\3mm\bivariate_analysis\composite_LAI\\'
+        for f in os.listdir(fdir):
+            if not 'CV_rainfall_beta_LAI_composite_growing_season' in f:
+                continue
+
 
 
             if not f.endswith('.tif'):
@@ -4408,10 +4418,10 @@ class partial_correlation():
     def __init__(self):
         pass
 
-        self.fdir_X = result_root + rf'3mm\Multiregression\input\\'
-        self.fdir_Y = result_root + rf'\3mm\Multiregression\\input\\'
-        self.xvar_list = [ 'fire_ecosystem_year_average','sum_rainfall',
-                        'rainfall_seasonality_all_year','VPD', ]
+        self.fdir_X = result_root + rf'3mm\Multiregression\zscore\\'
+        self.fdir_Y = result_root + rf'\3mm\Multiregression\\zscore\\'
+        self.xvar_list = [ 'fire_ecosystem_year_average','sum_rainfall_growing_season',
+                       'CV_intraannual_rainfall_ecosystem_year', 'CV_intraannual_rainfall_growing_season' ]
 
 
         self.y_var = ['composite_LAI_beta_mean']
@@ -4422,22 +4432,22 @@ class partial_correlation():
         self.outpartial_pvalue = self.outdir + rf'\partial_pvalue.npy'
 
     def run(self):
-        df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
-        # # #
+        # df=self.build_df(self.fdir_X,self.fdir_Y,self.xvar_list,self.y_var)
+        # # # #
         # self.cal_partial_corr(df,self.xvar_list, )
         # self.cal_single_correlation()
         # self.cal_single_correlation_ly()
         # self.plot_partial_correlation()
 
         # self.maximum_partial_corr()
-        # self.statistic_corr()
+        self.statistic_corr()
         # self.statistic_trend()
 
 
     def build_df(self,fdir_X,fdir_Y,fx_list,fy):
         df = pd.DataFrame()
 
-        filey = fdir_Y + fy[0] + '.npy'
+        filey = fdir_Y + fy[0] + '_zscore.npy'
         print(filey)
 
         dic_y = T.load_npy(filey)
@@ -4468,7 +4478,7 @@ class partial_correlation():
 
             # print(var_name)
             x_val_list = []
-            filex = fdir_X + xvar + '.npy'
+            filex = fdir_X + xvar + '_zscore.npy'
             # filex = fdir_X + xvar + f'_{period}.npy'
 
             # print(filex)
@@ -4825,8 +4835,10 @@ class partial_correlation():
 
 
     def statistic_corr(self):
-        fdir = result_root + rf'3mm\RF_Multiregression\partial_correlation\\'
-        variable_list=['partial_corr_rainfall_intensity','partial_corr_rainfall_frenquency']
+        fdir = result_root + rf'\3mm\Multiregression\partial_correlation\\'
+        variable_list=['trend_sum_rainfall_growing_season','trend_CV_intraannual_rainfall_growing_season',
+                       'trend_CV_intraannual_rainfall_ecosystem_year','trend_fire_ecosystem_year_average'
+                       ]
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
@@ -6021,6 +6033,387 @@ class Figure5():
 
         return df
 
+class multi_regression_anomaly():
+    def __init__(self):
+
+        self.fdirX = result_root+rf'3mm\Multiregression\\input\\'
+        self.fdirY = result_root+rf'\3mm\Multiregression\\input\\'
+
+
+        self.y_var = ['composite_LAI_beta_growing_season']
+        self.xvar = [ 'CV_intraannual_rainfall_growing_season', 'fire_ecosystem_year_average',
+                      'sum_rainfall_growing_season','CV_intraannual_rainfall_ecosystem']
+
+        self.multi_regression_result_dir = result_root + rf'\3mm\\Multiregression\\Multiregression_result\\'
+        T.mk_dir(self.multi_regression_result_dir, force=True)
+
+        self.multi_regression_result_f = self.multi_regression_result_dir+f'{self.y_var[0]}.npy'
+
+        pass
+
+    def run(self):
+
+        # step 1 build dataframe
+
+        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
+
+        # # # step 2 cal correlation
+        self.cal_multi_regression_beta(df)
+
+        # step 3 plot
+        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
+        ## step 4 convert m2/m2/ppm to %/100ppm
+        # self.convert_CO2_sensitivity_unit()
+
+        # step 5
+        self.calculate_trend_contribution()
+
+        pass
+
+    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
+
+        df = pd.DataFrame()
+
+        filey = fdir_Y + fy[0] + '.npy'
+        print(filey)
+
+        dic_y = T.load_npy(filey)
+        # array=np.load(filey)
+        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
+        pix_list = []
+        y_val_list = []
+
+        for pix in dic_y:
+            yvals = dic_y[pix][0:22]
+
+            if len(yvals) == 0:
+                continue
+            yvals = T.interp_nan(yvals)
+            yvals = np.array(yvals)
+            if yvals[0] == None:
+                continue
+
+            pix_list.append(pix)
+            y_val_list.append(yvals)
+        df['pix'] = pix_list
+        df['y'] = y_val_list
+
+        # build x
+
+        for xvar in fx_list:
+
+            # print(var_name)
+            x_val_list = []
+            filex = fdir_X + xvar + '.npy'
+            # filex = fdir_X + xvar + f'_{period}.npy'
+
+            # print(filex)
+            # exit()
+            # x_arr = T.load_npy(filex)
+            dic_x = T.load_npy(filex)
+            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
+                pix = row.pix
+                if not pix in dic_x:
+                    x_val_list.append([])
+                    continue
+                xvals = dic_x[pix][0:22]
+                xvals = np.array(xvals)
+                if len(xvals) == 0:
+                    x_val_list.append([])
+                    continue
+
+                xvals = T.interp_nan(xvals)
+                if xvals[0] == None:
+                    x_val_list.append([])
+                    continue
+
+                x_val_list.append(xvals)
+
+            # x_val_list = np.array(x_val_list)
+            df[xvar] = x_val_list
+        T.print_head_n(df)
+        ## save df
+        T.save_df(df, self.multi_regression_result_dir + fy[0] + '.df')
+        T.df_to_excel(df, self.multi_regression_result_dir + fy[0] + '.xlsx')
+
+        return df
+
+    def __linearfit(self, x, y):
+        '''
+        最小二乘法拟合直线
+        :param x:
+        :param y:
+        :return:
+        '''
+        N = float(len(x))
+        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
+        for i in range(0, int(N)):
+            sx += x[i]
+            sy += y[i]
+            sxx += x[i] * x[i]
+            syy += y[i] * y[i]
+            sxy += x[i] * y[i]
+        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
+        b = (sy - a * sx) / N
+        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
+        return a, b, r
+
+    def cal_multi_regression_beta(self,df):
+        import statsmodels.api as sm
+        import statsmodels.formula.api as smf
+        import pandas as pd
+        import joblib
+
+
+        x_var_list = self.xvar
+
+        outf = self.multi_regression_result_f
+
+        multi_derivative = {}
+
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            # print(row);exit()
+            pix = row.pix
+
+            y_vals = row['y']
+            # y_vals = T.remove_np_nan(y_vals)
+            # y_vals = T.interp_nan(y_vals)
+            if len(y_vals) == 0:
+                continue
+
+            # y_vals_detrend = signal.detrend(y_vals)
+            #  calculate partial derivative with multi-regression
+            df_new = pd.DataFrame()
+            x_var_list_valid = []
+
+            for x in x_var_list:
+
+                x_vals = row[x]
+
+                if len(x_vals) == 0:
+                    continue
+
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+
+                if len(x_vals) != len(y_vals):
+                    continue
+                # print(x_vals)
+                if x_vals[0] == None:
+                    continue
+
+                df_new[x] = x_vals
+
+                x_var_list_valid.append(x)
+            if len(df_new) <= 3:
+                continue
+            if len(x_var_list_valid) < 2:
+                continue
+            # T.print_head_n(df_new)
+
+            df_new['y'] = y_vals  # nodetrend
+
+            # T.print_head_n(df_new)
+            df_new = df_new.dropna(axis=1, how='all')
+
+            x_var_list_valid_new = []
+            for v_ in x_var_list_valid:
+                if not v_ in df_new:
+                    continue
+                else:
+                    x_var_list_valid_new.append(v_)
+            # T.print_head_n(df_new)
+            # x_var_list_valid_new.append('CO2:CRU')
+            # # x_var_list_valid_new.append('tmax:CRU')
+
+            df_new = df_new.dropna()
+            ## build multiregression model and consider interactioon
+
+            linear_model = LinearRegression()
+            # print(df_new['y'])
+
+            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
+            coef_ = np.array(linear_model.coef_)
+            coef_dic = dict(zip(x_var_list_valid_new, coef_))
+            # print(df_new['y'])
+            # exit()
+            multi_derivative[pix] = coef_dic
+        T.save_npy(multi_derivative, outf)
+
+    pass
+
+    def plt_multi_regression_result(self, multi_regression_result_dir, y_var):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        f = self.multi_regression_result_f
+
+        dic = T.load_npy(f)
+        var_list = []
+        for pix in dic:
+
+
+            vals = dic[pix]
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        for var_i in var_list:
+            # print(var_i)
+            spatial_dic = {}
+            for pix in dic:
+                r, c = pix
+                if r < 60:
+                    continue
+
+                landcover_value = crop_mask[pix]
+
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                dic_i = dic[pix]
+                if not var_i in dic_i:
+                    continue
+                val = dic_i[var_i]
+                spatial_dic[pix] = val
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+            arr = arr * array_mask
+            print(var_i)
+
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_{y_var}.tif')
+            std = np.nanstd(arr)
+            mean = np.nanmean(arr)
+            vmin = mean - std
+            vmax = mean + std
+            plt.figure()
+            # arr[arr > 0.1] = 1
+            plt.imshow(arr, vmin=-5, vmax=5)
+
+            plt.title(var_i)
+            plt.colorbar()
+
+        plt.show()
+
+    def convert_CO2_sensitivity_unit(self):
+        period_list = ['1982_2020']
+        for period in period_list:
+            CO2_sensitivity_f = result_root + rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
+            average_LAI4g_f = result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(CO2_sensitivity_f)
+            arr[arr < -99] = np.nan
+            dic_CO2_sensitivity = DIC_and_TIF().spatial_arr_to_dic(arr)
+
+            dic_LAI4g_average = T.load_npy(average_LAI4g_f)
+
+            for pix in dic_CO2_sensitivity:
+                CO2_sensitivity = dic_CO2_sensitivity[pix]
+                CO2_sensitivity = np.array(CO2_sensitivity, dtype=float)
+                if np.isnan(CO2_sensitivity):
+                    continue
+                if not pix in dic_LAI4g_average:
+                    continue
+                LAI_average = dic_LAI4g_average[pix]
+                LAI_average = np.array(LAI_average, dtype=float)
+
+                if np.isnan(LAI_average):
+                    continue
+                CO2_sensitivity = CO2_sensitivity / LAI_average * 100
+                if CO2_sensitivity < -99999:
+                    continue
+                dic_CO2_sensitivity[pix] = CO2_sensitivity
+            arr_new = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic_CO2_sensitivity)
+            arr_new[arr_new < -99] = np.nan
+            arr_new[arr_new > 99] = np.nan
+
+            # plt.imshow(arr_new)
+            # plt.colorbar()
+            # plt.show()
+
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif", "_scale.tif")}')
+            # DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_CO2_sensitivity, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
+            # T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
+
+    def calculate_trend_contribution(self):
+        ## here I would like to calculate the trend contribution of each variable
+        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
+        ## load the trend of each variable
+        ## load the trend of the target variable
+        ## load multi regression result
+        ## calculate the trend contribution
+        trend_dir = result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
+
+        selected_vairables_list = [
+            'CRU_trend',
+            'CO2_trend',
+            'tmax_trend',
+            'VPD_trend',
+        ]
+
+        trend_dict = {}
+        for variable in selected_vairables_list:
+            fpath = join(trend_dir, f'{variable}.npy')
+            array = np.load(fpath, allow_pickle=True)
+            array[array < -9999] = np.nan
+            spatial_dict = D.spatial_arr_to_dic(array)
+            for pix in tqdm(spatial_dict, desc=variable):
+                r, c = pix
+                if r < 120:
+                    continue
+                val = spatial_dict[pix]
+                if np.isnan(val):
+                    continue
+                if not pix in trend_dict:
+                    trend_dict[pix] = {}
+                key = variable.replace('_trend', '')
+                trend_dict[pix][key] = spatial_dict[pix]
+
+        f = self.multi_regression_result_f
+        print(f)
+        print(isfile(f))
+        # exit()
+        dic_multiregression = T.load_npy(f)
+        var_list = []
+        for pix in dic_multiregression:
+
+            # landcover_value = crop_mask[pix]
+            # if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+            #     continue
+
+            vals = dic_multiregression[pix]
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        # print(var_list)
+        # exit()
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in dic_multiregression:
+                if not pix in trend_dict:
+                    continue
+
+                dic_i = dic_multiregression[pix]
+                if not var_i in dic_i:
+                    continue
+                val_multireg = dic_i[var_i]
+                val_trend = trend_dict[pix][var_i]
+                val_contrib = val_multireg * val_trend
+                spatial_dic[pix] = val_contrib
+            arr_contrib = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
+            plt.colorbar()
+            plt.title(var_i)
+            plt.show()
+            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib,
+                                                   f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
+
+
 class GAM():
     def __init__(self):
         pass
@@ -6098,10 +6491,10 @@ class GAM():
         dff=rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window2.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
-        df = df[df['composite_LAI_beta_mean_trend'] > 0]
-        df = df[df['sum_rainfall_p_value'] < 0.05]
+        df = df[df['composite_LAI_beta_trend_growing_season'] > 0]
+        # df = df[df['sum_rainfall_p_value'] < 0.05]
         # df = df[df['wet_dry'] == 'drying']
-        df = df[df['wet_dry'] == 'wetting']
+        # df = df[df['wet_dry'] == 'wetting']
 
         # Example: Your data
         # Suppose you have a DataFrame with columns:
@@ -6116,15 +6509,15 @@ class GAM():
         df_sample['landcovlandcover_classfication_code'] = pd.Categorical(df_sample['landcover_classfication']).codes
 
         # Define response and predictors
-        y = df_sample['composite_LAI_beta'].values
+        y = df_sample['composite_LAI_beta_growing_season'].values
         # X = df_sample[['landcovlandcover_classfication_code','VPD', 'Aridity', 'sum_rainfall','heat_event_frenquency',
         #         'rooting_depth','nitrogen','sand','cwdx80_05','Burn_area_mean','FVC_average',
         #         'SM_average', 'Non tree vegetation_trend',
         #
         #         ]].values
 
-        X = df_sample[['landcovlandcover_classfication_code','VPD', 'sum_rainfall','cwdx80_05',
-                       'heavy_rainfall_days','Burn_area_mean'
+        X = df_sample[['landcovlandcover_classfication_code','Burn_area_mean', 'sum_rainfall_growing_season',
+                       'CV_intraannual_rainfall_growing_season','CV_intraannual_rainfall','heat_event_frenquency',
 
 
                        ]].values
@@ -6155,12 +6548,15 @@ class GAM():
 
 
 
+
         ).fit(X, y)
 
         gam.summary()
 
         fig, axs = plt.subplots(2, 3, figsize=(15, 4))
-        titles = [ 'landcover','VPD', 'sum_rainfall', 'cwdx80_05','heat_event_frenquency']
+        titles = [ 'landcovlandcover_classfication_code','Burn_area_mean', 'sum_rainfall_growing_season',
+                       'heavy_rainfall_days','CV_intraannual_rainfall','heat_event_frenquency',]
+
 
         for i in range(len(titles)):
             ax = axs.flatten()[i]
@@ -6183,16 +6579,17 @@ def main():
 
     # Figure1().run()
     # Figure2().run()
-    # Figure3().run()
+    # Figure3_beta().run()
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
     # multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
+    multi_regression_anomaly().run()
     # Figure5().run()
 
     # partial_correlation().run()
-    GAM().run()
+    # GAM().run()
 
 
 

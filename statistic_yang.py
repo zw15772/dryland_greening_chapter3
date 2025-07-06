@@ -1765,7 +1765,7 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'composite_LAI_beta'
+        self.y_variable = 'composite_LAI_beta_growing_season'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
@@ -1804,9 +1804,9 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        self.pdp_shap()
+        # self.pdp_shap()
         # # # #
-        self.plot_pdp_shap()
+        # self.plot_pdp_shap()
         # self.plot_bar_landcover()
         # self.shapely_df_generation()
         # self.plot_pdp_shap_test()
@@ -1823,7 +1823,7 @@ class SHAP_CV():
 
 
         # self.variable_contributions()
-        # self.plot_dominant_factors_bar()
+        self.plot_dominant_factors_bar()
         # self.plot_robinson()
         # self.max_contributions()
         # self.disentangle()
@@ -1989,7 +1989,7 @@ class SHAP_CV():
 
         self.x_variable_list_CRU = [
 
-            'VPD',
+            # 'VPD',
             'Burn_area_mean',
 
 
@@ -2000,33 +2000,35 @@ class SHAP_CV():
             # 'Non tree vegetation_trend',
 
             # 'rainfall_frenquency_trend',
-            # 'rainfall_intensity_trend',
+            # 'rainfall_intensity_growing_season',
             # 'rainfall_seasonality_all_year_trend',
+            'CV_intraannual_rainfall_growing_season',
             'CV_intraannual_rainfall',
+
+            #
             # 'pi_average',
 
 
-            # 'sand_rainfall_intensity',
-            # 'sand_rainfall_frenquency',
             # 'sum_rainfall_trend',
-            'cwdx80_05',
+            # 'cwdx80_05',
 
             # 'fire_ecosystem_year_average_trend',
-            'sum_rainfall',
+
+            'sum_rainfall_growing_season',
+            # 'sum_rainfall',
 
              # 'Aridity',
-            'heat_event_frenquency'  ,
-            # 'landcover_classfication',
-            # 'dry_spell_tre'd',
+            'heat_event_frenquency',
+            # 'dry_spell_growing_season',
+            # 'heavy_rainfall_days_growing_season',
             # 'Tmax_trend',
-            # #
-            'sand',
+            # 'sand',
             # 'soc',
-            # 'rainfall_intensity',
-
-          # 'rainfall_frenquency',
-            #
-            'rainfall_seasonality_all_year',
+            # 'rainfall_intensity_growing_season',
+           #
+           # 'rainfall_frenquency_growing_season',
+           #  #
+            # 'rainfall_seasonality_all_year',
               #
               # 'fire_ecosystem_year',
             # 'rooting_depth',
@@ -2070,6 +2072,10 @@ class SHAP_CV():
 
         self.x_variable_range_dict_global_CRU = {
             'CV_intraannual_rainfall': [0, 7],
+            'CV_intraannual_rainfall_non_growing_season': [0, 7],
+            'sum_rainfall_non_growing_season': [0, 1500],
+            'rainfall_intensity_growing_season':[0,25],
+            'CV_intraannual_rainfall_growing_season': [0, 7],
             'Aridity': [0, 0.65],
             'FVC_average': [0, 0.8],
             'SM_average': [0, 0.4],
@@ -2087,14 +2093,14 @@ class SHAP_CV():
             'sand': [0, 800],
             'soc': [0, 600],
             'sand_rainfall_intensity': [-2, 2],
-            'sum_rainfall': [0, 1500],
-            'sum_rainfall_trend': [-5, 5],
+            'sum_rainfall_growing_season': [0, 1500],
+
             'sand_rainfall_frenquency': [-2 ,2],
 
             'fire_ecosystem_year': [0,50],
             'fire_ecosystem_year_average_trend': [-1, 1],
 
-            'dry_spell': [1,3],
+            'dry_spell_growing_season': [0,3],
             'rainfall_intensity': [0, 25],
             'rainfall_intensity_trend': [-0.1, 0.1],
             'heat_event_frenquency':[0,6],
@@ -2254,7 +2260,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_wetting_sig')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2265,15 +2271,15 @@ class SHAP_CV():
         df = T.load_df(dff)
         df = self.df_clean(df)
 
-        df = df[df['composite_LAI_beta_mean_trend'] > 0]
-        df = df[df['sum_rainfall_p_value'] < 0.05]
+        df = df[df['composite_LAI_beta_trend_growing_season'] > 0]
+        # df = df[df['sum_rainfall_p_value'] < 0.05]
         # df = df[df['wet_dry'] == 'drying']
-        df = df[df['wet_dry'] == 'wetting']
+        # df = df[df['wet_dry'] == 'wetting']
         # print('len(df):',len(df))
         # df, dic_start, dic_end=self.filter_percentile(df)
         # print('len(df):',len(df));exit()
         # df = self.valid_range_df(df)
-        outdf=join(outdir,'wetting_origin_sig.df')
+        outdf=join(outdir,'ALL_origin_sig.df')
         T.save_df(df, outdf)
         # print('len(df):',len(df));exit()
 
@@ -2673,7 +2679,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_wetting_sig', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_ALL_sig', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2765,7 +2771,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-3, 3)
+            plt.ylim(-6,6)
 
         plt.suptitle(self.y_variable)
 
@@ -3676,8 +3682,8 @@ class SHAP_CV():
 
     def spatial_shapely(self):  #### spatial plot
 
-        dff = self.dff
-        outdir =join(self.this_class_png, 'pdp_shap_beta12','spatial_shapely')
+        dff = results_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta_growing_season\pdp_shap_beta_ALL_sig\\\ALL_origin_sig.df'
+        outdir =join(self.this_class_png, 'pdp_shap_beta_ALL_sig','spatial_shapely')
         T.mk_dir(outdir, force=True)
 
         # T.open_path_and_file(outdir)
@@ -3714,7 +3720,7 @@ class SHAP_CV():
 
         print(len(df_origin))
         x_variable_list = self.x_variable_list
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta12',self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_ALL_sig',self.y_variable + '.shap.pkl')
         # print(inf_shap);exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values.shape)
@@ -3883,8 +3889,8 @@ class SHAP_CV():
 
     def variable_contributions(self):  ## each variable contribution and the max one
         r2 = .69
-        fdir = join(self.this_class_png, 'pdp_shap_beta12', 'spatial_shapely')
-        outdir = join(self.this_class_png,'pdp_shap_beta12', 'variable_contributions')
+        fdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig', 'spatial_shapely')
+        outdir = join(self.this_class_png,'pdp_shap_beta_ALL_sig', 'variable_contributions')
         T.mk_dir(outdir, force=True)
         all_spatial_dict = {}
         keys = []
@@ -4001,51 +4007,40 @@ class SHAP_CV():
         # DIC_and_TIF(pixelsize=.5).arr_to_tif(max_index, outf)
 
     def plot_dominant_factors_bar(self):  ### insert bar plot
-        dff=rf'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta2\\Dataframe.df'
+        dff=rf'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta_growing_season\pdp_shap_beta_ALL_sig\\ALL_origin_sig.df'
 
         df=pd.read_pickle(dff)
         df=self.df_clean(df)
+        df = df[df['composite_LAI_beta_trend_growing_season'] > 0]
 
-        val_list=[1,2,3,4,5,6,7,8,9,10,11]
-        dic_name={1:'Fire burn area',2:'SM-Temp coupling',
-                  3:'Rainfall frenquency',4:'Rainfallfrenquency trend',
-                  5:'rainfall intensity',6:'rainfall intensity trend',
+        val_list=[1,2,3,4,5,]
+        dic_name={1:'Fire burn area',2:'CV_intraannual_rainfall_growing_season',
+                  3:'CV_intraannual_rainfall',4:'heat_event_frenquency',
+                  5:'sum_rainfall_growing_season',
 
-                  7:'rainfall seasonality', 8:'rainfall seasonality trend',
-                  9:'Rootin depth',
 
-                  10:'Sand',
-                  11:'SOC',
                   }
 
-        color_dic = {'Fire burn area': '#3feabc',
-                     'SM-Temp coupling': '#bb3dc9',
-                     'Rainfall frenquency': '#455dca',
-                     'Rainfallfrenquency trend': '#44ce5d',
-                     'rainfall intensity': '#98e16e',
-                     'rainfall intensity trend': '#82d0dc',
+        color_dic = {'Fire burn area': 'red',
+                     'CV_intraannual_rainfall_growing_season': '#bb3dc9',
+                     'CV_intraannual_rainfall': '#455dca',
+                     'heat_event_frenquency': 'orange',
+                     'sum_rainfall_growing_season': '#98e16e',
 
-                     'rainfall seasonality': '#dfef4d',
-                     'rainfall seasonality trend': '#cf3c8d',
-
-                     ## soil
-                     'Rootin depth': '#de8313',
-                    'Sand': '#ef3815',
-                    'SOC': '#753319',
 
                      }
         percentage_list=[]
         percetage_dict={}
         for val in val_list:
-            val=df[df['max_flag_only']==val]
+            val=df[df['max_flag_only_growing_season']==val]
             count=len(val)
             ## df=dfis nan
-            percetage=count/np.count_nonzero(~np.isnan(df['max_flag_only']))*100
-            print(dic_name[val['max_flag_only'].values[0]],percetage)
+            percetage=count/np.count_nonzero(~np.isnan(df['max_flag_only_growing_season']))*100
+            print(dic_name[val['max_flag_only_growing_season'].values[0]],percetage)
             percentage_list.append(percetage)
 
 
-            percetage_dict[dic_name[val['max_flag_only'].values[0]]]=percetage
+            percetage_dict[dic_name[val['max_flag_only_growing_season'].values[0]]]=percetage
         print(sum(percentage_list))
 
         sorted_items = sorted(percetage_dict.items(), key=lambda x: x[1], reverse=True)

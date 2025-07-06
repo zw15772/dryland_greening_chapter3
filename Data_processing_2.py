@@ -706,15 +706,16 @@ class Data_processing_2:
             np.save(outf, zscore_dic)
 
     def composite_LAI(self):
-        f_1=rf'D:\Project3\Result\3mm\Long_term_CV\\\long_term_LAI4g_detrend_CV.npy'
-        f_2=rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_GLOBMAP_LAI_detrend_CV.npy'
-        f_3=rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_detrended_SNU_LAI_CV.npy'
+        infdir=result_root + rf'\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\\'
+        f_1=infdir+rf'multi_regression_result_detrend_growing_season_GLOBMAP_LAI\npy_time_series\sum_rainfall_detrend.npy'
+        f_2=infdir+rf'multi_regression_result_detrend_growing_season_LAI4g\npy_time_series\\sum_rainfall_detrend.npy'
+        f_3=infdir+rf'\multi_regression_result_detrend_growing_season_SNU_LAI\npy_time_series\sum_rainfall_detrend.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
         average_dic= {}
 
-        for pix in dic1:
+        for pix in tqdm(dic1):
             if not pix in dic2:
                 continue
             if not pix in dic3:
@@ -734,21 +735,23 @@ class Data_processing_2:
 
             average_val=np.nanmean([value1,value2,value3],axis=0)
 
-            print(average_val)
+            # print(average_val)
             if np.nanmean(average_val) >999:
                 continue
             if np.nanmean(average_val) <-999:
                 continue
             average_dic[pix]=average_val
 
-            # plt.plot(value1,color='blue')
-            # plt.plot(value2,color='green')
-            # plt.plot(value3,color='orange')
-            # plt.plot(average_val,color='red')
-            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            plt.plot(value1,color='blue')
+            plt.plot(value2,color='green')
+            plt.plot(value3,color='orange')
+            plt.plot(average_val,color='red')
+            plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
+        outdir=infdir+rf'\multi_regression_result_detrend_growing_season_composite\\'
+        Tools().mk_dir(outdir,force=True)
 
-        np.save(rf'D:\Project3\Result\3mm\Long_term_CV\\long_term_composite_CV.npy',average_dic)
+        np.save(outdir+'composite_LAI_beta.npy',average_dic)
 
         pass
     def interpolate_VCF(self):
@@ -1105,7 +1108,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        fdir=result_root+rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_composite\\'
 
         print(fdir)
         print(self.dff)
@@ -1120,8 +1123,8 @@ class build_moving_window_dataframe():
 
 
             variable= f.split('.')[0]
-            if not variable in variable_list:
-                continue
+            # if not variable in variable_list:
+            #     continue
 
 
             # print(variable)
@@ -1405,9 +1408,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\\\SHAP_beta\\Dataframe\\')
+        self.this_class_arr = (result_root+rf'3mm\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window2.df'
+        self.dff = self.this_class_arr + rf'Three_dimension.df'
 
         pass
 
@@ -1433,7 +1436,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
         # df=self.add_aridity_to_df(df)
@@ -1455,7 +1458,7 @@ class build_dataframe():
 
 
         # df=self.rename_columns(df)
-        df = self.drop_field_df(df)
+        # df = self.drop_field_df(df)
         df=self.show_field(df)
 
 
@@ -2269,7 +2272,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=data_root+ rf'Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
+        fdir=result_root+ rf'\3mm\SHAP_beta\png\RF_composite_LAI_beta_growing_season\pdp_shap_beta_ALL_sig\variable_contributions\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2320,7 +2323,7 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}'] = val_list
+            df[f'{f_name}_growing_season'] = val_list
 
 
         return df
@@ -8475,10 +8478,10 @@ class SM_Tcoupling():
 
 
 def main():
-    # Data_processing_2().run()
+    Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
