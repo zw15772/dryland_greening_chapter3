@@ -102,7 +102,8 @@ class Data_processing_2:
         # self.tif_to_dic()
         # self.interpolate_VCF()
         # self.interpolation()
-        self.zscore()
+        self.mean()
+        # self.zscore()
         # self.composite_LAI()
 
 
@@ -644,12 +645,23 @@ class Data_processing_2:
                 np.save(outdir + '\\per_pix_dic_%03d' % (flag / 10000), temp_dic)
                 temp_dic = {}
         np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
+    def mean(self):
+        f=result_root+rf'\3mm\extract_FVC_phenology_year\\FVC.npy'
+        dic=T.load_npy(f)
+        result_dic={}
+        for pix in dic:
+            val=dic[pix]['growing_season']
+            result_dic[pix]=np.nanmean(val)
+        np.save(result_root+rf'\3mm\extract_FVC_phenology_year\\FVC_mean.npy',result_dic)
+
+
+        pass
 
     def zscore(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\Multiregression\\input\\'
+        fdir = result_root + rf'\3mm\Multiregression\input\\'
         outdir = result_root + rf'\3mm\Multiregression\\zscore\\'
         Tools().mk_dir(outdir, force=True)
 
@@ -691,7 +703,11 @@ class Data_processing_2:
                 mean = np.nanmean(time_series)
                 zscore = (time_series - mean) / np.nanstd(time_series)
 
+
+
+
                 zscore_dic[pix] = zscore
+
 
                 # plt.plot(time_series)
                 # plt.legend(['raw'])
@@ -953,10 +969,11 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
-        # df=self.add_interaction_to_df(df)
+        # df=self.add_window_to_df(df)
+        df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
+        # self.add_short_vegetation_mean(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1074,7 +1091,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_ecosystem_year_composite_LAI\\composite_LAI_beta_mean.npy'
+        f = rf'D:\Project3\Result\3mm\Multiregression\zscore\composite_LAI_beta_growing_season_zscore.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1108,14 +1125,16 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_composite\\'
+        fdir=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\'
 
         print(fdir)
         print(self.dff)
-        variable_list=['CV_intraannual_rainfall','heavy_rainfall_days',
-         'rainfall_seasonality_all_year',
-        'dry_spell',  'rainfall_frenquency','rainfall_intensity',
-                  'sum_rainfall'   ]
+        variable_list=['CV_intraannual_rainfall_ecosystem_year_zscore','CV_intraannual_rainfall_growing_season_zscore'
+                       
+                       'heat_event_frenquency_zscore',
+        'VPD_zscore',
+        'dry_spell_growing_season_zscore',
+                  'sum_rainfall_growing_season_zscore' ,'sum_rainfall_ecosystem_year_zscore'  ]
 
 
         for f in os.listdir(fdir):
@@ -1125,6 +1144,8 @@ class build_moving_window_dataframe():
             variable= f.split('.')[0]
             # if not variable in variable_list:
             #     continue
+
+
 
 
             # print(variable)
@@ -1183,9 +1204,9 @@ class build_moving_window_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                v1= vals[y-0]
-                NDVI_list.append(v1)
-
+                # v1= vals[y-0]
+                # NDVI_list.append(v1)
+                #
 
 
             df[f'{variable}'] = NDVI_list
@@ -1204,13 +1225,20 @@ class build_moving_window_dataframe():
 
         return df
 
+    # def add_interaction_to_df(self,df):
+    #     # T.print_head_n(df);exit()
+    #
+    #     # df['CO2_rainfall']=df['CO2']*df['rainfall_intensity_average_zscore']
+    #     df['FVC_relative_change'] = 'unknown'
+    #     df.loc[df['sum_rainfall_trend'] > 0, 'wet_dry'] = 'wetting'
+    #     df.loc[df['sum_rainfall_trend'] < 0, 'wet_dry'] = 'drying'
+    #     return df
+
     def add_interaction_to_df(self,df):
         # T.print_head_n(df);exit()
 
-        # df['CO2_rainfall']=df['CO2']*df['rainfall_intensity_average_zscore']
-        df['wet_dry'] = 'unknown'
-        df.loc[df['sum_rainfall_trend'] > 0, 'wet_dry'] = 'wetting'
-        df.loc[df['sum_rainfall_trend'] < 0, 'wet_dry'] = 'drying'
+        df['FVC_relative_change_trend']=df['FVC_max_trend']/df['FVC_mean']*100
+
         return df
 
 
@@ -1294,7 +1322,8 @@ class build_moving_window_dataframe():
 
             vals = val_dic[pix]['ecosystem_year']
             vals = np.array(vals)
-            mean_burn_area=np.nanmean(vals)
+            ## 10^6
+            mean_burn_area=np.nanmean(vals)/1000000
             if mean_burn_area < -99:
                 val_list.append(np.nan)
                 continue
@@ -1307,6 +1336,37 @@ class build_moving_window_dataframe():
 
 
         pass
+
+    def add_short_vegetation_mean(self,df):
+        fpath=  result_root+rf'3mm\VCF\moving_window_extraction\tree cover.npy'
+
+        val_dic = T.load_npy(fpath)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            window = row.window
+            # pix = row.pix
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+
+
+            vals = val_dic[pix]
+            vals = np.array(vals)
+            ## 10^6
+            mean_burn_area=np.nanmean(vals)
+            if mean_burn_area < -99:
+                val_list.append(np.nan)
+                continue
+
+            val_list.append(mean_burn_area)
+
+
+        df['tree_vegetation_mean']=val_list
     def add_columns(self, df):
         df['window'] = df['window'].str.extract(r'(\d+)').astype(int)
 
@@ -1408,9 +1468,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\bivariate_analysis\Dataframe\\')
+        self.this_class_arr = (result_root+rf'\3mm\SHAP_beta\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Three_dimension.df'
+        self.dff = self.this_class_arr + rf'moving_window2.df'
 
         pass
 
@@ -1444,10 +1504,10 @@ class build_dataframe():
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
-        # df=self.dummies(df)
-        # # df=self.add_maxmium_LC_change(df)
+        # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # # # #
+        # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
 
@@ -2272,7 +2332,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+ rf'\3mm\SHAP_beta\png\RF_composite_LAI_beta_growing_season\pdp_shap_beta_ALL_sig\variable_contributions\\'
+        fdir=rf'D:\Project3\Result\3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\variable_contributions\\'
         variables_list = [
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2280,15 +2340,16 @@ class build_dataframe():
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',]
         for f in os.listdir(fdir):
-
+            #
             if not f.endswith('.tif'):
                 continue
+            # if not 'mean' in f:
+            #     continue
+
 
 
             variable = (f.split('.')[0])
             print(variable)
-            # if  not 'sum_rainfall' in variable:
-            #     continue
 
 
             #
@@ -2323,18 +2384,20 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}_growing_season'] = val_list
+            df[f'{f_name}'] = val_list
 
 
         return df
 
 
     def add_mean_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\Long_term_CV\\'
+        fdir=rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
             variable = (f.split('.')[0])
+            if not 'mean' in f:
+                continue
 
 
 
@@ -2351,6 +2414,7 @@ class build_dataframe():
                     val_list.append(np.nan)
                     continue
                 val = val_dic[pix]
+
                 if val < 0:
                     val_list.append(np.nan)
                     continue
@@ -2369,7 +2433,11 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'fire_ecosystem_year_average_ecosystem_year': 'fire_ecosystem_year',
+        df = df.rename(columns={'CV_intraannual_rainfall_ecosystem_year_composite_LAI_beta_growing_season_senstivity': 'CV_intraannual_rainfall_ecosystem_year_composite_LAI_beta_senstivity',
+                                'CV_intraannual_rainfall_growing_season_composite_LAI_beta_growing_season_senstivity': 'CV_intraannual_rainfall_growing_season_composite_LAI_beta_senstivity',
+                                'fire_ecosystem_year_average_composite_LAI_beta_growing_season_senstivity': 'fire_ecosystem_year_average_composite_LAI_beta_senstivity',
+                              'sum_rainfall_growing_season_composite_LAI_beta_growing_season_senstivity': 'sum_rainfall_growing_season_composite_LAI_beta_senstivity',
+
 
 
 
@@ -8478,9 +8546,9 @@ class SM_Tcoupling():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()

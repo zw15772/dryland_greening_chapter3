@@ -1824,12 +1824,14 @@ class build_dataframe():
 
 class PLOT_dataframe():
     def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.plot_CV_LAI()
+        self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.statistic_trend_CV_bar()
-        self.statistic_trend_bar()
+        # self.statistic_trend_bar()
 
 
         pass
@@ -1863,12 +1865,11 @@ class PLOT_dataframe():
         color_list = ['grey'] * 16
         color_list[0] = 'green'
 
-        color_list = ['green', 'blue',  'orange', 'red','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+        color_list = ['green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [0.5,0.5,0.5,2,2]
+        linewidth_list = [1,1,1,2,2]
 
-        fig = plt.figure()
-        i = 1
+
 
         # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
         # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
@@ -1881,26 +1882,66 @@ class PLOT_dataframe():
 
 
         result_dic = {}
+        CI_dic={}
+        std_dic={}
+
         for var in variable_list:
 
             result_dic[var] = {}
+            CI_dic[var] = {}
             data_dic = {}
+            CI_dic_data={}
+            std_dic_data={}
 
             for year in year_list:
                 df_i = df[df['year'] == year]
 
                 vals = df_i[f'{var}'].tolist()
+                SEM=stats.sem(vals)
+                CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
+                std=np.nanstd(vals)
+                CI_dic_data[year]=CI
+                std_dic_data[year]=std
+
                 data_dic[year] = np.nanmean(vals)
+
+
+
+
             result_dic[var] = data_dic
+            CI_dic[var]=CI_dic_data
+            std_dic[var]=std_dic_data
         ##dic to df
 
         df_new = pd.DataFrame(result_dic)
 
         flag = 0
+        plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-            plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag])
+            if var == 'composite_LAI_CV':
+                ## plot CI bar
+                plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag],
+                         )
+                ## fill std
+                std = [std_dic[var][y] for y in year_list]
+                plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
+
+                ## fill CI
+                # ci_low = [CI_dic[var][y][0] for y in year_list]
+                # ci_high = [CI_dic[var][y][1] for y in year_list]
+                # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
+
+
+
+                ## std
+
+
+
+            else:
+                plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag])
             flag = flag + 1
+        ## if var == 'composite_LAI_CV': plot CI bar
 
 
         window_size = 15
@@ -1916,7 +1957,8 @@ class PLOT_dataframe():
                 break
             year_range_str.append(f'{start_year}-{end_year}')
         # plt.xticks(range(0, 23, 4))
-        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=0, ha='right')
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.yticks(np.arange(5, 25, 5))
         # plt.xticks(range(0, 23, 3))
 
 
@@ -1925,14 +1967,15 @@ class PLOT_dataframe():
         plt.grid(which='major', alpha=0.5)
 
         # plt.show()
-        # out_pdf_fdir = rf'D:\Project3\ERA5_025\extract_LAI4g_phenology_year\moving_window_extraction_average\growing_season\trend\\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        plt.tight_layout()
+        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
-
-        plt.legend()
-        plt.show()
+        #
+        # plt.legend()
+        # plt.show()
 
     def plot_relative_change_LAI(self):  ##### plot for 4 clusters
 
@@ -2054,23 +2097,28 @@ class PLOT_dataframe():
             # plt.show()
             color_list = [
                 '#008837',
-                '#a6dba0',
+                'silver',
 
-                '#c2a5cf',
+                'silver',
                 '#7b3294',
             ]
             width = 0.4
             alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
 
             # 逐个画 bar
             for i, (key, val) in enumerate(result_dic.items()):
                 plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
                 plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
-                plt.ylabel('Percentage')
-                plt.title(variable)
+                plt.ylabel('Percentage (%)')
+                # plt.title(variable)
 
             plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            plt.show()
+            plt.tight_layout()
+            # plt.show())
+        ## save pdf
+            plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_CV_bar.pdf')
+
 
     def statistic_trend_bar(self):
         fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'

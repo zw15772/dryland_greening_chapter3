@@ -1620,8 +1620,8 @@ class Figure3_beta():
 
         # step 5
 
-        # self.plot_figure2b()  ## 1-8 map +CV LAI trends + CV interannual rainfall trend
-        self.plot_figure2a_Robinson()
+        self.plot_figure2b_test()  ## 1-8 map +CV LAI trends + CV interannual rainfall trend
+        # self.plot_figure2a_Robinson()
 
 
 
@@ -1841,7 +1841,7 @@ class Figure3_beta():
         pass
 
 
-    def plot_figure2b(self):
+    def plot_figure2b_test(self):
 
         variable='composite'
         dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\Three_dimension_growing_season.df'
@@ -1897,7 +1897,7 @@ class Figure3_beta():
                 dry_ratio = dry_count / len(df_i) * 100
                 wet_dry_ratio[i] = (wet_ratio, dry_ratio)
         # pprint(dic);exit()
-        pprint(wet_dry_ratio);exit()
+        # pprint(wet_dry_ratio);exit()
         ## I want to add new column when df[df[f'CV_rainfall_beta_LAI_{variable}'] == 3] and df[df[f'wet_dry'] == 'drying']
         ## give this column a name is extraction
         df['extraction'] = -999
@@ -1950,7 +1950,7 @@ class Figure3_beta():
             dry_width = val * (dry_ratio / 100)
 
             # drying portion ( hatch)
-            ax.barh(y=1, width=dry_width, left=left, color=color, edgecolor='black', height=0.2,hatch='///')
+            ax.barh(y=1, width=dry_width, left=left, color=color, edgecolor='black', height=0.2,)
             # wetting portion (no hatch)
             ax.barh(y=1, width=wet_width, left=left + dry_width, color=color, edgecolor='black', height=0.2,
                    )
@@ -1966,7 +1966,8 @@ class Figure3_beta():
             dry_width = val * (dry_ratio / 100)
 
             # drying portion ( hatch)
-            ax.barh(y=0, width=dry_width, left=left, color=color, edgecolor='black', height=0.2, hatch='///')
+            # ax.barh(y=0, width=dry_width, left=left, color=color, edgecolor='black', height=0.2, hatch='///')
+            ax.barh(y=0, width=dry_width, left=left, color=color, edgecolor='black', height=0.2,)
             # wetting portion (no hatch)
             ax.barh(y=0, width=wet_width, left=left + dry_width, color=color, edgecolor='black', height=0.2,
                    )
@@ -1982,12 +1983,12 @@ class Figure3_beta():
 
         # Optional: Add vertical line at 50% or labels
 
-        plt.tight_layout()
-        plt.show()
-        # outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
-        # T.mk_dir(outdir, force=True)
-        # ## save the figure
-        # plt.savefig(outdir + rf'{variable}.pdf')
+        # plt.tight_layout()
+        # plt.show()
+        outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
+        T.mk_dir(outdir, force=True)
+        ## save the figure
+        plt.savefig(outdir + rf'{variable}.pdf')
 
 
         pass
@@ -6033,18 +6034,20 @@ class Figure5():
 
         return df
 
+
 class multi_regression_anomaly():
     def __init__(self):
 
-        self.fdirX = result_root+rf'3mm\Multiregression\\input\\'
-        self.fdirY = result_root+rf'\3mm\Multiregression\\input\\'
+        self.fdirX = result_root+rf'3mm\Multiregression\\zscore\\'
+        self.fdirY = result_root+rf'\3mm\Multiregression\\zscore\\'
 
 
         self.y_var = ['composite_LAI_beta_growing_season']
-        self.xvar = [ 'CV_intraannual_rainfall_growing_season', 'fire_ecosystem_year_average',
-                      'sum_rainfall_growing_season','CV_intraannual_rainfall_ecosystem']
+        self.xvar = [ 'fire_ecosystem_year_average_zscore',
+                      'CV_intraannual_rainfall_ecosystem_year_zscore',
+                      'sum_rainfall_growing_season_zscore','CV_intraannual_rainfall_growing_season_zscore',]
 
-        self.multi_regression_result_dir = result_root + rf'\3mm\\Multiregression\\Multiregression_result\\'
+        self.multi_regression_result_dir = result_root + rf'\3mm\\Multiregression\\Multiregression_result\Sensitivity\\'
         T.mk_dir(self.multi_regression_result_dir, force=True)
 
         self.multi_regression_result_f = self.multi_regression_result_dir+f'{self.y_var[0]}.npy'
@@ -6055,18 +6058,20 @@ class multi_regression_anomaly():
 
         # step 1 build dataframe
 
-        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-
-        # # # step 2 cal correlation
-        self.cal_multi_regression_beta(df)
-
-        # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
+        # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
+        # #
+        # # # # # step 2 cal correlation
+        # self.cal_multi_regression_beta(df)
+        # #
+        # # # # step 3 plot
+        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
         ## step 4 convert m2/m2/ppm to %/100ppm
         # self.convert_CO2_sensitivity_unit()
 
         # step 5
-        self.calculate_trend_contribution()
+        # self.calculate_trend_contribution()
+        # self.statistic_contribution()
+        self.statistic_Sensitivity()
 
         pass
 
@@ -6347,31 +6352,31 @@ class multi_regression_anomaly():
         ## load the trend of the target variable
         ## load multi regression result
         ## calculate the trend contribution
-        trend_dir = result_root + rf'\trend_analysis\anomaly\OBS_extend\\'
+        trend_dir = result_root + rf'\3mm\Multiregression\Multiregression_result\Trend\\'
 
         selected_vairables_list = [
-            'CRU_trend',
-            'CO2_trend',
-            'tmax_trend',
-            'VPD_trend',
+            'fire_ecosystem_year_average',
+            'sum_rainfall_growing_season',
+            'CV_intraannual_rainfall_growing_season',
+            'CV_intraannual_rainfall_ecosystem_year',
         ]
 
         trend_dict = {}
         for variable in selected_vairables_list:
-            fpath = join(trend_dir, f'{variable}.npy')
-            array = np.load(fpath, allow_pickle=True)
+            fpath = join(trend_dir, f'{variable}.tif')
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
             array[array < -9999] = np.nan
             spatial_dict = D.spatial_arr_to_dic(array)
             for pix in tqdm(spatial_dict, desc=variable):
                 r, c = pix
-                if r < 120:
+                if r < 60:
                     continue
                 val = spatial_dict[pix]
                 if np.isnan(val):
                     continue
                 if not pix in trend_dict:
                     trend_dict[pix] = {}
-                key = variable.replace('_trend', '')
+                key = variable
                 trend_dict[pix][key] = spatial_dict[pix]
 
         f = self.multi_regression_result_f
@@ -6402,16 +6407,130 @@ class multi_regression_anomaly():
                 if not var_i in dic_i:
                     continue
                 val_multireg = dic_i[var_i]
+                if var_i not in trend_dict[pix]:
+                    continue
+
                 val_trend = trend_dict[pix][var_i]
                 val_contrib = val_multireg * val_trend
                 spatial_dic[pix] = val_contrib
-            arr_contrib = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(spatial_dic)
+            arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
             plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
             plt.colorbar()
             plt.title(var_i)
             plt.show()
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_contrib,
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib,
                                                    f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def statistic_contribution(self):
+        dff=result_root + rf'3mm\Multiregression\Multiregression_result\contribution\Dataframe\\contribution.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        df = df[df['composite_LAI_beta_trend_growing_season'] > 0]
+        df.dropna(inplace=True)
+
+        selected_vairables_list = [
+            'CV_intraannual_rainfall_ecosystem_year_composite_LAI_beta_senstivity',
+            'CV_intraannual_rainfall_growing_season_composite_LAI_beta_senstivity',
+            'fire_ecosystem_year_average_composite_LAI_beta_senstivity',
+            'sum_rainfall_growing_season_composite_LAI_beta_senstivity',
+        ]
+        result_stat_dict={}
+
+
+
+        for variable in selected_vairables_list:
+            values=df[variable].values
+            values=np.array(values)
+            values=values[values>-99]
+            values=values[values<99]
+            values_average=np.nanmean(values)
+            values_std=np.nanstd(values)
+            values_CI=values_std*1.96/np.sqrt(len(values))
+            result_stat_dict[variable]=[values_average,values_CI]
+
+        ## plot
+
+
+        for variable in selected_vairables_list:
+            values_average,values_CI=result_stat_dict[variable]
+            plt.bar(variable,values_average,yerr=values_CI, width=0.5)
+        plt.show()
+
+        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
+        #
+
+    def statistic_Sensitivity(self):
+        dff = result_root + rf'3mm\Multiregression\Multiregression_result\contribution\Dataframe\\contribution.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_beta_trend'] > 0]
+        df.dropna(inplace=True)
+
+        selected_vairables_list = [
+            'CV_intraannual_rainfall_ecosystem_year',
+            'sum_rainfall',
+            'fire',
+            'CV_intraannual_rainfall_growing_season',
+            # 'VPD',
+
+        ]
+        result_stat_dict = {}
+
+        for variable in selected_vairables_list:
+            values = df[variable].values
+            values = np.array(values)
+            values = values[values > -99]
+            values = values[values < 99]
+            values_average = np.nanmean(values)
+            values_std = np.nanstd(values)
+            values_CI = values_std * 1.96 / np.sqrt(len(values))
+            result_stat_dict[variable] = [values_average, values_CI]
+
+        ## plot
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        for variable in selected_vairables_list:
+            values_average, values_CI = result_stat_dict[variable]
+
+
+
+            bars = plt.bar(variable, values_average,  width=0.5)
+
+
+
+        # 美化坐标轴和标签
+        ax.set_ylabel('Effect Size', fontsize=14)
+        ax.axhline(0, color='black', linewidth=0.8)
+
+        ax.set_xticklabels(selected_vairables_list, rotation=20, fontsize=12)
+
+        ax.tick_params(axis='y', labelsize=12)
+
+        plt.tight_layout()
+        plt.show()
+
+        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
+        #
+
+
+
+
+
+
+
 
 
 class GAM():
@@ -6579,13 +6698,13 @@ def main():
 
     # Figure1().run()
     # Figure2().run()
-    # Figure3_beta().run()
+    Figure3_beta().run()
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
     # multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
-    multi_regression_anomaly().run()
+    # multi_regression_anomaly().run()
     # Figure5().run()
 
     # partial_correlation().run()

@@ -4132,15 +4132,17 @@ class moving_window():
         window_size = 15
 
 
-        fdir = rf'\3mm\extract_FVC_phenology_year\moving_window_extraction\\'
-        outdir = rf'\3mm\extract_FVC_phenology_year\\moving_window_min_max_anaysis\\'
+        fdir =result_root+ rf'\3mm\extract_FVC_phenology_year\moving_window_extraction\\'
+        outdir = result_root+rf'\3mm\extract_FVC_phenology_year\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if 'detrend' in f:
+                continue
 
 
             dic = T.load_npy(fdir + f)
 
-            slides = 32 - window_size+1   ## revise!!
+            slides = 36 - window_size+1   ## revise!!
             outf = outdir + f.split('.')[0] + f'_max.npy'
             print(outf)
 
@@ -4299,8 +4301,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_composite\\'
-        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_composite\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
