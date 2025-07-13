@@ -1444,9 +1444,9 @@ class PLOT_Climate_factors():
         temp_root = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\temp_root\\'
 
         model_list = [  'heavy_rainfall_days', 'rainfall_seasonality_all_year',
-                      'sum_rainfall',
+                      'sum_rainfall', 'VPD',
 
-                     'CV_intraannual_rainfall',]
+                   ]
 
         dic_name = {'pi_average': 'SM-T coupling',
                     'heavy_rainfall_days': 'Heavy rainfall days',
@@ -1454,7 +1454,7 @@ class PLOT_Climate_factors():
                     'sum_rainfall': 'Total rainfall',
                     'VOD_detrend_min': 'VOD_min',
                     'fire_ecosystem_year_average': 'Fire burn area',
-                    'VPD_max': 'VPD_max',
+                    'VPD': 'VPD',
                     'CV_intraannual_rainfall': 'CV_intraannual_rainfall_trend',
 
                     'Non tree vegetation': 'Non tree vegetation',
@@ -1503,7 +1503,7 @@ class PLOT_Climate_factors():
                        'sum_rainfall': -5,
                       'VOD_detrend_min': -0.005,
                       'fire_ecosystem_year_average': -1,
-                      'VPD_max': -0.01,
+                      'VPD': -0.01,
                       'Non tree vegetation': -0.5,
                       'CV_intraannual_rainfall': -0.1
 
@@ -1516,7 +1516,7 @@ class PLOT_Climate_factors():
                        'sum_rainfall': 5,
                       'VOD_detrend_min': 0.005,
                       'fire_ecosystem_year_average': 1,
-                      'VPD_max': 0.01,
+                      'VPD': 0.01,
                       'Non tree vegetation': 0.5,
                       'CV_intraannual_rainfall': 0.1}
 

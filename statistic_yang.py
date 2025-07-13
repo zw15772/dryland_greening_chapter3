@@ -1765,7 +1765,7 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'composite_LAI_beta'
+        self.y_variable = 'composite_LAI_CV_zscore'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
@@ -1773,7 +1773,7 @@ class SHAP_CV():
         T.mk_dir(self.this_class_png, force=True)
 
         # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
-        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window2.df'
+        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window_zscore.df'
 
         self.variable_list_rt()
         self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -1804,9 +1804,9 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        # self.pdp_shap()
+        self.pdp_shap()
         # # # # # #
-        # self.plot_pdp_shap()
+        self.plot_pdp_shap()
         # self.plot_bar_landcover()
         # self.shapely_df_generation()
         # self.plot_bar_shap()
@@ -1814,7 +1814,7 @@ class SHAP_CV():
         # self.plot_pdp_shap_density_cloud()
         # self.plot_pdp_shap_density_cloud_individual()  ## paper use
         # self.plot_pdp_shap_density_cloud_individual_test()
-        self.plot_relative_importance()
+        # self.plot_relative_importance()
         # self.plot_pdp_shap_all_models_SI()
         # self.plot_pdp_shap_all_models_main()
         # self.plot_heatmap_ranking()
@@ -1825,7 +1825,7 @@ class SHAP_CV():
         #
         # self.variable_contributions()
         # self.plot_dominant_factors_bar()
-        self.plot_robinson()
+        # self.plot_robinson()
         # self.max_contributions()
         # self.disentangle()
 
@@ -1989,27 +1989,29 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
+            'composite_LAI_beta',
 
-            'VPD',
-            'Burn_area_mean',
+            # 'VPD_zscore',
+         # 'Burn_area_mean',
+            'detrended_sum_rainfall_CV_zscore',
 
 
-            # 'FVC_max',
-            'FVC_relative_change_trend',
+            'FVC_max_zscore',
+            # 'FVC_relative_change_trend',
             # 'SM_average',
             # 'Short_vegetation_change_1982-2016',
             # 'tree_vegetation_mean',
 
-            # 'Non tree vegetation_trend',
+            # 'Non_tree_vegetation_trend',
 
             # 'rainfall_frenquency',
             # 'rainfall_intensity',
             # 'rainfall_seasonality_all_year_trend',
             # 'CV_intraannual_rainfall',
             # 'rainfall_seasonality_all_year_growing_season',
-             'rainfall_seasonality_all_year',
+            # 'rainfall_seasonality_all_year',
 
-            #
+            'CV_intraannual_rainfall_ecosystem_year_zscore',
             # 'pi_average',
 
 
@@ -2021,12 +2023,12 @@ class SHAP_CV():
             # 'sum_rainfall_growing_season',
             # 'sum_rainfall',
 
-             # 'Aridity',
-            'heat_event_frenquency',
+             'Aridity',
+            'heat_event_frenquency_zscore',
             # 'dry_spell',
-            'heavy_rainfall_days',
+            # 'heavy_rainfall_days',
             # 'Tmax_trend',
-            # 'sand',
+            'sand',
             # 'soc',
             # 'rainfall_intensity_growing_season',
            #
@@ -2034,7 +2036,7 @@ class SHAP_CV():
            #  #
             # 'rainfall_seasonality_all_year',
               #
-              # 'fire_ecosystem_year',
+              'fire_ecosystem_year_average_zscore',
             # 'rooting_depth_05',
 
 
@@ -2270,7 +2272,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig2')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_zscore')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2281,7 +2283,7 @@ class SHAP_CV():
         df = T.load_df(dff)
         df = self.df_clean(df)
 
-        df = df[df['composite_LAI_beta_mean_trend'] > 0]
+        # df = df[df['composite_LAI_CV_trend'] > 0]
         # df = df[df['sum_rainfall_p_value'] < 0.05]
         # df = df[df['wet_dry'] == 'drying']
         # df = df[df['wet_dry'] == 'wetting']
@@ -2752,7 +2754,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_ALL_sig2', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_zscore', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2844,7 +2846,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-6,6)
+            plt.ylim(-.5,.5)
 
         plt.suptitle(self.y_variable)
 
@@ -3258,7 +3260,7 @@ class SHAP_CV():
                 'sum_rainfall':[-6,6],
                 'VOD_detrend_min':[-3,3],
                 'Aridity':[-1,1],
-                'FVC_relative_change_trend':[-1,2],
+                'FVC_relative_change_trend':[-2,2],
                 'heat_event_frenquency':[-1.5,1.5],
 
                 'pi_average_trend': [-0.5,0.5],
@@ -4075,9 +4077,9 @@ class SHAP_CV():
                   }
 
         color_dic = {'Fire burn area': 'red',
-                     'Trends in vegetation cover': '#bb3dc9',
+                     'Trends in vegetation cover': 'deepskyblue',
                      'VPD': '#ff6f00',
-                     'heat_event_frenquency': 'orange',
+                     'heat_event_frenquency': '#bb3dc9',
                      'Heavy rainfall days': '#98e16e',
                      'Rainfall seasonality': '#455dca',
 
@@ -4112,7 +4114,12 @@ class SHAP_CV():
         plt.xticks(rotation=45, ha='right')
         plt.ylabel('Percentage')
         plt.tight_layout()
-        plt.show()
+        # plt.show()
+        #save pdf
+        outdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig2')
+        T.mk_dir(outdir, force=True)
+        plt.savefig(join(outdir, 'percentage_dominant_factors.pdf'),dpi=300, bbox_inches='tight')
+
 
         ## plot
 
@@ -4129,11 +4136,13 @@ class SHAP_CV():
 
 
         fpath = join(fdir_trend, 'max_flag_only.tif')
+        arr = DIC_and_TIF().spatial_tif_to_arr(fpath)
+        # plt.imshow(arr, interpolation='nearest',cmap='jet')
+        # plt.colorbar()
+        # plt.show()
 
         plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-        m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=7, is_discrete=True, colormap_n=7,)
-
-
+        m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=0.5, vmax=6.5, is_discrete=True, colormap_n=7,)
 
         # plt.show()
         outf = join(outdir, 'Robinson.pdf')
@@ -4403,9 +4412,9 @@ class Plot_Robinson:
         '''
 
         color_list = ['red',
-                     '#bb3dc9',
+                     'deepskyblue',
                      '#ff6f00',
-                     'orange',
+                     '#bb3dc9',
                      '#98e16e',
                       '#455dca',
                      ]

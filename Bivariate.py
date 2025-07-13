@@ -1004,10 +1004,11 @@ class Figure1():
         # self.bivariate_map()
         # self.Aridity_CV()
         # self.Aridity_beta()
-        self.figure1f()
+        # self.figure1f()
 
         # self.Figure1c_robinson()
         # self.heatmap_LAImin_max_CV_Figure1d()
+        self.statistical_analysis()
 
 
 
@@ -1368,6 +1369,69 @@ class Figure1():
         BBOX[-90,-180,90,180]],
     ID["EPSG",4326]]'''
         return wkt
+
+    def statistical_analysis(self):  #
+
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+
+        T.print_head_n(df)
+        x_var = 'composite_LAI_detrend_relative_change_min_trend'
+        y_var = 'composite_LAI_detrend_relative_change_max_trend'
+        ## x_var >0 and y_var >0==1;  2 x_var>0 and y_var<0 3 x_var<0 and y_var<0 4 x_var<0 and y_var>0
+        result_list=[]
+        label_list=[]
+
+
+        df_pos_pos=df[(df[x_var]>0)&(df[y_var]>0)]
+
+        df_pos_neg=df[(df[x_var]>0)&(df[y_var]<0)]
+        df_neg_pos=df[(df[x_var]<0)&(df[y_var]>0)]
+        df_neg_neg=df[(df[x_var]<0)&(df[y_var]<0)]
+        percentage_pos_pos=len(df_pos_pos)/len(df)*100
+        result_list.append(percentage_pos_pos)
+        label_list.append('++')
+        percentage_pos_neg=len(df_pos_neg)/len(df)*100
+        result_list.append(percentage_pos_neg)
+        label_list.append('+-')
+        percentage_neg_pos=len(df_neg_pos)/len(df)*100
+        result_list.append(percentage_neg_pos)
+        label_list.append('-+')
+        percentage_neg_neg=len(df_neg_neg)/len(df)*100
+        result_list.append(percentage_neg_neg)
+        label_list.append('--')
+
+        # upper_left_color = (193,92,156)
+        # upper_right_color =(112, 196, 181)
+        # lower_left_color = (237, 125, 49)
+        # lower_right_color = (0, 0, 110)
+        # center_color = (240, 240, 240)
+        color_list=[   (112, 196, 181),
+            (0, 0, 110),
+
+            (193, 92, 156),
+
+                    (237, 125, 49)]
+        ## rgb_to_hex
+        print(result_list);exit()
+        color_list = ['#{:02x}{:02x}{:02x}'.format(r, g, b) for r, g, b in color_list]
+        fig = plt.figure(figsize=(3, 3))
+
+
+        for i in range(len(result_list)):
+            plt.bar(label_list[i],result_list[i],color=color_list[i],width=0.7,alpha=0.8)
+        plt.ylabel('Percentage (%)')
+        plt.tight_layout()
+        # plt.show()
+        ## save figure
+        plt.savefig(rf'D:\Project3\Result\3mm\extract_composite_phenology_year\bivariate\Figure1d.pdf',dpi=600,bbox_inches='tight')
+
+
+
+
+
 
 
 
@@ -1896,7 +1960,7 @@ class Figure3_beta():
                 wet_ratio = wet_count / len(df_i) * 100
                 dry_ratio = dry_count / len(df_i) * 100
                 wet_dry_ratio[i] = (wet_ratio, dry_ratio)
-        # pprint(dic);exit()
+        pprint(dic);exit()
         # pprint(wet_dry_ratio);exit()
         ## I want to add new column when df[df[f'CV_rainfall_beta_LAI_{variable}'] == 3] and df[df[f'wet_dry'] == 'drying']
         ## give this column a name is extraction
@@ -2372,7 +2436,8 @@ class Figure4:
 
     def run(self):
         # self.check_df_attributes()
-        self.plot_X_Y()
+        # self.plot_X_Y()
+        self.bivariate_map()
         pass
 
 
@@ -2397,6 +2462,89 @@ class Figure4:
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+    def bivariate_map(self): ## this plot for VPD and heavy rainfall days vs beta
+        import xymap
+
+
+        fdir =result_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\bivariate\\'
+
+        outdir =result_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\bivariate\\'
+
+        T.mkdir(outdir)
+
+        outtif = join(outdir,'beta_VPD.tif')
+        # outtif = join(outdir, 'LAImin_LAImax.tif')
+
+        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath1 = join(fdir,'composite_LAI_beta_trend.tif')
+        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath2 = join(fdir,'heavy_rainfall_days_trend.tif')
+
+        #1
+        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
+        #2
+        tif1_label, tif2_label = 'composite_LAI_beta_trend','VPD_trend'
+
+        #1
+        # min1, max1 = -1, 1
+        # min2, max2 = -1, 1
+
+        #2
+        min1, max1 = -.5, .5
+        min2, max2 = -.01, .01
+
+        arr1 = ToRaster().raster2array(fpath1)[0]
+        arr2 = ToRaster().raster2array(fpath2)[0]
+
+        arr1[arr1<-9999] = np.nan
+        arr2[arr2<-9999] = np.nan
+
+        arr1_flattened = arr1.flatten()
+        arr2_flattened = arr2.flatten()
+
+
+        # plt.hist(arr1_flattened,bins=100)
+        # plt.title('arr1')
+        # plt.figure()
+        # plt.hist(arr2_flattened,bins=100)
+        # plt.title('arr2')
+        # plt.show()
+
+        # choice 1
+        # upper_left_color = (193,92,156)
+        # upper_right_color =(112, 196, 181)
+        # lower_left_color = (237, 125, 49)
+        # lower_right_color = (0, 0, 110)
+        # center_color = (240, 240, 240)
+
+        ## CV greening option
+
+        upper_left_color = (194, 0, 120)
+        upper_right_color = (0,170,237)
+        lower_left_color = (233, 55, 43)
+        # lower_right_color = (160, 108, 168)
+        lower_right_color = (234, 233, 46)
+        center_color = (240, 240, 240)
+
+
+        xymap.Bivariate_plot_1(res = 2,
+                         alpha = 255,
+                         upper_left_color = upper_left_color, #
+                         upper_right_color = upper_right_color, #
+                         lower_left_color = lower_left_color, #
+                         lower_right_color = lower_right_color, #
+                         center_color = center_color).plot_bivariate(
+                                                                    fpath1, fpath2,
+                                                                    tif1_label, tif2_label,
+                                                                    min1, max1,
+                                                                    min2, max2,
+                                                                    outtif,
+                                                                    n_x = 5, n_y = 5
+                                                                    )
+
+        T.open_path_and_file(outdir)
+
     def plot_X_Y(self):
         dff=result_root+rf'3mm\SHAP_beta\Dataframe\\Trend.df'
         # dff=result_root+rf'\3mm\SHAP_beta\Dataframe\\moving_window.df'
@@ -3171,7 +3319,7 @@ class Figure2():
             color_array_i = []
             for col in row:
                 color = self.color_dict[col]
-                rgb_color = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+                rgb_color = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)  ### convert hex to rgb
                 color_array_i.append(rgb_color)
             color_array.append(color_array_i)
         color_array = np.array(color_array)[::-1]

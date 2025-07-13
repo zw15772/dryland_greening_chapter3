@@ -4136,14 +4136,13 @@ class moving_window():
         outdir = result_root+rf'\3mm\extract_FVC_phenology_year\\moving_window_min_max_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if 'detrend' in f:
-                continue
+
 
 
             dic = T.load_npy(fdir + f)
 
             slides = 36 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_max.npy'
+            outf = outdir + f.split('.')[0] + f'_min.npy'
             print(outf)
 
             trend_dic = {}
@@ -4162,7 +4161,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<18:
+                    if len(time_series_all)<22:
                         continue
 
 
@@ -4172,7 +4171,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmax(time_series)
+                    average=np.nanmin(time_series)
                     # print(average)
 
                     trend_list.append(average)
@@ -4185,16 +4184,16 @@ class moving_window():
 
     def moving_window_std_anaysis(self):
         window_size=15
-        fdir = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\\moving_window_min_max_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\\moving_window_mean_std_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'LAI4g_detrend' in f:
-                continue
+            # if not 'LAI4g_detrend' in f:
+            #     continue
 
             dic = T.load_npy(fdir + f)
             slides = 38-window_size+1
-            outf = outdir + f.split('.')[0] + f'_std.npy'
+            outf = outdir + f.split('.')[0] + f'_mean.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -4225,7 +4224,8 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    cv=np.nanstd(time_series)
+                    # cv=np.nanstd(time_series)
+                    cv = np.nanmean(time_series)
                     trend_list.append(cv)
 
                 trend_dic[pix]=trend_list
@@ -4309,7 +4309,6 @@ class moving_window():
 
             if not f.endswith('.npy'):
                 continue
-
 
 
             # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',

@@ -99,10 +99,10 @@ class Data_processing_2:
 
         # self.extract_dryland_tiff()
 
-        # self.tif_to_dic()
+        self.tif_to_dic()
         # self.interpolate_VCF()
         # self.interpolation()
-        self.mean()
+        # self.mean()
         # self.zscore()
         # self.composite_LAI()
 
@@ -570,8 +570,8 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\drylang_tiff\\'
-        outdir=rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\dic_05\\'
+        fdir_all = rf'D:\Project3\Data\ESA_CCI_LC_tif05\\'
+        outdir=rf'D:\Project3\Data\ESA_CCI_LC_tif05\\dic_05\\'
         T.mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
@@ -646,13 +646,29 @@ class Data_processing_2:
                 temp_dic = {}
         np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
     def mean(self):
-        f=result_root+rf'\3mm\extract_FVC_phenology_year\\FVC.npy'
-        dic=T.load_npy(f)
+        f_mean=result_root+rf'\3mm\extract_FVC_phenology_year\\FVC.npy'
+        f_trend=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_max_trend.tif'
+        dic_mean=T.load_npy(f_mean)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend)
+        dic_trend=DIC_and_TIF().spatial_arr_to_dic(arr)
         result_dic={}
-        for pix in dic:
-            val=dic[pix]['growing_season']
-            result_dic[pix]=np.nanmean(val)
-        np.save(result_root+rf'\3mm\extract_FVC_phenology_year\\FVC_mean.npy',result_dic)
+        for pix in dic_mean:
+            if pix not in dic_trend:
+                continue
+            val=dic_mean[pix]['growing_season']
+            val_mean=np.nanmean(val)
+            val_trend=dic_trend[pix]
+            if np.isnan(val_mean) or np.isnan(val_trend):
+                continue
+            if val_mean==0:
+                continue
+            relative_trend=val_trend/val_mean *100
+
+            result_dic[pix]=relative_trend
+        outf=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_relative_trend.tif'
+        array=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
+        DIC_and_TIF().arr_to_tif(array, outf)
+        np.save(result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_relative_trend.npy',result_dic)
 
 
         pass
@@ -661,13 +677,16 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'\3mm\Multiregression\input\\'
-        outdir = result_root + rf'\3mm\Multiregression\\zscore\\'
+        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\\'
+        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
+
+
+
 
 
 
@@ -709,23 +728,23 @@ class Data_processing_2:
                 zscore_dic[pix] = zscore
 
 
-                # plt.plot(time_series)
+                plt.plot(time_series)
                 # plt.legend(['raw'])
                 # plt.show()
-                #
-                # plt.plot(zscore)
+
+                plt.plot(zscore)
                 # plt.legend(['zscore'])
-                # # plt.legend(['anomaly','relative_change'])
+                # plt.legend(['raw','zscore'])
                 # plt.show()
 
                 ## save
             np.save(outf, zscore_dic)
 
     def composite_LAI(self):
-        infdir=result_root + rf'\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\\'
-        f_1=infdir+rf'multi_regression_result_detrend_growing_season_GLOBMAP_LAI\npy_time_series\sum_rainfall_detrend.npy'
-        f_2=infdir+rf'multi_regression_result_detrend_growing_season_LAI4g\npy_time_series\\sum_rainfall_detrend.npy'
-        f_3=infdir+rf'\multi_regression_result_detrend_growing_season_SNU_LAI\npy_time_series\sum_rainfall_detrend.npy'
+        # infdir=result_root + rf'\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\\'
+        f_1=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\LAI4g_detrend_max_zscore.npy'
+        f_2=rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\detrended_SNU_LAI_max_zscore.npy'
+        f_3=rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\GLOBMAP_LAI_detrend_max_raw_zscore.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -762,12 +781,12 @@ class Data_processing_2:
             plt.plot(value2,color='green')
             plt.plot(value3,color='orange')
             plt.plot(average_val,color='red')
-            plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
-        outdir=infdir+rf'\multi_regression_result_detrend_growing_season_composite\\'
+        outdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\'
         Tools().mk_dir(outdir,force=True)
 
-        np.save(outdir+'composite_LAI_beta.npy',average_dic)
+        np.save(outdir+'composite_LAImax_zscore.npy',average_dic)
 
         pass
     def interpolate_VCF(self):
@@ -961,7 +980,7 @@ class build_moving_window_dataframe():
         self.threshold = '1mm'
         self.this_class_arr = (rf'D:\Project3\Result\3mm\SHAP_beta\\Dataframe\\\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window2.df'
+        self.dff = self.this_class_arr + rf'moving_window_zscore.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -970,12 +989,12 @@ class build_moving_window_dataframe():
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         # df=self.add_window_to_df(df)
-        df=self.add_interaction_to_df(df)
+        # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
         # self.add_short_vegetation_mean(df)
         # df=self.add_products_consistency_to_df(df)
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         # df=self.add_columns(df)
         # df=self.drop_field_df(df)
         # self.show_field()
@@ -1125,19 +1144,21 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\'
+        fdir=result_root+rf'\\3mm\Multiregression\zscore\\'
 
         print(fdir)
         print(self.dff)
-        variable_list=['CV_intraannual_rainfall_ecosystem_year_zscore','CV_intraannual_rainfall_growing_season_zscore'
+        variable_list=['CV_intraannual_rainfall_ecosystem_year_zscore',
                        
                        'heat_event_frenquency_zscore',
         'VPD_zscore',
         'dry_spell_growing_season_zscore',
-                  'sum_rainfall_growing_season_zscore' ,'sum_rainfall_ecosystem_year_zscore'  ]
+                  'sum_rainfall_ecosystem_year_zscore'  ]
 
 
         for f in os.listdir(fdir):
+            if not 'CV_intraannual_rainfall_ecosystem_year_zscore' in f:
+                continue
 
 
 
@@ -1204,9 +1225,9 @@ class build_moving_window_dataframe():
                     NDVI_list.append(np.nan)
                     continue
 
-                # v1= vals[y-0]
-                # NDVI_list.append(v1)
-                #
+                v1= vals[y-0]
+                NDVI_list.append(v1)
+
 
 
             df[f'{variable}'] = NDVI_list
@@ -1237,7 +1258,7 @@ class build_moving_window_dataframe():
     def add_interaction_to_df(self,df):
         # T.print_head_n(df);exit()
 
-        df['FVC_relative_change_trend']=df['FVC_max_trend']/df['FVC_mean']*100
+        df['beta_CVrainfall_interaction']=df['composite_LAI_beta']*df['detrended_sum_rainfall_CV_zscore']
 
         return df
 
@@ -1377,14 +1398,7 @@ class build_moving_window_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'rainfall_intensity_zscore_average_zscore': 'rainfall_intensity_zscore_average',
-                                'heavy_rainfall_days_zscore_average_zscore': 'heavy_rainfall_days_zscore_average',
-
-                                'dry_spell_zscore_average_zscore': 'dry_spell_zscore_average',
-                                'rainfall_frenquency_zscore_average_zscore': 'rainfall_frenquency_zscore_average',
-                                'rainfall_intensity_zscore_average_zscore': 'rainfall_intensity_zscore_average',
-                                'rainfall_seasonality_all_year_zscore_average_zscore': 'rainfall_seasonality_all_year_zscore_average',
-                                'sum_rainfall_zscore_average_zscore': 'sum_rainfall_zscore_average',
+        df = df.rename(columns={'Non tree vegetation_trend': 'Non_tree_vegetation_trend',
 
                                 }
 
@@ -1432,9 +1446,9 @@ class build_moving_window_dataframe():
 
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'multi_regression_moving_window\window15_anomaly\\TIFF\\'
+        fdir=result_root+rf'\\3mm\extract_composite_phenology_year\trend\\'
         for f in os.listdir(fdir):
-            if not 'CO2' in f:
+            if not 'composite_LAI_CV' in f:
                 continue
             if not f.endswith('.tif'):
                 continue
@@ -1442,7 +1456,7 @@ class build_moving_window_dataframe():
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
             array = np.array(array, dtype=float)
             val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
-            f_name = f.split('.')[0]+'_LAI4g'
+            f_name = f.split('.')[0]
             print(f_name)
             val_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -4729,6 +4743,13 @@ class Plot_Robinson:
         #     '#c2a5cf',
         #     '#7b3294',
         # ]
+        # std_list=[ '#e66101',
+        #            '#fdb863',
+        #            '#f7f7f7',
+        #            '#b2abd2',
+        #            '#5e3c99',
+        #
+        # ]
         # Blue represents high values, and red represents low values.
         if ax == None:
             # plt.figure(figsize=(10, 10))
@@ -7313,11 +7334,11 @@ class TRENDY_CV:
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
         # self.TRENDY_ensemble()
-        # self.plot_robinson()
+        self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        self.plot_CV_trend_among_models()
+        # self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -7741,9 +7762,9 @@ class TRENDY_CV:
     def plot_robinson(self):
 
         # fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        fdir_trend = result_root+rf'\3mm\product_consistency\\CV\\'
-        temp_root = result_root+rf'3mm\product_consistency\CV\\trend\\\\temp_plot\\'
-        outdir = result_root+rf'\\3mm\product_consistency\\Robinson\\'
+        fdir_trend = result_root+rf'3mm\extract_composite_phenology_year\trend\\'
+        temp_root = result_root+rf'3mm\extract_composite_phenology_year\temp_root\\'
+        outdir = result_root+rf'\\3mm\extract_composite_phenology_year\\plot_robinson\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -7751,18 +7772,18 @@ class TRENDY_CV:
 
             if not f.endswith('.tif'):
                 continue
-            if not 'composite_LAI_CV' in f:
+            if not 'mean' in f:
                 continue
 
-            fname = 'composite_LAI_CV_trend'
-            fname_p_value = 'composite_LAI_CV_p_value'
+            fname = 'composite_LAI_mean_trend'
+            fname_p_value = 'composite_LAI_mean_p_value'
             print(fname_p_value)
             fpath = fdir_trend+fname+'.tif'
             p_value_f = fdir_trend + fname_p_value + '.tif'
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=9,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-0.01, vmax=0.01, is_discrete=True, colormap_n=9,)
 
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
             # plt.title(f'{fname}')
@@ -8546,9 +8567,9 @@ class SM_Tcoupling():
 
 
 def main():
-    # Data_processing_2().run()
+    Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
