@@ -3190,9 +3190,9 @@ class extract_LAI_phenology():
         pass
 
     def extract_phenology_LAI_mean(self):  ## extract LAI average
-        fdir =rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\extract_phenology_monthly_variables_SM\\'
+        fdir =rf'D:\Project3\Data\Fire\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\GLEAM_SM\\'
+        outdir_CV = result_root+rf'\3mm\extract_fire_phenology_year\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -3227,6 +3227,7 @@ class extract_LAI_phenology():
                 val = np.array(val)
 
                 sum_growing_season = np.nanmean(val)
+                # sum_growing_season = np.nansum(val)
                 growing_season_mean_list.append(sum_growing_season)
 
             for val in vals_non_growing_season:
@@ -3241,7 +3242,7 @@ class extract_LAI_phenology():
                                'growing_season': growing_season_mean_list,
                                'non_growing_season': non_growing_season_mean_list}
 
-        outf = outdir_CV + 'VOD.npy'
+        outf = outdir_CV + 'Fire.npy'
 
         np.save(outf, result_dic)
 
@@ -3777,7 +3778,7 @@ class moving_window():
         # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
-        # self.moving_window_CV_extraction_anaysis_rainfall()
+        self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
@@ -3790,22 +3791,22 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\\'
+        fdir_all =result_root+ rf'\3mm\extract_fire_phenology_year\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'3mm\glass_fvc_avhrr\\moving_window_extraction\\'
+        outdir = self.result_root + rf'3mm\extract_fire_phenology_year\\moving_window_extraction\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
 
             if not f.endswith('.npy'):
                 continue
-            # if not '_detrend' in f:
-            #     continue
+            if not 'sum' in f:
+                continue
             #
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -3823,7 +3824,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]['ecosystem_year']
 
 
                 time_series = np.array(time_series)
@@ -3947,12 +3948,12 @@ class moving_window():
         growing_season_mode_list = ['ecosystem_year', ]
         for mode in growing_season_mode_list:
 
-            fdir = rf'E:\Project3\Result\5mm\CRU_JRA\moving_window_extraction_trend\\{mode}\\'
-            outdir = rf'E:\Project3\Result\5mm\CRU_JRA\\moving_window_average_anaysis_trend\\{mode}\\'
+            fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\{mode}\\'
+            outdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\{mode}\\'
             T.mk_dir(outdir, force=True)
 
             for f in os.listdir(fdir):
-                if not 'detrend' in f:
+                if not 'VPD_detrend' in f:
                     continue
 
 
@@ -4132,8 +4133,8 @@ class moving_window():
         window_size = 15
 
 
-        fdir =result_root+ rf'\3mm\extract_FVC_phenology_year\moving_window_extraction\\'
-        outdir = result_root+rf'\3mm\extract_FVC_phenology_year\\moving_window_min_max_anaysis\\'
+        fdir =result_root+ rf'3mm\extract_fire_phenology_year\moving_window_extraction\\'
+        outdir = result_root+rf'\3mm\extract_fire_phenology_year\\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -4142,7 +4143,7 @@ class moving_window():
             dic = T.load_npy(fdir + f)
 
             slides = 36 - window_size+1   ## revise!!
-            outf = outdir + f.split('.')[0] + f'_min.npy'
+            outf = outdir + f.split('.')[0] + f'_max.npy'
             print(outf)
 
             trend_dic = {}
@@ -4171,7 +4172,7 @@ class moving_window():
                     #     continue
                     # print(len(time_series))
                     ##average
-                    average=np.nanmin(time_series)
+                    average=np.nanmax(time_series)
                     # print(average)
 
                     trend_list.append(average)
@@ -4301,11 +4302,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\\trend\\'
+        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
+        outdir =result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'VPD_detrend_CV' in f:
+                continue
 
             if not f.endswith('.npy'):
                 continue
@@ -4324,6 +4327,7 @@ class moving_window():
             if not f.endswith('.npy'):
                 continue
             dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            # dic=T.load_npy_dir(fdir)
 
             trend_dic = {}
             p_value_dic = {}

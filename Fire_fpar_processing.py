@@ -340,6 +340,179 @@ class download_NOAA_AVHRR():
                     value_list.append(value_i)
             DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
 
+class processing_CCI_landcover_change:
+    def __init__(self):
+        pass
+
+    def run(self):
+        # self.tif_to_dic()
+        self.relative_change()
+        pass
+
+
+    def CCI_landcover_preprocess(self):
+        fdir_all=data_root+'\ESA_CCI_LC_tif05\\'
+        dic_composite={'SHRUBS-BD':'shrubs',
+                       'SHRUBS-BE':'shrubs',
+                       'SHRUBS-ND':'shrubs',
+                       'SHRUBS-NE':'shrubs',
+                       'GRASS-MAN':'grass',
+                       'GRASS-NAT':'grass',
+                       'TREES-BD':'trees',
+                       'TREES-BE':'trees',
+                       'TREES-ND':'trees',
+                       'TREES-NE':'trees',
+                       'BARE':'bare',
+                       'WATER':'water',
+                       'BUILT':'built',
+
+
+                       }
+
+
+        ## each landcover group I want to append and sum them
+
+        for fdir in os.listdir(fdir_all):
+            outdir=join(fdir_all,fdir,'composite')
+            T.mk_dir(outdir,force=True)
+            shrubslist = []
+            grasslist = []
+            trees_list = []
+            water_list=[]
+            built_list=[]
+            bare_list=[]
+
+            results_class_dict={}
+            for f in os.listdir(fdir_all+fdir):
+                if not f.endswith('.tif'):
+                    continue
+                if 'LAND' in f:
+                    continue
+                if 'SNOWICE' in f:
+                    continue
+
+                fpath=join(fdir_all+fdir,f)
+                landcover=f.split('_')[-1].split('.')[0]
+                landcover=dic_composite[landcover]
+
+                if landcover=='shrubs':
+                    shrubslist.append(fpath)
+                elif landcover=='grass':
+                    grasslist.append(fpath)
+                elif landcover=='trees':
+                    trees_list.append(fpath)
+                elif landcover=='water':
+                    water_list.append(fpath)
+                elif landcover=='built':
+                    built_list.append(fpath)
+                elif landcover=='bare':
+                    bare_list.append(fpath)
+                else:
+                    raise
+            results_class_dict['shrubs'] = shrubslist
+            results_class_dict['grass'] = grasslist
+            results_class_dict['trees'] = trees_list
+            results_class_dict['water'] = water_list
+            results_class_dict['built'] = built_list
+            results_class_dict['bare'] = bare_list
+
+            for key in results_class_dict.keys():
+                array_list=[]
+
+                outf = join(outdir, key + '.tif')
+                for f in results_class_dict[key]:
+                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+                    array_list.append(array)
+                array_list=np.array(array_list)
+                array_sum=np.sum(array_list,axis=0)
+                DIC_and_TIF().arr_to_tif(array_sum, outf)
+
+
+    def tif_to_dic(self):
+        fdir=rf'D:\Project3\Data\ESA_CCI_LC_tif05\\'
+        outdir = rf'D:\Project3\Data\ESA_CCI_LC_dic_dict\\'
+        T.mk_dir(outdir)
+        veg_types = ["grass", "trees", "shrubs"]
+        years = range(1993, 2021)
+
+        # 初始化结果字典
+        veg_dict = {veg: [] for veg in veg_types}
+
+        # 拼接每个植被类型的时间序列
+        for veg in veg_types:
+            print(veg)
+            fpath_list=[]
+            for year in years:
+                file_path = os.path.join(fdir, str(year),'composite', f"{veg}.tif")
+                # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(file_path)
+                fpath_list.append(file_path)
+            # print(fpath_list);exit()
+            outdir_i = join(outdir,veg)
+            T.mk_dir(outdir_i)
+            spatial_dict = self.compose_tif_list(fpath_list, method='array')
+            T.save_distributed_perpix_dic(spatial_dict, outdir_i)
+
+        ## 保存结果字典
+
+    pass
+    def relative_change(self):
+        fdir_all = rf'D:\Project3\Data\ESA_CCI_LC_tif05\DIC\\'
+        outdir =result_root + rf'3mm\ESA_CCI_LC\\'
+        T.mk_dir(outdir)
+        result_dic={}
+        for fdir in os.listdir(fdir_all):
+            fdir_i = join(fdir_all,fdir)
+            outdir_i = join(outdir,fdir)
+            dic=T.load_npy_dir(fdir_i)
+            for pix in dic:
+                vals=dic[pix]
+                vals=np.array(vals)
+                if vals[0]==0:
+                    continue
+                relative_changes=(vals[0]-vals[-1])/vals[0]*100
+                # print(relative_changes)
+                result_dic[pix]=relative_changes
+
+            T.save_npy(result_dic, outdir_i)
+
+            pass
+
+
+
+
+        pass
+    def compose_tif_list(self, flist, less_than=-9999, method='mean'):
+        # less_than -9999, mask as np.nan
+        if len(flist) == 0:
+            return
+        tif_template = flist[0]
+        void_dic = DIC_and_TIF(tif_template=tif_template).void_spatial_dic()
+        for f in tqdm(flist, desc='transforming...'):
+            if not f.endswith('.tif'):
+                continue
+            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
+            for r in range(len(array)):
+                for c in range(len(array[0])):
+                    pix = (r, c)
+                    val = array[r][c]
+                    void_dic[pix].append(val)
+        spatial_dic = {}
+        for pix in tqdm(void_dic, desc='calculating mean...'):
+            vals = void_dic[pix]
+            vals = np.array(vals, dtype=float)
+            vals[vals < less_than] = np.nan
+            if method == 'mean':
+                compose_val = np.nanmean(vals)
+            elif method == 'max':
+                compose_val = np.nanmax(vals)
+            elif method == 'sum':
+                compose_val = np.nansum(vals)
+            elif method == 'array':
+                compose_val = vals
+            else:
+                raise UserWarning(f'{method} is invalid, should be "mean" "max" or "sum" or "array"')
+            spatial_dic[pix] = compose_val
+        return spatial_dic
 
 
 class Data_processing:
@@ -1604,7 +1777,8 @@ def main():
 
     # download_fpar().run()
     # download_NOAA_AVHRR().run()
-    Data_processing().run()
+    # Data_processing().run()
+    processing_CCI().run()
     # moving_window().run()
 
 

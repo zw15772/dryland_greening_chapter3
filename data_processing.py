@@ -13592,45 +13592,42 @@ class check_data():
     def plot_sptial(self):
         ##['CABLE-POP_S2_lai',
 
-        fdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
+        fdir = rf'C:\Users\wenzhang1\Desktop\MCD_15A3H_DIC\\'
+        # for f in os.listdir(fdir):
+        #     if not f.endswith('.npy'):
+        #         continue
+        #
+        #     dic=T.load_npy(fdir+f)
+        dic={}
+
         for f in os.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-            if not 'SDGVM_S2_lai_detrend_CV' in f:
+            if not f.endswith(('.npy')):
                 continue
 
+            dic_i=T.load_npy(fdir+f)
+            dic.update(dic_i)
 
+        len_dic={}
+        average_={}
 
-            dic=T.load_npy(fdir+f)
+        for pix in dic:
+            r,c=pix
+            # (r,c)=(817,444)
+            # if not r==444:
+            #     continue
+            # if not c==817:
+            #     continue
+            # if r<480:
+            #     continue
+            vals=dic[pix]
+            average_[pix]=np.nanmean(vals)
+            len_dic[pix]=len(vals)
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(len_dic)
+        plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=23)
+        plt.title(f)
+        plt.show()
 
-            # for f in os.listdir(fdir):
-            #     if not f.endswith(('.npy')):
-            #         continue
             #
-            #     dic_i=T.load_npy(fdir+f)
-            #     dic.update(dic_i)
-
-            len_dic={}
-            average_={}
-
-            for pix in dic:
-                r,c=pix
-                # (r,c)=(817,444)
-                # if not r==444:
-                #     continue
-                # if not c==817:
-                #     continue
-                # if r<480:
-                #     continue
-                vals=dic[pix]
-                average_[pix]=np.nanmean(vals)
-                len_dic[pix]=len(vals)
-            arr=DIC_and_TIF().pix_dic_to_spatial_arr(len_dic)
-            plt.imshow(arr,cmap='RdBu',interpolation='nearest',vmin=0,vmax=23)
-            plt.title(f)
-            plt.show()
-
-                #
 
 
     def pixel_inspection(self):
@@ -15257,7 +15254,7 @@ def main():
     # calculating_variables().run()
     # pick_event().run()
     # selection().run()
-    multi_regression_anomaly().run()
+    # multi_regression_anomaly().run()
     # multi_regression_detrended_anomaly().run()
     # data_preprocess_for_random_forest().run()
 
@@ -15270,7 +15267,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    # check_data().run()
+    check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 

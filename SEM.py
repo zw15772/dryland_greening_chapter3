@@ -111,7 +111,7 @@ class SEM_wen:
         print('original len(df):', len(df))
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 20]
+        # df = df[df['LC_max'] < 5]
         # df=df[df['composite_LAI_CV_trend'] > 0]
         # df = df[df['extraction_mask'] == 1]
 
@@ -132,55 +132,45 @@ class SEM_wen:
         return df
 
     def model_description_not_detrend_test2(self):
-        desc_water_limited_SMroot = '''
-                            # regressions
+        desc_all_limited_SMroot = '''
+                                     # regressions
 
-                             composite_LAI_CV_zscore~composite_LAImin_zscore+composite_LAImax_zscore
-                             composite_LAImax_zscore~composite_LAI_beta+sum_rainfall_ecosystem_year_zscore+CV_intraannual_rainfall_ecosystem_year_zscore+FVC_max_zscore
-    
-                           composite_LAImin_zscore  ~ composite_LAI_beta+sum_rainfall_ecosystem_year_zscore+CV_intraannual_rainfall_ecosystem_year_zscore+FVC_max_zscore+Burn_area_mean
-                           
-                           
-                           
-                          
-                          
-                             composite_LAI_CV_zscore~composite_LAImax_zscore
-                             composite_LAI_CV_zscore~composite_LAImin_zscore
-                             
-                             
-                             
-                             
+
+                                     composite_LAI_CV_zscore~detrended_sum_rainfall_CV_zscore+composite_LAI_beta+fire_ecosystem_year_average_zscore
+                                     composite_LAI_beta~sum_rainfall_ecosystem_year_zscore+CO2_zscore+CV_intraannual_rainfall_ecosystem_year_zscore+pi_average_zscore+fire_ecosystem_year_average_zscore+grass_relative_change+trees_relative_change
+                                  
+                                     # residual correlations
+                                     
+                                      composite_LAI_CV_zscore~~composite_LAI_CV_zscore
+                                      composite_LAI_CV_zscore~~detrended_sum_rainfall_CV_zscore
+                            
+
+                                    composite_LAI_CV_zscore~~fire_ecosystem_year_average_zscore
+                         
+                               
+
+                                         composite_LAI_CV_zscore~~composite_LAI_beta
+                                      
+
+                                
                                     
-                             
-                            '''
+                                 
+                                         composite_LAI_beta~~sum_rainfall_ecosystem_year_zscore
+                                     
+                                         composite_LAI_beta~~CV_intraannual_rainfall_ecosystem_year_zscore
+                                         composite_LAI_beta~~pi_average_zscore
+                                      
 
-        desc_energy_limited_SMroot = '''
-                                    # regressions
-
-                                    early_peak_MCD~early_Temp+early_precip
-
-                                    peak_SMroot~  early_peak_MCD+peak_precip
-
-                                    late_MCD ~ peak_SMroot + late_Temp
-                                    late_MCD~peak_precip
+                        
+                                     
 
 
-                                    # residual correlations
-                                     early_peak_MCD~~early_peak_MCD
-                                        peak_SMroot~~peak_SMroot
-                                        late_MCD~~late_MCD
 
-                                        early_peak_MCD~~early_Temp
-                                        early_peak_MCD~~early_precip
-                                        peak_SMroot~~early_peak_MCD
-                                        peak_SMroot~~peak_precip
-                                        late_MCD~~peak_SMroot
-                                        late_MCD~~late_Temp
-                                        late_MCD~~peak_precip
 
-                                    '''
 
-        return desc_water_limited_SMroot
+                                     '''
+
+        return desc_all_limited_SMroot
 
     def model_description_not_detrend_new(self):
         desc_all_limited_SMroot = '''

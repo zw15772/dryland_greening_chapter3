@@ -1806,7 +1806,7 @@ class SHAP_CV():
         # self.AIC_stepwise(self.dff)
         self.pdp_shap()
         # # # # # #
-        self.plot_pdp_shap()
+        # self.plot_pdp_shap()
         # self.plot_bar_landcover()
         # self.shapely_df_generation()
         # self.plot_bar_shap()
@@ -1991,9 +1991,12 @@ class SHAP_CV():
         self.x_variable_list_CRU = [
             'composite_LAI_beta',
 
-            # 'VPD_zscore',
+            'sum_rainfall_ecosystem_year_zscore',
          # 'Burn_area_mean',
             'detrended_sum_rainfall_CV_zscore',
+            'grass_trend',
+            'tress_trend',
+            'shrubs_trend',
 
 
             'FVC_max_zscore',
@@ -2011,12 +2014,12 @@ class SHAP_CV():
             # 'rainfall_seasonality_all_year_growing_season',
             # 'rainfall_seasonality_all_year',
 
-            'CV_intraannual_rainfall_ecosystem_year_zscore',
+            'CV_intraannual_rainfall_growing_season_zscore',
             # 'pi_average',
 
 
             # 'sum_rainfall_trend',
-            # 'cwdx80_05',
+            'cwdx80_05',
 
             # 'fire_ecosystem_year_average_trend',
             #
