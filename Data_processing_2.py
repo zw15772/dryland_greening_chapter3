@@ -103,8 +103,8 @@ class Data_processing_2:
         # self.interpolate_VCF()
         # self.interpolation()
         # self.mean()
-        # self.zscore()
-        self.anomaly()
+        self.zscore()
+        # self.anomaly()
         # self.composite_LAI()
 
 
@@ -689,9 +689,9 @@ class Data_processing_2:
 
 
             outf = outdir + f.split('.')[0]+'_anomaly.npy'
-            if isfile(outf):
-                continue
-            print(outf)
+            # if isfile(outf):
+            #     continue
+            # print(outf)
 
             dic = T.load_npy(fdir + f)
 
@@ -729,7 +729,7 @@ class Data_processing_2:
                     continue
                 time_series = time_series
                 mean = np.nanmean(time_series)
-                zscore = (time_series - mean) / np.nanstd(time_series)
+                zscore = (time_series - mean)
 
 
 
@@ -737,10 +737,10 @@ class Data_processing_2:
                 zscore_dic[pix] = zscore
 
 
-                plt.plot(time_series)
+                # plt.plot(time_series)
                 # plt.legend(['raw'])
-                # plt.show()
-
+                # # plt.show()
+                #
                 # plt.plot(zscore)
                 # plt.legend(['zscore'])
                 # plt.legend(['raw','zscore'])
@@ -754,23 +754,30 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
-        outdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\\\zscore\\'
+        model_list= ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                           'ORCHIDEE_S2_lai',
+
+                           'YIBs_S2_Monthly_lai',
+
+                     'TRENDY_ensemble1',
+                    'TRENDY_ensemble2_mean',
+                     'TRENDY_ensemble3_median',]
+        outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\zscore\\'
         Tools().mk_dir(outdir, force=True)
-
-        for f in os.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-            if not 'TRENDY_ensemble_composite_time_series_detrend_CV' in f:
-                continue
+        for model in model_list:
+            fpath = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\{model}_detrend_CV.npy'
 
 
-            outf = outdir + f.split('.')[0]+'_zscore.npy'
+
+            outf = outdir + model + '_detrend_CV_zscore.npy'
             if isfile(outf):
                 continue
             print(outf)
 
-            dic = T.load_npy(fdir + f)
+            dic = T.load_npy(fpath)
 
             zscore_dic = {}
 
@@ -781,7 +788,7 @@ class Data_processing_2:
 
 
                 time_series = dic[pix]
-                print(time_series)
+                # print(time_series)
 
                 # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
 
@@ -814,10 +821,10 @@ class Data_processing_2:
                 zscore_dic[pix] = zscore
 
 
-                plt.plot(time_series)
+                # plt.plot(time_series)
                 # plt.legend(['raw'])
-                # plt.show()
-
+                #
+                #
                 # plt.plot(zscore)
                 # plt.legend(['zscore'])
                 # plt.legend(['raw','zscore'])
@@ -1064,9 +1071,9 @@ class Phenology():  ### plot site based phenology curve
 class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
-        self.this_class_arr = (rf'D:\Project3\Result\3mm\Multiregression\partial_correlation\\')
+        self.this_class_arr = (rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result\\OBS_anomaly\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'partial_correlation_df.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1074,10 +1081,10 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
-        self.add_fire(df)
+        # self.add_fire(df)
         # self.add_short_vegetation_mean(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
@@ -1196,7 +1203,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\Multiregression\zscore\composite_LAI_beta_growing_season_zscore.npy'
+        f = rf'D:\Project3\Result\3mm\Multiregression\anomaly\composite_LAI_beta_mean_anomaly.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1225,32 +1232,31 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['composite_LAI_beta'] = change_rate_list
+        df['composite_LAI_beta_mean_anomaly'] = change_rate_list
         return df
     def add_window_to_df(self, df):
         threshold = self.threshold
 
         fdir=result_root+rf'\3mm\GLEAM_SM\moving_window_extraction\\'
 
+
+
         print(fdir)
         print(self.dff)
-        variable_list=['CV_intraannual_rainfall_ecosystem_year_zscore',
-                       
-                       'heat_event_frenquency_zscore',
-        'VPD_zscore',
-        'dry_spell_growing_season_zscore',
-                  'sum_rainfall_ecosystem_year_zscore'  ]
+        fdir=rf'D:\Project3\Result\3mm\Multiregression\anomaly\\'
+        variable_list=['composite_LAI_CV_anomaly',
+             'CV_intraannual_rainfall_ecosystem_year_anomaly',     'detrended_sum_rainfall_CV_anomaly'  ]
+        variable_list=['composite_LAI_beta_mean_anomaly']
+
 
 
         for f in os.listdir(fdir):
-            if not 'zscore' in f:
-                continue
 
 
 
             variable= f.split('.')[0]
-            # if not variable in variable_list:
-            #     continue
+            if not variable in variable_list:
+                continue
 
 
 
@@ -1290,10 +1296,10 @@ class build_moving_window_dataframe():
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 21:
+                if len(vals) == 22:
                     ## add twice nan at the end
                     # vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
-                    vals=np.append(vals,[np.nan,np.nan,np.nan])
+                    vals=np.append(vals,[np.nan,np.nan])
 
 
                     v1 = vals[y-0]
@@ -1570,9 +1576,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result\OBS\\')
+        self.this_class_arr = (result_root+rf'\\3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'contributions.df'
+        self.dff = self.this_class_arr + rf'df_normalized.df'
 
         pass
 
@@ -1805,7 +1811,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\LAI4g_detrend_CV.npy'
+        f = rf'D:\Project3\Result\3mm\Multiregression\anomaly\\composite_LAI_beta_mean_anomaly.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1818,7 +1824,7 @@ class build_dataframe():
         year = []
 
         for pix in tqdm(dic):
-            time_series = dic[pix]['ecosystem_year']
+            time_series = dic[pix]
 
             y = 1983
             for val in time_series:
@@ -1930,8 +1936,9 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=rf'D:\Project3\Result\3mm\extract_fire_phenology_year\moving_window_extraction\\'
-        variable_list=['fire_weighted_ecosystem_year_average']
+        fdir=rf'D:\Project3\Result\3mm\Multiregression\anomaly\\'
+        variable_list=['Fire_sum_max_anomaly','composite_LAI_CV_anomaly',
+             'CV_intraannual_rainfall_ecosystem_year_anomaly',     'detrended_sum_rainfall_CV_anomaly'  ]
 
         for f in os.listdir(fdir):
 
@@ -2435,15 +2442,15 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\trend2\\'
+        fdir=result_root+rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
         #                   'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
         #                   'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
         #                   'ORCHIDEE_S2_lai',]
-        variable_list=['CV_intraannual_rainfall_trend','pi_average_trend',
-                      'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
+        # variable_list=['CV_intraannual_rainfall_trend','pi_average_trend',
+        #               'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
         for f in os.listdir(fdir):
             #
             if not f.endswith('.tif'):
@@ -2457,8 +2464,8 @@ class build_dataframe():
 
 
 
-            if variable not in variable_list:
-                continue
+            # if variable not in variable_list:
+            #     continue
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
             array = np.array(array, dtype=float)
@@ -7475,7 +7482,8 @@ class TRENDY_CV:
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
         # self.TRENDY_ensemble()
-        self.plot_robinson()
+        self.TRENDY_ensemble_npy()
+        # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
@@ -7778,7 +7786,7 @@ class TRENDY_CV:
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
-    def TRENDY_ensemble(self):
+    def TRENDY_ensemble_npy(self):
 
         model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -7789,29 +7797,72 @@ class TRENDY_CV:
                       'YIBs_S2_Monthly_lai']
 
 
-        fdir = result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\'
-        arr_list=[]
+        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\zscore\\'
+
+        result_dic={}
 
         for model in model_list:
-            fpath = fdir + model + '_detrend_max_trend.tif'
+            fpath = fdir + model + '_detrend_CV_zscore.npy'
+            dic=T.load_npy(fpath)
+            result_dic[model]=dic
+        ## for each pixel calculate mean
+        all_pixels = list(result_dic[model_list[0]].keys())
+        ensemble_mean_dic = {}
 
+        for pix in all_pixels:
+            timeseries_list = []
+            for model in model_list:
+                if pix not in result_dic[model]:
+                    continue
+                vals = result_dic[model][pix]
+                if len(vals)!=24:
+                    continue
+                if vals is not None:
+                    timeseries_list.append(np.array(vals))
+
+            if timeseries_list:
+                # stack 成 (13, T) 然后对 axis=0 平均
+                timeseries_list = np.array(timeseries_list)
+
+                mean_ts = np.nanmedian(timeseries_list, axis=0)
+                ensemble_mean_dic[pix] = mean_ts
+
+
+        outf=result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\zscore\TRENDY_ensemble_composite_detrend_CV_zscore.npy'
+        T.save_npy(ensemble_mean_dic, outf)
+
+
+    def TRENDY_ensemble(self):
+
+        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+
+                      'YIBs_S2_Monthly_lai']
+
+        fdir = result_root + rf'3mm\Multiregression\zscore\TRENDY\sensitivity\\'
+        arr_list = []
+
+        for model in model_list:
+            fpath = fdir + model + '_sensitivity_zscore.npy'
             arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            arr[arr>99]=np.nan
-            arr[arr<-99]=np.nan
+            arr[arr > 99] = np.nan
+            arr[arr < -99] = np.nan
 
             arr_list.append(arr)
 
+
         arr_ensemble = np.nanmean(arr_list, axis=0)
-        arr_ensemble[arr_ensemble>99]=np.nan
-        arr_ensemble[arr_ensemble<-99]=np.nan
+        arr_ensemble[arr_ensemble > 99] = np.nan
+        arr_ensemble[arr_ensemble < -99] = np.nan
         plt.imshow(arr_ensemble, cmap='RdYlGn')
         plt.colorbar()
         plt.show()
 
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, result_root + rf'\3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif')
-
-
-
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble,
+                                              result_root + rf'\3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif')
 
     def trend_analysis(self):  ##each window average trend
 
@@ -8708,7 +8759,7 @@ class SM_Tcoupling():
 
 
 def main():
-    Data_processing_2().run()
+    # Data_processing_2().run()
     # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
@@ -8716,7 +8767,7 @@ def main():
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

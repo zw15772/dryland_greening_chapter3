@@ -3778,7 +3778,7 @@ class moving_window():
         # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
-        self.moving_window_CV_extraction_anaysis_rainfall()
+        # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
@@ -4302,13 +4302,11 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
-        outdir =result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\trend\\'
+        fdir =result_root+ rf'3mm\Multiregression\anomaly\\'
+        outdir =result_root + rf'3mm\Multiregression\anomaly\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'VPD_detrend_CV' in f:
-                continue
 
             if not f.endswith('.npy'):
                 continue
