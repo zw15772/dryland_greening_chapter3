@@ -4078,10 +4078,12 @@ class moving_window():
         #
         #
         # for mode in growing_season_mode_list:
-        fdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\glass_fvc_avhrr\moving_window_extraction\\'
+        fdir = result_root + rf'\3mm\Fire\moving_window_extraction\\'
+        outdir = result_root + rf'\3mm\Fire\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'sum' in f:
+                continue
 
             dic = T.load_npy(fdir + f)
 
@@ -4133,10 +4135,12 @@ class moving_window():
         window_size = 15
 
 
-        fdir =result_root+ rf'3mm\extract_fire_phenology_year\moving_window_extraction\\'
-        outdir = result_root+rf'\3mm\extract_fire_phenology_year\\moving_window_extraction\\'
+        fdir =result_root+ rf'\3mm\Fire\moving_window_extraction\\'
+        outdir = result_root+rf'\3mm\Fire\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'sum' in f:
+                continue
 
 
 
@@ -4302,13 +4306,16 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'3mm\Multiregression\anomaly\\'
-        outdir =result_root + rf'3mm\Multiregression\anomaly\\trend\\'
+        fdir =result_root+ rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\'
+        outdir =result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
 
+
             if not f.endswith('.npy'):
+                continue
+            if not 'composite_LAI_beta_mean_zscore' in f:
                 continue
 
 

@@ -754,84 +754,88 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        model_list= ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                           'ORCHIDEE_S2_lai',
-
-                           'YIBs_S2_Monthly_lai',
-
-                     'TRENDY_ensemble1',
-                    'TRENDY_ensemble2_mean',
-                     'TRENDY_ensemble3_median',]
-        outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\zscore\\'
+        # model_list= ['SNU_LAI_detrend_CV', 'CLASSIC_S2_lai',
+        #                    'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+        #                    'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+        #                    'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+        #                    'ORCHIDEE_S2_lai',
+        #
+        #                    'YIBs_S2_Monthly_lai',
+        #
+        #              'TRENDY_ensemble1',
+        #             'TRENDY_ensemble2_mean',
+        #              'TRENDY_ensemble3_median',]
+        # model_list=['SNU_LAI','LAI4g','GLOBMAP_LAI']
+        #
+        # outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\input\Y\\'
+        # Tools().mk_dir(outdir, force=True)
+        # for model in model_list:
+        fpath = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\heavy_rainfall_days.npy'
+        outdir=result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\zscore\\'
         Tools().mk_dir(outdir, force=True)
-        for model in model_list:
-            fpath = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\{model}_detrend_CV.npy'
 
 
 
-            outf = outdir + model + '_detrend_CV_zscore.npy'
-            if isfile(outf):
+        outf = outdir+ 'heavy_rainfall_days_zscore.npy'
+        # if isfile(outf):
+        #     continue
+        print(outf)
+
+        dic = T.load_npy(fpath)
+
+        zscore_dic = {}
+
+        for pix in tqdm(dic):
+
+            if pix not in dic_dryland_mask:
                 continue
-            print(outf)
-
-            dic = T.load_npy(fpath)
-
-            zscore_dic = {}
-
-            for pix in tqdm(dic):
-
-                if pix not in dic_dryland_mask:
-                    continue
 
 
-                time_series = dic[pix]
-                # print(time_series)
+            time_series = dic[pix]
+            # print(time_series)
 
-                # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
+            # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
 
-                if not isinstance(time_series, (list, np.ndarray)):
-                    print(f"{pix}: invalid time_series (not iterable): {time_series}")
-                    continue
+            if not isinstance(time_series, (list, np.ndarray)):
+                print(f"{pix}: invalid time_series (not iterable): {time_series}")
+                continue
 
-                time_series = np.array(time_series, dtype=float)
-                # time_series = time_series[3:37]
+            time_series = np.array(time_series, dtype=float)
+            # time_series = time_series[3:37]
 
-                print(len(time_series))
-                ## exclude nan
+            print(len(time_series))
+            ## exclude nan
 
 
 
 
-                if np.isnan(np.nanmean(time_series)):
-                    continue
-                # if np.nanmean(time_series) >999:
-                #     continue
-                if np.nanmean(time_series) <-999:
-                    continue
-                time_series = time_series
-                mean = np.nanmean(time_series)
-                zscore = (time_series - mean) / np.nanstd(time_series)
+            if np.isnan(np.nanmean(time_series)):
+                continue
+            # if np.nanmean(time_series) >999:
+            #     continue
+            if np.nanmean(time_series) <-999:
+                continue
+            time_series = time_series
+            mean = np.nanmean(time_series)
+            zscore = (time_series - mean) / np.nanstd(time_series)
 
 
 
 
-                zscore_dic[pix] = zscore
+            zscore_dic[pix] = zscore
 
 
-                # plt.plot(time_series)
-                # plt.legend(['raw'])
-                #
-                #
-                # plt.plot(zscore)
-                # plt.legend(['zscore'])
-                # plt.legend(['raw','zscore'])
-                # plt.show()
+            # plt.plot(time_series)
+            # plt.legend(['raw'])
+            #
+            #
+            # plt.plot(zscore)
+            # plt.legend(['zscore'])
+            # plt.legend(['raw','zscore'])
+            # plt.show()
 
-                ## save
-            np.save(outf, zscore_dic)
+            ## save
+        np.save(outf, zscore_dic)
 
     def composite_LAI(self):
         # infdir=result_root + rf'\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\\'
@@ -1071,9 +1075,10 @@ class Phenology():  ### plot site based phenology curve
 class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
-        self.this_class_arr = (rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result\\OBS_anomaly\\Dataframe\\')
+        self.this_class_arr = (
+                    result_root + rf'\3mm\SHAP_beta\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'moving_window_zscore.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1237,26 +1242,21 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'\3mm\GLEAM_SM\moving_window_extraction\\'
+        fdir=result_root+rf'\3mm\Multiregression\zscore\\'
 
-
-
-        print(fdir)
-        print(self.dff)
-        fdir=rf'D:\Project3\Result\3mm\Multiregression\anomaly\\'
-        variable_list=['composite_LAI_CV_anomaly',
-             'CV_intraannual_rainfall_ecosystem_year_anomaly',     'detrended_sum_rainfall_CV_anomaly'  ]
-        variable_list=['composite_LAI_beta_mean_anomaly']
 
 
 
         for f in os.listdir(fdir):
+            if not 'Fire_sum'in f:
+
+                continue
+
 
 
 
             variable= f.split('.')[0]
-            if not variable in variable_list:
-                continue
+
 
 
 
@@ -1290,8 +1290,8 @@ class build_moving_window_dataframe():
                 # plt.show()
 
                 # print(vals)
-                vals[vals>9999] = np.nan
-                vals[vals<-9999] = np.nan
+                # vals[vals>9999] = np.nan
+                # vals[vals<-9999] = np.nan
 
                 ##### if len vals is 38, the end of list add np.nan
 
@@ -1301,10 +1301,6 @@ class build_moving_window_dataframe():
                     # vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
                     vals=np.append(vals,[np.nan,np.nan])
 
-
-                    v1 = vals[y-0]
-
-                    NDVI_list.append(v1)
 
 
                 # if len(vals) !=24:
@@ -1416,7 +1412,7 @@ class build_moving_window_dataframe():
             df=T.add_spatial_dic_to_df(df,dic,key_name)
         return df
     def add_fire(self,df):
-        fpath=  result_root+rf'\3mm\Fire\moving_window_extraction\\Fire_sum_max.npy'
+        fpath=  result_root+rf'\3mm\Fire\moving_window_extraction\\Fire_sum_average.npy'
 
         val_dic = T.load_npy(fpath)
 
@@ -1576,9 +1572,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\\3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\')
+        self.this_class_arr = (result_root+rf'3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'df_normalized.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
 
         pass
 
@@ -1604,22 +1600,23 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
         # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # #
-        df=self.add_lat_lon_to_df(df)
-        df=self.add_continent_to_df(df)
-        #
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # #
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_continent_to_df(df)
+        # df=self.add_residual_to_df(df)
+
         # # # #
         # df=self.add_rooting_depth_to_df(df)
         # #
@@ -1843,7 +1840,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif'
+        f = result_root + rf'3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\\composite_LAI_beta_mean_contrib.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2442,7 +2439,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\'
+        fdir=result_root+rf'\\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\delta_multi_reg2\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2456,7 +2453,7 @@ class build_dataframe():
             if not f.endswith('.tif'):
                 continue
 
-
+            #
 
 
             variable = (f.split('.')[0])
@@ -2499,6 +2496,14 @@ class build_dataframe():
 
 
         return df
+    def add_residual_to_df(self, df):
+        df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
+                          df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
+
+        df['sum_climate_contrib']=df['CV_intraannual_rainfall_ecosystem_year_contrib'] + df['detrended_sum_rainfall_CV_contrib']
+
+        return df
+
 
     def add_soil_to_df(self, df):
         fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
@@ -2597,14 +2602,14 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'Non tree vegetation_trend': 'Non_tree_vegetation_trend',
-                                'Tree cover_trend': 'Tree_cover_trend',
+        df = df.rename(columns={'residual': 'residual_contrib',
+                               }
 
 
 
 
 
-                            }
+
 
                                )
 
@@ -2618,14 +2623,8 @@ class build_dataframe():
         df = df.drop(columns=[
 
 
-                              'landcover_classfication_Bare',
+                              'climate',
 
-                              'landcover_classfication_-999',
-            'landcover_classfication_Deciduous',
-            'landcover_classfication_Evergreen',
-            'landcover_classfication_Grass',
-            'landcover_classfication_Mixed',
-            'landcover_classfication_Shrub',
 
 
 
@@ -7482,12 +7481,12 @@ class TRENDY_CV:
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
         # self.TRENDY_ensemble()
-        self.TRENDY_ensemble_npy()
+        # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        # self.plot_CV_trend_among_models()
+        self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8313,7 +8312,7 @@ class TRENDY_CV:
         ## I want use set 3 color
 
         mark_size_list=[200]+[50]*3+[200]+[50]*14
-        alpha_list=[1]+[0.7]*3+[1]+[0.7]*14
+        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*14
 
 
 
@@ -8326,7 +8325,7 @@ class TRENDY_CV:
         # print(df.columns)
         # exit()
         marker_list=['^','s', 'P','X','D',]*4
-        marker_list = ['^', ] * 4 + ['s']*14
+        # marker_list = ['^', ] * 4 + ['s']*14
 
         variables_list = ['composite_LAI_mean','LAI4g', 'GLOBMAP_LAI',
                           'SNU_LAI',
@@ -8389,8 +8388,8 @@ class TRENDY_CV:
 
         err_trend_list = np.array(err_trend_list)
         err_CV_list = np.array(err_CV_list)
-        for i, (x, y, marker,color,var,mark_size,alpha) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list,mark_size_list,alpha_list)):
-            plt.scatter(y, x, marker=marker,color=color_list[i], label=var, s=mark_size, alpha=alpha,edgecolors='black',)
+        for i, (x, y, marker,color,var,mark_size) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list,mark_size_list)):
+            plt.scatter(y, x, marker=marker,color=color_list[i], label=var, s=mark_size, edgecolors='black',)
             # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
 
 
@@ -8761,13 +8760,13 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

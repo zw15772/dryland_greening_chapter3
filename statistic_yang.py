@@ -1800,7 +1800,7 @@ class SHAP_CV():
         # # #
         # # #
         # self.check_variables_ranges()
-        #
+        # #
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
@@ -1820,10 +1820,10 @@ class SHAP_CV():
         # self.plot_heatmap_ranking()
         # self.plot_interaction_manual()
         # self.spatial_shapely_vs_aridity()
-        # self.spatial_shapely()   ### spatial plot
-        #
-        #
-        # self.variable_contributions()
+        self.spatial_shapely()   ### spatial plot
+
+
+        self.variable_contributions()
         # self.plot_dominant_factors_bar()
         # self.plot_robinson()
         # self.max_contributions()
@@ -1838,7 +1838,7 @@ class SHAP_CV():
         T.print_head_n(df)
         print(df.columns.tolist())
         print(len(df))
-        # exit()
+        exit()
         pass
 
     def check_variables_ranges(self):
@@ -1990,16 +1990,22 @@ class SHAP_CV():
 
         self.x_variable_list_CRU = [
             'composite_LAI_beta',
+            'VPD_max_zscore',
 
-            'sum_rainfall_ecosystem_year_zscore',
+
+        'CV_intraannual_rainfall_ecosystem_year_zscore',
+            # 'sum_rainfall_ecosystem_year_zscore',
          # 'Burn_area_mean',
+         #    'beta_CVrainfall_interaction',
+            'heat_event_frenquency_zscore',
+            'Non_tree_vegetation_average_zscore',
             'detrended_sum_rainfall_CV_zscore',
-            'grass_trend',
-            'tress_trend',
-            'shrubs_trend',
-
-
-            'FVC_max_zscore',
+            # 'grass_trend',
+            # 'tress_trend',
+            # 'shrubs_trend',
+            #
+            #
+            # 'FVC_max_zscore',
             # 'FVC_relative_change_trend',
             # 'SM_average',
             # 'Short_vegetation_change_1982-2016',
@@ -2014,33 +2020,32 @@ class SHAP_CV():
             # 'rainfall_seasonality_all_year_growing_season',
             # 'rainfall_seasonality_all_year',
 
-            'CV_intraannual_rainfall_growing_season_zscore',
+            # 'CV_intraannual_rainfall',
             # 'pi_average',
 
 
             # 'sum_rainfall_trend',
-            'cwdx80_05',
+            # 'cwdx80_05',
 
             # 'fire_ecosystem_year_average_trend',
             #
             # 'sum_rainfall_growing_season',
             # 'sum_rainfall',
 
-             'Aridity',
-            'heat_event_frenquency_zscore',
+            #  'Aridity',
+            # 'heat_event_frenquency_zscore',
             # 'dry_spell',
             # 'heavy_rainfall_days',
             # 'Tmax_trend',
-            'sand',
+            # 'sand',
             # 'soc',
             # 'rainfall_intensity_growing_season',
            #
-         # 'rainfall_frenquency',
-           #  #
-            # 'rainfall_seasonality_all_year',
-              #
-              'fire_ecosystem_year_average_zscore',
-            # 'rooting_depth_05',
+         # 'rainfall_frenquency_zscore',
+         #   #  #
+         #    'rainfall_seasonality_all_year_zscore',
+
+            'Fire_sum_average_zscore',
 
 
             ]
@@ -2164,6 +2169,7 @@ class SHAP_CV():
         ### x tick label rotate
         vmin = -1
         vmax = 1
+
 
         sns.heatmap(df.corr(), annot=True, fmt=".2f",vmin=vmin, vmax=vmax,cmap="RdBu")
         plt.xticks(rotation=45)
@@ -2849,7 +2855,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-.5,.5)
+            plt.ylim(-5,5)
 
         plt.suptitle(self.y_variable)
 
@@ -3734,8 +3740,8 @@ class SHAP_CV():
 
     def spatial_shapely(self):  #### spatial plot
 
-        dff = results_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\\\ALL_origin_sig.df'
-        outdir =join(self.this_class_png, 'pdp_shap_beta_ALL_sig2','spatial_shapely')
+        dff = results_root + rf'\3mm\SHAP_beta\png\RF_composite_LAI_CV\pdp_shap_beta_zscore\\\ALL_origin_sig.df'
+        outdir =join(self.this_class_png, 'pdp_shap_beta_ALL_sig','spatial_shapely')
         T.mk_dir(outdir, force=True)
 
         # T.open_path_and_file(outdir)
@@ -3772,7 +3778,7 @@ class SHAP_CV():
 
         print(len(df_origin))
         x_variable_list = self.x_variable_list
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_ALL_sig2',self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png,'pdp_shap_beta_zscore', self.y_variable + '.shap.pkl')
         # print(inf_shap);exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values.shape)
@@ -3946,8 +3952,8 @@ class SHAP_CV():
 
     def variable_contributions(self):  ## each variable contribution and the max one
         r2 = .69
-        fdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig2', 'spatial_shapely')
-        outdir = join(self.this_class_png,'pdp_shap_beta_ALL_sig2', 'variable_contributions')
+        fdir = join(self.this_class_png, 'pdp_shap_beta_ALL_sig', 'spatial_shapely')
+        outdir = join(self.this_class_png,'pdp_shap_beta_ALL_sig', 'variable_contributions')
         T.mk_dir(outdir, force=True)
         all_spatial_dict = {}
         keys = []

@@ -93,6 +93,18 @@ class SEM_wen:
         # des = self.model_description_not_detrend_new()
 
         df_clean = self.df_clean(df)
+        ## paircorrelation
+        var_list = ['composite_LAI_CV_zscore',
+                    'detrended_sum_rainfall_CV_zscore',
+                    'Fire_sum_average_zscore',
+                    'CV_intraannual_rainfall_ecosystem_year_zscore',
+                    'composite_LAI_beta','Non_tree_vegetation_average_zscore']
+        # df_new = df_clean[var_list]
+
+
+        # sns.heatmap(df_new.corr(), annot=True, fmt=".2f", vmin=-1, vmax=1, cmap="RdBu")
+        # plt.show()
+
         self.SEM_model(df_clean, des)
         pass
 
@@ -136,36 +148,20 @@ class SEM_wen:
                                      # regressions
 
 
-                                     composite_LAI_CV_zscore~detrended_sum_rainfall_CV_zscore+composite_LAI_beta+fire_ecosystem_year_average_zscore
-                                     composite_LAI_beta~sum_rainfall_ecosystem_year_zscore+CO2_zscore+CV_intraannual_rainfall_ecosystem_year_zscore+pi_average_zscore+fire_ecosystem_year_average_zscore+grass_relative_change+trees_relative_change
+                                     composite_LAI_CV_zscore~detrended_sum_rainfall_CV_zscore+composite_LAI_beta+CV_intraannual_rainfall_ecosystem_year_zscore
+                                     composite_LAI_beta~CV_intraannual_rainfall_ecosystem_year_zscore 
+
                                   
                                      # residual correlations
                                      
-                                      composite_LAI_CV_zscore~~composite_LAI_CV_zscore
-                                      composite_LAI_CV_zscore~~detrended_sum_rainfall_CV_zscore
-                            
-
-                                    composite_LAI_CV_zscore~~fire_ecosystem_year_average_zscore
-                         
-                               
-
-                                         composite_LAI_CV_zscore~~composite_LAI_beta
-                                      
+                                     composite_LAI_CV_zscore~~composite_LAI_CV_zscore
+                                     
+                                     composite_LAI_CV_zscore~~CV_intraannual_rainfall_ecosystem_year_zscore
+                                     composite_LAI_CV_zscore~~detrended_sum_rainfall_CV_zscore
+                                   
+                                     
 
                                 
-                                    
-                                 
-                                         composite_LAI_beta~~sum_rainfall_ecosystem_year_zscore
-                                     
-                                         composite_LAI_beta~~CV_intraannual_rainfall_ecosystem_year_zscore
-                                         composite_LAI_beta~~pi_average_zscore
-                                      
-
-                        
-                                     
-
-
-
 
 
                                      '''
