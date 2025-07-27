@@ -2363,8 +2363,8 @@ class SHAP_CV():
         all_vars_df = all_vars_df.dropna(subset=self.y_variable, how='any')
         # print('len(all_vars_df):', len(all_vars_df));exit()
 
-        outdf = join(outdir, 'ALL_origin_sig.df')
-        T.save_df(all_vars_df, outdf)
+        # outdf = join(outdir, 'ALL_origin_sig.df')
+        # T.save_df(all_vars_df, outdf)
 
         ## for plot use not training
         ## I want to add CO2 into new df but using all_vars_df to selected from df
@@ -2409,7 +2409,7 @@ class SHAP_CV():
 
 
 
-        model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
+        model, y, y_pred = self.__train_model_outofbag(X, Y)  # train a Random Forests model
         # plt.scatter(y, y_pred)
         # plt.xlabel('y')
         # plt.ylabel('y_pred')
@@ -4299,6 +4299,42 @@ class SHAP_CV():
         # exit()
 
         return model, y_test, y_pred
+
+
+    def __train_model_outofbag(self, X, y):
+        from sklearn.model_selection import train_test_split
+        '''
+        :param X: a dataframe of x variables
+        :param y: a dataframe of y variable
+        :return: a random forest model and the R^2
+        
+        '''
+
+
+        y_true_all = []
+        y_pred_all = []
+
+
+            model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
+                           max_depth=15, eta=0.1, random_state=42, n_jobs=14, oob_score=True )
+            # model = RandomForestRegressor(n_estimators=200, random_state=42,n_jobs=14)
+            # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
+
+            model.fit(X_train, y_train)
+            # model.fit(X_train, y_train)
+            # Get predictions
+            y_pred = model.predict(X_test)
+
+            # print(len(y_pred))
+            # plt.scatter(y_test, y_pred)
+            # plt.show()
+            r = stats.pearsonr(y_test, y_pred)
+
+            r2 = r[0] ** 2
+            print('r2:', r2)
+            # exit()
+
+            return model, y_test, y_pred
 
     def __train_model_RF(self, X, y):
         '''

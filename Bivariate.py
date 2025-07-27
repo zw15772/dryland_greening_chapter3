@@ -8702,16 +8702,16 @@ class Figure5():
 class multi_regression_anomaly():
     def __init__(self):
 
-        self.fdirX = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\'
-        self.fdirY = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\input\Y\\'
+        self.fdirX = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
+        self.fdirY = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\Y\\'
 
         self.xvar = ['detrended_sum_rainfall_CV', 'composite_LAI_beta_mean',
-                     'CV_intraannual_rainfall_ecosystem_year', 'Fire_sum_average', ]
+                     'CV_intraannual_rainfall_ecosystem_year', 'Fire_sum_average', 'sum_rainfall']
 
         self.y_var = ['composite_LAI_detrend_CV']
         # self.y_var = ['TRENDY_ensemble_composite_time_series_detrend_CV']
 
-        self.multi_regression_result_dir = result_root + rf'\3mm\\Multiregression\\Multiregression_result\\OBS_fire_zscore\\slope\\'
+        self.multi_regression_result_dir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\\'
         T.mk_dir(self.multi_regression_result_dir, force=True)
 
         self.multi_regression_result_f = self.multi_regression_result_dir + f'{self.y_var[0]}.npy'
@@ -8724,8 +8724,8 @@ class multi_regression_anomaly():
         # self.cal_multi_regression_beta_whole_area()
 
         # step 1 build dataframe
-        #
-        # df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
+
+        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
         # #
         # # # # # step 2 cal correlation
         #
@@ -10080,7 +10080,7 @@ class GAM():
         from statsmodels.stats.outliers_influence import variance_inflation_factor
         from statsmodels.tools.tools import add_constant
 
-        dff = rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window2.df'
+        dff = rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window_zscore.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
@@ -10184,8 +10184,8 @@ def main():
     # greening_CV_relationship().run()
     # multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
-    # multi_regression_anomaly().run()
-    multi_regression_residual().run()
+    multi_regression_anomaly().run()
+
     # Figure5().run()
 
      # partial_correlation().run()

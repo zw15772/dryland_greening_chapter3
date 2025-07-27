@@ -4306,16 +4306,16 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\'
-        outdir =result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\trend\\'
+        fdir =result_root+ rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
+        outdir =result_root + rf'3mm\Multiregression\Multiregression_result_residual\\X\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'sum_rainfall' in f:
+                continue
 
 
             if not f.endswith('.npy'):
-                continue
-            if not 'composite_LAI_beta_mean_zscore' in f:
                 continue
 
 

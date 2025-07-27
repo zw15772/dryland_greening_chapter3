@@ -1076,9 +1076,9 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\3mm\SHAP_beta\Dataframe\\')
+                    result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window_zscore.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1086,11 +1086,12 @@ class build_moving_window_dataframe():
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
-        # self.add_short_vegetation_mean(df)
+        self.add_sum_rainfall_mean(df)
+        self.add_short_vegetation_mean(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1446,15 +1447,15 @@ class build_moving_window_dataframe():
 
         pass
 
-    def add_short_vegetation_mean(self,df):
-        fpath=  result_root+rf'3mm\VCF\moving_window_extraction\tree cover.npy'
+    def add_sum_rainfall_mean(self,df):
+        fpath=  result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\sum_rainfall.npy'
 
         val_dic = T.load_npy(fpath)
 
         val_list = []
         for i, row in tqdm(df.iterrows(), total=len(df)):
 
-            window = row.window
+            # window = row.window
             # pix = row.pix
             pix = row['pix']
             r, c = pix
@@ -1475,7 +1476,38 @@ class build_moving_window_dataframe():
             val_list.append(mean_burn_area)
 
 
-        df['tree_vegetation_mean']=val_list
+        df['sum_rainfall_mean']=val_list
+
+    def add_short_vegetation_mean(self,df):
+        fpath=  result_root+rf'3mm\VCF\moving_window_extraction\Non tree vegetation_average.npy'
+
+        val_dic = T.load_npy(fpath)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            # window = row.window
+            # pix = row.pix
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+
+
+            vals = val_dic[pix]
+            vals = np.array(vals)
+
+            mean_burn_area=np.nanmean(vals)
+            if mean_burn_area < -99:
+                val_list.append(np.nan)
+                continue
+
+            val_list.append(mean_burn_area)
+
+
+        df['Non tree vegetation_mean']=val_list
     def add_columns(self, df):
         df['window'] = df['window'].str.extract(r'(\d+)').astype(int)
 
@@ -1615,7 +1647,7 @@ class build_dataframe():
         # # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
-        # df=self.add_residual_to_df(df)
+        df=self.add_residual_to_df(df)
 
         # # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -2439,7 +2471,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\delta_multi_reg2\\'
+        fdir=result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\delta_multi_reg2\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2453,7 +2485,7 @@ class build_dataframe():
             if not f.endswith('.tif'):
                 continue
 
-            #
+
 
 
             variable = (f.split('.')[0])
