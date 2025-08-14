@@ -1765,7 +1765,7 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'composite_LAI_CV_zscore'
+        self.y_variable = 'composite_LAI_CV_anomaly'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
@@ -1773,7 +1773,7 @@ class SHAP_CV():
         T.mk_dir(self.this_class_png, force=True)
 
         # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
-        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window_zscore.df'
+        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window2.df'
 
         self.variable_list_rt()
         self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -1804,9 +1804,9 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        self.pdp_shap()
+        # self.pdp_shap()
         # # # # # #
-        # self.plot_pdp_shap()
+        self.plot_pdp_shap()
         # self.plot_bar_landcover()
         # self.shapely_df_generation()
         # self.plot_bar_shap()
@@ -1820,10 +1820,10 @@ class SHAP_CV():
         # self.plot_heatmap_ranking()
         # self.plot_interaction_manual()
         # self.spatial_shapely_vs_aridity()
-        self.spatial_shapely()   ### spatial plot
-
-
-        self.variable_contributions()
+        # self.spatial_shapely()   ### spatial plot
+        #
+        #
+        # self.variable_contributions()
         # self.plot_dominant_factors_bar()
         # self.plot_robinson()
         # self.max_contributions()
@@ -1989,17 +1989,18 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
-            'composite_LAI_beta',
-            'VPD_max_zscore',
+            'composite_LAI_beta_mean_anomaly',
 
 
-        'CV_intraannual_rainfall_ecosystem_year_zscore',
+
+        'CV_intraannual_rainfall_anomaly',
+            'sum_rainfall_anomaly',
             # 'sum_rainfall_ecosystem_year_zscore',
          # 'Burn_area_mean',
          #    'beta_CVrainfall_interaction',
-            'heat_event_frenquency_zscore',
-            'Non_tree_vegetation_average_zscore',
-            'detrended_sum_rainfall_CV_zscore',
+
+            # 'Non_tree_vegetation_average',
+            'detrended_sum_rainfall_CV_anomaly',
             # 'grass_trend',
             # 'tress_trend',
             # 'shrubs_trend',
@@ -2045,7 +2046,7 @@ class SHAP_CV():
          #   #  #
          #    'rainfall_seasonality_all_year_zscore',
 
-            'Fire_sum_average_zscore',
+            # 'Fire_sum_average',
 
 
             ]
@@ -2281,7 +2282,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_zscore')
+        outdir = join(self.this_class_png, 'pdp_shap_beta_anomaly')
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2310,10 +2311,10 @@ class SHAP_CV():
 
         for pix in unique_pix_list:
             spatial_dic[pix] = 1
-        # arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-        # plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
-        # plt.colorbar()
-        # plt.show()
+        arr=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(arr,vmin=-0.5,vmax=0.5,cmap='jet',interpolation='nearest')
+        plt.colorbar()
+        plt.show()
 
 
 
@@ -2409,7 +2410,8 @@ class SHAP_CV():
 
 
 
-        model, y, y_pred = self.__train_model_outofbag(X, Y)  # train a Random Forests model
+        # model, y, y_pred = self.__train_model(X, Y)  # train a Random Forests model
+        model, y, y_pred = self.__train_model_bootstrap(X,Y)
         # plt.scatter(y, y_pred)
         # plt.xlabel('y')
         # plt.ylabel('y_pred')
@@ -2763,7 +2765,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_zscore', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png, 'pdp_shap_beta_anomaly', self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -4300,41 +4302,38 @@ class SHAP_CV():
 
         return model, y_test, y_pred
 
-
-    def __train_model_outofbag(self, X, y):
+    def __train_model_bootstrap(self, X, y):
         from sklearn.model_selection import train_test_split
         '''
         :param X: a dataframe of x variables
         :param y: a dataframe of y variable
         :return: a random forest model and the R^2
-        
         '''
 
+        model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
+                               max_depth=15, eta=0.1, random_state=42, n_jobs=14,  )
+        # model = RandomForestRegressor(n_estimators=200, random_state=42,n_jobs=14)
+        # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
-        y_true_all = []
-        y_pred_all = []
+        model.fit(X, y)
+        # model.fit(X_train, y_train)
+        # Get predictions
+        y_pred = model.predict(X)
+
+        # print(len(y_pred))
+        # plt.scatter(y_test, y_pred)
+        # plt.show()
+        r = stats.pearsonr(y_pred,y)
+
+        r2 = r[0] ** 2
+        print('r2:', r2)
+        # exit()
+
+        return model, y, y_pred
 
 
-            model = xgb.XGBRegressor(objective="reg:squarederror", booster='gbtree', n_estimators=100,
-                           max_depth=15, eta=0.1, random_state=42, n_jobs=14, oob_score=True )
-            # model = RandomForestRegressor(n_estimators=200, random_state=42,n_jobs=14)
-            # model = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=12, max_depth=7)
 
-            model.fit(X_train, y_train)
-            # model.fit(X_train, y_train)
-            # Get predictions
-            y_pred = model.predict(X_test)
 
-            # print(len(y_pred))
-            # plt.scatter(y_test, y_pred)
-            # plt.show()
-            r = stats.pearsonr(y_test, y_pred)
-
-            r2 = r[0] ** 2
-            print('r2:', r2)
-            # exit()
-
-            return model, y_test, y_pred
 
     def __train_model_RF(self, X, y):
         '''

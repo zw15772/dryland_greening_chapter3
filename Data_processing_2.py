@@ -103,8 +103,8 @@ class Data_processing_2:
         # self.interpolate_VCF()
         # self.interpolation()
         # self.mean()
-        self.zscore()
-        # self.anomaly()
+        # self.zscore()
+        self.anomaly()
         # self.composite_LAI()
 
 
@@ -678,12 +678,14 @@ class Data_processing_2:
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        fdir = result_root + rf'3mm\Multiregression\input\\'
+        fdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\'
         outdir = result_root + rf'3mm\Multiregression\\\\anomaly\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
+                continue
+            if not 'sum_rainfall' in f:
                 continue
 
 
@@ -1076,9 +1078,9 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\\Dataframe\\')
+                    result_root + rf'3mm\SHAP_beta\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'moving_window2.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1090,8 +1092,8 @@ class build_moving_window_dataframe():
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
-        self.add_sum_rainfall_mean(df)
-        self.add_short_vegetation_mean(df)
+        # self.add_sum_rainfall_mean(df)
+        # self.add_short_vegetation_mean(df)
         # df=self.add_products_consistency_to_df(df)
         # df=self.rename_columns(df)
         # df=self.add_columns(df)
@@ -1243,14 +1245,13 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'\3mm\Multiregression\zscore\\'
+        fdir=result_root+rf'3mm\Multiregression\anomaly\\'
 
 
 
 
         for f in os.listdir(fdir):
-            if not 'Fire_sum'in f:
-
+            if not 'sum_rainfall' in f:
                 continue
 
 
@@ -1413,9 +1414,9 @@ class build_moving_window_dataframe():
             df=T.add_spatial_dic_to_df(df,dic,key_name)
         return df
     def add_fire(self,df):
-        fpath=  result_root+rf'\3mm\Fire\moving_window_extraction\\Fire_sum_average.npy'
+        fdir=  data_root
 
-        val_dic = T.load_npy(fpath)
+        val_dic = T.load_npy_dir(fdir)
 
         val_list = []
         for i, row in tqdm(df.iterrows(), total=len(df)):
@@ -1430,7 +1431,7 @@ class build_moving_window_dataframe():
                 continue
 
 
-            vals = val_dic[pix]
+            vals = val_dic[pix]['ecosystem_year']
             vals = np.array(vals)
             ## 10^6
             mean_burn_area=np.nansum(vals)/1000000
@@ -1441,7 +1442,7 @@ class build_moving_window_dataframe():
             val_list.append(mean_burn_area)
 
 
-        df['Burn_area_mean']=val_list
+        df['Burn_area_sum']=val_list
 
 
 
@@ -1568,9 +1569,9 @@ class build_moving_window_dataframe():
 
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\\3mm\extract_composite_phenology_year\trend\\'
+        fdir=result_root+rf'\3mm\Fire\moving_window_extraction\\'
         for f in os.listdir(fdir):
-            if not 'composite_LAI_CV' in f:
+            if not 'Fire_percentage_annual_sum' in f:
                 continue
             if not f.endswith('.tif'):
                 continue
@@ -1604,9 +1605,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\Dataframe\\')
+        self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'statistic.df'
 
         pass
 
@@ -1615,7 +1616,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1633,21 +1634,22 @@ class build_dataframe():
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
-        # df=self.add_soil_to_df(df)
-        # df=self.add_mean_to_df(df)
-        # #
+        # # # df=self.add_soil_to_df(df)
+        # # # df=self.add_mean_to_df(df)
+        # # # df=self.add_interaction_to_df(df)
+        # # #
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
-        # # # # # df=self.dummies(df)
+        # # # # # # df=self.dummies(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # # # # # #
+        # # # # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
-        df=self.add_residual_to_df(df)
+        # df=self.add_residual_to_df(df)
 
         # # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -1872,7 +1874,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\\composite_LAI_beta_mean_contrib.tif'
+        f = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg\\composite_LAI_beta_mean.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2471,7 +2473,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\delta_multi_reg2\\'
+        fdir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2485,11 +2487,14 @@ class build_dataframe():
             if not f.endswith('.tif'):
                 continue
 
-
-
-
             variable = (f.split('.')[0])
             print(variable)
+            if  'contrib' in variable:
+                continue
+            if 'color_map' in variable:
+                continue
+            if  'max' in variable:
+                continue
 
 
 
@@ -2518,9 +2523,9 @@ class build_dataframe():
                 if val < -99:
                     val_list.append(np.nan)
                     continue
-                # if val > 99:
-                #     val_list.append(np.nan)
-                #     continue
+                if val > 99:
+                    val_list.append(np.nan)
+                    continue
                 val_list.append(val)
 
 
@@ -2529,10 +2534,18 @@ class build_dataframe():
 
         return df
     def add_residual_to_df(self, df):
-        df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
-                          df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
+        T.print_head_n(df)
 
-        df['sum_climate_contrib']=df['CV_intraannual_rainfall_ecosystem_year_contrib'] + df['detrended_sum_rainfall_CV_contrib']
+        # df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
+        #                   df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
+
+        # df['sum_climate_contrib']=df['CV_intraannual_rainfall_ecosystem_year_contrib'] + df['detrended_sum_rainfall_CV_contrib']
+        df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib'] +
+                                                                          df['detrended_sum_rainfall_CV_contrib'] + df['sum_rainfall_contrib']+
+
+                                                                          df['composite_LAI_beta_mean_contrib'] )
+
+
 
         return df
 
@@ -2592,13 +2605,12 @@ class build_dataframe():
 
 
     def add_mean_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\extract_FVC_phenology_year\\'
+        fdir=result_root+rf'3mm\Multiregression\Multiregression_result_residual\X\mean\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
             variable = (f.split('.')[0])
-            if not 'mean' in f:
-                continue
+
 
 
 
@@ -2626,6 +2638,13 @@ class build_dataframe():
             df[f'{f_name}'] = val_list
 
 
+
+        return df
+
+    def add_interaction_to_df(self, df):
+        # T.print_head_n(df);exit()
+
+        df['sum_rainfall_CVintra_interation']=df['sum_rainfall_mean']*df['CV_intraannual_rainfall_ecosystem_year']
 
         return df
 

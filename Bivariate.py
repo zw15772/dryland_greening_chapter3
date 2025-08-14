@@ -10130,9 +10130,14 @@ class GAM():
         # Convert categorical variable to codes
 
 
-        X = df_sample[['composite_LAI_beta','CV_intraannual_rainfall_ecosystem_year_zscore',
-                       'Fire_sum_average_zscore','detrended_sum_rainfall_CV_zscore'
+        # X = df_sample[['composite_LAI_beta','CV_intraannual_rainfall_ecosystem_year_zscore',
+        #                'Fire_sum_average_zscore','detrended_sum_rainfall_CV_zscore'
+        #
+        #
+        #                ]].values
 
+        X = df_sample[['composite_LAI_beta', 'CV_intraannual_rainfall_ecosystem_year_zscore',
+                       'detrended_sum_rainfall_CV_zscore'
 
                        ]].values
         y=df_sample['composite_LAI_CV_zscore'].values
@@ -10184,13 +10189,13 @@ def main():
     # greening_CV_relationship().run()
     # multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
-    multi_regression_anomaly().run()
+    # multi_regression_anomaly().run()
 
     # Figure5().run()
 
      # partial_correlation().run()
     # partial_correlation_TRENDY().run()
-    # GAM().run()
+    GAM().run()
 
 
 

@@ -1770,7 +1770,64 @@ class moving_window():
         pass
 
 
+class Fire_percentage():
+    def __init__(self):
+        pass
+    def run(self):
+        self.calculating_percentage()
+        pass
+    def calculating_percentage(self):
 
+        dff=result_root+rf'3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\Dataframe\\Dataframe.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        for col in df.columns:
+            print(col)
+        # exit()
+        ratio_dict = {}
+        area_dict = DIC_and_TIF().calculate_pixel_area()
+
+        for i,row in tqdm(df.iterrows(),total=len(df)):
+            pix=row['pix']
+            lat = row['lat']
+
+            # 计算该像素的实际面积（单位：km²）
+            area_km2 =area_dict[pix]/1000000
+            # print(area_km2);exit()
+            fire_area = row['Burn_area_mean']
+
+            ratio = fire_area / area_km2 if area_km2 > 0 else np.nan
+            ratio_dict[pix] = ratio*100
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(ratio_dict)
+        plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=30)
+        # plt.colorbar()
+        # plt.show()
+        DIC_and_TIF().arr_to_tif(arr, result_root+rf'3mm\Fire\moving_window_extraction\\Fire_percentage_annual_sum.tif')
+
+
+
+
+
+        pass
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+        df = df[df['composite_LAI_detrend_CV_zscore_trend'] > 0]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+
+
+    pass
 
 
 def main():
@@ -1778,7 +1835,8 @@ def main():
     # download_fpar().run()
     # download_NOAA_AVHRR().run()
     # Data_processing().run()
-    processing_CCI().run()
+    Fire_percentage().run()
+
     # moving_window().run()
 
 
