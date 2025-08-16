@@ -2067,7 +2067,8 @@ class Extract_rainfall_phenology_daily():
         # self.extract_heavy_rainfall_days()
         # self.extract_rainfall_CV()
         # self.average_analysis()
-        self.detrend_rainfall()
+        # self.detrend_rainfall()
+        self.extract_dry_year()
         # self.trend_analysis()
 
     def define_quantile_threshold(self):
@@ -3025,6 +3026,30 @@ class Extract_rainfall_phenology_daily():
 
             pass
 
+    def extract_dry_year(self,):
+        f = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\detrended_sum_rainfall_ecosystem_year_zscore.npy'
+        dic = T.load_npy(f)
+        dry_freq_dict = {}
+
+        for pix in tqdm(dic):
+            vals = np.array(dic[pix])
+            vals = vals[~np.isnan(vals)]  # 移除 NaN
+            if len(vals) == 0:
+                dry_freq_dict[pix] = np.nan
+                continue
+
+            dry_vals = vals[vals < -1]  # 小于 -1 为干年
+            dry_count = len(dry_vals)
+            dry_freq = dry_count / len(vals) * 100  # 转为百分比
+            dry_freq_dict[pix] = dry_freq
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(dry_freq_dict)
+
+
+        outdir = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outf = outdir + 'dry_freq_dict.npy'
+        DIC_and_TIF().arr_to_tif(arr, outf.replace('.npy', '.tif'))
+
+        T.save_npy(dry_freq_dict, outf)
 
     def average_analysis(self):
 
@@ -3767,7 +3792,6 @@ class extract_rainfall_annual_based_on_monthly():  ## here process monthly GPCC 
 
 
 
-
 class moving_window():
     def __init__(self):
         self.this_root = 'D:\Project3\\'
@@ -3791,22 +3815,21 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\3mm\extract_fire_phenology_year\\'
+        fdir_all =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'3mm\extract_fire_phenology_year\\moving_window_extraction\\'
+        outdir = self.result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\zscore\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
 
             if not f.endswith('.npy'):
                 continue
-            if not 'sum' in f:
-                continue
+
             #
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -3824,7 +3847,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]['ecosystem_year']
+                time_series = dic[pix]
 
 
                 time_series = np.array(time_series)
@@ -4189,12 +4212,12 @@ class moving_window():
 
     def moving_window_std_anaysis(self):
         window_size=15
-        fdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\\moving_window_mean_std_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\ecosystem_year\\'
+        outdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\\\\moving_window_mean_std_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            # if not 'LAI4g_detrend' in f:
-            #     continue
+            if not 'detrended_sum_rainfall_ecosystem_year_zscore' in f:
+                continue
 
             dic = T.load_npy(fdir + f)
             slides = 38-window_size+1
@@ -4306,13 +4329,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
-        outdir =result_root + rf'3mm\Multiregression\Multiregression_result_residual\\X\\trend\\'
+        fdir =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
+        outdir =result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'sum_rainfall' in f:
-                continue
+
 
 
             if not f.endswith('.npy'):

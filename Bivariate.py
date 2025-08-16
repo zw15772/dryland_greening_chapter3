@@ -930,7 +930,7 @@ class Figure1():
 
 
 
-    def bivariate_map(self):  ## figure 1c
+    def bivariate_map(self):  ## figure 1  ## LAImin and LAImax bivariate
         import xymap
 
 
@@ -1012,162 +1012,6 @@ class Figure1():
 
         T.open_path_and_file(outdir)
 
-    def Aridity_CV(self):
-        dff=result_root + rf'\3mm\Dataframe\Trend_new\Trend_2.df'
-        df=T.load_df(dff)
-        # df=df.dropna()
-        df=self.df_clean(df)
-        print(df.columns)
-        CVLAI=df['composite_LAI_mean_detrend_CV_trend'].tolist()
-        aridity=df['Aridity'].tolist()
-
-        n_bins = 9
-
-        aridity_bin = np.linspace(0.05, 0.65, n_bins)
-
-        # 5. Combine into a DataFrame
-        df = pd.DataFrame({'CV': CVLAI, 'Aridity': aridity})
-        df = df.dropna()
-
-        average_list = []
-        sem_list=[]
-        average_all=[]
-        x_ticks=[]
-        ###
-
-
-        for i in range(n_bins):
-            if i == n_bins - 1:
-                continue
-            df_group = df[(df['Aridity'] > aridity_bin[i]) & (df['Aridity'] <= aridity_bin[i + 1])]
-            print(len(df_group))
-            values=df_group['CV'].tolist()
-            value_array=np.array(values)
-            value_array[value_array>999]=np.nan
-            value_array[value_array<-999]=np.nan
-            average_all.append(value_array)
-            average_list.append(np.nanmean(value_array))
-            sem_list=np.nanstd(value_array,ddof=1)/np.sqrt(len(value_array))
-            ## xticks= nbin --bnin+1
-            x_ticks.append(aridity_bin[i] + (aridity_bin[i + 1] - aridity_bin[i]) / 2)
-
-
-
-            # 画图
-        plt.figure(figsize=(6, 3))
-        custom_colors = ['#aabbe3', '#f1a8a0', '#b18ac3', '#bdbdbd',
-                         '#cce7ee', '#b79ec6', '#f0bfd2', '#94c8c1']
-        plt.bar(aridity_bin[:-1], average_list, width=0.05, color='#b18ac3', yerr=sem_list, capsize=5,  )
-
-
-
-        plt.xticks(rotation=45)
-        plt.xticks(aridity_bin[:-1])
-        plt.ylim(0,0.55)
-        plt.xlabel("Aridity")
-        plt.ylabel("CVLAI (%/yr)")
-        plt.tight_layout()
-
-        plt.show()
-
-    def Aridity_beta(self):
-        from scipy.stats import kruskal
-        from statsmodels.stats.multicomp import pairwise_tukeyhsd
-        dff=result_root + rf'\3mm\Dataframe\Trend_new\\Trend_2.df'
-        df=T.load_df(dff)
-        # T.print_head_n(df);exit()
-        # df=df.dropna()
-        df=self.df_clean(df)
-        print(df.columns)
-        CVLAI=df['long_term_composite_CV'].tolist()
-        aridity=df['Aridity'].tolist()
-
-        n_bins = 9
-
-        aridity_bin = np.linspace(0.05, 0.65, n_bins)
-
-        # 5. Combine into a DataFrame
-        df = pd.DataFrame({'CV': CVLAI, 'Aridity': aridity})
-        df = df.dropna()
-
-        average_list = []
-        sem_list=[]
-        average_all=[]
-        x_ticks=[]
-        grouped_values=[]
-        ###
-
-
-        for i in range(n_bins):
-            if i == n_bins - 1:
-                continue
-            df_group = df[(df['Aridity'] > aridity_bin[i]) & (df['Aridity'] <= aridity_bin[i + 1])]
-            print(len(df_group))
-            values=df_group['CV'].tolist()
-            value_array=np.array(values)
-            value_array[value_array>999]=np.nan
-            value_array[value_array<-999]=np.nan
-            average_all.append(value_array)
-            average_list.append(np.nanmean(value_array))
-            grouped_values.append(values)
-            sem_list=np.nanstd(value_array,ddof=1)/np.sqrt(len(value_array))
-            ## xticks= nbin --bnin+1
-            x_ticks.append(aridity_bin[i] + (aridity_bin[i + 1] - aridity_bin[i]) / 2)
-
-        all_values = np.concatenate(grouped_values)
-        all_labels = np.concatenate([[f'Bin{i + 1}'] * len(grouped_values[i]) for i in range(n_bins - 1)])
-
-        # Perform Kruskal-Wallis test (non-parametric ANOVA alternative)
-        H_stat, p_val = kruskal(*grouped_values)
-        print(f"Kruskal-Wallis H={H_stat:.3f}, p={p_val:.3e}")
-
-        # Post-hoc Tukey HSD test
-        tukey_result = pairwise_tukeyhsd(all_values, all_labels)
-        print(tukey_result)
-
-        # Optional: mark statistically different bars
-        from statsmodels.stats.multicomp import MultiComparison
-        mc = MultiComparison(all_values, all_labels)
-        letters = mc.tukeyhsd().groupsunique
-        group_letters = mc.tukeyhsd().summary()
-
-        # Plot
-        plt.figure(figsize=(6, 3))
-        bar_colors = ['#b18ac3'] * (n_bins - 1)
-
-        bars = plt.bar(x_ticks, average_list, width=0.05, color=bar_colors,
-                       yerr=sem_list, capsize=5)
-
-        # Add significance letters (a, b, c...) on top of bars
-        tukey = mc.tukeyhsd()
-        groups = list(mc.groupsunique)
-        summary = pd.DataFrame(data=tukey._results_table.data[1:], columns=tukey._results_table.data[0])
-        summary['significant'] = summary['reject']
-
-        # Add basic labels (same label if not significantly different)
-        from statsmodels.stats.multicomp import tukeyhsd
-        from statsmodels.stats.multicomp import MultiComparison
-
-        # Simple label: all bars same label if no significance
-        for i, bar in enumerate(bars):
-            plt.text(bar.get_x() + bar.get_width() / 2,
-                     bar.get_height() + 0.5,
-                     '**'  ,# a, b, c...
-                     ha='center', va='bottom', fontsize=10)
-
-        plt.xticks(ticks=x_ticks,
-                   labels=[f'{aridity_bin[i]:.2f}-{aridity_bin[i + 1]:.2f}' for i in range(n_bins - 1)],
-                   rotation=45)
-        plt.ylim(0, 20)
-        plt.xlabel("Aridity", fontsize=12)
-        plt.ylabel("Long-term CV (%)", fontsize=12)
-        plt.title("Composite LAI", fontsize=12)
-        plt.tight_layout()
-        plt.show()
-
-
-
-
 
 
 
@@ -1197,7 +1041,7 @@ class Figure1():
 
 
 
-    def Figure1c_robinson(self):
+    def Figure1_robinson(self):  # convert figure to robinson
 
         fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
         temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
@@ -1288,7 +1132,7 @@ class Figure1():
     ID["EPSG",4326]]'''
         return wkt
 
-    def statistical_analysis(self):  #
+    def statistical_analysis(self):  # ## calculating percentage
 
         dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
         df=T.load_df(dff)
@@ -1580,7 +1424,7 @@ class Figure1():
 
 
 
-class Figure3_beta():
+class Figure2():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -5257,29 +5101,29 @@ class partial_correlation():
     def run(self):
 
         self.xvar_list = ['rainfall_frenquency_zscore',
-                          'detrended_sum_rainfall_CV_zscore',
-                         'Fire_sum_average_zscore' ]
-        # self.model_list = ['composite_LAI',OBS_median', 'GLOBMAP_LAI','SNU_LAI','LAI4g'] ]
+                          'detrended_sum_rainfall_growing_season_zscore',
+                          ]
+        self.model_list = ['GLOBMAP_LAI','SNU_LAI','LAI4g']
 
 
-        self.model_list = ['composite_LAI',]
 
         for model in self.model_list:
-            self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate_fire\\result\\\\{model}_test\\'
+            self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\result\\\\{model}\\'
             T.mk_dir(self.outdir, force=True)
             self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
             self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
 
             y_var = f'{model}_detrend_CV_zscore.npy'
-            x_var_list = self.xvar_list + [f'{model}_beta_mean_zscore']
+            x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
 
             #
             df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
             #
             self.cal_partial_corr(df,x_var_list, )
-            #
-            # # # # # self.check_data()
+            # #
+            # # # # # # self.check_data()
             self.plot_partial_correlation()
+            self.plot_partial_correlation_p_value()
 
             # self.maximum_partial_corr()
             # self.normalized_partial_corr(model)
@@ -5290,7 +5134,7 @@ class partial_correlation():
             # self.statistic_trend()
 
             # self.pft_test2()
-            self.pft_max_label()
+            # self.pft_max_label()
             # self.pft_corr()
             # self.aridity_bin()
 
@@ -5630,6 +5474,71 @@ class partial_correlation():
             # plt.colorbar()
 
         # plt.show()
+
+    def plot_partial_correlation_p_value(self):
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+
+
+
+        f_pvalue = self.outpartial_pvalue
+        outdir= self.outdir
+
+
+
+        partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
+
+
+        var_list = []
+        for pix in partial_correlation_p_value_dic:
+
+
+
+
+            vals = partial_correlation_p_value_dic[pix]
+
+
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in partial_correlation_p_value_dic:
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                dic_i = partial_correlation_p_value_dic[pix]
+                if not var_i in dic_i:
+                    continue
+                val = dic_i[var_i]
+                spatial_dic[pix] = val
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'{var_i}_p_value.tif')
+            std = np.nanstd(arr)
+            mean = np.nanmean(arr)
+            vmin = mean - std
+            vmax = mean + std
+            # plt.figure()
+            # arr[arr > 0.1] = 1
+            # plt.imshow(arr, vmin=-1, vmax=1)
+            #
+            # plt.title(var_i)
+            # plt.colorbar()
+
+        # plt.show()
+
 
     def maximum_partial_corr(self):
         fdir=self.outdir
@@ -6287,74 +6196,7 @@ class partial_correlation():
         plt.show()
 
 
-    def pft_corr(self):
-        dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate_fire\Dataframe\\Dataframe.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
 
-        df.dropna(inplace=True)
-        for column in df.columns:
-            print(column)
-        df=df[df['composite_LAI_CV_trend'] > 0]
-
-
-
-        ## get uqniue pft
-        pft_unique=df['landcover_classfication'].unique()
-        # print(pft_unique);exit()
-        pft_unique_list=['Global','Evergreen','Deciduous','Grass','Shrub',]
-
-        var_list=['composite_LAI_beta_mean_zscore','composite_LAI_Fire_sum_average_zscore',
-                  'composite_LAI_detrended_sum_rainfall_CV_zscore','composite_LAI_CV_intraannual_rainfall_ecosystem_year_zscore']
-        dic_label={ 1:'Gamma',
-                    2:'Fire',
-                    3:'CV_interannual_rainfall',
-                    4:'CV_rainfall_seasonality',
-
-
-        }
-
-
-        result_dic={}
-        for pft in pft_unique_list:
-            df_temp=df[df['landcover_classfication']==pft]
-            for var in var_list:
-                df_temp=df[[var,'max_label',f'{var}_p_value']]
-                ## >0 and <0
-                percent_pos=len(df_temp[df_temp[var]>0])/len(df_temp)
-                ## sig is pos+p_value<0.05
-                percent_pos_sig=len(df_temp[(df_temp[var]>0) & (df_temp[f'{var}_p_value']<0.05)])/len(df_temp)
-                percent_neg=len(df_temp[df_temp[var]<0])/len(df_temp)
-                percent_neg_sig=len(df_temp[(df_temp[var]<0) & (df_temp[f'{var}_p_value']<0.05)])/len(df_temp)
-
-                # 非显著部分 = 全部 - 显著
-                percent_pos_nonsig = percent_pos - percent_pos_sig
-                percent_neg_nonsig = percent_neg - percent_neg_sig
-
-                result_dic[var] = [percent_pos_sig, percent_pos_nonsig, percent_neg_sig, percent_neg_nonsig]
-
-            # 构建DataFrame
-            df_plot = pd.DataFrame(result_dic,
-                                   index=['Positive_sig', 'Positive_nonsig', 'Negative_sig', 'Negative_nonsig']).T
-
-            # 画图
-            colors = ['green', 'lightgreen', 'red', 'lightcoral']
-            df_plot.plot(kind='bar', stacked=True, color=colors, figsize=(10, 6), width=0.5)
-            ## xticks dic_label
-            plt.xticks(rotation=45, ha='right')
-            plt.xticks(range(len(dic_label)), dic_label.values(),rotation=0, )
-            ## add y=0
-            plt.axhline(y=0.5, color='gray', linestyle='--')
-
-            plt.ylabel('Percentage')
-            plt.title(f'{pft}')
-
-            plt.legend(title='Category', bbox_to_anchor=(1.05, 1), loc='upper left')
-            plt.tight_layout()
-            plt.show()
-
-
-        ## plot
 
 
 
@@ -10193,9 +10035,9 @@ def main():
 
     # Figure5().run()
 
-     # partial_correlation().run()
+     partial_correlation().run()
     # partial_correlation_TRENDY().run()
-    GAM().run()
+    # GAM().run()
 
 
 

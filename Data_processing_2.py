@@ -103,8 +103,9 @@ class Data_processing_2:
         # self.interpolate_VCF()
         # self.interpolation()
         # self.mean()
-        # self.zscore()
-        self.anomaly()
+        # self.mean_rainfall()
+        self.zscore()
+        # self.anomaly()
         # self.composite_LAI()
 
 
@@ -647,32 +648,58 @@ class Data_processing_2:
                 temp_dic = {}
         np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
     def mean(self):
-        f_mean=result_root+rf'\3mm\extract_FVC_phenology_year\\FVC.npy'
-        f_trend=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_max_trend.tif'
+        f_mean=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\sum_rainfall.npy'
+
         dic_mean=T.load_npy(f_mean)
-        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend)
-        dic_trend=DIC_and_TIF().spatial_arr_to_dic(arr)
+        # arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_mean)
+        # dic_trend=DIC_and_TIF().spatial_arr_to_dic(arr)
         result_dic={}
         for pix in dic_mean:
-            if pix not in dic_trend:
-                continue
-            val=dic_mean[pix]['growing_season']
+
+            val=dic_mean[pix]['ecosystem_year']
             val_mean=np.nanmean(val)
-            val_trend=dic_trend[pix]
-            if np.isnan(val_mean) or np.isnan(val_trend):
+
+            if np.isnan(val_mean) or np.isnan(val_mean):
                 continue
             if val_mean==0:
                 continue
-            relative_trend=val_trend/val_mean *100
+            # relative_trend=val_trend/val_mean *100
 
-            result_dic[pix]=relative_trend
-        outf=result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_relative_trend.tif'
-        array=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
-        DIC_and_TIF().arr_to_tif(array, outf)
-        np.save(result_root+rf'\3mm\extract_FVC_phenology_year\moving_window_min_max_anaysis\trend\\FVC_relative_trend.npy',result_dic)
+            result_dic[pix]=val_mean
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
+
+        outf=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\mean\\sum_rainfall_mean.tif'
+
+        np.save(
+            outf,
+            result_dic)
+
+        DIC_and_TIF().arr_to_tif(arr,outf)
+
+    def mean_rainfall(self):
+        f_mean = rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\\Tree cover.npy'
+
+        dic_mean = T.load_npy(f_mean)
+
+        result_dic = {}
+        for pix in dic_mean:
+
+            val = dic_mean[pix]
+            val_mean = np.nanmean(val)
+
+            result_dic[pix] = val_mean
 
 
-        pass
+
+
+        outdir = rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\\'
+        T.mk_dir(outdir, force=True)
+
+        np.save(
+            outdir + rf'Tree cover_mean.npy',
+            result_dic)
+
+    pass
 
     def anomaly(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
@@ -772,13 +799,14 @@ class Data_processing_2:
         # outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\input\Y\\'
         # Tools().mk_dir(outdir, force=True)
         # for model in model_list:
-        fpath = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\heavy_rainfall_days.npy'
-        outdir=result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\zscore\\'
+        fpath = result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\detrended_sum_rainfall_CV.npy'
+        outdir=result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\zscore\\'
+        T.mk_dir(outdir, force=True)
         Tools().mk_dir(outdir, force=True)
 
 
 
-        outf = outdir+ 'heavy_rainfall_days_zscore.npy'
+        outf = outdir+ 'detrended_sum_rainfall_growing_season_zscore.npy'
         # if isfile(outf):
         #     continue
         print(outf)
@@ -828,12 +856,13 @@ class Data_processing_2:
 
 
             # plt.plot(time_series)
-            # plt.legend(['raw'])
+            # # plt.legend(['raw'])
+            # plt.show()
             #
             #
             # plt.plot(zscore)
             # plt.legend(['zscore'])
-            # plt.legend(['raw','zscore'])
+            # # plt.legend(['raw','zscore'])
             # plt.show()
 
             ## save
@@ -1078,14 +1107,14 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'3mm\SHAP_beta\Dataframe\\')
+                    result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'moving_window2.df'
+        self.dff = self.this_class_arr + rf'Dataframe_2.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
-        # df=self.append_attributes(df)
+        df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
         # df=self.add_window_to_df(df)
@@ -1140,13 +1169,11 @@ class build_moving_window_dataframe():
 
     def build_df(self, df):
 
-        fdir = rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\LAI4g_detrend_CV.npy'
+        fdir = result_root+rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
         all_dic = {}
 
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
-                continue
-            if not 'LAI4g_detrend_CV' in f:
                 continue
 
             fname = f.split('.')[0]
@@ -1396,12 +1423,11 @@ class build_moving_window_dataframe():
 
         pass
     def append_attributes(self, df):  ## add attributes
-        fdir =  result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\\'
+        fdir =  result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
                 continue
-            if not 'detrended_GIMMS_plus_NDVI_CV' in f:
-                continue
+
 
             # array=np.load(fdir+f)
             # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1605,7 +1631,7 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
+        self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_2\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + rf'statistic.df'
 
@@ -1616,7 +1642,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1633,17 +1659,18 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
-        # # # df=self.add_soil_to_df(df)
-        # # # df=self.add_mean_to_df(df)
-        # # # df=self.add_interaction_to_df(df)
-        # # #
+        # df=self.add_trend_to_df(df)
+        # df=self.add_fire(df)
+        # df=self.add_soil_to_df(df)
+        # df=self.add_mean_to_df(df)
+        # # # # df=self.add_interaction_to_df(df)
+        # # # #
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
-        # # # # # # df=self.dummies(df)
+        # # # # # # # df=self.dummies(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
         # # # # # # # #
@@ -1657,7 +1684,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         df=self.show_field(df)
 
@@ -2025,6 +2052,8 @@ class build_dataframe():
             df[f'{variable}'] = NDVI_list
         # exit()
         return df
+
+
 
     def add_rainfall_characteristic_to_df(self, df):
         fdir = rf'E:\Data\ERA5_precip\ERA5_daily\dict\dry_spell\\'
@@ -2473,7 +2502,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg\\'
+        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2489,17 +2518,12 @@ class build_dataframe():
 
             variable = (f.split('.')[0])
             print(variable)
-            if  'contrib' in variable:
-                continue
-            if 'color_map' in variable:
-                continue
-            if  'max' in variable:
+            if not 'contrib' in variable:
                 continue
 
 
 
-            # if variable not in variable_list:
-            #     continue
+
 
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir + f)
             array = np.array(array, dtype=float)
@@ -2520,10 +2544,10 @@ class build_dataframe():
                     val_list.append(np.nan)
                     continue
                 val = val_dic[pix]
-                if val < -99:
+                if val < -9999:
                     val_list.append(np.nan)
                     continue
-                if val > 99:
+                if val > 9999:
                     val_list.append(np.nan)
                     continue
                 val_list.append(val)
@@ -2533,6 +2557,38 @@ class build_dataframe():
 
 
         return df
+
+    def add_fire(self, df):
+        fdir = data_root+rf'Fire\phenology_year_extraction_dryland\\'
+
+        val_dic = T.load_npy_dir(fdir)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            # window = row.window
+            # pix = row.pix
+            pix = row['pix']
+            r, c = pix
+
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+
+            vals = val_dic[pix]['ecosystem_year']
+            vals = np.array(vals)
+            ## 10^6
+            mean_burn_area = np.nansum(vals) / 1000000
+            if mean_burn_area < -99:
+                val_list.append(np.nan)
+                continue
+
+            val_list.append(mean_burn_area)
+
+        df['Burn_area_sum'] = val_list
+        return df
+
+        pass
     def add_residual_to_df(self, df):
         T.print_head_n(df)
 
@@ -2551,14 +2607,15 @@ class build_dataframe():
 
 
     def add_soil_to_df(self, df):
-        fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
+        # fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
+        fdir=data_root+rf'Base_data\Rooting_Depth\tif_025_unify_merge\\'
 
         for f in os.listdir(fdir):
             #
             if not f.endswith('.tif'):
                 continue
-            # if not 'relative_change' in f:
-            #     continue
+            if not '05' in f:
+                continue
 
 
 
@@ -2605,7 +2662,7 @@ class build_dataframe():
 
 
     def add_mean_to_df(self, df):
-        fdir=result_root+rf'3mm\Multiregression\Multiregression_result_residual\X\mean\\'
+        fdir=rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\mean\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
@@ -2653,7 +2710,10 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'residual': 'residual_contrib',
+        df = df.rename(columns={'detrended_sum_rainfall_growing_season_zscore_contrib_1': 'detrended_sum_rainfall_growing_season_zscore_contrib',
+
+                                'composite_LAI_beta_mean_zscore_contrib_1': 'composite_LAI_beta_mean_zscore_contrib',
+                                'rainfall_frenquency_zscore_contrib_1': 'rainfall_frenquency_zscore_contrib',
                                }
 
 
@@ -2674,7 +2734,8 @@ class build_dataframe():
         df = df.drop(columns=[
 
 
-                              'climate',
+                              'color_map_2',
+            'color_map_1'
 
 
 
