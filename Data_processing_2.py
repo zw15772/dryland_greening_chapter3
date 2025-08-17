@@ -1107,12 +1107,12 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
+                    result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe_2.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        # df=self.build_df(df)
+        df=self.build_df(df)
         # self.append_value(df)
         df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
@@ -1169,7 +1169,7 @@ class build_moving_window_dataframe():
 
     def build_df(self, df):
 
-        fdir = result_root+rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
+        fdir = result_root+rf'\3mm\Multiregression\partial_correlation\TRENDY\Input\X\\'
         all_dic = {}
 
         for f in os.listdir(fdir):
@@ -1423,10 +1423,11 @@ class build_moving_window_dataframe():
 
         pass
     def append_attributes(self, df):  ## add attributes
-        fdir =  result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
+        fdir =  result_root + rf'3mm\Multiregression\partial_correlation\TRENDY\Input\Y\\'
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
                 continue
+
 
 
             # array=np.load(fdir+f)
@@ -1664,6 +1665,7 @@ class build_dataframe():
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
         # # # # df=self.add_interaction_to_df(df)
+
         # # # #
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
@@ -1673,7 +1675,7 @@ class build_dataframe():
         # # # # # # # df=self.dummies(df)
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
-        # # # # # # # #
+        # # # # # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
@@ -1686,6 +1688,7 @@ class build_dataframe():
 
         df=self.rename_columns(df)
         # df = self.drop_field_df(df)
+        # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
 
 
@@ -2502,7 +2505,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\\'
+        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\SNU_LAI\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2512,14 +2515,15 @@ class build_dataframe():
         # variable_list=['CV_intraannual_rainfall_trend','pi_average_trend',
         #               'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
         for f in os.listdir(fdir):
-            #
+
+
+
             if not f.endswith('.tif'):
                 continue
 
             variable = (f.split('.')[0])
             print(variable)
-            if not 'contrib' in variable:
-                continue
+
 
 
 
@@ -2553,7 +2557,7 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}'] = val_list
+            df[f'{f_name}_SNU_LAI'] = val_list
 
 
         return df
@@ -2589,17 +2593,19 @@ class build_dataframe():
         return df
 
         pass
+
     def add_residual_to_df(self, df):
-        T.print_head_n(df)
+
+
+        print(df.columns.tolist())
 
         # df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
         #                   df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
 
-        # df['sum_climate_contrib']=df['CV_intraannual_rainfall_ecosystem_year_contrib'] + df['detrended_sum_rainfall_CV_contrib']
-        df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib'] +
-                                                                          df['detrended_sum_rainfall_CV_contrib'] + df['sum_rainfall_contrib']+
+        df['composite_residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['composite_LAI_beta_mean_zscore_contrib'] +
+                                                                          df['rainfall_frenquency_zscore_contrib'] + df['detrended_sum_rainfall_growing_season_zscore_contrib']
 
-                                                                          df['composite_LAI_beta_mean_contrib'] )
+                                                                          )
 
 
 
@@ -2608,6 +2614,8 @@ class build_dataframe():
 
     def add_soil_to_df(self, df):
         # fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
+
+
         fdir=data_root+rf'Base_data\Rooting_Depth\tif_025_unify_merge\\'
 
         for f in os.listdir(fdir):
@@ -2710,10 +2718,10 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'detrended_sum_rainfall_growing_season_zscore_contrib_1': 'detrended_sum_rainfall_growing_season_zscore_contrib',
+        df = df.rename(columns={'composite_LAI_beta_mean_zscore_contrib': 'composite_LAI_sensitivity_zscore_contrib',
 
-                                'composite_LAI_beta_mean_zscore_contrib_1': 'composite_LAI_beta_mean_zscore_contrib',
-                                'rainfall_frenquency_zscore_contrib_1': 'rainfall_frenquency_zscore_contrib',
+                                'LAI4g_sensitivity_zscore_contrib_LAI4g': 'LAI4g_sensitivity_zscore_contrib',
+                                'SNU_LAI_sensitivity_zscore_contrib_SNU_LAI': 'SNU_LAI_sensitivity_zscore_contrib',
                                }
 
 
@@ -2963,7 +2971,19 @@ class build_dataframe():
         return df
 
 
+    def remove_duplicate_columns(self,df):
 
+        T.print_head_n(df)
+        duplicate_columns = df.columns[df.columns.duplicated()]
+        print("重复的列名：", duplicate_columns)
+
+        duplicated_mask = df.columns.duplicated(keep='first')
+
+        # 只保留重复列（保留第二个）
+        df = df.loc[:, duplicated_mask]
+
+        T.print_head_n(df)
+        return df
 
     def show_field(self, df):
         for col in df.columns:
@@ -8872,8 +8892,8 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

@@ -1424,7 +1424,7 @@ class Figure1():
 
 
 
-class Figure2():
+class Figure2_delete():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -5103,27 +5103,33 @@ class partial_correlation():
         self.xvar_list = ['rainfall_frenquency_zscore',
                           'detrended_sum_rainfall_growing_season_zscore',
                           ]
+
         self.model_list = ['GLOBMAP_LAI','SNU_LAI','LAI4g']
+        self.model_list = ['composite_LAI',  ]
 
 
 
-        for model in self.model_list:
-            self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\result\\\\{model}\\'
-            T.mk_dir(self.outdir, force=True)
-            self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
-            self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
 
-            y_var = f'{model}_detrend_CV_zscore.npy'
-            x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
-
-            #
-            df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-            #
-            self.cal_partial_corr(df,x_var_list, )
-            # #
-            # # # # # # self.check_data()
-            self.plot_partial_correlation()
-            self.plot_partial_correlation_p_value()
+        # for model in self.model_list:
+        #     self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\result\\\\{model}\\'
+        #     T.mk_dir(self.outdir, force=True)
+        #     self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
+        #     self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
+        #
+        #     y_var = f'{model}_detrend_CV_zscore.npy'
+        #     x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
+        #
+        #
+        #     df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+        #     #
+        #     self.cal_partial_corr(df,x_var_list, )
+        #     # #
+        #     # # # # # # self.check_data()
+        #     self.plot_partial_correlation()
+        #     self.plot_partial_correlation_p_value()
+        #     # self.statistic_trend_bar()
+        #     self.plot_spatial_map_sig()
+        self.statistic_corr()
 
             # self.maximum_partial_corr()
             # self.normalized_partial_corr(model)
@@ -5539,6 +5545,221 @@ class partial_correlation():
 
         # plt.show()
 
+    def statistic_trend_bar(self):
+        model_list=self.model_list
+        variable_list=self.xvar_list
+        for model in model_list:
+            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\'
+            for variable in variable_list:
+
+
+                f_trend_path = fdir + f'{variable}.tif'
+                f_pvalue_path = fdir + f'{variable}_p_value.tif'
+
+                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+                arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+                arr_corr[arr_corr < -99] = np.nan
+                arr_corr[arr_corr > 99] = np.nan
+                arr_corr = arr_corr[~np.isnan(arr_corr)]
+
+                arr_pvalue[arr_pvalue < -99] = np.nan
+                arr_pvalue[arr_pvalue > 99] = np.nan
+                arr_pvalue = arr_pvalue[~np.isnan(arr_pvalue)]
+                ## corr negative and positive
+                arr_corr = arr_corr.flatten()
+                arr_pvalue = arr_pvalue.flatten()
+                arr_pos = len(arr_corr[arr_corr > 0]) / len(arr_corr) * 100
+                arr_neg = len(arr_corr[arr_corr < 0]) / len(arr_corr) * 100
+
+                ## significant positive and negative
+                ## 1 is significant and 2 positive or negative
+
+                mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+                mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+                # 满足条件的像元数
+                count_positive_sig = np.sum(mask_pos)
+                count_negative_sig = np.sum(mask_neg)
+
+                # 百分比
+                significant_positive = (count_positive_sig / len(arr_corr)) * 100
+                significant_negative = (count_negative_sig / len(arr_corr)) * 100
+                result_dic = {
+
+                    'sig neg': significant_negative,
+                    'non sig neg': arr_neg,
+                    'non sig pos': arr_pos,
+                    'sig pos': significant_positive
+
+                }
+                # df_new=pd.DataFrame(result_dic,index=[variable])
+                # ## plot
+                # df_new=df_new.T
+                # df_new=df_new.reset_index()
+                # df_new.columns=['Variable','Percentage']
+                # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+                # plt.show()
+                color_list = [
+                    '#008837',
+                    '#a6dba0',
+
+                    '#c2a5cf',
+                    '#7b3294',
+                ]
+                width = 0.4
+                alpha_list = [1, 0.5, 0.5, 1]
+
+                # 逐个画 bar
+                for i, (key, val) in enumerate(result_dic.items()):
+                    plt.bar(i, val, color=color_list[i], alpha=alpha_list[i], width=width)
+                    plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                    plt.ylabel('Percentage')
+                    plt.title(f'{model}_{variable}')
+
+                plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+                plt.show()
+
+    def plot_spatial_map_sig(self):
+
+        model_list=self.model_list
+        variable_list=['composite_LAI_sensitivity_zscore',
+                         'rainfall_frenquency_zscore',
+                       'detrended_sum_rainfall_growing_season_zscore']
+        for model in model_list:
+            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\'
+            outdir=result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
+            T.mk_dir(outdir,force=True)
+            for variable in variable_list:
+                f_trend_path = fdir + f'{variable}.tif'
+                f_pvalue_path = fdir + f'{variable}_p_value.tif'
+
+                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+                arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+                plt.imshow(arr_corr)
+                plt.colorbar()
+                plt.show()
+                arr_corr[arr_corr < -99] = np.nan
+                arr_corr[arr_corr > 99] = np.nan
+                arr_pvalue[arr_pvalue > 99] = np.nan
+                arr_pvalue[arr_pvalue < -99] = np.nan
+                arr_corr[arr_pvalue>0.05]=np.nan
+
+                # plt.imshow(arr_corr)
+                # plt.colorbar()
+                outf=outdir+f'{variable}.tif'
+                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
+
+
+        pass
+
+    def statistic_corr(self):
+        model_list = self.model_list
+        variable_list = ['composite_LAI_sensitivity_zscore',
+                         'rainfall_frenquency_zscore','detrended_sum_rainfall_growing_season_zscore']
+        result_dic={}
+
+        for model in model_list:
+
+            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
+
+
+            for variable in variable_list:
+                f_trend_path = fdir + f'{variable}.tif'
+
+
+                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+                arr_corr[arr_corr<-99]=np.nan
+                arr_corr[arr_corr>99]=np.nan
+                arr_corr=arr_corr[~np.isnan(arr_corr)]
+                arr_corr = arr_corr.flatten()
+                ## calculating average
+                average=np.nanmean(arr_corr)
+
+                result_dic[f'{model}_{variable}']=arr_corr
+
+
+
+
+
+        # 绘图
+        x_label_dic={
+            'composite_LAI_sensitivity_zscore':'$\gamma$',
+            'rainfall_frenquency_zscore':'Fq of rainfall',
+            'detrended_sum_rainfall_growing_season_zscore':'CVInterannual rainfall'
+        }
+
+
+        color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1', ]
+
+        dark_colors = [self.darken_color(c, 0.8) for c in color_list]
+        ## plt box plot
+
+       ###
+
+        x_labels = list(x_label_dic.values())
+        num_vars = len(x_labels)
+
+        # 提取数据
+        data_list = []
+        for key in x_label_dic.keys():
+            for model in model_list:
+                var_key = f"{model}_{key}"
+                if var_key in result_dic:
+                    data_list.append(result_dic[var_key])
+                    break  # 只取一个模型的数据（如OBS），你可以改为取多个模型平均或合并
+
+        # 设置颜色
+        color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1']
+        dark_colors = ['#774685', '#78a97d', '#539b7f', '#c3646f']  # 可以改为你自定义的 darken_color 函数
+
+        # 绘图
+        fig, ax = plt.subplots(figsize=(4, 3))
+
+        box = ax.boxplot(
+            data_list,
+            patch_artist=True,
+            widths=0.4,
+            showfliers=False
+
+        )
+
+        # 自定义颜色
+        for patch, face, edge in zip(box['boxes'], color_list, dark_colors):
+            patch.set_facecolor(face)
+            patch.set_edgecolor(edge)
+            patch.set_linewidth(1.5)
+        for i in range(len(data_list)):
+
+            box['medians'][i].set_color(dark_colors[i])
+            box['medians'][i].set_linewidth(1.5)
+
+            box['whiskers'][2 * i].set_color(dark_colors[i])
+            box['whiskers'][2 * i + 1].set_color(dark_colors[i])
+            box['whiskers'][2 * i].set_linewidth(1.2)
+            box['whiskers'][2 * i + 1].set_linewidth(1.2)
+
+        # 设置x轴
+
+
+        plt.xticks(range(1, len(x_labels) + 1), x_labels, fontsize=10)
+        plt.xlabel('')
+        plt.ylabel('Partial correlation', fontsize=10)
+
+
+        plt.axhline(0, color='gray', linestyle='--')
+        plt.tight_layout()
+
+
+
+        plt.show()
+
+    def darken_color(self, color, amount=0.7):
+        """
+        给颜色加深，amount 越小越深 (0~1之间)
+        """
+        import matplotlib.colors as mcolors
+        c = mcolors.to_rgb(color)
+        return tuple([max(0, x * amount) for x in c])
 
     def maximum_partial_corr(self):
         fdir=self.outdir
@@ -5981,61 +6202,7 @@ class partial_correlation():
     pass
 
 
-    def statistic_corr(self):
 
-        dff = result_root + rf'3mm\Multiregression\partial_correlation\\partial_correlation_df.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-
-        df.dropna(inplace=True)
-
-        variable_list=self.xvar_list
-
-        for variable in variable_list:
-            vals=df[variable].to_list()
-            vals=np.array(vals)
-
-
-            arr_corr=vals
-
-
-            arr_pos=len(df[df[variable]>0])/len(df)*100
-            arr_neg=len(df[df[variable]<0])/len(df)*100
-
-            ## significant positive and negative
-            ## 1 is significant and 2 positive or negative
-            df_sig=df[df[f'{variable}_p_value']<0.05]
-            arr_pos_sig=len(df_sig[df_sig[variable]>0])/len(df)*100
-            arr_neg_sig=len(df_sig[df_sig[variable]<0])/len(df)*100
-
-
-            result_dic={
-                'Negative_sig': arr_neg_sig,
-                'Negative': arr_neg,
-                'Positive':arr_pos,
-                'Positive_sig':arr_pos_sig,
-
-            }
-            # df_new=pd.DataFrame(result_dic,index=[variable])
-            # ## plot
-            # df_new=df_new.T
-            # df_new=df_new.reset_index()
-            # df_new.columns=['Variable','Percentage']
-            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
-            # plt.show()
-            color_list = ['#d01c8b', '#f1b6da', '#b8e186', '#4dac26']
-            width = 0.4
-            alpha_list = [1, 0.5, 0.5, 1]
-
-            # 逐个画 bar
-            for i, (key, val) in enumerate(result_dic.items()):
-                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
-                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
-                plt.ylabel('Percentage')
-                plt.title(variable)
-
-            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            plt.show()
 
 
 

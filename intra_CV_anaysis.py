@@ -4329,8 +4329,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
-        outdir =result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\trend\\'
+        fdir =result_root+ rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\'
+        outdir =result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
