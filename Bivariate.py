@@ -5104,8 +5104,9 @@ class partial_correlation():
                           'detrended_sum_rainfall_growing_season_zscore',
                           ]
 
-        self.model_list = ['GLOBMAP_LAI','SNU_LAI','LAI4g']
-        self.model_list = ['composite_LAI',  ]
+        self.model_list = ['GLOBMAP_LAI','SNU_LAI','LAI4g','composite_LAI', ]
+        self.model_list = [ 'composite_LAI', ]
+
 
 
 
@@ -5115,18 +5116,18 @@ class partial_correlation():
         #     T.mk_dir(self.outdir, force=True)
         #     self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
         #     self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
-        #
-        #     y_var = f'{model}_detrend_CV_zscore.npy'
-        #     x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
-        #
-        #
-        #     df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-        #     #
-        #     self.cal_partial_corr(df,x_var_list, )
-        #     # #
-        #     # # # # # # self.check_data()
-        #     self.plot_partial_correlation()
-        #     self.plot_partial_correlation_p_value()
+
+            # y_var = f'{model}_detrend_CV_zscore.npy'
+            # x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
+            #
+            #
+            # df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+            # #
+            # self.cal_partial_corr(df,x_var_list, )
+            # #
+            # # # # # # self.check_data()
+            # self.plot_partial_correlation()
+            # self.plot_partial_correlation_p_value()
         #     # self.statistic_trend_bar()
         #     self.plot_spatial_map_sig()
         self.statistic_corr()
@@ -5135,7 +5136,7 @@ class partial_correlation():
             # self.normalized_partial_corr(model)
             # self.normalized_partial_corr_unpacked(model)
             # self.normalized_partial_corr_ensemble(model)
-            # self.plot_pdf()
+        # self.plot_pdf()
             # self.statistic_corr()
             # self.statistic_trend()
 
@@ -5175,7 +5176,7 @@ class partial_correlation():
         y_val_list = []
 
         for pix in dic_y:
-            yvals = dic_y[pix][0:22]
+            yvals = dic_y[pix]
 
             if len(yvals) == 0:
                 continue
@@ -5208,7 +5209,7 @@ class partial_correlation():
                 if not pix in dic_x:
                     x_val_list.append([])
                     continue
-                xvals = dic_x[pix][0:22]
+                xvals = dic_x[pix]
                 xvals = np.array(xvals)
                 xvals = xvals
                 if len(xvals) == 0:
@@ -5621,15 +5622,15 @@ class partial_correlation():
 
     def plot_spatial_map_sig(self):
 
-        model_list=self.model_list
-        variable_list=['composite_LAI_sensitivity_zscore',
-                         'rainfall_frenquency_zscore',
-                       'detrended_sum_rainfall_growing_season_zscore']
+        model_list = self.model_list
+        variable_list = self.xvar_list
         for model in model_list:
             fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\'
-            outdir=result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
-            T.mk_dir(outdir,force=True)
-            for variable in variable_list:
+            outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
+            new_variable_list = variable_list + [f'{model}_sensitivity_zscore']
+            T.mk_dir(outdir, force=True)
+
+            for variable in new_variable_list:
                 f_trend_path = fdir + f'{variable}.tif'
                 f_pvalue_path = fdir + f'{variable}_p_value.tif'
 
@@ -5653,105 +5654,115 @@ class partial_correlation():
         pass
 
     def statistic_corr(self):
-        model_list = self.model_list
-        variable_list = ['composite_LAI_sensitivity_zscore',
-                         'rainfall_frenquency_zscore','detrended_sum_rainfall_growing_season_zscore']
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+        df.dropna(inplace=True)
+
+        variable_list=['sensitivity_zscore',
+            'rainfall_frenquency_zscore',
+                       'detrended_sum_rainfall_growing_season_zscore',
+                       ]
+
         result_dic={}
 
-        for model in model_list:
+        for model in self.model_list:
+            new_variable_list=[]
 
-            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
 
 
             for variable in variable_list:
-                f_trend_path = fdir + f'{variable}.tif'
+                new_variable=f'{model}_{variable}_sig'
+                new_variable_list.append(new_variable)
 
 
-                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
-                arr_corr[arr_corr<-99]=np.nan
-                arr_corr[arr_corr>99]=np.nan
-                arr_corr=arr_corr[~np.isnan(arr_corr)]
-                arr_corr = arr_corr.flatten()
+            for new_var in new_variable_list:
+                vals=df[new_var].to_list()
+                vals=np.array(vals)
+                vals[vals>99]=np.nan
+                vals[vals<-99]=np.nan
+                vals=vals[~np.isnan(vals)]
                 ## calculating average
-                average=np.nanmean(arr_corr)
+                average=np.nanmean(vals)
 
-                result_dic[f'{model}_{variable}']=arr_corr
+                result_dic[f'{new_var}']=vals
 
 
 
 
 
         # 绘图
-        x_label_dic={
-            'composite_LAI_sensitivity_zscore':'$\gamma$',
-            'rainfall_frenquency_zscore':'Fq of rainfall',
-            'detrended_sum_rainfall_growing_season_zscore':'CVInterannual rainfall'
-        }
+            x_label_dic={
+                f'{model}_sensitivity_zscore_sig':'$\gamma$',
+                f'{model}_rainfall_frenquency_zscore_sig':'Fq of rainfall',
+                f'{model}_detrended_sum_rainfall_growing_season_zscore_sig':'CVInterannual rainfall'
+            }
 
 
-        color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1', ]
+            color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1', ]
 
-        dark_colors = [self.darken_color(c, 0.8) for c in color_list]
-        ## plt box plot
+            dark_colors = [self.darken_color(c, 0.8) for c in color_list]
+            ## plt box plot
 
-       ###
+           ###
 
-        x_labels = list(x_label_dic.values())
-        num_vars = len(x_labels)
+            x_labels = list(x_label_dic.values())
+            num_vars = len(x_labels)
 
-        # 提取数据
-        data_list = []
-        for key in x_label_dic.keys():
-            for model in model_list:
-                var_key = f"{model}_{key}"
+            # 提取数据
+            data_list = []
+            for key in x_label_dic.keys():
+
+                var_key = f"{key}"
                 if var_key in result_dic:
                     data_list.append(result_dic[var_key])
-                    break  # 只取一个模型的数据（如OBS），你可以改为取多个模型平均或合并
-
-        # 设置颜色
-        color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1']
-        dark_colors = ['#774685', '#78a97d', '#539b7f', '#c3646f']  # 可以改为你自定义的 darken_color 函数
-
-        # 绘图
-        fig, ax = plt.subplots(figsize=(4, 3))
-
-        box = ax.boxplot(
-            data_list,
-            patch_artist=True,
-            widths=0.4,
-            showfliers=False
-
-        )
-
-        # 自定义颜色
-        for patch, face, edge in zip(box['boxes'], color_list, dark_colors):
-            patch.set_facecolor(face)
-            patch.set_edgecolor(edge)
-            patch.set_linewidth(1.5)
-        for i in range(len(data_list)):
-
-            box['medians'][i].set_color(dark_colors[i])
-            box['medians'][i].set_linewidth(1.5)
-
-            box['whiskers'][2 * i].set_color(dark_colors[i])
-            box['whiskers'][2 * i + 1].set_color(dark_colors[i])
-            box['whiskers'][2 * i].set_linewidth(1.2)
-            box['whiskers'][2 * i + 1].set_linewidth(1.2)
-
-        # 设置x轴
 
 
-        plt.xticks(range(1, len(x_labels) + 1), x_labels, fontsize=10)
-        plt.xlabel('')
-        plt.ylabel('Partial correlation', fontsize=10)
+            # 设置颜色
+            color_list = ['#a577ad', '#9fd79e', '#73c79e', '#f599a1']
+            dark_colors = ['#774685', '#78a97d', '#539b7f', '#c3646f']  # 可以改为你自定义的 darken_color 函数
+
+            # 绘图
+            fig, ax = plt.subplots(figsize=(4, 3))
+
+            box = ax.boxplot(
+                data_list,
+                patch_artist=True,
+                widths=0.4,
+                showfliers=False
+
+            )
+
+            # 自定义颜色
+            for patch, face, edge in zip(box['boxes'], color_list, dark_colors):
+                patch.set_facecolor(face)
+                patch.set_edgecolor(edge)
+                patch.set_linewidth(1.5)
+            for i in range(len(data_list)):
+
+                box['medians'][i].set_color(dark_colors[i])
+                box['medians'][i].set_linewidth(1.5)
+
+                box['whiskers'][2 * i].set_color(dark_colors[i])
+                box['whiskers'][2 * i + 1].set_color(dark_colors[i])
+                box['whiskers'][2 * i].set_linewidth(1.2)
+                box['whiskers'][2 * i + 1].set_linewidth(1.2)
+
+            # 设置x轴
 
 
-        plt.axhline(0, color='gray', linestyle='--')
-        plt.tight_layout()
+            plt.xticks(range(1, len(x_labels) + 1), x_labels, fontsize=10)
+            plt.xlabel('')
+            plt.ylabel('Partial correlation', fontsize=10)
+
+
+            plt.axhline(0, color='gray', linestyle='--')
+            plt.tight_layout()
 
 
 
-        plt.show()
+            plt.show()
 
     def darken_color(self, color, amount=0.7):
         """
@@ -6525,8 +6536,13 @@ class partial_correlation_TRENDY():
 
     def run(self):
 
-        self.xvar_list = ['CV_intraannual_rainfall_ecosystem_year_zscore', 'detrended_sum_rainfall_CV_zscore',
-                        'Fire_sum_average_zscore' ]
+        self.xvar_list = ['rainfall_frenquency_zscore',
+                          'detrended_sum_rainfall_growing_season_zscore',
+                          ]
+
+
+
+
 
         self.model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -6537,30 +6553,33 @@ class partial_correlation_TRENDY():
                            'YIBs_S2_Monthly_lai',
 
                            ]
-        self.model_list = ['TRENDY_mean' ]
+        self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\obs_climate\\result\\'
+        # self.model_list = ['TRENDY_mean' ]
 
 
         for model in self.model_list:
-            self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\Result\climate_fire_sensitivity\\{model}\\'
-            T.mk_dir(self.outdir, force=True)
-            self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
-            self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
+            outdir = self.outdir + rf'{model}\\'
+            T.mk_dir(outdir, force=True)
+            self.outpartial = outdir + rf'\partial_corr_{model}.npy'
+            self.outpartial_pvalue = outdir + rf'\partial_pvalue_{model}.npy'
 
             y_var = f'{model}_detrend_CV_zscore.npy'
-            x_var_list=self.xvar_list+[f'{model}_sensitivity_zscore']
+            x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
 
 
             # df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-            # # # # #
+            # # # #
             # self.cal_partial_corr(df,x_var_list)
             # # # # # # self.cal_single_correlation()
             # # # # # # self.cal_single_correlation_ly()
             # # # # # # self.check_data()
-            # self.plot_partial_correlation()
-            #
+            # self.plot_partial_correlation(outdir)
+            # self.plot_partial_correlation_p_value(outdir)
+            self.plot_spatial_map_sig()
+
             # # self.maximum_partial_corr()
             # self.normalized_partial_corr(model)
-            self.normalized_partial_corr_ensemble(model)
+            # self.normalized_partial_corr_ensemble(model)
             # self.normalized_partial_corr_unpacked(model)
             # self.plot_pdf()
             # self.statistic_corr()
@@ -6599,7 +6618,7 @@ class partial_correlation_TRENDY():
         y_val_list = []
 
         for pix in dic_y:
-            yvals = dic_y[pix][0:22]
+            yvals = dic_y[pix]
 
             if len(yvals) == 0:
                 continue
@@ -6632,7 +6651,7 @@ class partial_correlation_TRENDY():
                 if not pix in dic_x:
                     x_val_list.append([])
                     continue
-                xvals = dic_x[pix][0:22]
+                xvals = dic_x[pix]
                 xvals = np.array(xvals)
                 xvals = xvals
                 if len(xvals) == 0:
@@ -6841,7 +6860,7 @@ class partial_correlation_TRENDY():
 
 
 
-    def plot_partial_correlation(self):
+    def plot_partial_correlation(self,outdir):
 
         landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
@@ -6853,7 +6872,7 @@ class partial_correlation_TRENDY():
 
         f_partial = self.outpartial
         f_pvalue = self.outpartial_pvalue
-        outdir= self.outdir
+
 
 
         partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
@@ -6891,7 +6910,7 @@ class partial_correlation_TRENDY():
                 spatial_dic[pix] = val
             arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
 
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'{var_i}.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, outdir + f'{var_i}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
             vmin = mean - std
@@ -6909,7 +6928,101 @@ class partial_correlation_TRENDY():
 
 
 
+    def plot_partial_correlation_p_value(self,outdir ):
 
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+
+
+
+        f_pvalue = self.outpartial_pvalue
+
+
+
+
+        partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
+
+
+        var_list = []
+        for pix in partial_correlation_p_value_dic:
+
+
+
+
+            vals = partial_correlation_p_value_dic[pix]
+
+
+            for var_i in vals:
+                var_list.append(var_i)
+        var_list = list(set(var_list))
+        for var_i in var_list:
+            spatial_dic = {}
+            for pix in partial_correlation_p_value_dic:
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                dic_i = partial_correlation_p_value_dic[pix]
+                if not var_i in dic_i:
+                    continue
+                val = dic_i[var_i]
+                spatial_dic[pix] = val
+            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, outdir + f'{var_i}_p_value.tif')
+            std = np.nanstd(arr)
+            mean = np.nanmean(arr)
+            vmin = mean - std
+            vmax = mean + std
+            # plt.figure()
+            # arr[arr > 0.1] = 1
+            # plt.imshow(arr, vmin=-1, vmax=1)
+            #
+            # plt.title(var_i)
+            # plt.colorbar()
+
+        # plt.show()
+
+    def plot_spatial_map_sig(self):
+
+        model_list = self.model_list
+        variable_list = self.xvar_list
+        for model in model_list:
+            fdir = self.outdir + rf'\\{model}\\'
+            outdir = self.outdir + rf'\\{model}\\sig\\'
+            T.mk_dir(outdir,True)
+            new_variable_list=variable_list+[f'{model}_sensitivity_zscore']
+
+            for variable in new_variable_list:
+                f_trend_path = fdir + f'{variable}.tif'
+                f_pvalue_path = fdir + f'{variable}_p_value.tif'
+
+                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+                arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+                # plt.imshow(arr_corr)
+                # plt.colorbar()
+                # plt.show()
+                arr_corr[arr_corr < -99] = np.nan
+                arr_corr[arr_corr > 99] = np.nan
+                arr_pvalue[arr_pvalue > 99] = np.nan
+                arr_pvalue[arr_pvalue < -99] = np.nan
+                arr_corr[arr_pvalue > 0.05] = np.nan
+
+                # plt.imshow(arr_corr)
+                # plt.colorbar()
+                outf = outdir + f'{variable}.tif'
+                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
+
+        pass
 
 
 
@@ -10202,7 +10315,7 @@ def main():
 
     # Figure5().run()
 
-     partial_correlation().run()
+    partial_correlation().run()
     # partial_correlation_TRENDY().run()
     # GAM().run()
 

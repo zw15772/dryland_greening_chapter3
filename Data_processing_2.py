@@ -1632,9 +1632,9 @@ class build_dataframe():
 
 
 
-        self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_2\\Dataframe\\')
+        self.this_class_arr = (result_root+rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'statistic.df'
+        self.dff = self.this_class_arr + rf'statistics.df'
 
         pass
 
@@ -1643,7 +1643,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1659,7 +1659,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        # df=self.add_trend_to_df_scenarios(df)  ### add different scenarios of mild, moderate, extreme
+        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
         # df=self.add_soil_to_df(df)
@@ -1667,17 +1667,17 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # # #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # df=self.dummies(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # # # # # # # # #
-        # df=self.add_lat_lon_to_df(df)
-        # df=self.add_continent_to_df(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        # # # # # # df=self.dummies(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        # # # # # # # #
+        df=self.add_lat_lon_to_df(df)
+        df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
         # # # #
@@ -1686,7 +1686,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
@@ -1904,7 +1904,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg\\composite_LAI_beta_mean.tif'
+        f = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\CABLE-POP_S2_lai\\rainfall_frenquency_zscore_contrib.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2450,62 +2450,66 @@ class build_dataframe():
         return df
 
 
-    def add_trend_to_df_scenarios(self,df):
-        mode_list=['wet','dry']
-        for mode in mode_list:
-            period_list=['1982_2000','2001_2020','1982_2020']
-            for period in period_list:
+    def add_trend_to_df_trendy(self,df):
+        fdir_all=result_root+rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\\'
+        for fdir in os.listdir(fdir_all):
+            if 'Robinson' in fdir:
+                continue
 
-                fdir=result_root+rf'\monte_carlo\{mode}\\{period}\\'
 
-                for f in os.listdir(fdir):
-                    # print(f)
-                    # exit()
-                    if not 'trend' in f:
+            for f in os.listdir(join(fdir_all,fdir)):
+
+            # fdir_sig=fdir_all+fdir+'\\sig\\'
+            #
+            # for f in os.listdir(fdir_sig):
+
+
+
+                if not f.endswith('.tif'):
+                    continue
+
+
+
+                variable=(f.split('.')[0])
+                if 'sensitivity' in variable:
+                    fname=variable
+                else:
+                    fname=f'{fdir}_{variable}'
+                print(fname)
+
+
+
+                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_all,fdir,f))
+                array = np.array(array, dtype=float)
+
+                val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
+
+                # val_array = np.load(fdir + f)
+                # val_dic=T.load_npy(fdir+f)
+
+                # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
+
+
+                val_list=[]
+                for i,row in tqdm(df.iterrows(),total=len(df)):
+                    pix=row['pix']
+                    if not pix in val_dic:
+                        val_list.append(np.nan)
                         continue
-
-
-                    if not f.endswith('.tif'):
+                    val=val_dic[pix]
+                    if val<-99:
+                        val_list.append(np.nan)
                         continue
-
-
-
-                    variable=(f.split('.')[0])
-
-
-
-                    array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fdir+f)
-                    array = np.array(array, dtype=float)
-
-                    val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
-
-                    # val_array = np.load(fdir + f)
-                    # val_dic=T.load_npy(fdir+f)
-
-                    # val_dic = DIC_and_TIF().spatial_arr_to_dic(val_array)
-                    f_name=f.split('.')[0]+'_'+period
-                    print(f_name)
-
-                    val_list=[]
-                    for i,row in tqdm(df.iterrows(),total=len(df)):
-                        pix=row['pix']
-                        if not pix in val_dic:
-                            val_list.append(np.nan)
-                            continue
-                        val=val_dic[pix]
-                        if val<-99:
-                            val_list.append(np.nan)
-                            continue
-                        if val>99:
-                            val_list.append(np.nan)
-                            continue
-                        val_list.append(val)
-                    df[f'{f_name}']=val_list
+                    if val>99:
+                        val_list.append(np.nan)
+                        continue
+                    val_list.append(val)
+                df[f'{fname}']=val_list
 
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\SNU_LAI\\'
+        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\\'
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -8892,8 +8896,8 @@ class SM_Tcoupling():
 def main():
     # Data_processing_2().run()
     # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
