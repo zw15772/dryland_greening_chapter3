@@ -104,9 +104,9 @@ class Data_processing_2:
         # self.interpolation()
         # self.mean()
         # self.mean_rainfall()
-        self.zscore()
+        # self.zscore()
         # self.anomaly()
-        # self.composite_LAI()
+        self.composite_LAI()
 
 
 
@@ -1631,10 +1631,10 @@ class build_dataframe():
     def __init__(self):
 
 
-
-        self.this_class_arr = (result_root+rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
+        self.this_class_arr = (result_root+rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\')
+        # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'statistics.df'
+        self.dff = self.this_class_arr + rf'partial_correlation.df'
 
         pass
 
@@ -1643,7 +1643,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1659,7 +1659,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
         # df=self.add_soil_to_df(df)
@@ -1667,17 +1667,17 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # #
-        df=self.add_lat_lon_to_df(df)
-        df=self.add_continent_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # # # # #
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
         # # # #
@@ -1687,7 +1687,7 @@ class build_dataframe():
 
 
         # df=self.rename_columns(df)
-        # df = self.drop_field_df(df)
+        df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
 
@@ -2451,13 +2451,16 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all=result_root+rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\\'
+        fdir_all=result_root+rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\\'
         for fdir in os.listdir(fdir_all):
             if 'Robinson' in fdir:
                 continue
 
 
+
             for f in os.listdir(join(fdir_all,fdir)):
+                if not 'color_map' in f:
+                    continue
 
             # fdir_sig=fdir_all+fdir+'\\sig\\'
             #
@@ -2509,7 +2512,8 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\\'
+        fdir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\TRENDY_ensemble\\'
+
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
         #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -2527,6 +2531,13 @@ class build_dataframe():
 
             variable = (f.split('.')[0])
             print(variable)
+
+            variable = (f.split('.')[0])
+            # if 'sensitivity' in variable:
+            #     fname = variable
+            # else:
+            #     fname = f'TRENDY_ensemble_{variable}'
+            # print(fname)
 
 
 
@@ -2561,7 +2572,7 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}_SNU_LAI'] = val_list
+            df[f'{f_name}'] = val_list
 
 
         return df
@@ -2606,8 +2617,8 @@ class build_dataframe():
         # df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
         #                   df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
 
-        df['composite_residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['composite_LAI_beta_mean_zscore_contrib'] +
-                                                                          df['rainfall_frenquency_zscore_contrib'] + df['detrended_sum_rainfall_growing_season_zscore_contrib']
+        df['composite_LAI_residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['composite_LAI_sensitivity_zscore_contrib'] +
+                                                                          df['composite_LAI_rainfall_frenquency_zscore_contrib'] + df['composite_LAI_detrended_sum_rainfall_growing_season_zscore_contrib']
 
                                                                           )
 
@@ -2722,10 +2733,10 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'composite_LAI_beta_mean_zscore_contrib': 'composite_LAI_sensitivity_zscore_contrib',
+        df = df.rename(columns={'detrended_sum_rainfall_growing_season_zscore_sig': 'TRENDY_ensemble_detrended_sum_rainfall_growing_season_zscore_sig',
 
-                                'LAI4g_sensitivity_zscore_contrib_LAI4g': 'LAI4g_sensitivity_zscore_contrib',
-                                'SNU_LAI_sensitivity_zscore_contrib_SNU_LAI': 'SNU_LAI_sensitivity_zscore_contrib',
+                              'rainfall_frenquency_zscore_sig': 'TRENDY_ensemble_rainfall_frenquency_zscore_sig',
+
                                }
 
 
@@ -2743,11 +2754,24 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=[
-
-
-                              'color_map_2',
-            'color_map_1'
+        df = df.drop(columns=['composite_LAI_color_map',
+                              'GLOBMAP_LAI_color_map',
+                              'LAI4g_color_map',
+                              'SNU_LAI_color_map',
+                              'CABLE-POP_S2_lai_color_map',
+                              'CLASSIC_S2_lai_color_map',
+                              'CLM5_color_map',
+                              'DLEM_S2_lai_color_map',
+                              'IBIS_S2_lai_color_map',
+                              'ISAM_S2_lai_color_map',
+                              'ISBA-CTRIP_S2_lai_color_map',
+                              'JSBACH_S2_lai_color_map',
+                              'JULES_S2_lai_color_map',
+                              'LPJ-GUESS_S2_lai_color_map',
+                              'LPX-Bern_S2_lai_color_map',
+                              'ORCHIDEE_S2_lai_color_map',
+                              'TRENDY_ensemble_color_map',
+                              'YIBs_S2_Monthly_lai_color_map',
 
 
 
@@ -2755,6 +2779,7 @@ class build_dataframe():
 
 
                               ])
+
         return df
 
 
@@ -7977,16 +8002,30 @@ class TRENDY_CV:
 
                       'YIBs_S2_Monthly_lai']
 
-        fdir = result_root + rf'3mm\Multiregression\zscore\TRENDY\sensitivity\\'
+        fdir_all = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\\'
         arr_list = []
 
         for model in model_list:
-            fpath = fdir + model + '_sensitivity_zscore.npy'
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            arr[arr > 99] = np.nan
-            arr[arr < -99] = np.nan
+            fdir_ii=fdir_all+model+'\\'
+            for f in os.listdir(fdir_ii):
+                if 'contrib' in f:
+                    continue
 
-            arr_list.append(arr)
+
+                if not 'sensitivity_zscore' in f:
+                    continue
+                if not f.endswith('.tif'):
+                    continue
+                fpath=fdir_ii+f
+
+
+
+
+                arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+                arr[arr > 99] = np.nan
+                arr[arr < -99] = np.nan
+
+                arr_list.append(arr)
 
 
         arr_ensemble = np.nanmean(arr_list, axis=0)
@@ -7995,9 +8034,12 @@ class TRENDY_CV:
         plt.imshow(arr_ensemble, cmap='RdYlGn')
         plt.colorbar()
         plt.show()
+        outdir=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\\TRENDY_ensemble\\'
+        T.mk_dir(outdir, force=True)
+        outf=outdir+'TRENDY_ensemble_sensitivity_zscore.tif'
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
 
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble,
-                                              result_root + rf'\3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\TRENDY_ensemble_detrend_max_trend.tif')
+
 
     def trend_analysis(self):  ##each window average trend
 
@@ -8531,19 +8573,24 @@ class TRENDY_CV:
 
             ##markerborderwidth=1
 
-            plt.ylabel('Trend (%/year)', fontsize=12)
-            plt.xlabel('CV (%/year)', fontsize=12)
+            plt.ylabel('Trends in LAI (%/year)', fontsize=12)
+            plt.xlabel('Trends in CVLAI (%/year)', fontsize=12)
             plt.ylim(-0.02,0.18)
             plt.xlim(-0.3, 0.5)
             plt.xticks(fontsize=12)
+            ## xticks gap 0.05
+            plt.yticks(np.arange(-0.02, 0.19, 0.05))
             plt.yticks(fontsize=12)
-            plt.legend()
+            # plt.legend()
         ## save imagine
-        # plt.savefig(result_root + rf'3mm\FIGURE\\LAI4g_detrend_CV_trend.pdf',  bbox_inches='tight')
+        plt.axhline(y=0.068, color='k', linestyle='--', linewidth=1)
+        plt.axvline(x=0.12, color='k', linestyle='--', linewidth=1)
+        plt.savefig(result_root + rf'3mm\FIGURE\\LAI4g_detrend_CV_trend.pdf',  bbox_inches='tight')
 
 
 
-        plt.show()
+        #
+        # plt.show()
 
 
 
@@ -8894,15 +8941,15 @@ class SM_Tcoupling():
 
 
 def main():
-    # Data_processing_2().run()
-    # Phenology().run()
-    build_dataframe().run()
+     # Data_processing_2().run()
+    # # Phenology().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

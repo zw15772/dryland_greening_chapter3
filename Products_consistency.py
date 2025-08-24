@@ -1828,10 +1828,10 @@ class PLOT_dataframe():
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        self.plot_CV_LAI()
+        # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.statistic_trend_CV_bar()
-        # self.statistic_trend_bar()
+        self.statistic_trend_bar()
 
 
         pass
@@ -1862,12 +1862,11 @@ class PLOT_dataframe():
 
         # create color list with one green and another 14 are grey
 
-        color_list = ['grey'] * 16
-        color_list[0] = 'green'
 
-        color_list = ['green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [1,1,1,2,2]
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 
 
@@ -1875,9 +1874,13 @@ class PLOT_dataframe():
         # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
         #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
-        variable_list=[
+        variable_list=['composite_LAI_CV',
                        'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
-            'GLOBMAP_LAI_detrend_CV','composite_LAI_CV',]
+            'GLOBMAP_LAI_detrend_CV',]
+        dic_label={'composite_LAI_CV':'Composite LAI',
+                   'LAI4g_detrend_CV':'LAI4g',
+                   'detrended_SNU_LAI_CV':'SNUV',
+                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',}
         year_list=range(0,25)
 
 
@@ -1921,11 +1924,11 @@ class PLOT_dataframe():
         for var in variable_list:
             if var == 'composite_LAI_CV':
                 ## plot CI bar
-                plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag],
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
                          )
                 ## fill std
-                std = [std_dic[var][y] for y in year_list]
-                plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
 
                 ## fill CI
                 # ci_low = [CI_dic[var][y][0] for y in year_list]
@@ -1939,7 +1942,11 @@ class PLOT_dataframe():
 
 
             else:
-                plt.plot(year_list, df_new[var], label=var, linewidth=linewidth_list[flag], color=color_list[flag])
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag])
+
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
+
             flag = flag + 1
         ## if var == 'composite_LAI_CV': plot CI bar
 
@@ -1959,17 +1966,19 @@ class PLOT_dataframe():
         # plt.xticks(range(0, 23, 4))
         plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
         plt.yticks(np.arange(5, 25, 5))
+        # plt.yticks(np.arange(5, 50, 5))
         # plt.xticks(range(0, 23, 3))
 
 
         plt.ylabel(f'LAI CV (%)')
 
         plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
 
         # plt.show()
-        plt.tight_layout()
+        # plt.tight_layout()
         out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        plt.savefig(out_pdf_fdir + 'time_series.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
 
@@ -1990,13 +1999,9 @@ class PLOT_dataframe():
 
         # create color list with one green and another 14 are grey
 
-        color_list = ['grey'] * 16
-        color_list[0] = 'green'
-
-        color_list = ['green', 'blue',  'orange', 'red','purple', 'aqua', 'black', 'yellow', 'purple', 'pink', 'grey',
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [0.5,0.5,0.5,2,2]
-
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 
 
         fig = plt.figure()
@@ -2006,9 +2011,13 @@ class PLOT_dataframe():
         # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
         #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
-        variable_list = ['LAI4g', 'SNU_LAI_relative_change', 'GLOBMAP_LAI_relative_change',
-                         'composite_LAI_relative_change_mean',
+        variable_list = [
+                         'composite_LAI_relative_change_mean','LAI4g', 'SNU_LAI_relative_change',
+            'GLOBMAP_LAI_relative_change',
                          ]
+        dic_label={'LAI4g':'LAI4g','SNU_LAI_relative_change':'SNU_LAI',
+                   'GLOBMAP_LAI_relative_change':'GLOBMAP_LAI',
+                   'composite_LAI_relative_change_mean':'Composite LAI'}
         year_list=range(1983,2021)
 
 
@@ -2028,16 +2037,20 @@ class PLOT_dataframe():
 
         df_new = pd.DataFrame(result_dic)
         flag=0
+        plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-            plt.plot(year_list, df_new[var], label=var,linewidth=linewidth_list[flag], color=color_list[flag])
+            plt.plot(year_list, df_new[var], label=dic_label[var],linewidth=linewidth_list[flag], color=color_list[flag])
             flag=flag+1
         plt.ylabel('Relative change LAI (%)')
         plt.grid(True)
 
 
         plt.legend()
-        plt.show()
+        # plt.show()
+        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
     def statistic_trend_CV_bar(self):
@@ -2177,11 +2190,20 @@ class PLOT_dataframe():
             # plt.show()
             color_list = [
                  '#844000',
-            '#fc9831',
+            'lightgray',
 
-            '#86b9d2',
+            'lightgray',
             '#064c6c',
             ]
+
+            # color_list = [
+            #     '#844000',
+            #     '#fc9831',
+            #     '#fffbd4',
+            #     '#86b9d2',
+            #     '#064c6c',
+            # ]
+
             width = 0.4
             alpha_list = [1, 0.5, 0.5, 1]
 
@@ -2194,6 +2216,8 @@ class PLOT_dataframe():
 
             plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
             plt.show()
+            # plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_trend_bar.pdf')
+            # plt.close()
 
 
 def main():
