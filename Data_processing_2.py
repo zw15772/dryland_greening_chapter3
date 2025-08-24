@@ -1107,17 +1107,17 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Dataframe\\')
+                    result_root + rf'\3mm\product_consistency\dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'moving_window.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        df=self.build_df(df)
+        # df=self.build_df(df)
         # self.append_value(df)
-        df=self.append_attributes(df)
+        # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
@@ -1272,13 +1272,13 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'3mm\Multiregression\anomaly\\'
+        fdir=result_root+rf'\3mm\extract_composite_phenology_year\\'
 
 
 
 
         for f in os.listdir(fdir):
-            if not 'sum_rainfall' in f:
+            if not 'composite_LAI_detrend_relative_change_min' in f:
                 continue
 
 
@@ -1301,7 +1301,7 @@ class build_moving_window_dataframe():
             NDVI_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
 
-                window = row.window
+                window = row.year
                 # pix = row.pix
                 pix = row['pix']
                 r, c = pix
@@ -8944,12 +8944,12 @@ def main():
      # Data_processing_2().run()
     # # Phenology().run()
     # build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

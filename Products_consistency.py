@@ -1829,9 +1829,9 @@ class PLOT_dataframe():
         pass
     def run (self):
         # self.plot_CV_LAI()
-        # self.plot_relative_change_LAI()
+        self.plot_relative_change_LAI()
         # self.statistic_trend_CV_bar()
-        self.statistic_trend_bar()
+        # self.statistic_trend_bar()
 
 
         pass
@@ -1881,7 +1881,7 @@ class PLOT_dataframe():
                    'LAI4g_detrend_CV':'LAI4g',
                    'detrended_SNU_LAI_CV':'SNUV',
                    'GLOBMAP_LAI_detrend_CV':'GLOBMAP',}
-        year_list=range(0,25)
+        year_list=range(0,24)
 
 
         result_dic = {}
@@ -1934,7 +1934,9 @@ class PLOT_dataframe():
                 # ci_low = [CI_dic[var][y][0] for y in year_list]
                 # ci_high = [CI_dic[var][y][1] for y in year_list]
                 # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
 
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
 
 
                 ## std
@@ -1946,6 +1948,8 @@ class PLOT_dataframe():
 
                 # std = [std_dic[var][y] for y in year_list]
                 # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
 
             flag = flag + 1
         ## if var == 'composite_LAI_CV': plot CI bar
@@ -1975,11 +1979,11 @@ class PLOT_dataframe():
         plt.grid(which='major', alpha=0.5)
         plt.legend(loc='upper left')
 
-        # plt.show()
+        plt.show()
         # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
         #
@@ -2042,15 +2046,17 @@ class PLOT_dataframe():
         for var in variable_list:
             plt.plot(year_list, df_new[var], label=dic_label[var],linewidth=linewidth_list[flag], color=color_list[flag])
             flag=flag+1
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(var, f'{slope:.2f}', f'{p_value:.2f}')
         plt.ylabel('Relative change LAI (%)')
         plt.grid(True)
 
 
         plt.legend()
-        # plt.show()
-        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.show()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
     def statistic_trend_CV_bar(self):

@@ -913,20 +913,19 @@ class multi_regression_beta():
 
         plt.show()
 
-class Figure1():
+class Figure2():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
         # self.bivariate_map()
-        # self.Aridity_CV()
-        # self.Aridity_beta()
-        # self.figure1f()
 
-        # self.Figure1c_robinson()
+        # self.Figure1_robinson()
         # self.heatmap_LAImin_max_CV_Figure1d()
-        self.statistical_analysis()
+    ## slop trend calculation
+        self.slop_calculation()
+
 
 
 
@@ -943,10 +942,10 @@ class Figure1():
         outtif = join(outdir,'CV_trend2.tif')
         # outtif = join(outdir, 'LAImin_LAImax.tif')
 
-        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
-        fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
-        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
-        fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
+        fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        # fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
+        fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        # fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
 
         #1
         # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
@@ -1132,7 +1131,7 @@ class Figure1():
     ID["EPSG",4326]]'''
         return wkt
 
-    def statistical_analysis(self):  # ## calculating percentage
+    def statistical_analysis(self):  # ## calculating percentage  not used
 
         dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
         df=T.load_df(dff)
@@ -1288,6 +1287,110 @@ class Figure1():
         plt.show()
         # plt.savefig(outf)
         # plt.close()
+    def slop_calculation(self):
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
+
+        df=self.df_clean(df)
+        print(len(df))
+
+
+
+        color_list = ['purple', 'teal', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
+                      'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2, 2 ]
+
+
+
+        variable_list = ['composite_LAI_detrend_relative_change_min',
+                         'composite_LAI_detrend_relative_change_max',  ]
+        dic_label = {'composite_LAI_detrend_relative_change_min': 'LAImin',
+                     'composite_LAI_detrend_relative_change_max': 'LAImax',}
+        year_list = range(0, 24)
+
+        result_dic = {}
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+
+            data_dic = {}
+
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+
+
+                data_dic[year] = np.nanmean(vals)
+
+            result_dic[var] = data_dic
+
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+
+        flag = 0
+        plt.figure(figsize=(self.map_width*1.6, self.map_height))
+        slope_dic={}
+
+        for var in variable_list:
+                slope_dic[var]=slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+
+
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag],
+                         color=color_list[flag])
+
+
+
+
+
+                flag = flag + 1
+
+        for var in variable_list:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(slope,p_value, )
+            x_pos = max(year_list) * 0.9  # 例如在靠近右边
+            # 选择一个固定的y位置（可以用数据的均值或最大最小值调节）
+            y_base = df_new[var].mean()
+
+            # 在同一列上下显示
+            plt.text(x_pos, y_base +3, f'slope={slope:.2f}', fontsize=12, ha='center')
+            plt.text(x_pos, y_base - 1, f'p={p_value:.2f}', fontsize=12, ha='center')
+
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        # plt.xticks(range(0, 23, 4))
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.yticks(np.arange(-30, 31, 10))
+
+
+
+
+        plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
+
+        # plt.show()
+
+        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+        pass
 
     def figure1f(self):
 
@@ -1302,8 +1405,7 @@ class Figure1():
         # plt.show();exit()
 
         T.print_head_n(df)
-        x_var = 'composite_LAI_detrend_relative_change_min_trend'
-        y_var = 'composite_LAI_detrend_relative_change_max_trend'
+
 
         df_LAImax_pos=df[df['composite_LAI_detrend_relative_change_max_trend']>0]
         df_LAImax_neg=df[df['composite_LAI_detrend_relative_change_max_trend']<0]
@@ -1435,8 +1537,8 @@ class Figure_beta():
         # self.generate_bivarite_map()
     ## Step2
         # self.generate_df()
-        #
-        # ## step3
+        # #
+        # # ## step3
         # build_dataframe().run()
 
 
@@ -1466,28 +1568,28 @@ class Figure_beta():
         # exit()
         outdir = result_root + rf'3mm\\\bivariate_analysis\\composite_LAI\\'
         T.mk_dir(outdir, force=True)
-        outtif = outdir + rf'\\wetting_beta_LAI_growing_season.tif'
+        outtif = outdir + rf'\\wetting_beta_growing_season.tif'
 
         tif1 = tif_rainfall
         tif2 = tif_sensitivity
 
         dic1 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif1)
         dic2 = DIC_and_TIF(pixelsize=0.5).spatial_tif_to_dic(tif2)
-        dics = {'interannual_CVrainfall': dic1,
+        dics = {'wetting_drying': dic1,
                 'beta': dic2}
         df = T.spatial_dics_to_df(dics)
         # print(df)
-        df['interannual_CVrainfall_increase'] = df['interannual_CVrainfall'] > 0
+        df['wetting'] = df['wetting_drying'] > 0
         df['beta_increase'] = df['beta'] > 0
 
         print(df)
         label_list = []
         for i, row in df.iterrows():
-            if row['interannual_CVrainfall_increase'] and row['beta_increase']:
+            if row['wetting'] and row['beta_increase']:
                 label_list.append(1)
-            elif row['interannual_CVrainfall_increase'] and not row['beta_increase']:
+            elif row['wetting'] and not row['beta_increase']:
                 label_list.append(2)
-            elif not row['interannual_CVrainfall_increase'] and row['beta_increase']:
+            elif not row['wetting'] and row['beta_increase']:
                 label_list.append(3)
             else:
                 label_list.append(4)
@@ -1502,20 +1604,22 @@ class Figure_beta():
     def generate_df(self):
         ##rainfall_trend +sensitivity+ greening
         variable='composite_LAI'
-        ftiff=result_root + rf'3mm\bivariate_analysis\\{variable}\\interannual_CVrainfall_beta.tif'
+        ftiff=result_root + rf'3mm\bivariate_analysis\\{variable}\\wetting_beta_growing_season.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(ftiff)
+        array[array<-999]=np.nan
 
         dic_beta_CVrainfall=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(array)
 
-        f_CVLAItiff=result_root+rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\\CV_intraannual_rainfall_trend.tif'
+        f_CVLAItiff=result_root+rf'3mm\extract_composite_phenology_year\trend\\composite_LAI_relative_change_mean_trend.tif'
         array_CV_LAI,originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_CVLAItiff)
+        array_CV_LAI[array_CV_LAI<-999]=np.nan
         dic_CV_LAI=DIC_and_TIF(pixelsize=0.5).spatial_arr_to_dic(array_CV_LAI)
 
 
-        df=T.spatial_dics_to_df({'CVrainfall_beta':dic_beta_CVrainfall,f'CV_intraannual_rainfall':dic_CV_LAI})
+        df=T.spatial_dics_to_df({'wetting_beta':dic_beta_CVrainfall,f'LAI_trend':dic_CV_LAI})
 
-        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension.df')
-        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension.xlsx')
+        T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_wetting_beta_LAItrend.df')
+        T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_wetting_beta_LAItrend.xlsx')
         # exit()
 
 
@@ -1524,40 +1628,45 @@ class Figure_beta():
 
     def generate_three_dimension(self):
         variable='composite_LAI'
-        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension.df'
+        dff=result_root + rf'\3mm\bivariate_analysis\Dataframe\\three_dimension_wetting_beta_LAItrend.df'
         df=T.load_df(dff)
         self.df_clean(df)
-        df=df[df['composite_LAI_CV_trend']>=0]
+        # df=df[df['composite_LAI_CV_trend']>=0]
 
 
+        for col in ['LAI_trend', 'wetting_beta']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df.loc[df[col] <= -99, col] = np.nan  # 若没有哨兵可以删掉这一行
 
-        df[f"CV_intraannual_rainfall"] = df[f"CV_intraannual_rainfall"].apply(lambda x: "increaseCV" if x >= 0 else "decreaseCV")
+            # 2) 给 LAI_trend 打标签（NaN 安全）
 
-        category_mapping = {
-            ("increaseCV", 1): 1,
-            ("increaseCV", 2): 2,
-            ("increaseCV", 3): 3,
-            ("increaseCV", 4): 4,
-            ("decreaseCV", 1): 5,
-            ("decreaseCV", 2): 6,
-            ("decreaseCV", 3): 7,
-            ("decreaseCV", 4): 8,
-        }
+        def trend_label(x):
+            if pd.isna(x):
+                return pd.NA
+            return 'greening' if x >= 0 else 'browning'
 
-        # Apply the mapping to create a new column 'new_category'
-        df["CV_inter_intra_rainfall_beta"] = df.apply(
-            lambda row: category_mapping[(row[f"CV_intraannual_rainfall"], row["CVrainfall_beta"])],
-            axis=1)
-        # T.save_df(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.df')
-        # T.df_to_excel(df, result_root + rf'\3mm\bivariate_analysis\Dataframe\\Trend.xlsx')
+        df['LAI_trend_label'] = df['LAI_trend'].apply(trend_label)
+
+        # 3) 仅保留 wetting_beta ∈ {1,2,3,4}，其他置为 NA
+        df['wetting_beta'] = df['wetting_beta'].astype('Int64')  # Int64 能保留 NA
+        df.loc[~df['wetting_beta'].isin([1, 2, 3, 4]), 'wetting_beta'] = pd.NA
+
+        # 4) 构造映射（MultiIndex + reindex，未匹配的自动给 NaN 而不是 KeyError）
+        mapping = pd.Series({
+            ('greening', 1): 1, ('greening', 2): 2, ('greening', 3): 3, ('greening', 4): 4,
+            ('browning', 1): 5, ('browning', 2): 6, ('browning', 3): 7, ('browning', 4): 8,
+        })
+
+        mi = pd.MultiIndex.from_arrays([df['LAI_trend_label'], df['wetting_beta']])
+        df['wetting_LAI_beta'] = mapping.reindex(mi).to_numpy()  # 没有匹配的得到 NaN
 
         # Display the result
         print(df)
         outdir = result_root + rf'\3mm\bivariate_analysis\\{variable}\\'
         T.mk_dir(outdir, force=True)
-        outf = outdir + rf'CV_inter_intra_rainfall_beta.tif'
+        outf = outdir + rf'LAI_wetting_beta_growing_season.tif'
 
-        spatial_dic = T.df_to_spatial_dic(df, 'CV_inter_intra_rainfall_beta')
+        spatial_dic = T.df_to_spatial_dic(df, 'wetting_LAI_beta')
         DIC_and_TIF(pixelsize=.5).pix_dic_to_tif(spatial_dic, outf)
         ##save pdf
 
@@ -1571,7 +1680,7 @@ class Figure_beta():
     def plot_figure2b(self):
 
         variable='composite'
-        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\three_dimension_growing_season.df'
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\three_dimension_wetting_beta_LAItrend.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         df=df.dropna()
@@ -1584,11 +1693,11 @@ class Figure_beta():
 
 
 
-        df_greening = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] < 5]
+        df_greening = df[df[f'LAI_wetting_beta_growing_season'] < 5]
         count_green = len(df_greening)
 
 
-        df_browning = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] >= 5]
+        df_browning = df[df[f'LAI_wetting_beta_growing_season'] >= 5]
         count_brown = len(df_browning)
 
 
@@ -1604,18 +1713,18 @@ class Figure_beta():
         for i in range(1, 9):
 
             if i < 5:
-                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == i]
+                df_i = df[df[f'LAI_wetting_beta_growing_season'] == i]
                 count = len(df_i)
                 dic[i] = count / len(df) * 100
 
 
             else:
-                df_i = df[df[f'CV_rainfall_beta_LAI_{variable}_growing_season'] == i]
+                df_i = df[df[f'LAI_wetting_beta_growing_season'] == i]
                 count = len(df_i)
                 dic[i] = count / len(df) * 100
             sum=sum+dic[i]
-        print(sum)
-        pprint(dic);exit()
+        # print(sum)
+        # pprint(dic);exit()
         ## I want to index 1234 to 5678 and 5678 to 1234
 
 
@@ -1656,7 +1765,7 @@ class Figure_beta():
 
         # Aesthetics
         ax.set_yticks([0, 1])
-        ax.set_yticklabels(['CVrainfall+', 'CVrainfall-'])
+        ax.set_yticklabels(['drying', 'wetting'])
         ax.set_xlabel('%')
         ax.set_xlim(0, 60)
 
@@ -1755,7 +1864,7 @@ class Figure_beta():
                 continue
 
             fname = f.split('.')[0]
-            if not 'CV_rainfall_beta_LAI_composite_growing_season' in fname:
+            if not 'LAI_wetting_beta_growing_season' in fname:
                 continue
 
             fpath = fdir_trend + f
@@ -1779,7 +1888,7 @@ class Figure_beta():
 
             # plt.title(f'{fname}')
             # plt.show()
-            outf = outdir + 'CV_rainfall_beta_LAI_composite_growing_season.pdf'
+            outf = outdir + 'LAI_wetting_beta_growing_season.pdf'
             plt.savefig(outf)
             plt.close()
             # exit()
@@ -2110,151 +2219,6 @@ class Figure_beta():
 
         return df
 
-class Figure4:
-
-    def __init__(self):
-        self.dff=result_root+rf'\3mm\SHAP_beta\Dataframe\\moving_window.df'
-
-    def run(self):
-        # self.check_df_attributes()
-        # self.plot_X_Y()
-        self.bivariate_map()
-        pass
-
-
-    def check_df_attributes(self):
-        dff = self.dff
-        df = T.load_df(dff)
-        T.print_head_n(df)
-        print(df.columns.tolist())
-        print(len(df))
-        # exit()
-        pass
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
-
-    def bivariate_map(self): ## this plot for VPD and heavy rainfall days vs beta
-        import xymap
-
-
-        fdir =result_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\bivariate\\'
-
-        outdir =result_root + rf'3mm\SHAP_beta\png\RF_composite_LAI_beta\pdp_shap_beta_ALL_sig2\bivariate\\'
-
-        T.mkdir(outdir)
-
-        outtif = join(outdir,'beta_VPD.tif')
-        # outtif = join(outdir, 'LAImin_LAImax.tif')
-
-        # fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
-        fpath1 = join(fdir,'composite_LAI_beta_trend.tif')
-        # fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
-        fpath2 = join(fdir,'heavy_rainfall_days_trend.tif')
-
-        #1
-        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
-        #2
-        tif1_label, tif2_label = 'composite_LAI_beta_trend','VPD_trend'
-
-        #1
-        # min1, max1 = -1, 1
-        # min2, max2 = -1, 1
-
-        #2
-        min1, max1 = -.5, .5
-        min2, max2 = -.01, .01
-
-        arr1 = ToRaster().raster2array(fpath1)[0]
-        arr2 = ToRaster().raster2array(fpath2)[0]
-
-        arr1[arr1<-9999] = np.nan
-        arr2[arr2<-9999] = np.nan
-
-        arr1_flattened = arr1.flatten()
-        arr2_flattened = arr2.flatten()
-
-
-        # plt.hist(arr1_flattened,bins=100)
-        # plt.title('arr1')
-        # plt.figure()
-        # plt.hist(arr2_flattened,bins=100)
-        # plt.title('arr2')
-        # plt.show()
-
-        # choice 1
-        # upper_left_color = (193,92,156)
-        # upper_right_color =(112, 196, 181)
-        # lower_left_color = (237, 125, 49)
-        # lower_right_color = (0, 0, 110)
-        # center_color = (240, 240, 240)
-
-        ## CV greening option
-
-        upper_left_color = (194, 0, 120)
-        upper_right_color = (0,170,237)
-        lower_left_color = (233, 55, 43)
-        # lower_right_color = (160, 108, 168)
-        lower_right_color = (234, 233, 46)
-        center_color = (240, 240, 240)
-
-
-        xymap.Bivariate_plot_1(res = 2,
-                         alpha = 255,
-                         upper_left_color = upper_left_color, #
-                         upper_right_color = upper_right_color, #
-                         lower_left_color = lower_left_color, #
-                         lower_right_color = lower_right_color, #
-                         center_color = center_color).plot_bivariate(
-                                                                    fpath1, fpath2,
-                                                                    tif1_label, tif2_label,
-                                                                    min1, max1,
-                                                                    min2, max2,
-                                                                    outtif,
-                                                                    n_x = 5, n_y = 5
-                                                                    )
-
-        T.open_path_and_file(outdir)
-
-    def plot_X_Y(self):
-        dff=result_root+rf'3mm\SHAP_beta\Dataframe\\Trend.df'
-        # dff=result_root+rf'\3mm\SHAP_beta\Dataframe\\moving_window.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        # df=df[df['continent']=='Africa']
-        df=df[df['extraction_mask']==1]
-        # df=df[df['composite_LAI_beta']>-5]
-        # df=df[df['composite_LAI_beta']<5]
-
-        Y=df['composite_LAI_beta_mean_trend'].tolist()
-        X=df['sand'].tolist()
-        Y=np.array(Y)
-        X=np.array(X)
-        mask = (~np.isnan(X)) & (~np.isnan(Y))
-        Y=Y[mask]
-        X=X[mask]
-        ### add fiting line
-        slope, intercept, r_value, p_value, std_err = stats.linregress(X, Y)
-        plt.plot(X, intercept + slope * X, color='r')
-        plt.text(0.5, 0.5, f'r={r_value:.2f}, p={p_value:.2e}', transform=plt.gca().transAxes)
-
-        KDE_plot().plot_scatter(X,Y)
-        plt.ylim(-.5,.5)
-        plt.xlabel('')
-        plt.ylabel('composite_LAI_beta')
-        plt.show()
-
-        pass
 class Plot_Robinson:
     def __init__(self):
         # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
@@ -2694,7 +2658,7 @@ class Plot_Robinson:
         plt.xticks(range(len(c_list)), x_ticks_list)
         plt.yticks(range(len(r_list)), y_ticks_list[::-1])
 
-class Figure2():
+class Figure_temp():  ## not used
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -3355,7 +3319,7 @@ class build_dataframe():
 
         self.this_class_arr = (result_root+rf'\3mm\bivariate_analysis\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'three_dimension.df'
+        self.dff = self.this_class_arr + rf'three_dimension_wetting_beta_LAItrend.df'
 
         pass
 
@@ -3367,10 +3331,10 @@ class build_dataframe():
         # df=self.foo2(df)
         # df=self.add_detrend_zscore_to_df(df)
         # df=self.append_attributes(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.ensemble_to_df(df)
         # df=self.add_wet_dry_to_df(df)
-        # df=self.add_8class_to_df(df)
+        df=self.add_8class_to_df(df)
 
 
         # df=self.add_aridity_to_df(df)
@@ -3987,7 +3951,7 @@ class build_dataframe():
     def add_8class_to_df(self, df):
         fdir=rf'D:\Project3\Result\3mm\bivariate_analysis\composite_LAI\\'
         for f in os.listdir(fdir):
-            if not 'CV_rainfall_beta_LAI_composite_growing_season' in f:
+            if not 'LAI_wetting_beta_growing_season' in f:
                 continue
 
 
@@ -9638,7 +9602,7 @@ def main():
 
     # Figure1().run()
     # Figure2().run()
-    # Figure3_beta().run()
+
     Figure_beta().run()
     # Figure4().run()
     # build_dataframe().run()
