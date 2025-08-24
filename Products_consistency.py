@@ -1829,7 +1829,8 @@ class PLOT_dataframe():
         pass
     def run (self):
         # self.plot_CV_LAI()
-        self.plot_relative_change_LAI()
+        # self.plot_relative_change_LAI()
+        self.plot_std()
         # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
 
@@ -1923,6 +1924,144 @@ class PLOT_dataframe():
 
         for var in variable_list:
             if var == 'composite_LAI_CV':
+                ## plot CI bar
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
+                         )
+                ## fill std
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
+
+                ## fill CI
+                # ci_low = [CI_dic[var][y][0] for y in year_list]
+                # ci_high = [CI_dic[var][y][1] for y in year_list]
+                # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+
+                ## std
+
+
+
+            else:
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag])
+
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+            flag = flag + 1
+        ## if var == 'composite_LAI_CV': plot CI bar
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        # plt.xticks(range(0, 23, 4))
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.yticks(np.arange(5, 25, 5))
+        # plt.yticks(np.arange(5, 50, 5))
+        # plt.xticks(range(0, 23, 3))
+
+
+        plt.ylabel(f'LAI CV (%)')
+
+        plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
+
+        plt.show()
+        # plt.tight_layout()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+        #
+        # plt.legend()
+        # plt.show()
+
+    def plot_std(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+
+
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+        variable_list=['composite_LAI_relative_change_detrend_std','LAI4g_relative_change_detrend_std',
+                       'SNU_LAI_relative_change_detrend_std',
+                       'GLOBMAP_LAI_relative_change_detrend_std',
+
+                      ]
+        dic_label={'composite_LAI_relative_change_detrend_std':'Composite',
+                   'LAI4g_relative_change_detrend_std':'GIMMS4g',
+                   'SNU_LAI_relative_change_detrend_std':'SNU',
+                   'GLOBMAP_LAI_relative_change_detrend_std':'GLOBMAP',}
+        year_list=range(0,24)
+
+
+        result_dic = {}
+        CI_dic={}
+        std_dic={}
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+            CI_dic[var] = {}
+            data_dic = {}
+            CI_dic_data={}
+            std_dic_data={}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                SEM=stats.sem(vals)
+                CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
+                std=np.nanstd(vals)
+                CI_dic_data[year]=CI
+                std_dic_data[year]=std
+
+                data_dic[year] = np.nanmean(vals)
+
+
+
+
+            result_dic[var] = data_dic
+            CI_dic[var]=CI_dic_data
+            std_dic[var]=std_dic_data
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+
+        flag = 0
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            if var == 'composite_LAI_relative_change_detrend_std':
                 ## plot CI bar
                 plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
                          )

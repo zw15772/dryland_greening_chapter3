@@ -869,10 +869,11 @@ class Data_processing_2:
         np.save(outf, zscore_dic)
 
     def composite_LAI(self):
-        # infdir=result_root + rf'\3mm\moving_window_multi_regression\multiresult_relative_change_detrend\\'
-        f_1=rf'D:\Project3\Result\3mm\extract_LAI4g_phenology_year\dryland\moving_window_min_max_anaysis\LAI4g_detrend_max_zscore.npy'
-        f_2=rf'D:\Project3\Result\3mm\extract_SNU_LAI_phenology_year\moving_window_min_max_anaysis\\detrended_SNU_LAI_max_zscore.npy'
-        f_3=rf'D:\Project3\Result\3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\GLOBMAP_LAI_detrend_max_raw_zscore.npy'
+
+        infdir=result_root + rf'3mm\extract_composite_phenology_year\STD_relative_change_std\\'
+        f_1=infdir+rf'\\GLOBMAP\\GLOBMAP_LAI_relative_change_detrend_std.npy'
+        f_2=infdir+rf'\\LAI4g\\LAI4g_relative_change_detrend_std.npy'
+        f_3=infdir+rf'\\SNU_LAI\\SNU_LAI_relative_change_detrend_std.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -909,12 +910,12 @@ class Data_processing_2:
             plt.plot(value2,color='green')
             plt.plot(value3,color='orange')
             plt.plot(average_val,color='red')
-            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
-        outdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\'
+        outdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\STD_relative_change_std\\'
         Tools().mk_dir(outdir,force=True)
 
-        np.save(outdir+'composite_LAImax_zscore.npy',average_dic)
+        np.save(outdir+'composite_LAI_relative_change_detrend_std.npy',average_dic)
 
         pass
     def interpolate_VCF(self):
@@ -1272,14 +1273,12 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'\3mm\extract_composite_phenology_year\\'
+        fdir=result_root+rf'\3mm\extract_composite_phenology_year\STD_relative_change_std\\'
 
 
 
 
         for f in os.listdir(fdir):
-            if not 'composite_LAI_detrend_relative_change_min' in f:
-                continue
 
 
 

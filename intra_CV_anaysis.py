@@ -3805,9 +3805,9 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
-        # self.moving_window_std_anaysis()
+        self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
         # self.robinson()
 
@@ -4212,16 +4212,16 @@ class moving_window():
 
     def moving_window_std_anaysis(self):
         window_size=15
-        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_extraction_trend\ecosystem_year\\'
-        outdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\\\\moving_window_mean_std_anaysis\\'
+        fdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\\\\moving_window_mean_std_anaysis\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'detrended_sum_rainfall_ecosystem_year_zscore' in f:
+            if not 'LAI4g_detrend' in f:
                 continue
 
             dic = T.load_npy(fdir + f)
             slides = 38-window_size+1
-            outf = outdir + f.split('.')[0] + f'_mean.npy'
+            outf = outdir + f.split('.')[0] + f'_std.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -4252,8 +4252,8 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    # cv=np.nanstd(time_series)
-                    cv = np.nanmean(time_series)
+                    cv=np.nanstd(time_series)
+                    # cv = np.nanmean(time_series)
                     trend_list.append(cv)
 
                 trend_dic[pix]=trend_list
@@ -4329,8 +4329,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\'
-        outdir =result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\trend\\'
+        fdir =result_root+ rf'\3mm\extract_composite_phenology_year\STD_relative_change_std\composite_LAI\\'
+        outdir =result_root + rf'\3mm\extract_composite_phenology_year\STD_relative_change_std\composite_LAI\\\\trend\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
