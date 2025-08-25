@@ -15,6 +15,7 @@ from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
 from sympy.abc import alpha
+from sympy.printing.pretty.pretty_symbology import line_width
 
 from SI_anaysis import climate_variables
 
@@ -924,7 +925,8 @@ class Figure2():
         # self.Figure1_robinson()
         # self.heatmap_LAImin_max_CV_Figure1d()
     ## slop trend calculation
-        self.slop_calculation()
+        # self.slop_calculation()
+        self.statistic_pdf()
 
 
 
@@ -1012,6 +1014,32 @@ class Figure2():
         T.open_path_and_file(outdir)
 
 
+    def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
+
+        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
+        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+            if not 'std_mean' in f:
+                continue
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+            outf=outdir + fname + '.tif'
+            srcSRS=self.wkt_84()
+            dstSRS=self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath,outf, 50000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
+
 
 
     def RGBA_to_tif(self,blend_arr,outf,originX, originY, pixelWidth, pixelHeight):
@@ -1039,32 +1067,6 @@ class Figure2():
 
 
 
-
-    def Figure1_robinson(self):  # convert figure to robinson
-
-        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
-        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
-        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
-        T.mk_dir(outdir, force=True)
-        T.mk_dir(temp_root, force=True)
-
-        for f in os.listdir(fdir_trend):
-            if not 'CV_trend_test' in f:
-                continue
-
-            if not f.endswith('.tif'):
-                continue
-
-            fname = f.split('.')[0]
-
-            fpath = fdir_trend + f
-            outf=outdir + fname + '.tif'
-            srcSRS=self.wkt_84()
-            dstSRS=self.wkt_robinson()
-
-            ToRaster().resample_reproj(fpath,outf, 50000, srcSRS=srcSRS, dstSRS=dstSRS)
-
-            T.open_path_and_file(outdir)
 
 
     def wkt_robinson(self):
@@ -1391,6 +1393,39 @@ class Figure2():
         plt.close()
 
         pass
+
+    def statistic_pdf(self):
+        dff= result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        vals_min=df['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        vals_max=df['composite_LAI_detrend_relative_change_max_trend'].tolist()
+        vals_min=np.array(vals_min)
+        vals_max=np.array(vals_max)
+        vals_min[vals_min>99]=np.nan
+        vals_min[vals_min<-99]=np.nan
+        vals_max[vals_max>99]=np.nan
+        vals_max[vals_max<-99]=np.nan
+
+
+        figure, ax = plt.subplots(figsize=(3,2),  )
+        sns.kdeplot(vals_min, ax=ax, label=f'Min trend', fill=False,color='#f599a1',linewidth=2)
+        sns.kdeplot(vals_max, ax=ax, label=f'Max trend', fill=False,color='#a577ad',linewidth=2)
+
+        # === 添加均值线和标注 ===
+        mean_min = np.nanmean(vals_min)
+        mean_max = np.nanmean(vals_max)
+
+        ax.axvline(mean_min, color='#f599a1', linestyle='--', linewidth=1)
+        ax.axvline(mean_max, color='#a577ad', linestyle='--', linewidth=1)
+        # ax.legend()
+        plt.ylabel('')
+        plt.xlim(-5, 5)
+        # plt.show()
+        outf=result_root + rf'\3mm\product_consistency\pdf\\min_max_trend.pdf'
+        plt.savefig(outf,bbox_inches='tight',pad_inches=0,dpi=300)
+        plt.close()
+
 
     def figure1f(self):
 
@@ -2666,19 +2701,13 @@ class Figure_std_mean_bivariate():  ##
         pass
 
     def run(self):
-
-
-
+        ## step 1
         # self.bivariate_map()
-        self.Figure_robinson_reprojection()
-        # self.bivariate_scheme3()
-        # self.Figure2a_robinson()
+        ## step 2
+        # self.Figure_robinson_reprojection()  # convert figure to robinson and no need to plot robinson again
 
-
-        # self.Figure2b_test()
-
-        # self.CV_greening_heatmap2()
-        # self.statistic_bar()
+       ## step 3
+        self.statistic_pdf()
 
 
         pass
@@ -2892,86 +2921,49 @@ class Figure_std_mean_bivariate():  ##
         return df
 
     def statistic_pdf(self):
-        f_trend=rf'D:\Project3\Result\3mm\relative_change_growing_season\\TRENDY\trend_analysis\\composite_LAI_mean_trend.tif'
-        f_cv=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\trend\composite_LAI_CV_trend.tif'
-
-        array_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend)
-        array_cv, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_cv)
-
-        array_trend[array_trend < -999] = np.nan
-        array_cv[array_cv < -999] = np.nan
-        plt.hist(array_trend.flatten())
-        plt.show()
-        plt.hist(array_cv.flatten())
-        plt.show()
-        # exit()
-        mask = ~np.isnan(array_trend) & ~np.isnan(array_cv)
-        trend_map_valid = array_trend[mask]
-        cv_map_valid = array_cv[mask]
+        dff= result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        vals_min=df['composite_LAI_std_trend'].tolist()
+        vals_max=df['composite_LAI_mean_trend'].tolist()
+        vals_min=np.array(vals_min)
+        vals_max=np.array(vals_max)
+        vals_min[vals_min>99]=np.nan
+        vals_min[vals_min<-99]=np.nan
+        vals_max[vals_max>99]=np.nan
+        vals_max[vals_max<-99]=np.nan
 
 
+        figure, ax = plt.subplots(figsize=(3,2),  )
+        sns.kdeplot(vals_min, ax=ax, label=f'std trend', fill=False,color='#9fd7e9',linewidth=2)
+        sns.kdeplot(vals_max, ax=ax, label=f'mean trend', fill=False,color='#fcd590',linewidth=2)
+        # ax.legend()
+        # === 添加均值线和标注 ===
+        mean_min = np.nanmean(vals_min)
+        mean_max = np.nanmean(vals_max)
 
-        n_bins =5
+        ax.axvline(mean_min, color='#9fd7e9', linestyle='--', linewidth=1)
+        ax.axvline(mean_max, color='#fcd590', linestyle='--', linewidth=1)
+        # plt.legend()
 
-        cv_bins=np.linspace(-1,1,n_bins)
-        trend_bins=np.linspace(-0.5,0.5,n_bins)
-        # 5. Combine into a DataFrame
-        df = pd.DataFrame({'CV': cv_map_valid, 'Trend': trend_map_valid})
-        df=df.dropna()
+        # 在图顶写出均值
+        # ylim = ax.get_ylim()
+        # ax.text(mean_min, ylim[1] * 0.9, f'{mean_min:.4f}',
+        #         color='#f599a1', rotation=90, va='top', ha='right', fontsize=8)
+        # ax.text(mean_max, ylim[1] * 0.9, f'{mean_max:.4f}',
+        #         color='#a577ad', rotation=90, va='top', ha='left', fontsize=8)
 
-        result_dic={}
-        ###
-        x_tick_list=[]
-        percent_matrix = np.zeros((n_bins - 1, n_bins - 1))
-
-
-        for i in range(n_bins):
-            if i == n_bins - 1:
-                continue
-            df_group=df[(df['CV'] > cv_bins[i]) & (df['CV'] <= cv_bins[i + 1])]
-            print(len(df_group))
-
-            x_tick_list.append([i, 0])
-            for j in range(n_bins):
-                if j == n_bins - 1:
-                    continue
-                df_groupii=df_group[(df_group['Trend'] > trend_bins[j]) & (df_group['Trend'] <= trend_bins[j + 1])]['Trend']
-
-                count=len(df_groupii)/len(df_group) *100
-
-                percent_matrix[i,j]=count
+        plt.ylabel('')
+        plt.xlim(-0.01, 0.01)
+        # plt.tight_layout()
+        # plt.show()
+        outf=result_root + rf'\3mm\product_consistency\pdf\\std_mean_trend.pdf'
+        plt.savefig(outf,bbox_inches='tight',pad_inches=0,dpi=300)
 
 
 
-        # print(result_dic);exit()
-        x_label_list=['strongly CV-','moderately CV-','slight CV-','slight CV+','moderately CV+','strongly CV+']
 
 
-        ## plt result
-        # x轴标签 = CV组（主分组）
-        x_labels = [f"{cv_bins[i]:.2f}~{cv_bins[i + 1]:.2f}" for i in range(n_bins - 1)]
-        trend_labels = [f"{trend_bins[i]:.2f}~{trend_bins[i + 1]:.2f}" for i in range(n_bins - 1)]
-
-        x = np.arange(len(x_labels))  # 每个主组位置
-        width = 0.2  # 每个子柱宽度
-
-        plt.figure(figsize=(self.map_width, self.map_height))
-        color_list=['brown','red',   'green', 'blue', 'purple']
-        flag=0
-
-        for j in range(n_bins - 1):  # 对于每个 trend 组
-
-            plt.bar(x + j * width, percent_matrix[:, j], width, label=f"Trend {trend_labels[j]}", color=color_list[flag])
-            flag+=1
-
-        plt.xticks(x + width * ((n_bins - 2) / 2), x_labels, rotation=45)
-        plt.ylabel('Percentage (%)')
-
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-
-        plt.show()
 
 
     def classify(self,row):
@@ -9484,11 +9476,11 @@ class GAM():
 def main():
     # CCI_landcover_preprocess().run()
 
-    # Figure1().run()
-    # Figure2().run()
+
+    Figure2().run()
 
     # Figure_beta().run()
-    Figure_std_mean_bivariate().run()
+    # Figure_std_mean_bivariate().run()
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()

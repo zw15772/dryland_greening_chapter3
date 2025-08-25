@@ -1629,11 +1629,12 @@ class build_dataframe():
 
     def __init__(self):
 
-
-        self.this_class_arr = (result_root+rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\')
-        # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
+        self.this_class_arr = (
+                result_root + rf'\3mm\product_consistency\dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'partial_correlation.df'
+        self.dff = self.this_class_arr + rf'moving_window.df'
+        # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
+
 
         pass
 
@@ -1659,7 +1660,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
@@ -1686,7 +1687,7 @@ class build_dataframe():
 
 
         # df=self.rename_columns(df)
-        df = self.drop_field_df(df)
+        # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
 
@@ -2511,7 +2512,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\TRENDY_ensemble\\'
+        fdir = result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
 
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2532,6 +2533,9 @@ class build_dataframe():
             print(variable)
 
             variable = (f.split('.')[0])
+
+            if not 'composite_LAI_detrend_relative_change_min_trend' in variable:
+                continue
             # if 'sensitivity' in variable:
             #     fname = variable
             # else:
@@ -2753,24 +2757,12 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=['composite_LAI_color_map',
-                              'GLOBMAP_LAI_color_map',
-                              'LAI4g_color_map',
-                              'SNU_LAI_color_map',
-                              'CABLE-POP_S2_lai_color_map',
-                              'CLASSIC_S2_lai_color_map',
-                              'CLM5_color_map',
-                              'DLEM_S2_lai_color_map',
-                              'IBIS_S2_lai_color_map',
-                              'ISAM_S2_lai_color_map',
-                              'ISBA-CTRIP_S2_lai_color_map',
-                              'JSBACH_S2_lai_color_map',
-                              'JULES_S2_lai_color_map',
-                              'LPJ-GUESS_S2_lai_color_map',
-                              'LPX-Bern_S2_lai_color_map',
-                              'ORCHIDEE_S2_lai_color_map',
-                              'TRENDY_ensemble_color_map',
-                              'YIBs_S2_Monthly_lai_color_map',
+        df = df.drop(columns=['GLOBMAP_LAI_relative_change_detrend_std',
+                              'LAI4g_relative_change_detrend_std',
+                              'SNU_LAI_relative_change_detrend_std',
+
+                              'composite_LAI_relative_change_detrend_std',
+
 
 
 
@@ -8942,8 +8934,8 @@ class SM_Tcoupling():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
