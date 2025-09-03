@@ -922,10 +922,10 @@ class Figure2():
     def run (self):
         # self.bivariate_map()
 
-        # self.Figure1_robinson()
+        self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
-    ## slop trend calculation
-        # self.slop_calculation()
+    ##plot LAImin and LAImax see script Products_consistency
+
         self.statistic_pdf()
 
 
@@ -1289,110 +1289,6 @@ class Figure2():
         plt.show()
         # plt.savefig(outf)
         # plt.close()
-    def slop_calculation(self):
-        df = T.load_df(
-            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
-
-        df=self.df_clean(df)
-        print(len(df))
-
-
-
-        color_list = ['purple', 'teal', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
-                      'pink', 'grey',
-                      'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [2, 2 ]
-
-
-
-        variable_list = ['composite_LAI_detrend_relative_change_min',
-                         'composite_LAI_detrend_relative_change_max',  ]
-        dic_label = {'composite_LAI_detrend_relative_change_min': 'LAImin',
-                     'composite_LAI_detrend_relative_change_max': 'LAImax',}
-        year_list = range(0, 24)
-
-        result_dic = {}
-
-        for var in variable_list:
-
-            result_dic[var] = {}
-
-            data_dic = {}
-
-
-            for year in year_list:
-                df_i = df[df['year'] == year]
-
-                vals = df_i[f'{var}'].tolist()
-
-
-                data_dic[year] = np.nanmean(vals)
-
-            result_dic[var] = data_dic
-
-        ##dic to df
-
-        df_new = pd.DataFrame(result_dic)
-
-        flag = 0
-        plt.figure(figsize=(self.map_width*1.6, self.map_height))
-        slope_dic={}
-
-        for var in variable_list:
-                slope_dic[var]=slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
-
-
-                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag],
-                         color=color_list[flag])
-
-
-
-
-
-                flag = flag + 1
-
-        for var in variable_list:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
-            print(slope,p_value, )
-            x_pos = max(year_list) * 0.9  # 例如在靠近右边
-            # 选择一个固定的y位置（可以用数据的均值或最大最小值调节）
-            y_base = df_new[var].mean()
-
-            # 在同一列上下显示
-            plt.text(x_pos, y_base +3, f'slope={slope:.2f}', fontsize=12, ha='center')
-            plt.text(x_pos, y_base - 1, f'p={p_value:.2f}', fontsize=12, ha='center')
-
-
-
-        window_size = 15
-
-        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-        year_range = range(1982, 2021)
-        year_range_str = []
-        for year in year_range:
-
-            start_year = year
-            end_year = year + window_size - 1
-            if end_year > 2020:
-                break
-            year_range_str.append(f'{start_year}-{end_year}')
-        # plt.xticks(range(0, 23, 4))
-        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
-        plt.yticks(np.arange(-30, 31, 10))
-
-
-
-
-        plt.grid(which='major', alpha=0.5)
-        plt.legend(loc='upper left')
-
-        # plt.show()
-
-        out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
-
-        pass
 
     def statistic_pdf(self):
         dff= result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
@@ -1718,7 +1614,7 @@ class Figure_beta():
         dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\three_dimension_wetting_beta_LAItrend.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        df=df.dropna()
+        # df=df.dropna()
         # df_sig=df[df['detrended_SNU_LAI_CV_p_value']<0.05]
         dic_label = {1: 'CVLAI+_CVrainfall+_posbeta', 2: 'CVLAI+_CVrainfall+_negbeta', 3: 'CVLAI+_CVrainfall-posbeta',
                      4: 'CVLAI+_CVrainfall-negbeta',
@@ -1806,12 +1702,12 @@ class Figure_beta():
 
         # Optional: Add vertical line at 50% or labels
 
-        # plt.tight_layout()
-        # plt.show()
-        outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
-        T.mk_dir(outdir, force=True)
-        ## save the figure
-        plt.savefig(outdir + rf'{variable}.pdf')
+        plt.tight_layout()
+        plt.show()
+        # outdir=result_root + rf'\3mm\bivariate_analysis\Barplot\\'
+        # T.mk_dir(outdir, force=True)
+        # ## save the figure
+        # plt.savefig(outdir + rf'{variable}.pdf')
 
 
         pass
@@ -4173,42 +4069,43 @@ class partial_correlation():
     def __init__(self):
         pass
 
-        self.fdirX = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\\input\\X\\'
-        self.fdirY = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\input\\Y\\'
+        self.fdirX = result_root + rf'3mm\Multiregression\partial_correlation\Obs\\input\\X\\'
+        self.fdirY = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\\input\\Y\\'
 
     def run(self):
 
-        self.xvar_list = ['rainfall_frenquency_zscore',
-                          'detrended_sum_rainfall_growing_season_zscore',
+        self.xvar_list = ['rainfall_frenquency_growing_season_zscore',
+                          'detrended_sum_rainfall_growing_season_CV_zscore',
                           ]
 
-        self.model_list = ['GLOBMAP_LAI','SNU_LAI','LAI4g','composite_LAI', ]
-        self.model_list = [ 'composite_LAI', ]
-
+        self.model_list = ['composite_LAI','GLOBMAP_LAI','SNU_LAI','LAI4g','composite_LAI',  ]
 
 
 
 
         # for model in self.model_list:
-        #     self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\\result\\\\{model}\\'
+        #     self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\\result\\\\{model}\\'
         #     T.mk_dir(self.outdir, force=True)
         #     self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
         #     self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
-
-            # y_var = f'{model}_detrend_CV_zscore.npy'
-            # x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
-            #
-            #
-            # df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-            # #
-            # self.cal_partial_corr(df,x_var_list, )
-            # #
-            # # # # # # self.check_data()
-            # self.plot_partial_correlation()
-            # self.plot_partial_correlation_p_value()
+        #
+        #     y_var = f'{model}_detrend_CV_zscore.npy'
+        #     x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
+        #
+        #
+        #     df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+        #     #
+        #     self.cal_partial_corr(df,x_var_list, )
+        #     #
+        #     # # # # # # self.check_data()
+        #     self.plot_partial_correlation()
+        #     self.plot_partial_correlation_p_value()
         #     # self.statistic_trend_bar()
-        #     self.plot_spatial_map_sig()
-        self.statistic_corr_boxplot() # use this
+        # self.plot_spatial_map_sig()
+        # self.statistic_corr_boxplot() # use this
+        # self.box_plot_significant_differences()
+        # self.sensitivity_vs_climate_factors()
+        self.percentage_pft()
 
         #############################################################################
 
@@ -4705,8 +4602,8 @@ class partial_correlation():
         model_list = self.model_list
         variable_list = self.xvar_list
         for model in model_list:
-            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\'
-            outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\result\{model}\\sig\\'
+            fdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\{model}\\'
+            outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\{model}\\sig\\'
             new_variable_list = variable_list + [f'{model}_sensitivity_zscore']
             T.mk_dir(outdir, force=True)
 
@@ -4734,15 +4631,15 @@ class partial_correlation():
         pass
 
     def statistic_corr_boxplot(self):
-        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
 
-        df.dropna(inplace=True)
+        # df.dropna(inplace=True)
 
         variable_list=['sensitivity_zscore',
-            'rainfall_frenquency_zscore',
-                       'detrended_sum_rainfall_growing_season_zscore',
+            'rainfall_frenquency_growing_season_zscore',
+                       'detrended_sum_rainfall_growing_season_CV_zscore',
                        ]
 
         result_dic={}
@@ -4753,7 +4650,7 @@ class partial_correlation():
 
 
             for variable in variable_list:
-                new_variable=f'{model}_{variable}_sig'
+                new_variable=f'{model}_{variable}'
                 new_variable_list.append(new_variable)
 
 
@@ -4762,7 +4659,11 @@ class partial_correlation():
                 vals=np.array(vals)
                 vals[vals>99]=np.nan
                 vals[vals<-99]=np.nan
+
                 vals=vals[~np.isnan(vals)]
+                vals_positive = vals[vals > 0]
+
+                print(len(vals_positive)/len(vals))
                 ## calculating average
                 average=np.nanmean(vals)
 
@@ -4770,13 +4671,11 @@ class partial_correlation():
 
 
 
-
-
         # 绘图
             x_label_dic={
-                f'{model}_sensitivity_zscore_sig':'$\gamma$',
-                f'{model}_rainfall_frenquency_zscore_sig':'Fq of rainfall',
-                f'{model}_detrended_sum_rainfall_growing_season_zscore_sig':'CV IAV rainfall'
+                f'{model}_sensitivity_zscore':'$\gamma$',
+                f'{model}_rainfall_frenquency_growing_season_zscore':'Fq of rainfall',
+                f'{model}_detrended_sum_rainfall_growing_season_CV_zscore':'CV IAV rainfall'
             }
 
 
@@ -4842,14 +4741,14 @@ class partial_correlation():
 
 
 
-            # plt.show()
-            outdir=result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\result\Figures\\'
-            Tools().mk_dir(outdir, force=True)
-
-            outf=join(outdir,f'{model}_partial_correlation_boxplot.pdf')
-            plt.savefig(outf,bbox_inches='tight',dpi=300
-
-            )
+            plt.show()
+            # outdir=result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\result\Figures\\'
+            # Tools().mk_dir(outdir, force=True)
+            #
+            # outf=join(outdir,f'{model}_partial_correlation_boxplot.pdf')
+            # plt.savefig(outf,bbox_inches='tight',dpi=300
+            #
+            # )
 
     def darken_color(self, color, amount=0.7):
         """
@@ -4858,6 +4757,436 @@ class partial_correlation():
         import matplotlib.colors as mcolors
         c = mcolors.to_rgb(color)
         return tuple([max(0, x * amount) for x in c])
+
+    def box_plot_significant_differences(self):
+        """
+        For each variable panel, plot two boxplot groups:
+          Left group = Rainfall Frequency (Fq):  Positive (left), Negative (right)
+          Right group = Rainfall IAV (interannual variability): Positive (left), Negative (right)
+
+        Each of the four boxes has its own face/edge color (Fq+/Fq-/IAV+/IAV-).
+        Welch t-tests are shown for Fq (Pos vs Neg) and IAV (Pos vs Neg) with Cohen's d.
+        """
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Patch
+        from scipy import stats
+
+        # ---------- load & clean ----------
+        dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        df0 = T.load_df(dff)
+        df0 = self.df_clean(df0)
+
+        # variables to compare across panels
+        var_list = [
+            'sum_rainfall_mean','sum_rainfall_trend','VPD_trend', 'sand',
+        ]
+
+        # grouping columns
+        corr_cols = {
+            'Fq': 'composite_LAI_rainfall_frenquency_growing_season_zscore',  # rainfall frequency correlation
+            'IAV': 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore',  # rainfall IAV correlation
+        }
+
+        # colors (face vs edge) for the four cases
+        FACE = {
+            ('Fq', 'pos'): '#cfe8ff',  # Fq positive (face)
+            ('Fq', 'neg'): '#ffe0cf',  # Fq negative (face)
+            ('IAV', 'pos'): '#dff3d6',  # IAV positive (face)
+            ('IAV', 'neg'): '#e5d9f2',  # IAV negative (face)
+        }
+        EDGE = {
+            ('Fq', 'pos'): '#1f78b4',  # Fq positive (edge)
+            ('Fq', 'neg'): '#e6550d',  # Fq negative (edge)
+            ('IAV', 'pos'): '#33a02c',  # IAV positive (edge)
+            ('IAV', 'neg'): '#6a3d9a',  # IAV negative (edge)
+        }
+
+        def annotate_p(ax, x1, x2, a, b, color='k', y_frac=0.92):
+            from scipy import stats
+            if len(a) < 2 or len(b) < 2:
+                return
+            # _, p = stats.ttest_ind(a, b, equal_var=False, nan_policy='omit')
+            H, p = stats.kruskal(a, b)
+
+            # 基于轴的 y 范围来放置
+            y0, y1 = ax.get_ylim()
+            rng = (y1 - y0) if (y1 - y0) > 0 else 1.0
+            y = y0 + y_frac * rng  # 括号底部位置（轴内）
+            h = 0.04 * rng  # 括号高度
+
+            ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y],
+                    lw=1.2, c=color, clip_on=True)
+
+            if np.isnan(p):
+                ptxt = 'p = nan'
+            elif p < 1e-3:
+                ptxt = 'p < 0.001 ***'
+            elif p < 1e-2:
+                ptxt = f'p = {p:.3f} **'
+            elif p < 5e-2:
+                ptxt = f'p = {p:.3f} *'
+            else:
+                ptxt = f'p = {p:.3f}'
+
+            ax.text((x1 + x2) / 2, y + 0.55 * h, ptxt,
+                    ha='center', va='bottom', fontsize=11, clip_on=True)
+
+        # ---------- plot ----------
+        fig, axes = plt.subplots(2, 3, figsize=(3.2 * 2, 3.2), )
+        axes = axes.flatten()
+
+        for i, var in enumerate(var_list):
+            ax = axes[i]
+
+            # build four arrays: Fq(+) Fq(-) | IAV(+) IAV(-)  (Pos on left, Neg on right)
+            data, tags = [], []
+            for key in ['Fq', 'IAV']:
+                corr_col = corr_cols[key]
+                ## df >99 and df<-99==nan
+                df0 = df0[(df0[var] < 999) & (df0[var] > -999)]
+
+
+                tmp = df0[[var, corr_col]].dropna()
+                ### filter data
+                tmp_filter, dic_start, dic_end = self.filter_percentile(var, tmp)
+                # tmp_filter = tmp
+
+                vals_pos = tmp_filter.loc[tmp_filter[corr_col] > 0, var].to_numpy(float)
+                vals_neg = tmp_filter.loc[tmp_filter[corr_col] < 0, var].to_numpy(float)
+                # order: Positive, Negative
+                data.extend([vals_pos, vals_neg])
+                tags.extend([(key, 'pos'), (key, 'neg')])
+
+            # handle low data
+            if sum(len(arr) for arr in data) < 4:
+                ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center', transform=ax.transAxes)
+                ax.set_title(var, fontsize=11)
+                continue
+
+            positions = [1, 2, 4, 5]  # [Fq+, Fq-, IAV+, IAV-]
+            bx = ax.boxplot(
+                data, positions=positions, widths=0.55,
+                vert=True, patch_artist=True, showfliers=False
+            )
+
+            # set face & edge colors
+            for gi, patch in enumerate(bx['boxes']):
+                tag = tags[gi]
+                patch.set_facecolor(FACE[tag])
+                patch.set_edgecolor(EDGE[tag])
+                patch.set_linewidth(1.6)
+                # lines use edge color
+                bx['medians'][gi].set_color(EDGE[tag]);
+                bx['medians'][gi].set_linewidth(1.6)
+                bx['whiskers'][2 * gi].set_color(EDGE[tag]);
+                bx['whiskers'][2 * gi + 1].set_color(EDGE[tag])
+                bx['whiskers'][2 * gi].set_linewidth(1.2);
+                bx['whiskers'][2 * gi + 1].set_linewidth(1.2)
+                bx['caps'][2 * gi].set_color(EDGE[tag]);
+                bx['caps'][2 * gi + 1].set_color(EDGE[tag])
+                bx['caps'][2 * gi].set_linewidth(1.2);
+                bx['caps'][2 * gi + 1].set_linewidth(1.2)
+
+            ylims = {
+                'sum_rainfall_trend': (-2.5, 3),
+                'VPD_trend': (-0.0005, 0.0025),
+                'sum_rainfall_mean':(-50,700),
+                'Tree cover_trend': (-0.5, 0.5),
+
+
+                'sand': (200, 800),
+
+
+            }
+            yticks = {
+                'sum_rainfall_trend': np.arange(-2.5, 3, 1),
+                'VPD_trend':np.arange(-0.0005, 0.0025, 0.0005),
+                'sum_rainfall_mean':np.arange(-50,700,200),
+                'Tree cover_trend':np.arange(-0.5,0.5,0.2),
+                'sand':np.arange(200,800,100)
+
+            }
+
+            if var in ylims:  ax.set_ylim(*ylims[var])
+            if var in yticks: ax.set_yticks(yticks[var])
+
+            dic_ylabels = {
+                'sum_rainfall_trend': 'Sum rainfall trend',
+                'sum_rainfall_mean': 'Sum rainfall mean',
+                'Non tree vegetation_trend': 'Changes in short vegetation fraction',
+                'VPD_trend': 'VPD trend',
+
+                'sand': 'Sand',
+            }
+            if var in dic_ylabels: ax.set_ylabel(dic_ylabels[var], fontsize=11)
+
+            ax.set_xticks(positions)
+            ax.set_xticklabels(['Pos', 'Neg', 'Pos', 'Neg'], fontsize=11)
+            ax.axvline(3, ls=':', c='0.6', lw=1)  # separator between groups
+            # ax.text(0.25, -0.16, 'Fq rainfall', transform=ax.transAxes, ha='center', va='top', fontsize=11)
+            # ax.text(0.75, -0.16, 'CV IAV Rainfall', transform=ax.transAxes, ha='center', va='top', fontsize=11)
+
+            ax.margins(y=0.15)
+            ax.grid(axis='y', alpha=0.2)
+
+            # significance bars for each group (Pos vs Neg)
+            Fq_pos, Fq_neg, IAV_pos, IAV_neg = data
+            annotate_p(ax, 1, 2, Fq_pos, Fq_neg, color=EDGE[('Fq', 'pos')])
+            annotate_p(ax, 4, 5, IAV_pos, IAV_neg, color=EDGE[('IAV', 'pos')])
+
+        # legend
+        handles = [
+            Patch(facecolor=FACE[('Fq', 'pos')], edgecolor=EDGE[('Fq', 'pos')], label='Fq positive'),
+            Patch(facecolor=FACE[('Fq', 'neg')], edgecolor=EDGE[('Fq', 'neg')], label='Fq negative'),
+            Patch(facecolor=FACE[('IAV', 'pos')], edgecolor=EDGE[('IAV', 'pos')], label='IAV positive'),
+            Patch(facecolor=FACE[('IAV', 'neg')], edgecolor=EDGE[('IAV', 'neg')], label='IAV negative'),
+        ]
+        fig.legend(handles=handles, loc='upper center', ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.05))
+
+        # plt.tight_layout()
+        plt.show()
+    def sensitivity_vs_climate_factors(self):
+        dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df.dropna(inplace=True)
+
+        # 设置变量名
+        target_var_list = [
+            'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore',
+            'composite_LAI_rainfall_frenquency_growing_season_zscore']
+
+        color_list = ['#dd492c', '#c05f77', '#b5869a',
+                      '#bfa8b1', '#d5c1ca', '#e7dce1',
+                      ]
+
+        sand_color_list = ['#ffffe5', '#fffaca', '#fff0ae', '#fee391', '#fece65',
+                           '#feb642', '#fe9929', '#f27e1b', '#e1640e', '#cc4c02', '#aa3c03', '#882f05', '#662506']
+        aridity_color_list = ['#d73027', '#ea6f44', '#f48e52', '#fec279', '#fed690',
+                              '#ffffbf', '#f7fccd', '#f0f9dc', '#e8f6ea', '#e0f3f8']
+        root_depth_list = [
+            '#f1e0b6',
+            '#e6c981',
+            '#d9b15a',
+            '#c89b43',
+            '#a88432',
+            '#7f6d28',
+            '#4f7f3b',
+            '#2e7031',
+            '#00441b'  # 深根
+        ]
+        short_vegetation_cover = ['#ffffcc',  # 极低覆盖
+                                  '#d9f0a3',
+                                  '#addd8e',
+                                  '#78c679',
+                                  '#41ab5d',
+                                  '#238443',
+                                  '#006837',
+                                  '#004529']
+
+        for target_var in target_var_list:
+
+            # bin_var = 'Burn_area_sum'
+            # bin_var = 'S_SAND'
+
+            bin_var='AWC_CLASS'
+            # bin_var = 'sum_rainfall_mean'
+            # bin_var = 'Tree cover_mean'
+            # bin_var='Non_tree_vegetation_mean'
+            # bin_var = 'rooting_depth_05'
+            plt.hist(df[bin_var])
+            plt.show()
+            # bin_edges = np.arange(0, 101, 10)
+            # bin_edges = np.arange(200,1201,100)
+            # bin_edges = np.arange(0,501,50)
+            # bin_edges = np.arange(0, 4000, 500)
+            # bin_edges=np.arange(10,91,10)
+            # bin_edges = np.arange(0.2, 0.66, 0.05)
+            # bin_edges = np.arange(150,850,50)
+            bin_edges = np.arange(1,7,1)
+            # bin_edges = np.quantile(df[bin_var], np.linspace(0, 0.66, 11))
+            bin_labels = [f'{round(bin_edges[i], 2)}-{round(bin_edges[i + 1], 2)}' for i in range(len(bin_edges) - 1)]
+            # bin_labels = [f'{round(bin_edges[i ], 2)}' for i in range(len(bin_edges) - 1)]
+
+            df['bin'] = pd.cut(df[bin_var], bins=bin_edges, labels=bin_labels, include_lowest=True)
+
+            # 初始化结果字典
+            result_dic = {}
+            count_list = []
+
+            for label in bin_labels:
+                df_bin = df[df['bin'] == label][[target_var]].dropna()
+
+                if len(df_bin) == 0:
+                    result_dic[label] = [0, 0, 0, 0]
+                    continue
+
+                mean_val = np.nanmean(df_bin[target_var])
+                std_err = np.nanstd(df_bin[target_var]) / np.sqrt(len(df_bin))  # 标准误差
+                result_dic[label] = [mean_val, std_err]
+                count_list.append(len(df_bin))
+
+            # 构造 DataFrame
+            result_df = pd.DataFrame(result_dic).T
+            result_df.columns = ['mean', 'std_err']
+            result_df.index = bin_labels
+
+            # 画图
+
+            ax = result_df['mean'].plot(
+                kind='bar',
+                yerr=result_df['std_err'],
+                figsize=(4, 3),
+                color=aridity_color_list,
+                capsize=3,
+                error_kw={'elinewidth': 1, 'ecolor': 'gray'},
+                edgecolor='gray',
+            )
+
+            ## add count
+
+            for i, bar in enumerate(ax.patches):
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        height + 0.02,  # 微调高度
+
+                        f'{count_list[i]}',
+                        ha='center', va='bottom', fontsize=10, rotation=90)
+
+            plt.axhline(y=0, color='gray', linestyle='-')
+            ## xtick every 100 label
+            xticks = ax.get_xticks()
+            # xticklabels = [label.get_text() for label in ax.get_xticklabels()]
+            # new_labels = [label if i % 2 == 0 else '' for i, label in enumerate(xticklabels)]
+            # ax.set_xticklabels(new_labels, rotation=0)
+
+            if target_var == 'detrended_sum_rainfall_CV_zscore_sensitivity':
+                plt.ylabel('CV Interannual Rainfall (zscore)')
+
+
+            elif target_var == 'rainfall_frenquency_zscore_sensitivity':
+                plt.ylabel('Fq Rainfall(zscore)')
+
+            if target_var == 'composite_LAI_beta_mean_zscore_contrib':
+                plt.xticks([])
+            elif target_var == 'rainfall_frenquency_zscore_contrib':
+                plt.xticks([])
+            else:
+                plt.xticks(rotation=45)
+
+            #
+            plt.tight_layout()
+            plt.show()
+            # ## save pdf
+            # fig = ax.get_figure()
+            # outdir=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_2\figure\\'
+            # T.mk_dir(outdir, force=True)
+            # fig.savefig(outdir + f'{target_var}_{bin_var}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close(fig)
+
+    def filter_percentile(self, var,tmp):
+        dic_start = {}
+        dic_end = {}
+
+
+
+        percentiles = [5, 95]
+
+
+        values = tmp[var].tolist()
+        values = np.array(values)
+        values_mask = ~np.isnan(values)
+        values_nonan = values[values_mask]
+
+
+        percentile_values = np.percentile(values_nonan, percentiles)
+        dic_start[var] = percentile_values[0]
+        dic_end[var] = percentile_values[1]
+        df = tmp[(tmp[var] >= percentile_values[0]) & (tmp[var] <= percentile_values[1])]
+        return df, dic_start, dic_end
+
+        pass
+
+
+    def percentage_pft(self):
+            dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
+
+            df = T.load_df(dff)
+
+            df = self.df_clean(df)
+
+            # pft_list = ['Grass', 'Shrub', 'Deciduous', 'Evergreen']
+            pft_list = [1, 2, 3, 4,5,6,7]
+
+            df_positve=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']>0]
+            df_negtive=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']<0]
+            #
+            # df_positve = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] > 0]
+            # df_negtive = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] < 0]
+
+
+            df_positve.dropna(inplace=True)
+            df_negtive.dropna(inplace=True)
+            result_dic_positve={}
+            result_dic_negtive={}
+            for pft in pft_list:
+                # vals = df_positve[df_positve['landcover_classfication'] == pft]
+                vals = df_positve[df_positve['AWC_CLASS'] == pft]
+
+                result_dic_positve[pft]=len(vals)/len(df_positve)*100
+            for pft in pft_list:
+                vals_negative = df_negtive[df_negtive['AWC_CLASS'] == pft]
+                result_dic_negtive[pft]=len(vals_negative)/len(df_negtive)*100
+
+            ## plot stack bar
+            pft_colors = {
+                'Grass': '#E8B9CF',
+                'Shrub': '#C59DB0',
+                'Deciduous': '#4B7345',
+                'Evergreen': '#9BC97F',
+            }
+
+            pft_colors = {
+                1: '#E8B9CF',
+                2: '#C59DB0',
+                3: '#4B7345',
+                4: '#9BC97F',
+                5: '#E8B9CF',
+                6: '#C59DB0',
+                7: '#4B7345',
+            }
+
+            fig, ax = plt.subplots(figsize=(4.5, 5))
+            x_pos, x_neg = 0, 1
+            bottom_pos = 0.0
+            for p in pft_list:
+                val = float(result_dic_positve[p])
+                face = pft_colors[p]
+                # edge = darken_hex(face, 0.55)
+                ax.bar(x_pos, val, bottom=bottom_pos, color=face,  linewidth=1.2)
+                # 中间标注百分比（块足够大再标）
+                if val > 3:
+                    ax.text(x_pos, bottom_pos + val / 2, f'{val:.1f}%', ha='center', va='center', fontsize=9)
+                bottom_pos += val
+
+            bottom_neg = 0.0
+            for p in pft_list:
+                val = float(result_dic_negtive[p])
+                face = pft_colors[p]
+                # edge = darken_hex(face, 0.55)
+                ax.bar(x_neg, val, bottom=bottom_neg, color=face,   linewidth=1.2)
+                if val > 3:
+                    ax.text(x_neg, bottom_neg + val / 2, f'{val:.1f}%', ha='center', va='center', fontsize=9)
+                bottom_neg += val
+
+            plt.show()
+
+
+
+
+
 
     def maximum_partial_corr(self):
         fdir=self.outdir
@@ -5663,7 +5992,8 @@ class partial_correlation_TRENDY():
             # self.plot_partial_correlation(outdir)
             # self.plot_partial_correlation_p_value(outdir)
             # self.plot_spatial_map_sig()
-        self.TRENDY_obs_heatmap() ## use this
+        # self.TRENDY_obs_heatmap() ## use this
+        # self.TRENDY_obs_boxplots()
 
 
             #### ####
@@ -6119,7 +6449,7 @@ class partial_correlation_TRENDY():
         dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        df=df.dropna(axis=0, how='any')
+
 
         model_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g',
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -6134,12 +6464,16 @@ class partial_correlation_TRENDY():
                        'detrended_sum_rainfall_growing_season_zscore']
 
 
+
+
+
         result_dic={}
         heatmap_data = pd.DataFrame(index=variable_list, columns=model_list)
 
         # 填充数据（使用中位数或均值）
         for variable in variable_list:
             for model in model_list:
+                df = df.dropna(subset=f'{model}_{variable}_sig')
                 col = f'{model}_{variable}_sig'
                 vals = df[col].values
                 vals = np.where((vals > 100) | (vals < -100), np.nan, vals)
@@ -6197,6 +6531,91 @@ class partial_correlation_TRENDY():
 
 
         plt.show()
+
+    def TRENDY_obs_boxplots(self): ## obs and TRENDY boxplots comparison
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df=df.dropna(axis=0, how='any')
+
+        model_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g',
+                          'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+
+        variable_list=['sensitivity_zscore','rainfall_frenquency_zscore',
+                       'detrended_sum_rainfall_growing_season_zscore']
+
+
+
+
+
+        # 填充数据（使用中位数或均值）
+        for variable in variable_list:
+            result_dic = {}
+            for model in model_list:
+                col = f'{model}_{variable}_sig'
+                vals = df[col].values
+                vals = np.where((vals > 100) | (vals < -100), np.nan, vals)
+
+                result_dic[model]=vals
+
+            df_new = pd.DataFrame(result_dic).T  # 行是model，列是样本
+
+
+            df_new.index.name = "Model"
+
+            # 替换 model label
+
+
+            dic_label_name = {'composite_LAI': 'Composite LAI',
+                              'SNU_LAI': 'SNU LAI',
+                              'GLOBMAP_LAI': 'GLOBMAP LAI',
+                              'LAI4g': 'LAI4g',
+
+                              'TRENDY_ensemble': 'TRENDY ensemble',
+
+                              'CABLE-POP_S2_lai': 'CABLE-POP',
+                              'CLASSIC_S2_lai': 'CLASSIC',
+                              'CLM5': 'CLM5',
+                              'DLEM_S2_lai': 'DLEM',
+                              'IBIS_S2_lai': 'IBIS',
+                              'ISAM_S2_lai': 'ISAM',
+                              'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                              'JSBACH_S2_lai': 'JSBACH',
+                              'JULES_S2_lai': 'JULES',
+                              'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                              'LPX-Bern_S2_lai': 'LPX-Bern',
+                              'ORCHIDEE_S2_lai': 'ORCHIDEE',
+
+                              'YIBs_S2_Monthly_lai': 'YIBs',
+
+                              }
+            dic_variable_name = {'sensitivity_zscore': '$\gamma$',
+                                 'rainfall_frenquency_zscore': 'Fq of rainfall',
+                                 'detrended_sum_rainfall_growing_season_zscore': 'CVInterannual rainfall'}
+
+            # 绘图
+            fig, ax = plt.subplots(figsize=(9, 2.5))
+            df_new.T.boxplot(
+                showfliers=False,
+                rot=90,
+                showmeans=True,
+                ax=ax
+            )
+
+            ax.set_title(dic_variable_name.get(variable, variable), fontsize=12, fontweight="bold")
+            ax.set_ylabel(dic_variable_name.get(variable, variable), fontsize=11)
+            ax.set_xlabel("Models", fontsize=11)
+            ## add Y=0 line
+            ax.axhline(0, ls='--', c='k')
+
+            # plt.tight_layout()
+            plt.show()
 
 
 
@@ -6969,17 +7388,19 @@ class multi_regression_beta_TRENDY():
         self.data_root = 'D:/Project3/Data/'
         self.result_root = 'D:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\\\'
+        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\\\'
         self.fdir_Y=self.result_root+rf'\\\3mm\relative_change_growing_season\moving_window_extraction\\'
 
         self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var_list =  ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        self.y_var_list =  ['TRENDY_ensemble_composite_time_series','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                           'ORCHIDEE_S2_lai',
 
                           'YIBs_S2_Monthly_lai']
+
+
 
 
     def run(self):
@@ -6995,30 +7416,30 @@ class multi_regression_beta_TRENDY():
 
 
 
-            outdir = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\\multiresult_relative_change_detrend_ecosystem_year\{y_var}\\'
-            # if os.path.isdir(outdir):
-            #     continue
-            T.mk_dir(outdir, force=True)
-            # for i in range(self.window):
-            #
-            #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
-            #     outf= outdir+rf'\\window{i:02d}.npy'
-            #     if os.path.isfile(outf):
-            #         continue
-            #     print(outf)
-            # # #
-            #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-            ##step 2 crate individial files
-            # self.plt_multi_regression_result(outdir,y_var)
+            outdir = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\\multiresult_relative_change_detrend_growing_season\{y_var}\\'
+#             # if os.path.isdir(outdir):
+#             #     continue
+#             T.mk_dir(outdir, force=True)
+#             for i in range(self.window):
 #
-        # ##step 3 covert to time series
-
+#                 df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
+#                 outf= outdir+rf'\\window{i:02d}.npy'
+#                 if os.path.isfile(outf):
+#                     continue
+#                 print(outf)
+#             # #
+#                 self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+#             #step 2 crate individial files
+#             self.plt_multi_regression_result(outdir,y_var)
+# #
+#         # ##step 3 covert to time series
+#
             # self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
-            # ## step 4 build dataframe using build Dataframe function and then plot here
+#             # ## step 4 build dataframe using build Dataframe function and then plot here
 
             # # spatial trends of sensitivity
-            # self.calculate_trend_trend(outdir)
-            self.composite_beta()
+            self.calculate_trend_trend(outdir)
+            # self.composite_beta()
             # plot robinson
             # self.plot_robinson()
             # self.plot_sensitivity_preicipation_trend()
@@ -7543,7 +7964,7 @@ class multi_regression_beta_TRENDY():
             print(outdir)
             # exit()
             T.mk_dir(outdir,force=True)
-            outf=outdir+rf'\\{variable}.npy'
+            outf=outdir+rf'\\{y_var}_sensitivity.npy'
             np.save(outf,result_dic)
 
         pass
@@ -9477,7 +9898,7 @@ def main():
     # CCI_landcover_preprocess().run()
 
 
-    Figure2().run()
+    # Figure2().run()
 
     # Figure_beta().run()
     # Figure_std_mean_bivariate().run()
@@ -9490,7 +9911,7 @@ def main():
 
     # Figure5().run()
 
-    # partial_correlation().run()
+    partial_correlation().run()
     # partial_correlation_TRENDY().run()
     # GAM().run()
 

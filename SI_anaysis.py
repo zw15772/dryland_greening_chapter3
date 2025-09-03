@@ -1139,10 +1139,13 @@ class Rainfall_product_comparison():
 class TRENDY_trend():
 
     def trend_analysis_plot(self):
-        outdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+        outdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\png\\'
+        T.mk_dir(outdir,True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
-        model_list = [  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        model_list = ['composite_LAI_relative_change_mean','GLOBMAP_LAI_relative_change','LAI4g','SNU_LAI_relative_change',
+                      'TRENDY_ensemble_median',
+                      'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                       'JULES_S2_lai', 'LPJ-GUESS_S2_lai','LPX-Bern_S2_lai',
@@ -1150,7 +1153,13 @@ class TRENDY_trend():
                       'YIBs_S2_Monthly_lai']
 
 
-        dic_name = {'LAI4g': 'LAI',
+        dic_name = {'SNU_LAI_relative_change':'SNU',
+                    'GLOBMAP_LAI_relative_change':'GLOBMAP',
+                    'composite_LAI_relative_change_mean': 'Composite',
+
+
+            'LAI4g': 'GIMMS4g',
+                    'TRENDY_ensemble_median':'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
                     'CLM5': 'CLM5',
@@ -1172,67 +1181,68 @@ class TRENDY_trend():
 
 
         fdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
-        count = 1
-        for model in model_list:
 
+        color_list = ['#844000', '#fc9831', '#fffbd4', '#86b9d2', '#064c6c']
+        my_cmap2 = T.cmap_blend(color_list, n_colors=5)
 
+        # 7×3 画布（共 21 格，当前有 19 个模型）
+        fig, axes = plt.subplots(7, 3, figsize=(10, 25), sharex=False, sharey=False)
+        axes = axes.ravel()
 
-            fpath= fdir+f'{model}_trend.tif'
-            f_p_value = fdir + f'{model}_p_value.tif'
+        mappable_for_cbar = None  # 用于共享色标
 
+        for i, model in enumerate(model_list):
+            ax = axes[i]
+            fpath = fdir + f'{model}_trend.tif'
+            f_pvalue = fdir + f'{model}_p_value.tif'
 
-            # ax = plt.subplot(3, 2, count)
-            # print(count, f)
-            count = count + 1
-            # if not count == 9:
-            #     continue
-            color_list = [
-                '#844000',
-                '#fc9831',
-                '#fffbd4',
-                '#86b9d2',
-                '#064c6c',
-            ]
-            my_cmap2 = T.cmap_blend(color_list, n_colors=5)
-
-
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-
-            arr = Tools().mask_999999_arr(arr, warning=False)
-            arr_m = ma.masked_where(np.isnan(arr), arr)
-            lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            plt.figure(figsize=(5, 3))
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l')
-
-
-            m = self.plot_sig_scatter(
-                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
-                s=1,
-                c='k', marker='x',
-                zorder=100, res=4
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=-0.3, vmax=0.3
             )
-            plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
+            # 叠加显著性
+            if not model=='TRENDY_ensemble_median':
+                Plot().plot_Robinson_significance_scatter(
+                    m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
+                    linewidths=0.5, s=3, c='k', marker='x', zorder=111, res=4
+                )
+            else:
+                continue
 
-            m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
-            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=my_cmap2, zorder=-1, vmin=-0.3, vmax=0.3)
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
 
+            ax.set_title(dic_name.get(model, model), fontsize=10, font='Arial')
+            ax.set_xticks([])
+            ax.set_yticks([])
 
-            # plt.show()
-        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
-        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
-        # cb.set_label(f'{model}_CV_trend', labelpad=-40)
-            outf = outdir + rf'trend_analysis_{model}.png'
+            if mappable_for_cbar is None:
+                mappable_for_cbar = mappable  # 只取第一个用于共享色标
 
-            plt.subplots_adjust(hspace=0.055, wspace=0.038)
-            #
-            plt.savefig(outf, dpi=600)
-            plt.close()
-            # plt.show()
-        T.open_path_and_file(outdir)
+        # 隐藏未使用的子图（21-19=2 个）
+        for j in range(len(model_list), len(axes)):
+            axes[j].axis('off')
+
+        # 共享色标（水平放在底部）
+        # cbar = fig.colorbar(
+        #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+        #     orientation='horizontal', fraction=0.035, pad=0.04
+        # )
+        # cbar.set_label('Trend (% per year)', fontsize=11)
+
+        # 紧凑布局与间距
+        # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+        outf = outdir + 'trend_analysis_7x3.png'
+        plt.show()
+        # plt.savefig(outf, dpi=600, bbox_inches='tight')
+        # plt.close()
 
     pass
 
@@ -1299,14 +1309,22 @@ class TRENDY_CV():
         outdir = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
         temp_root = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
 
-        model_list = ['LAI4g',  'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        model_list = [ 'composite_LAI_mean','GLOBMAP_LAI',
+                      'LAI4g','SNU_LAI',
+                      'TRENDY_ensemble_median',
+                      'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                       'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                      'ORCHIDEE_S2_lai','SDGVM_S2_lai',
+                      'ORCHIDEE_S2_lai', 'SDGVM_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        dic_name = {'LAI4g': 'LAI',
+        dic_name = {'SNU_LAI': 'SNU',
+                    'GLOBMAP_LAI': 'GLOBMAP',
+                    'composite_LAI_mean': 'Composite',
+
+                    'LAI4g': 'GIMMS4g',
+                    'TREND_ensemble_median': 'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
                     'CLM5': 'CLM5',
@@ -1322,8 +1340,6 @@ class TRENDY_CV():
                     'YIBs_S2_Monthly_lai': 'YIBs',
                     'LPX-Bern_S2_lai': 'LPX-Bern',
                     }
-
-
 
         fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
         count = 1
@@ -4362,9 +4378,9 @@ class calculate_longterm_CV():
 def main():
     # greening_analysis().run()
     # climate_variables().run()
-    # TRENDY_trend().trend_analysis_plot()
+    TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    PLOT_Climate_factors().run()
+    # PLOT_Climate_factors().run()
     # calculate_longterm_CV().run()
     # SHAP_CV().run()
     # SHAP_rainfall_seasonality().run()

@@ -3805,9 +3805,9 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
-        self.moving_window_std_anaysis()
+        # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -4221,7 +4221,7 @@ class moving_window():
 
             dic = T.load_npy(fdir + f)
             slides = 38-window_size+1
-            outf = outdir + f.split('.')[0] + f'_std.npy'
+            outf = outdir + f.split('.')[0] + f'_mean.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -4252,8 +4252,8 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    cv=np.nanstd(time_series)
-                    # cv = np.nanmean(time_series)
+                    # cv=np.nanstd(time_series)
+                    cv = np.nanmean(time_series)
                     trend_list.append(cv)
 
                 trend_dic[pix]=trend_list
@@ -4329,26 +4329,24 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\3mm\extract_composite_phenology_year\STD_relative_change_std\composite_LAI\\'
-        outdir =result_root + rf'\3mm\extract_composite_phenology_year\STD_relative_change_std\composite_LAI\\\\trend\\'
+        fdir =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
+        outdir =result_root + (rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\growing_season\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-
-
 
             if not f.endswith('.npy'):
                 continue
 
 
-            # if not f.split('.')[0] in ['detrended_sum_rainfall_CV', 'heat_event_frenquency',
-            #                            'rainfall_intensity','rainfall_frenquency',
-            #     'rainfall_seasonality_all_year']:
-            #     continue
-            #     continue
+            if not f.split('.')[0] in ['SM', 'sum_rainfall',
+                                       'rainfall_intensity',
+                'rainfall_seasonality_all_year','VPD']:
+                continue
+
             outf = outdir + f.split('.')[0]
-            # if os.path.isfile(outf + '_trend.tif'):
-            #     continue
+            if os.path.isfile(outf + '_trend.tif'):
+                continue
             print(outf)
 
             if not f.endswith('.npy'):
@@ -4371,7 +4369,7 @@ class moving_window():
                     ## ignore the last one year
 
                 # time_series = dic[pix][:-1]
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 # print((time_series))
                 # exit()
                 time_series = np.array(time_series)
