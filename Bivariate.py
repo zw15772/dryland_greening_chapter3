@@ -6,10 +6,12 @@ import lytools
 import pingouin
 import pingouin as pg
 import xymap
+from fontTools.subset import subset
 from matplotlib.pyplot import xticks
 from numba.core.compiler_machinery import pass_info
 from numba.cuda.libdevice import fdiv_rd
 from openpyxl.styles.builtins import percent, total
+from scipy.ndimage import label
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
@@ -4067,6 +4069,8 @@ class build_dataframe():
 
 class partial_correlation():
     def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
 
         self.fdirX = result_root + rf'3mm\Multiregression\partial_correlation\Obs\\input\\X\\'
@@ -4105,7 +4109,8 @@ class partial_correlation():
         # self.statistic_corr_boxplot() # use this
         # self.box_plot_significant_differences()
         # self.sensitivity_vs_climate_factors()
-        self.percentage_pft()
+        self.percentage_pft_test()
+        # self.percentage_pft_old()
 
         #############################################################################
 
@@ -4759,66 +4764,53 @@ class partial_correlation():
         return tuple([max(0, x * amount) for x in c])
 
     def box_plot_significant_differences(self):
+        from matplotlib.transforms import blended_transform_factory
         """
-        For each variable panel, plot two boxplot groups:
-          Left group = Rainfall Frequency (Fq):  Positive (left), Negative (right)
-          Right group = Rainfall IAV (interannual variability): Positive (left), Negative (right)
+        For each variable, draw two boxplot groups:
+          left = Rainfall Frequency (Fq): Pos, Neg
+          right = Rainfall IAV totals (CVIAV): Pos, Neg
 
-        Each of the four boxes has its own face/edge color (Fq+/Fq-/IAV+/IAV-).
-        Welch t-tests are shown for Fq (Pos vs Neg) and IAV (Pos vs Neg) with Cohen's d.
+        Each box gets its own face/edge color. Kruskal–Wallis p-values are shown
+        for Pos vs Neg within each group.
         """
         import numpy as np
-        import pandas as pd
         import matplotlib.pyplot as plt
-        from matplotlib.patches import Patch
         from scipy import stats
 
         # ---------- load & clean ----------
-        dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
-        df0 = T.load_df(dff)
-        df0 = self.df_clean(df0)
+        dff = result_root + r'\3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        df_raw = T.load_df(dff)
+        df_raw = self.df_clean(df_raw)  # keep this immutable
 
-        # variables to compare across panels
-        var_list = [
-            'sum_rainfall_mean','sum_rainfall_trend','VPD_trend', 'sand',
-        ]
+        # variables to compare
+        var_list = ['sum_rainfall_mean', 'sum_rainfall_trend', 'VPD_trend', 'sand']
 
         # grouping columns
         corr_cols = {
-            'Fq': 'composite_LAI_rainfall_frenquency_growing_season_zscore',  # rainfall frequency correlation
-            'IAV': 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore',  # rainfall IAV correlation
+            'Fq': 'composite_LAI_rainfall_frenquency_growing_season_zscore',
+            'IAV': 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore',
         }
 
-        # colors (face vs edge) for the four cases
+        # colors
         FACE = {
-            ('Fq', 'pos'): '#cfe8ff',  # Fq positive (face)
-            ('Fq', 'neg'): '#ffe0cf',  # Fq negative (face)
-            ('IAV', 'pos'): '#dff3d6',  # IAV positive (face)
-            ('IAV', 'neg'): '#e5d9f2',  # IAV negative (face)
+            ('Fq', 'pos'): '#cfe8ff',
+            ('Fq', 'neg'): '#ffe0cf',
+            ('IAV', 'pos'): '#dff3d6',
+            ('IAV', 'neg'): '#e5d9f2',
         }
         EDGE = {
-            ('Fq', 'pos'): '#1f78b4',  # Fq positive (edge)
-            ('Fq', 'neg'): '#e6550d',  # Fq negative (edge)
-            ('IAV', 'pos'): '#33a02c',  # IAV positive (edge)
-            ('IAV', 'neg'): '#6a3d9a',  # IAV negative (edge)
+            ('Fq', 'pos'): '#1f78b4',
+            ('Fq', 'neg'): '#e6550d',
+            ('IAV', 'pos'): '#33a02c',
+            ('IAV', 'neg'): '#6a3d9a',
         }
 
-        def annotate_p(ax, x1, x2, a, b, color='k', y_frac=0.92):
-            from scipy import stats
+        def annotate_p(ax, x1, x2, a, b, color='k', y_frac=0.95):
             if len(a) < 2 or len(b) < 2:
                 return
-            # _, p = stats.ttest_ind(a, b, equal_var=False, nan_policy='omit')
-            H, p = stats.kruskal(a, b)
+            _, p = stats.kruskal(a, b)
 
-            # 基于轴的 y 范围来放置
-            y0, y1 = ax.get_ylim()
-            rng = (y1 - y0) if (y1 - y0) > 0 else 1.0
-            y = y0 + y_frac * rng  # 括号底部位置（轴内）
-            h = 0.04 * rng  # 括号高度
-
-            ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y],
-                    lw=1.2, c=color, clip_on=True)
-
+            # 文案
             if np.isnan(p):
                 ptxt = 'p = nan'
             elif p < 1e-3:
@@ -4830,54 +4822,81 @@ class partial_correlation():
             else:
                 ptxt = f'p = {p:.3f}'
 
-            ax.text((x1 + x2) / 2, y + 0.55 * h, ptxt,
-                    ha='center', va='bottom', fontsize=11, clip_on=True)
+            # 在 x 用数据坐标、y 用轴坐标（0~1）
+            trans = blended_transform_factory(ax.transData, ax.transAxes)
+            h = 0.03  # 括号高度（轴坐标）
+            ax.plot([x1, x1, x2, x2], [y_frac, y_frac + h, y_frac + h, y_frac],
+                    lw=1.2, c=color, transform=trans, clip_on=False)
+            ax.text((x1 + x2) / 2, y_frac + h + 0.01, ptxt,
+                    ha='center', va='bottom', fontsize=11,
+                    transform=trans, clip_on=False)
 
-        # ---------- plot ----------
-        fig, axes = plt.subplots(2, 3, figsize=(3.2 * 2, 3.2), )
-        axes = axes.flatten()
+        # axes formatting
+        ylims = {
+            'sum_rainfall_trend': (-2.5, 3.6),
+            'VPD_trend': (-0.0005, 0.0026),
+            'sum_rainfall_mean': (-50, 801),
+            'sand': (200, 850),
+        }
+        yticks = {
+            'sum_rainfall_trend': np.arange(-2.5, 3.6, 1),
+            'VPD_trend': np.arange(-0.0005, 0.0026, 0.0005),
+            'sum_rainfall_mean': np.arange(-50, 801, 200),
+            'sand': np.arange(200, 850, 100),
+        }
+        ylabels = {
+            'sum_rainfall_trend': 'Trends in rainfall (mm/yr)',
+            'sum_rainfall_mean': 'Mean rainfall (mm/yr)',
+            'VPD_trend': 'Trends in VPD (kPa/yr)',
+            'sand': 'Sand (%)',
+        }
 
-        for i, var in enumerate(var_list):
-            ax = axes[i]
+        outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Figures\\'
+        T.mk_dir(outdir, force=True)
 
-            # build four arrays: Fq(+) Fq(-) | IAV(+) IAV(-)  (Pos on left, Neg on right)
+        # ---------- plot each variable ----------
+        for var in var_list:
+            # fresh figure per var
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+
+            # mask sentinels on this variable ONLY; don't mutate df_raw
+            dfv = df_raw.copy()
+            dfv.loc[(dfv[var] >= 999) | (dfv[var] <= -999), var] = np.nan
+
             data, tags = [], []
             for key in ['Fq', 'IAV']:
                 corr_col = corr_cols[key]
-                ## df >99 and df<-99==nan
-                df0 = df0[(df0[var] < 999) & (df0[var] > -999)]
 
+                # keep just the two needed columns, drop NaNs
+                tmp = dfv[[var, corr_col]].dropna()
 
-                tmp = df0[[var, corr_col]].dropna()
-                ### filter data
-                tmp_filter, dic_start, dic_end = self.filter_percentile(var, tmp)
-                # tmp_filter = tmp
+                # optional percentile filtering
+                tmp_filt, _, _ = self.filter_percentile(var, tmp)
 
-                vals_pos = tmp_filter.loc[tmp_filter[corr_col] > 0, var].to_numpy(float)
-                vals_neg = tmp_filter.loc[tmp_filter[corr_col] < 0, var].to_numpy(float)
-                # order: Positive, Negative
-                data.extend([vals_pos, vals_neg])
-                tags.extend([(key, 'pos'), (key, 'neg')])
+                vals_pos = tmp_filt.loc[tmp_filt[corr_col] > 0, var].to_numpy(float)
+                vals_neg = tmp_filt.loc[tmp_filt[corr_col] < 0, var].to_numpy(float)
 
-            # handle low data
-            if sum(len(arr) for arr in data) < 4:
-                ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center', transform=ax.transAxes)
-                ax.set_title(var, fontsize=11)
-                continue
+                data.extend([vals_pos, vals_neg])  # order: Pos, Neg
+                tags.extend([(key, 'pos'), (key, 'neg')])  # to color accordingly
 
+            # draw boxplots
             positions = [1, 2, 4, 5]  # [Fq+, Fq-, IAV+, IAV-]
             bx = ax.boxplot(
-                data, positions=positions, widths=0.55,
-                vert=True, patch_artist=True, showfliers=False
+                data,
+                positions=positions,
+                widths=0.55,
+                vert=True,
+                patch_artist=True,
+                showfliers=False,
             )
 
-            # set face & edge colors
+            # styling
             for gi, patch in enumerate(bx['boxes']):
                 tag = tags[gi]
                 patch.set_facecolor(FACE[tag])
                 patch.set_edgecolor(EDGE[tag])
                 patch.set_linewidth(1.6)
-                # lines use edge color
+
                 bx['medians'][gi].set_color(EDGE[tag]);
                 bx['medians'][gi].set_linewidth(1.6)
                 bx['whiskers'][2 * gi].set_color(EDGE[tag]);
@@ -4889,64 +4908,27 @@ class partial_correlation():
                 bx['caps'][2 * gi].set_linewidth(1.2);
                 bx['caps'][2 * gi + 1].set_linewidth(1.2)
 
-            ylims = {
-                'sum_rainfall_trend': (-2.5, 3),
-                'VPD_trend': (-0.0005, 0.0025),
-                'sum_rainfall_mean':(-50,700),
-                'Tree cover_trend': (-0.5, 0.5),
-
-
-                'sand': (200, 800),
-
-
-            }
-            yticks = {
-                'sum_rainfall_trend': np.arange(-2.5, 3, 1),
-                'VPD_trend':np.arange(-0.0005, 0.0025, 0.0005),
-                'sum_rainfall_mean':np.arange(-50,700,200),
-                'Tree cover_trend':np.arange(-0.5,0.5,0.2),
-                'sand':np.arange(200,800,100)
-
-            }
-
+            # axes settings
             if var in ylims:  ax.set_ylim(*ylims[var])
             if var in yticks: ax.set_yticks(yticks[var])
-
-            dic_ylabels = {
-                'sum_rainfall_trend': 'Sum rainfall trend',
-                'sum_rainfall_mean': 'Sum rainfall mean',
-                'Non tree vegetation_trend': 'Changes in short vegetation fraction',
-                'VPD_trend': 'VPD trend',
-
-                'sand': 'Sand',
-            }
-            if var in dic_ylabels: ax.set_ylabel(dic_ylabels[var], fontsize=11)
+            if var in ylabels: ax.set_ylabel(ylabels[var], fontsize=12)
 
             ax.set_xticks(positions)
-            ax.set_xticklabels(['Pos', 'Neg', 'Pos', 'Neg'], fontsize=11)
-            ax.axvline(3, ls=':', c='0.6', lw=1)  # separator between groups
-            # ax.text(0.25, -0.16, 'Fq rainfall', transform=ax.transAxes, ha='center', va='top', fontsize=11)
-            # ax.text(0.75, -0.16, 'CV IAV Rainfall', transform=ax.transAxes, ha='center', va='top', fontsize=11)
-
+            ax.set_xticklabels(['Pos', 'Neg', 'Pos', 'Neg'], fontsize=12)
+            ax.tick_params(axis='y', labelsize=12)
+            ax.axvline(3, ls=':', c='0.6', lw=1)  # separator
             ax.margins(y=0.15)
             ax.grid(axis='y', alpha=0.2)
 
-            # significance bars for each group (Pos vs Neg)
+            # significance (Pos vs Neg within each group)
             Fq_pos, Fq_neg, IAV_pos, IAV_neg = data
             annotate_p(ax, 1, 2, Fq_pos, Fq_neg, color=EDGE[('Fq', 'pos')])
             annotate_p(ax, 4, 5, IAV_pos, IAV_neg, color=EDGE[('IAV', 'pos')])
 
-        # legend
-        handles = [
-            Patch(facecolor=FACE[('Fq', 'pos')], edgecolor=EDGE[('Fq', 'pos')], label='Fq positive'),
-            Patch(facecolor=FACE[('Fq', 'neg')], edgecolor=EDGE[('Fq', 'neg')], label='Fq negative'),
-            Patch(facecolor=FACE[('IAV', 'pos')], edgecolor=EDGE[('IAV', 'pos')], label='IAV positive'),
-            Patch(facecolor=FACE[('IAV', 'neg')], edgecolor=EDGE[('IAV', 'neg')], label='IAV negative'),
-        ]
-        fig.legend(handles=handles, loc='upper center', ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.05))
+            # save & close
+            plt.savefig(outdir + f'{var}_boxplot.pdf', dpi=300, bbox_inches='tight')
+            plt.close(fig)
 
-        # plt.tight_layout()
-        plt.show()
     def sensitivity_vs_climate_factors(self):
         dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
         df = T.load_df(dff)
@@ -5110,34 +5092,174 @@ class partial_correlation():
         pass
 
 
-    def percentage_pft(self):
+    def percentage_pft_test(self):
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from matplotlib.patches import Patch
+
+        # ---------- load & clean ----------
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # classes_all = df['landcover_classfication'].unique().tolist()
+        # print(classes_all)
+        # exit()
+
+
+        group_col = 'landcover_classfication'
+        pft_list = ['Grass','Shrub','Deciduous','Evergreen']
+
+        # 相关性（正/负）判断的列
+        col_Fq = 'composite_LAI_rainfall_frenquency_growing_season_zscore'
+        col_IAV = 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore'
+        var_list=[col_Fq,col_IAV]
+
+        # 颜色（按类编号）
+
+        result_dic = {}
+        for var in var_list:
+            sub = df[[var, group_col]].dropna()
+
+            # --------- Pos 子集 ----------
+            sub_pos = sub[sub[var] > 0]
+            n_pos = (sub_pos[group_col].isin(pft_list)).sum()  # 只算这4类
+            perc_pos = []
+            for pft in pft_list:
+                cnt = (sub_pos[group_col] == pft).sum()
+                perc_pos.append(round(100.0 * cnt / n_pos, 2) if n_pos else 0.0)
+
+            result_dic[(var, 'Pos')] = perc_pos
+            print(var, 'Pos sum =', sum(perc_pos))  # 应该≈100
+
+            # --------- Neg 子集 ----------
+            sub_neg = sub[sub[var] < 0]
+            n_neg = (sub_neg[group_col].isin(pft_list)).sum()
+            perc_neg = []
+            for pft in pft_list:
+                cnt = (sub_neg[group_col] == pft).sum()
+                perc_neg.append(round(100.0 * cnt / n_neg, 2) if n_neg else 0.0)
+
+            result_dic[(var, 'Neg')] = perc_neg
+            print(var, 'Neg sum =', sum(perc_neg))  # 应该≈100
+
+        # print(result_dic)
+        # exit()
+        # ---------- plot ----------
+
+        vals_Fq_pos = result_dic[(col_Fq, 'Pos')]
+        vals_Fq_neg = result_dic[(col_Fq, 'Neg')]
+        vals_IAV_pos = result_dic[(col_IAV, 'Pos')]
+        vals_IAV_neg = result_dic[(col_IAV, 'Neg')]
+
+        # 类别顺序（与你计算时一致）：pft_list + ['Other'] （如果没加“Other”，就去掉）
+        cats = pft_list + ['Other']
+
+
+
+
+        # 颜色（按你的类别来设；示例）
+        pft_colors = {
+
+            'Grass': '#E8B9CF',
+            'Shrub': '#C59DB0',
+            'Deciduous': '#9BC97F',
+            'Evergreen': '#4B7345'
+
+
+        }
+        pft_names={'Grass': 'Grass',
+                   'Shrub':'Shrub',
+                   'Deciduous':'Deciduous',
+                   'Evergreen':'Evergreen'}
+
+
+        # ===== 2) 画图（单轴，左 Fq、右 IAV，中间虚线分组）=====
+        fig, ax = plt.subplots(figsize=(self.map_width*1.5, self.map_height))
+
+        # 四根柱的位置：左组（0,1），右组（3,4），中间留空
+        x_pos = [0, 1, 3, 4]
+        all_vals = [vals_Fq_pos, vals_Fq_neg, vals_IAV_pos, vals_IAV_neg]
+
+        # 逐根柱子堆叠
+        for x, vals in zip(x_pos, all_vals):
+            bottom = 0.0
+            for c, v in zip(cats, vals):
+                v = float(v)
+                if v <= 0:
+                    continue
+
+                color = pft_colors[c]
+
+                ax.bar(x, v, bottom=bottom, width=0.8,
+                       color=color,
+                       edgecolor='black', linewidth=0.8)
+                if v > 3:  # 块够大再标数字
+                    ax.text(x, bottom + v / 2, f'{v:.1f}%', ha='center', va='center', fontsize=9)
+                bottom += v
+
+        # 轴设置
+        ax.set_ylim(0, 100)
+        ax.set_ylabel(f'Fraction of landcover (%)', fontsize=12)
+
+        # x 刻度：每组内部标 Pos/Neg；组名写在下面
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(['Pos', 'Neg', 'Pos', 'Neg'], fontsize=11)
+
+        # 组标签
+        # ax.text(0.5, -12, 'Fq rainfall', ha='center', va='top', transform=ax.get_xaxis_transform(), fontsize=11)
+        # ax.text(3.5, -12, 'CV IAV rainfall', ha='center', va='top', transform=ax.get_xaxis_transform(), fontsize=11)
+
+        # 组间虚线分隔
+        ax.axvline(2.0, color='0.6', linestyle='--', linewidth=1.0)
+
+        # 网格
+        ax.grid(axis='y', alpha=0.25, linestyle='--')
+
+        # 图例（放外侧上方）
+        # handles = [Patch(facecolor=pft_colors.get(c, '#CCC'), edgecolor='black', label=pft_names) for c
+        #            in cats]
+        # leg = fig.legend(handles=handles, ncol=min(len(cats), 6), frameon=False, loc='upper center',
+        #                  bbox_to_anchor=(0.5, 1.08), fontsize=9)
+
+
+        # plt.tight_layout()
+        # plt.show()
+
+        outdir = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Figures\\'
+
+        plt.savefig(outdir + f'{group_col}_composition_Fq_vs_CVIAV_stacked1.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+    def percentage_pft_old(self):
             dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
 
             df = T.load_df(dff)
 
             df = self.df_clean(df)
 
-            # pft_list = ['Grass', 'Shrub', 'Deciduous', 'Evergreen']
-            pft_list = [1, 2, 3, 4,5,6,7]
-
-            df_positve=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']>0]
-            df_negtive=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']<0]
-            #
-            # df_positve = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] > 0]
-            # df_negtive = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] < 0]
+            pft_list = ['Grass', 'Shrub', 'Deciduous', 'Evergreen']
 
 
-            df_positve.dropna(inplace=True)
-            df_negtive.dropna(inplace=True)
+            # df_positve=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']>0]
+            # df_negtive=df[df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore']<0]
+
+            df_positve = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] > 0]
+            df_positve.dropna(subset='composite_LAI_rainfall_frenquency_growing_season_zscore')
+            df_negtive = df[df['composite_LAI_rainfall_frenquency_growing_season_zscore'] < 0]
+            df_negtive.dropna(subset='composite_LAI_rainfall_frenquency_growing_season_zscore')
+
+
+
             result_dic_positve={}
             result_dic_negtive={}
             for pft in pft_list:
-                # vals = df_positve[df_positve['landcover_classfication'] == pft]
-                vals = df_positve[df_positve['AWC_CLASS'] == pft]
+                vals = df_positve[df_positve['landcover_classfication'] == pft]
+
 
                 result_dic_positve[pft]=len(vals)/len(df_positve)*100
             for pft in pft_list:
-                vals_negative = df_negtive[df_negtive['AWC_CLASS'] == pft]
+                vals_negative = df_negtive[df_negtive['landcover_classfication'] == pft]
                 result_dic_negtive[pft]=len(vals_negative)/len(df_negtive)*100
 
             ## plot stack bar
@@ -5148,15 +5270,7 @@ class partial_correlation():
                 'Evergreen': '#9BC97F',
             }
 
-            pft_colors = {
-                1: '#E8B9CF',
-                2: '#C59DB0',
-                3: '#4B7345',
-                4: '#9BC97F',
-                5: '#E8B9CF',
-                6: '#C59DB0',
-                7: '#4B7345',
-            }
+
 
             fig, ax = plt.subplots(figsize=(4.5, 5))
             x_pos, x_neg = 0, 1
@@ -5183,10 +5297,91 @@ class partial_correlation():
 
             plt.show()
 
+    def percentage_pft(self):
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+
+        # ---------- load & clean ----------
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # classes_all = df['landcover_classfication'].unique().tolist()
+        # print(classes_all)
+        # exit()
+
+
+        group_col = 'landcover_classfication'
+        pft_list = ['Grass','Shrub','Deciduous','Evergreen']
+
+        # 相关性（正/负）判断的列
+        col_Fq = 'composite_LAI_rainfall_frenquency_growing_season_zscore'
+        col_IAV = 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore'
+
+        # 颜色（按类编号）
+        pft_colors = {
+           'Grass': '#E8B9CF', 'Shrub': '#C59DB0', 'Deciduous': '#C9A6A6', 'Evergreen': '#C9A6A6',
+        }
 
 
 
+        Fq_pos_dic, Fq_neg_dic, Fq_pos_overall, Fq_neg_overall = self.pos_neg_share_by_class(df, col_Fq, group_col, pft_list)
 
+        IAV_pos_dic, IAV_neg_dic, IAV_pos_overall, IAV_neg_overall = self.pos_neg_share_by_class(df, col_IAV, group_col, pft_list)
+
+        # ------------ 画图（两列 subplot：左 Fq，右 IAV） ------------
+        fig, axes = plt.subplots(1, 2, figsize=(6.6, 4.8), sharey=True)
+
+        for ax, title, pos_dic, neg_dic in [
+            (axes[0], 'Fq rainfall', Fq_pos_dic, Fq_neg_dic),
+            (axes[1], 'CV IAV rainfall', IAV_pos_dic, IAV_neg_dic),
+        ]:
+            x_pos, x_neg = 0, 1
+
+            # 正（堆叠）
+            bottom = 0.0
+            for cls in pft_list:
+                val = float(pos_dic.get(cls, 0.0))
+                if val > 0:
+                    ax.bar(x_pos, val, bottom=bottom, color=pft_colors[cls],
+                           edgecolor='black', linewidth=0.8)
+                    if val > 3:
+                        ax.text(x_pos, bottom + val / 2, f'{val:.1f}%', ha='center', va='center', fontsize=9)
+                    bottom += val
+
+            # 负（堆叠）
+            bottom = 0.0
+            for cls in pft_list:
+                val = float(neg_dic.get(cls, 0.0))
+                if val > 0:
+                    ax.bar(x_neg, val, bottom=bottom, color=pft_colors[cls],
+                           edgecolor='black', linewidth=0.8)
+                    if val > 3:
+                        ax.text(x_neg, bottom + val / 2, f'{val:.1f}%', ha='center', va='center', fontsize=9)
+                    bottom += val
+
+            ax.set_xticks([x_pos, x_neg])
+            ax.set_xticklabels(['Pos', 'Neg'], fontsize=11)
+            ax.set_title(title, fontsize=12)
+            ax.set_ylim(0, 100)
+            ax.grid(axis='y', alpha=0.25, linestyle='--')
+
+        axes[0].set_ylabel(f'Fraction of landcover (%)', fontsize=11)
+
+        # 如需图例：
+        # handles = [plt.matplotlib.patches.Patch(facecolor=pft_colors[c], edgecolor='black', label=str(c))
+        #            for c in pft_list]
+        # fig.legend(handles=handles, ncol=min(len(pft_list), 7), frameon=False, loc='upper center',
+        #            bbox_to_anchor=(0.5, 1.03))
+
+        plt.tight_layout()
+        plt.show()
+
+        outdir = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Figures\\'
+        T.mk_dir(outdir, force=True)
+        plt.show()
+        # plt.savefig(outdir + f'{group_col}_composition_Fq_vs_CVIAV_stacked.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
     def maximum_partial_corr(self):
         fdir=self.outdir
