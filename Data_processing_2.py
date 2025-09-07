@@ -1630,9 +1630,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root + rf'\3mm\Multiregression\partial_correlation\Obs\\Dataframe\\')
+                result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'statistics.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1643,7 +1643,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1660,10 +1660,10 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
-        # df=self.add_soil_to_df(df)
+        df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
         # # # # df=self.add_interaction_to_df(df)
 
@@ -1905,7 +1905,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\CABLE-POP_S2_lai\\rainfall_frenquency_zscore_contrib.tif'
+        f = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\ISBA-CTRIP_S2_lai\\ISBA-CTRIP_S2_lai_sensitivity_zscore.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2452,12 +2452,17 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all=result_root+rf'\3mm\Multiregression\partial_correlation\Obs\result\\'
+        fdir_all=result_root+rf'3mm\Multiregression\partial_correlation\Obs\result\partial_corr2\\'
         for fdir in os.listdir(fdir_all):
+            # if not 'median' in fdir:
+            #     continue
+
 
 
 
             # for f in os.listdir(join(fdir_all,fdir)):
+            #     if not 'color' in f:
+            #         continue
 
 
 
@@ -2511,7 +2516,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\VCF\trend\\'
+        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\trend\\'
 
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2524,7 +2529,8 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-
+            if not 'median' in f:
+                continue
 
 
 
@@ -2621,8 +2627,8 @@ class build_dataframe():
         # df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
         #                   df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
 
-        df['composite_LAI_residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['composite_LAI_sensitivity_zscore_contrib'] +
-                                                                          df['composite_LAI_rainfall_frenquency_growing_season_zscore_contrib'] + df['composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore_contrib']
+        df['composite_LAI_median_residual_contrib'] = df['composite_LAI_median_detrend_CV_zscore_trend'] - (df['composite_LAI_median_sensitivity_zscore_contrib'] +
+                                                                          df['composite_LAI_median_detrended_sum_rainfall_ecosystem_year_CV_zscore_contrib'] + df['composite_LAI_median_CV_intraannual_rainfall_ecosystem_year_zscore_contrib']
 
                                                                           )
 
@@ -2760,13 +2766,11 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=['pi_average_p_value',
-                              'pi_average_trend',
-                              'pi_mean',
+        df = df.drop(columns=['composite_LAI_median_LAI_residual_contrib',
+                              'composite_median_LAI_residual_contrib',
+                              'composite_LAI_median_residual_contrib',
 
-                              'SM_average_p_value',
-                              'SM_average_trend',
-                              'SM_mean',
+
 
 
 
@@ -7951,16 +7955,16 @@ class TRENDY_CV:
                       'ORCHIDEE_S2_lai',
 
                       'YIBs_S2_Monthly_lai']
-        model_list=['SNU_LAI','LAI4g','GLOBMAP_LAI']
+        # model_list=['SNU_LAI','LAI4g','GLOBMAP_LAI']
 
 
 
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\X\\'
+        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\'
 
         result_dic={}
 
         for model in model_list:
-            fpath = fdir + model + '_sensitivity_zscore.npy'
+            fpath = fdir + model + '_detrend_CV_zscore.npy'
             dic=T.load_npy(fpath)
             result_dic[model]=dic
         ## for each pixel calculate mean
@@ -7996,7 +8000,7 @@ class TRENDY_CV:
                 ensemble_mean_dic[pix] = mean_ts
 
 
-        outf=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\X\composite_LAI_median_sensitivity_zscore.npy'
+        outf=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\TRENDY_ensemble_median_detrend_CV_zscore.npy'
         T.save_npy(ensemble_mean_dic, outf)
 
 
@@ -8547,10 +8551,10 @@ class TRENDY_CV:
 
 
             vals_trend = vals_trend[~np.isnan(vals_trend)]
-            print(variable,np.nanmean(vals_trend))
-            plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
-            plt.title(variable)
-            plt.show()
+            # print(variable,np.nanmean(vals_trend))
+            # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
+            # plt.title(variable)
+            # plt.show()
             vals_CV = vals_CV[~np.isnan(vals_CV)]
             vals_trend_list.append(np.nanmean(vals_trend))
             vals_CV_list.append(np.nanmean(vals_CV))
@@ -8560,6 +8564,8 @@ class TRENDY_CV:
             else:
                 err_trend_list.append(np.nan)
                 err_CV_list.append(np.nan)
+            print(variable, np.nanmean(vals_trend), np.nanmean(vals_CV))
+        exit()
 
 
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
@@ -9009,13 +9015,13 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

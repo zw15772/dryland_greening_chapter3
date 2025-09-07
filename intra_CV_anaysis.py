@@ -4329,8 +4329,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        outdir =result_root + (rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\growing_season\\trend\\')
+        fdir =result_root+ rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\\'
+        outdir =result_root + (rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4339,10 +4339,10 @@ class moving_window():
                 continue
 
 
-            if not f.split('.')[0] in ['SM', 'sum_rainfall',
-                                       'rainfall_intensity',
-                'rainfall_seasonality_all_year','VPD']:
-                continue
+            # if not f.split('.')[0] in ['SM', 'sum_rainfall',
+            #                            'rainfall_intensity',
+            #     'rainfall_seasonality_all_year','VPD']:
+            #     continue
 
             outf = outdir + f.split('.')[0]
             if os.path.isfile(outf + '_trend.tif'):
@@ -4369,7 +4369,7 @@ class moving_window():
                     ## ignore the last one year
 
                 # time_series = dic[pix][:-1]
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
                 # print((time_series))
                 # exit()
                 time_series = np.array(time_series)
