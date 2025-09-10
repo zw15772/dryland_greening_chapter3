@@ -1805,7 +1805,198 @@ class TRENDY_CV():
         # ax.scatter(lon_list,lat_list)
         # plt.show()
 
-        return m
+        return
+
+class LAImax_LAImin_models():
+    def run(self):
+        # self.bivariate_map()
+        self.Figure_robinson_reprojection()
+
+        pass
+
+    def bivariate_map(self):  ## figure 1  ## LAImin and LAImax bivariate
+        import xymap
+
+
+        fdir_max =result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\max\trend_analysis\\'
+        fdir_min =result_root + rf'3mm\relative_change_growing_season\moving_window_min_max_anaysis\min\trend_analysis\\'
+
+        outdir =result_root + rf'\\3mm\FIGURE\\'
+
+        T.mkdir(outdir, force=True)
+        model_list = [
+            'TRENDY_ensemble',
+            'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+            'ORCHIDEE_S2_lai',
+            'YIBs_S2_Monthly_lai']
+
+        for model in model_list:
+            outtif = join(outdir, f'{model}.tif')
+
+            fpath1 = join(fdir_max,f'{model}_detrend_max_trend.tif')
+
+            fpath2 = join(fdir_min,f'{model}_detrend_min_trend.tif')
+
+
+            #1
+            tif1_label, tif2_label = 'LAImax_trend','LAImin_trend'
+            #2
+            # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
+
+            #1
+            min1, max1 = -1, 1
+            min2, max2 = -1, 1
+
+            #2
+            # min1, max1 = -.3, .3
+            # min2, max2 = -.5, .5
+
+            arr1 = ToRaster().raster2array(fpath1)[0]
+            arr2 = ToRaster().raster2array(fpath2)[0]
+
+            arr1[arr1<-9999] = np.nan
+            arr2[arr2<-9999] = np.nan
+
+            arr1_flattened = arr1.flatten()
+            arr2_flattened = arr2.flatten()
+
+
+            # plt.hist(arr1_flattened,bins=100)
+            # plt.title('arr1')
+            # plt.figure()
+            # plt.hist(arr2_flattened,bins=100)
+            # plt.title('arr2')
+            # plt.show()
+
+            # choice 1
+            upper_left_color = (0, 0, 110)
+            upper_right_color =(112, 196, 181)
+            lower_left_color = (237, 125, 49)
+
+            lower_right_color = (193, 92, 156)
+            center_color = (240, 240, 240)
+
+            ## CV greening option
+            #
+            # upper_left_color = (194, 0, 120)
+            # upper_right_color = (0,170,237)
+            # lower_left_color = (233, 55, 43)
+            # # lower_right_color = (160, 108, 168)
+            # lower_right_color = (234, 233, 46)
+            # center_color = (240, 240, 240)
+
+
+            xymap.Bivariate_plot_1(res = 11,
+                             alpha = 255,
+                             upper_left_color = upper_left_color, #
+                             upper_right_color = upper_right_color, #
+                             lower_left_color = lower_left_color, #
+                             lower_right_color = lower_right_color, #
+                             center_color = center_color).plot_bivariate(
+                                                                        fpath1, fpath2,
+                                                                        tif1_label, tif2_label,
+                                                                        min1, max1,
+                                                                        min2, max2,
+                                                                        outtif,
+                                                                        n_x = 5, n_y =5
+                                                                        )
+
+            T.open_path_and_file(outdir)
+    def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
+
+        fdir_trend = result_root + rf'\3mm\FIGURE\bivariate\\'
+        temp_root = result_root + rf'\3mm\FIGURE\bivariate\bivariate\\temp_root\\'
+        outdir = result_root + rf'\3mm\FIGURE\bivariate\\ROBINSON\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+            outf=outdir + fname + '.tif'
+            srcSRS=self.wkt_84()
+            dstSRS=self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath,outf, 5000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
+
+    def wkt_robinson(self):
+        wkt='''PROJCRS["World_Robinson",
+    BASEGEOGCRS["WGS 84",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["World_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",54030]]
+        '''
+        return wkt
+
+
+    def wkt_84(self):
+        wkt = '''GEOGCRS["WGS 84",
+    ENSEMBLE["World Geodetic System 1984 ensemble",
+        MEMBER["World Geodetic System 1984 (Transit)"],
+        MEMBER["World Geodetic System 1984 (G730)"],
+        MEMBER["World Geodetic System 1984 (G873)"],
+        MEMBER["World Geodetic System 1984 (G1150)"],
+        MEMBER["World Geodetic System 1984 (G1674)"],
+        MEMBER["World Geodetic System 1984 (G1762)"],
+        MEMBER["World Geodetic System 1984 (G2139)"],
+        ELLIPSOID["WGS 84",6378137,298.257223563,
+            LENGTHUNIT["metre",1]],
+        ENSEMBLEACCURACY[2.0]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    USAGE[
+        SCOPE["Horizontal component of 3D system."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["EPSG",4326]]'''
+        return wkt
+
+
+
+
 class PLOT_Climate_factors():
     def run(self):
         self.trend_analysis_plot()
@@ -4743,7 +4934,8 @@ def main():
     # TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Colormap().run()
-    Partial_correlation().run()
+    # Partial_correlation().run()
+    LAImax_LAImin_models().run()
     # PLOT_Climate_factors().run()
     # calculate_longterm_CV().run()
     # SHAP_CV().run()
