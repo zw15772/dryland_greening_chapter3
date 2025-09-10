@@ -1132,18 +1132,356 @@ class Plot_Robinson:
     ID["ESRI",53030]]'''
         return wkt
 
+class Colormap():
+    def __init__(self):
+        pass
+    def run(self):
+        self.colormap()
+        pass
 
-class Rainfall_product_comparison():
+    def colormap(self):
+        outdir = result_root + rf'\3mm\FIGURE\\Colormap\\'
+        T.mk_dir(outdir, True)
+        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+
+        model_list = [
+
+                      'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+
+        # model_list = [
+        #     'composite_LAI_median',
+        #     'SNU_LAI', 'GLOBMAP_LAI',
+        #     'LAI4g',
+        #     'composite_LAI',
+        #     ]
+
+        dic_name = {'SNU_LAI': 'SNU',
+                    'GLOBMAP_LAI': 'GLOBMAP',
+                    'composite_LAI_median': 'Composite',
+                    'composite_LAI': 'Composite',
+
+                    'LAI4g': 'GIMMS4g',
+                    'TRENDY_ensemble_median': 'TRENDY_ensemble',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
+
+        # fdir_all = result_root + rf'\\3mm\\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\'
+        fdir_all = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\\'
+        for model in model_list:
+            fdir = fdir_all + rf'{model}\\'
+            temp_fdir = temp_root + rf'{model}\\'
+            T.mk_dir(temp_fdir, True)
+
+            color_list = [
+                '#f599a1', '#fcd590',
+                '#e73618', '#dae67a',
+                '#9fd7e9', '#a577ad',
+
+            ]
+
+            my_cmap2 = T.cmap_blend(color_list, n_colors=6)
+
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+            fpath = fdir + f'color_map.tif'
+
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=6,
+            )
+
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+            ax.set_title(dic_name.get(model, model), fontsize=8, font='Arial')
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+
+            # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Trend (% per year)', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + '\\' + model + '.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
     pass
+
+    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
+                         s=20,
+                         c='k', marker='x',
+                         zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
+
+        # arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        #
+        os.remove(fpath_clip)
+        # os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+        # exit()
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list) + res / 2
+        lat_list = np.array(lat_list) - res / 2
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        # lon_list = lon_list + pixelWidth / 2
+        # lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        # print(lat_list);exit()
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+        # ax.scatter(lon_list,lat_list)
+        # plt.show()
+
+        return m
+
+class Partial_correlation():
+    def __init__(self):
+        pass
+    def run(self):
+        self.partial_correlation()
+        pass
+
+    def partial_correlation(self):
+        outdir = result_root + rf'\3mm\FIGURE\\patial_corr\\Sensitivity\\'
+        T.mk_dir(outdir, True)
+        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+
+        model_list = [
+                      'TRENDY_ensemble_median',
+                      'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+
+        # model_list = [
+        #     'composite_LAI_median',
+        #     'SNU_LAI', 'GLOBMAP_LAI',
+        #     'LAI4g',
+        #     'composite_LAI',
+        #     ]
+
+        dic_name = {'SNU_LAI': 'SNU',
+                    'GLOBMAP_LAI': 'GLOBMAP',
+                    'composite_LAI_median': 'Composite',
+                    'composite_LAI': 'Composite',
+
+                    'LAI4g': 'GIMMS4g',
+                    'TRENDY_ensemble_median': 'TRENDY_ensemble',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
+
+        fdir_all = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\\partial_corr2\\'
+        fdir_all = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\partial_corr2\\'
+        for model in model_list:
+            fdir = fdir_all + rf'{model}\\sig\\'
+            temp_fdir = temp_root + rf'{model}\\'
+            T.mk_dir(temp_fdir, True)
+
+
+            my_cmap2 ='Spectral'
+
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+            # fpath = fdir + f'CV_intraannual_rainfall_ecosystem_year_zscore.tif'
+            # fpath = fdir + f'detrended_sum_rainfall_ecosystem_year_CV_zscore.tif'
+            fpath = fdir + f'{model}_sensitivity_zscore.tif'
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=-1, vmax=1
+            )
+            # 叠加显著性
+            # if not model == 'TRENDY_ensemble_mean':
+            #     Plot().plot_Robinson_significance_scatter(
+            #         m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
+            #         linewidths=0.5, s=1, c='k', marker='x', zorder=111, res=4
+            #     )
+            # else:
+            #     continue
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+            ax.set_title(dic_name.get(model, model), fontsize=8, font='Arial')
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+            #
+            # # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            ## plot colorbar
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Partial correlation', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + '\\' + model +'.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
+    pass
+
+    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
+                         s=20,
+                         c='k', marker='x',
+                         zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
+
+        # arr[arr > sig_level] = np.nan
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        #
+        os.remove(fpath_clip)
+        # os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+        # exit()
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list) + res / 2
+        lat_list = np.array(lat_list) - res / 2
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        # lon_list = lon_list + pixelWidth / 2
+        # lat_list = lat_list + pixelHeight / 2
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        # print(lat_list);exit()
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+        # ax.scatter(lon_list,lat_list)
+        # plt.show()
+
+        return m
+
 
 class TRENDY_trend():
 
     def trend_analysis_plot(self):
-        outdir = result_root + rf'\3mm\FIGURE\\trends_all_models\\'
+        outdir = result_root + rf'\3mm\FIGURE\\trends_all_models_greening\\'
         T.mk_dir(outdir,True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
-        model_list = ['composite_LAI_relative_change_mean','GLOBMAP_LAI_relative_change','LAI4g','SNU_LAI_relative_change',
+        model_list = [
                       'TRENDY_ensemble_median',
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
@@ -1151,6 +1489,7 @@ class TRENDY_trend():
                       'JULES_S2_lai', 'LPJ-GUESS_S2_lai','LPX-Bern_S2_lai',
                       'ORCHIDEE_S2_lai', 'SDGVM_S2_lai',
                       'YIBs_S2_Monthly_lai']
+
 
 
         dic_name = {'SNU_LAI_relative_change':'SNU',
@@ -1201,7 +1540,7 @@ class TRENDY_trend():
             m, mappable = Plot().plot_Robinson(
                 fpath, ax=ax, cmap=my_cmap2, vmin=-0.3, vmax=0.3
             )
-            # 叠加显著性
+            #叠加显著性
             if not model=='TRENDY_ensemble_median':
                 Plot().plot_Robinson_significance_scatter(
                     m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
@@ -1308,9 +1647,10 @@ class TRENDY_CV():
         outdir = result_root + rf'\3mm\FIGURE\\trends_all_models_CV\\'
         T.mk_dir(outdir,True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+        model_list=['composite_LAI','GLOBMAP','LAI4g','SNU_LAI',]
 
-        model_list = ['composite_LAI','GLOBMAP','LAI4g','SNU_LAI',
-                      'TRENDY_ensemble_median',
+        model_list = [
+                      'TRENDY_ensemble_median','TRENDY_ensemble_composite_time_series',
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -1325,6 +1665,7 @@ class TRENDY_CV():
 
 
             'LAI4g': 'GIMMS4g',
+                    'TRENDY_ensemble_composite_time_series': 'TRENDY_ensemble',
                     'TRENDY_ensemble_median':'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
@@ -1390,17 +1731,14 @@ class TRENDY_CV():
             ax.set_xticks([])
             ax.set_yticks([])
 
-            # if mappable_for_cbar is None:
-            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+            ## cbar
 
-
-
-        # 共享色标（水平放在底部）
-        # cbar = fig.colorbar(
-        #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
-        #     orientation='horizontal', fraction=0.035, pad=0.04
-        # )
-        # cbar.set_label('Trend (% per year)', fontsize=11)
+         ###plot colorbar
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Trends in CVLAI (%/yr)', fontsize=11)
 
         # 紧凑布局与间距
             # plt.subplots_adjust(hspace=0.08, wspace=0.02)
@@ -4403,7 +4741,9 @@ def main():
     # greening_analysis().run()
     # climate_variables().run()
     # TRENDY_trend().trend_analysis_plot()
-    TRENDY_CV().trend_analysis_plot()
+    # TRENDY_CV().trend_analysis_plot()
+    # Colormap().run()
+    Partial_correlation().run()
     # PLOT_Climate_factors().run()
     # calculate_longterm_CV().run()
     # SHAP_CV().run()

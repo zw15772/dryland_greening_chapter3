@@ -3815,14 +3815,14 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\zscore\\'
+        fdir_all =result_root+ rf'\3mm\moving_window_robust_test\\'
 
         # growing_season_mode_list=['growing_season', 'non_growing_season','ecosystem_year',]
         # growing_season_mode_list = [ 'growing_season', ]
 
         # for mode in growing_season_mode_list:
 
-        outdir = self.result_root + rf'\3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\growing_season\\zscore\\'
+        outdir = self.result_root + rf'\3mm\moving_window_robust_test\\moving_window_extraction\\20_year\\'
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -3841,7 +3841,7 @@ class moving_window():
             #     continue
 
             dic = T.load_npy(fdir_all+f)
-            window = 15
+            window = 20
 
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
@@ -4031,12 +4031,12 @@ class moving_window():
 
 
     def moving_window_CV_extraction_anaysis_LAI(self):
-        window_size=15
+        window_size=20
         # growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
         # for mode in growing_season_mode_list:
 
-        fdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_composite_phenology_year\moving_window_extraction_average\\'
+        fdir = rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction\\20_year\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction_average\\20_year\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4057,7 +4057,7 @@ class moving_window():
             for pix in tqdm(dic):
                 trend_list = []
                 time_series_all = dic[pix]
-                if len(time_series_all)<24:  ##
+                if len(time_series_all)<19:  ##
                     continue
                 time_series_all = np.array(time_series_all)
                 for ss in range(slides):
@@ -4268,10 +4268,10 @@ class moving_window():
             # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
 
     def moving_window_trend_anaysis(self): ## each window calculating the trend
-        window_size = 15
+        window_size = 10
 
-        fdir=rf'D:\Project3\Result\3mm\extract_VOD_phenology_year\moving_window_extraction\moving_window_average_anaysis\\'
-        outdir = rf'D:\Project3\Result\3mm\extract_VOD_phenology_year\moving_window_extraction\moving_window_average_anaysis\\trend\\'
+        fdir=rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\\trend\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             # if not f.split('.')[0] in ['average_heat_spell', 'heat_event_frequency',
@@ -4281,7 +4281,7 @@ class moving_window():
 
             dic = T.load_npy(fdir + f)
 
-            slides = 32 - window_size
+            slides = 38 - window_size
             outf = outdir + f.split('.')[0] + f'_trend.npy'
             print(outf)
 
@@ -4301,7 +4301,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<23:
+                    if len(time_series_all)<29:
                         continue
 
 
@@ -4329,8 +4329,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\\'
-        outdir =result_root + (rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\\trend\\')
+        fdir =result_root+ rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
+        outdir =result_root + (rf'3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):

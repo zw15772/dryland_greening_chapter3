@@ -916,7 +916,7 @@ class multi_regression_beta():
 
         plt.show()
 
-class Figure2():
+class Figure2_LAImin_LAImax(): ## LAImin and LAImax
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
@@ -926,9 +926,10 @@ class Figure2():
 
         self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
-    ##plot LAImin and LAImax see script Products_consistency
 
-        self.statistic_pdf()
+        # self.barplot_area_percentage()
+
+        # self.statistic_pdf()
 
 
 
@@ -943,26 +944,26 @@ class Figure2():
 
         T.mkdir(outdir)
 
-        outtif = join(outdir,'CV_trend2.tif')
-        # outtif = join(outdir, 'LAImin_LAImax.tif')
+        # outtif = join(outdir,'CV_trend2.tif')
+        outtif = join(outdir, 'LAImin_LAImax_test.tif')
 
-        fpath1 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath1 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
         # fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
-        fpath2 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath2 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
         # fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
 
         #1
-        # tif1_label, tif2_label = 'LAImin_trend','LAImax_trend'
+        tif1_label, tif2_label = 'LAImax_trend','LAImin_trend'
         #2
-        tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
+        # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
 
         #1
-        # min1, max1 = -1, 1
-        # min2, max2 = -1, 1
+        min1, max1 = -1, 1
+        min2, max2 = -1, 1
 
         #2
-        min1, max1 = -.3, .3
-        min2, max2 = -.5, .5
+        # min1, max1 = -.3, .3
+        # min2, max2 = -.5, .5
 
         arr1 = ToRaster().raster2array(fpath1)[0]
         arr2 = ToRaster().raster2array(fpath2)[0]
@@ -982,23 +983,24 @@ class Figure2():
         # plt.show()
 
         # choice 1
-        # upper_left_color = (193,92,156)
-        # upper_right_color =(112, 196, 181)
-        # lower_left_color = (237, 125, 49)
-        # lower_right_color = (0, 0, 110)
-        # center_color = (240, 240, 240)
+        upper_left_color = (0, 0, 110)
+        upper_right_color =(112, 196, 181)
+        lower_left_color = (237, 125, 49)
 
-        ## CV greening option
-
-        upper_left_color = (194, 0, 120)
-        upper_right_color = (0,170,237)
-        lower_left_color = (233, 55, 43)
-        # lower_right_color = (160, 108, 168)
-        lower_right_color = (234, 233, 46)
+        lower_right_color = (193, 92, 156)
         center_color = (240, 240, 240)
 
+        ## CV greening option
+        #
+        # upper_left_color = (194, 0, 120)
+        # upper_right_color = (0,170,237)
+        # lower_left_color = (233, 55, 43)
+        # # lower_right_color = (160, 108, 168)
+        # lower_right_color = (234, 233, 46)
+        # center_color = (240, 240, 240)
 
-        xymap.Bivariate_plot_1(res = 7,
+
+        xymap.Bivariate_plot_1(res = 11,
                          alpha = 255,
                          upper_left_color = upper_left_color, #
                          upper_right_color = upper_right_color, #
@@ -1010,7 +1012,7 @@ class Figure2():
                                                                     min1, max1,
                                                                     min2, max2,
                                                                     outtif,
-                                                                    n_x = 5, n_y = 5
+                                                                    n_x = 5, n_y =5
                                                                     )
 
         T.open_path_and_file(outdir)
@@ -1025,7 +1027,7 @@ class Figure2():
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
-            if not 'std_mean' in f:
+            if not 'LAImin_LAImax_test' in f:
                 continue
 
             if not f.endswith('.tif'):
@@ -1038,7 +1040,7 @@ class Figure2():
             srcSRS=self.wkt_84()
             dstSRS=self.wkt_robinson()
 
-            ToRaster().resample_reproj(fpath,outf, 50000, srcSRS=srcSRS, dstSRS=dstSRS)
+            ToRaster().resample_reproj(fpath,outf, 5000, srcSRS=srcSRS, dstSRS=dstSRS)
 
             T.open_path_and_file(outdir)
 
@@ -1291,6 +1293,68 @@ class Figure2():
         plt.show()
         # plt.savefig(outf)
         # plt.close()
+
+    def barplot_area_percentage(self):
+        ## plot bivariate plot of LAImin and LAImax
+
+        dff = result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        col_min = 'composite_LAI_detrend_relative_change_min_trend'
+        col_max = 'composite_LAI_detrend_relative_change_max_trend'
+        s_min = pd.to_numeric(df[col_min], errors='coerce')
+        s_max = pd.to_numeric(df[col_max], errors='coerce')
+        s_min = s_min.where(s_min.between(-99, 99))
+        s_max = s_max.where(s_max.between(-99, 99))
+
+        # 2) 构造四象限分类（++、+-、-+、--），其余为 NaN
+        conditions = [
+            (s_max > 0) & (s_min > 0),
+            (s_max > 0) & (s_min < 0),
+            (s_max < 0) & (s_min > 0),
+            (s_max < 0) & (s_min < 0),
+        ]
+        choices = ['both positive (++): LAImax↑, LAImin↑ ',
+                   'positive & negative (+-): LAImin↑ LAImax↓',
+                   'negative & positive (-+): LAImin↓ LAImax↑',
+                   'both negative (--): LAImin↓ LAImax↓']
+
+        df = df.copy()
+        df['class'] = np.select(conditions, choices, default=np.nan)
+
+        # 3) 计算各类百分比（排除 NaN），并固定显示顺序
+        order = choices  # 固定顺序与上面一致
+        counts = pd.value_counts(pd.Categorical(df['class'], categories=order), dropna=True)
+        total = counts.sum() if counts.sum() > 0 else 1
+        perc = (counts / total * 100).reindex(order).fillna(0)
+
+        # 4) 画图
+        fig, ax = plt.subplots(figsize=(3, 3))
+        bars = ax.bar(range(len(order)), perc.values, color=['#6BC4BF', '#FFBB99', '#B3C7F7', '#F7A8C3'],
+                      edgecolor='black', linewidth=0.8, width=0.7)
+
+        # 百分比标注
+        # for i, b in enumerate(bars):
+        #     val = perc.values[i]
+        #     if val > 0:
+        #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
+        #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
+
+        # ax.set_xticks(range(len(order)))
+        # ax.set_xticklabels(order, rotation=20, ha='right', fontsize=10)
+        ax.set_ylabel('Area (%)')
+        ax.set_ylim(0, max(perc.max() * 1.25, 10))  # 留一点顶部空间
+        ax.axhline(0, color='grey', lw=1)
+        outdir=result_root + rf'\3mm\FIGURE\\LAImax_LAImin\\'
+        T.mk_dir(outdir, force=True)
+
+        plt.savefig(outdir + 'LAImax_LAImin_barplot_2.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+        plt.show()
+
+
+        pass
 
     def statistic_pdf(self):
         dff= result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
@@ -8348,16 +8412,19 @@ class Figure5():
         self.map_width = 8.2 * centimeter_factor
         self.map_height = 8.2 * centimeter_factor
     def run(self):
-        self.TRENDY_beta()
+        self.TRENDY_LAImin_LAImax()
         pass
 
 
     def TRENDY_LAImin_LAImax(self):
-        dff=result_root+rf'3mm\Dataframe\LAImin_LAImax_all_models\\Trend_all.df'
+        dff=result_root+rf'\3mm\Dataframe\LAImin_LAImax_all_models_beta\\Trend_all.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
+        for column in df.columns:
+            print(column)
+        # exit()
 
-        variables_list = ['composite_LAI',
+        variables_list = ['composite_LAI','LAI4g',   'GLOBMAP_LAI_relative_change','SNU_LAI_relative_change',
                           'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -8369,8 +8436,8 @@ class Figure5():
         values_min_list=[]
 
         for variable in variables_list:
-            values_min=df[f'{variable}_detrend_min_trend'].values
-            values_max=df[f'{variable}_detrend_max_trend'].values
+            values_min = df[f'{variable}_detrend_min_trend'].values
+            values_max = df[f'{variable}_detrend_max_trend'].values
             values_max_list.append(values_max)
             values_min_list.append(values_min)
         values_min_list=np.array(values_min_list)
@@ -8380,7 +8447,11 @@ class Figure5():
         ## add legend
 
         fig, ax = plt.subplots(figsize=(self.map_width*1.5, self.map_height))
-        dic_label_name = {'composite_LAI': 'Composite LAI',
+        dic_label_name = {'composite_LAI': 'Composite',
+
+                          'GLOBMAP_LAI_relative_change': 'GLOBMAP',
+                          'SNU_LAI_relative_change': 'SNU',
+
                           'TRENDY_ensemble': 'TRENDY ensemble',
                           'CABLE-POP_S2_lai': 'CABLE-POP',
                           'CLASSIC_S2_lai': 'CLASSIC',
@@ -8396,6 +8467,7 @@ class Figure5():
                           'ORCHIDEE_S2_lai': 'ORCHIDEE',
 
                           'YIBs_S2_Monthly_lai': 'YIBs',
+                          'LAI4g': 'GIMMS4g',
 
                           }
 
@@ -8408,13 +8480,19 @@ class Figure5():
         plt.hlines(0, -0.5, len(variables_list) - 0.5, colors='black', linestyles='dashed')
         plt.ylabel('(%/yr)')
         plt.axhline(y=0, color='grey', linestyle='-')
+        labels = [dic_label_name.get(v, v) for v in variables_list]
         ax.set_xticks(range(len(variables_list)))
-        ax.set_xticklabels(dic_label_name.values(), rotation=90, fontsize=10, font='Arial')
-        plt.tight_layout()
-        plt.show()
+        ax.set_xticklabels(labels, rotation=90, fontsize=10, font='Arial')
+        # plt.tight_layout()
+        # plt.show()
         print(values_max_list_mean)
         print(values_min_list_mean)
         print(variables_list)
+        outdir=result_root+rf'\3mm\FIGURE\\Figure4\\'
+        outf=outdir+rf'barplot.pdf'
+        plt.savefig(outf,dpi=300,bbox_inches='tight')
+        # plt.savefig(outf, dpi=300, )
+
 
     def TRENDY_beta(self):
         dff=result_root+rf'3mm\Dataframe\LAImin_LAImax_all_models_beta\\Trend_all.df'
@@ -9857,142 +9935,625 @@ class multi_regression_zscore():
         #
 
 
-
-
-class GAM():
+class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 and figure 3
     def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
         pass
-    def run(self):
-        # self.VIF()
-        self.GAM_model()
+    def run (self):
+        # self.plot_CV_LAI()
+        # self.plot_relative_change_LAI()
+        # self.plot_std()
+        # self.plot_LAImax_LAImin()
+        self.statistic_trend_CV_bar()
+        # self.statistic_trend_bar()
+
+
         pass
+
     def df_clean(self, df):
-        # T.print_head_n(df)
+        T.print_head_n(df)
         # df = df.dropna(subset=[self.y_variable])
         # T.print_head_n(df)
-        print('original len(df):',len(df))
+        # exit()
         df = df[df['row'] > 60]
         df = df[df['Aridity'] < 0.65]
-        df=df[df['LC_max']<20]
-        # df = df[df['extraction_mask'] == 1]
-
-
-
-        df = df[df['MODIS_LUCC'] != 12]
-        # df=df[df['landcover_classfication'] != 'Cropland']
-        print('filtered len(df):',len(df))
-        # exit()
-
-
-        # #
-        # df = df[df['lon'] > -125]
-        # df = df[df['lon'] < -105]
-        # df = df[df['lat'] > 0]
-        # df = df[df['lat'] < 45]
-        # print(len(df))
+        df = df[df['LC_max'] < 10]
 
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
 
-    def VIF(self):
+    def plot_LAImax_LAImin(self):
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
 
-        from statsmodels.stats.outliers_influence import variance_inflation_factor
-        from statsmodels.tools.tools import add_constant
+        df=self.df_clean(df)
+        print(len(df))
 
-        dff = rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window_zscore.df'
-        df = T.load_df(dff)
+
+
+        color_list = ['purple', 'teal', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
+                      'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2, 2 ]
+
+
+
+        variable_list = ['composite_LAI_detrend_relative_change_min',
+                         'composite_LAI_detrend_relative_change_max',  ]
+        dic_label = {'composite_LAI_detrend_relative_change_min': 'LAImin',
+                     'composite_LAI_detrend_relative_change_max': 'LAImax',}
+        year_list = range(0, 24)
+
+        result_dic = {}
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+
+            data_dic = {}
+
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+
+
+                data_dic[year] = np.nanmean(vals)
+
+            result_dic[var] = data_dic
+
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+
+        flag = 0
+        plt.figure(figsize=(self.map_width*1.6, self.map_height))
+        slope_dic={}
+
+        for var in variable_list:
+                slope_dic[var]=slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+
+
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag],
+                         color=color_list[flag])
+
+
+
+
+
+                flag = flag + 1
+
+        for var in variable_list:
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(slope,p_value, )
+            x_pos = max(year_list) * 0.9  # 例如在靠近右边
+            # 选择一个固定的y位置（可以用数据的均值或最大最小值调节）
+            y_base = df_new[var].mean()
+
+            # 在同一列上下显示
+            plt.text(x_pos, y_base +3, f'slope={slope:.2f}', fontsize=12, ha='center')
+            plt.text(x_pos, y_base - 1, f'p={p_value:.2f}', fontsize=12, ha='center')
+
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        # plt.xticks(range(0, 23, 4))
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.yticks(np.arange(-30, 31, 10))
+
+
+
+
+        plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
+
+        plt.show()
+
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+        pass
+
+
+    def plot_CV_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
+        print(len(df))
         df = self.df_clean(df)
 
-        # df = df[df['wet_dry'] == 'wetting']
-
-        # Example: Your data
-        # Suppose you have a DataFrame with columns:
-        # 'beta', 'landcover', 'aridity', 'sum_rainfall'
-
-        df.dropna(inplace=True)
-
-
-
-        X = df[['VPD', 'Aridity', 'sum_rainfall','heat_event_frenquency',
-                'rooting_depth','nitrogen','sand','cwdx80_05','Burn_area_mean','FVC_average',
-                'SM_average',]]
-        X_const = add_constant(X)
-
-
-
-        vif = pd.DataFrame()
-        vif["Variable"] = X.columns
-        vif["VIF"] = [variance_inflation_factor(X_const.values, i + 1) for i in range(len(X.columns))]  # skip intercept
-        print(vif)
-
-    def GAM_model(self):
-        import pandas as pd
-        import numpy as np
-        from pygam import LinearGAM, s, f
-
-        dff=rf'D:\Project3\Result\3mm\SHAP_beta\Dataframe\\moving_window_zscore.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        # for column in df.columns:
-        #     print(column)
+        print(len(df))
+        T.print_head_n(df)
         # exit()
 
-        # Example: Your data
-        # Suppose you have a DataFrame with columns:
-        # 'beta', 'landcover', 'aridity', 'sum_rainfall'
-
-        df.dropna(inplace=True)
-
-        df_sample = df.sample(n=10000, random_state=42)
-
-
-        # Convert categorical variable to codes
-
-
-        # X = df_sample[['composite_LAI_beta','CV_intraannual_rainfall_ecosystem_year_zscore',
-        #                'Fire_sum_average_zscore','detrended_sum_rainfall_CV_zscore'
-        #
-        #
-        #                ]].values
-
-        X = df_sample[['composite_LAI_beta', 'CV_intraannual_rainfall_ecosystem_year_zscore',
-                       'detrended_sum_rainfall_CV_zscore'
-
-                       ]].values
-        y=df_sample['composite_LAI_CV_zscore'].values
+        # create color list with one green and another 14 are grey
 
 
 
-        gam = LinearGAM(
-            f(0) +  # categorical: landcover_code
-            s(1) +  # smooth term: aridity
-            s(2) + # smooth term: sum_rainfall
-            s(3)
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+
+        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
+        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
+        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
+
+        variable_list=['composite_LAI_CV',
+                       'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
+            'GLOBMAP_LAI_detrend_CV',]
+        dic_label={'composite_LAI_CV':'Composite LAI',
+                   'LAI4g_detrend_CV':'LAI4g',
+                   'detrended_SNU_LAI_CV':'SNUV',
+                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',}
+        year_list=range(0,24)
+
+
+        result_dic = {}
+        CI_dic={}
+        std_dic={}
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+            CI_dic[var] = {}
+            data_dic = {}
+            CI_dic_data={}
+            std_dic_data={}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                SEM=stats.sem(vals)
+                CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
+                std=np.nanstd(vals)
+                CI_dic_data[year]=CI
+                std_dic_data[year]=std
+
+                data_dic[year] = np.nanmean(vals)
 
 
 
 
-        ).fit(X, y)
+            result_dic[var] = data_dic
+            CI_dic[var]=CI_dic_data
+            std_dic[var]=std_dic_data
+        ##dic to df
 
-        gam.summary()
+        df_new = pd.DataFrame(result_dic)
 
-        fig, axs = plt.subplots(2, 3, figsize=(15, 4))
-        titles = [ 'composite_LAI_beta', 'CV_intraannual_rainfall_ecosystem_year_zscore',
-                   'Fire_sum_average_zscore','detrended_sum_rainfall_CV_zscore']
+        flag = 0
+        plt.figure(figsize=(self.map_width, self.map_height))
 
-        for i in range(len(titles)):
-            ax = axs.flatten()[i]
-            XX = gam.generate_X_grid(term=i)
-            pd_mean, pd_ci = gam.partial_dependence(term=i, X=XX, width=0.95)
+        for var in variable_list:
+            if var == 'composite_LAI_CV':
+                ## plot CI bar
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
+                         )
+                ## fill std
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
 
-            ax.plot(XX[:, i], pd_mean, label='Partial dependence')
-            ax.plot(XX[:, i], pd_ci, c='r', ls='--', label='95% CI')
-            ax.set_title(titles[i])
-            ax.grid(True)
+                ## fill CI
+                # ci_low = [CI_dic[var][y][0] for y in year_list]
+                # ci_high = [CI_dic[var][y][1] for y in year_list]
+                # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
 
-        plt.tight_layout()
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+
+                ## std
+
+
+
+            else:
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag])
+
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+            flag = flag + 1
+        ## if var == 'composite_LAI_CV': plot CI bar
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1982, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2020:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+        # plt.xticks(range(0, 23, 4))
+        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.yticks(np.arange(5, 25, 5))
+        # plt.yticks(np.arange(5, 50, 5))
+        # plt.xticks(range(0, 23, 3))
+
+
+        plt.ylabel(f'LAI CV (%)')
+
+        plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
+
         plt.show()
+        # plt.tight_layout()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+        #
+        # plt.legend()
+        # plt.show()
+
+    def plot_std(self):  ##### plot for 4 clusters
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from scipy import stats
+
+        # === 读数据 ===
+        df = T.load_df(result_root + rf'\3mm\product_consistency\dataframe\moving_window.df')
+        df = self.df_clean(df)
+
+        # 用实际存在的 year 索引，避免和 x 轴标签长度不一致
+        year_list = sorted(df['year'].astype(int).unique())
+        n = len(year_list)
+        x = np.arange(n)
+
+        # 两条变量：左轴 std，右轴 mean
+        std_var = 'composite_LAI_relative_change_detrend_std'
+        mean_var = 'composite_LAI_relative_change_detrend_mean'
+
+        dic_label = {
+            mean_var: 'Composite LAI mean',
+            std_var: 'Composite LAI std',
+        }
+
+        # 聚合到每个窗口（year）上的均值
+        def agg_mean(var):
+            vals = []
+            for y in year_list:
+                v = df.loc[df['year'] == y, var].to_numpy(dtype=float)
+                v = v[~np.isnan(v)]
+                vals.append(np.nan if len(v) == 0 else np.nanmean(v))
+            return np.array(vals, dtype=float)
+
+        y_std = agg_mean(std_var)
+        y_mean = agg_mean(mean_var)
+
+        # === 画图：双轴 ===
+        fig, ax1 = plt.subplots(figsize=(self.map_width, self.map_height))
+        ax2 = ax1.twinx()
+
+        color_std = 'purple'
+        color_mean = 'teal'
+        lw_std = lw_mean = 2
+
+        l1, = ax1.plot(x, y_std, label=dic_label[std_var], color=color_std, linewidth=lw_std)
+        l2, = ax2.plot(x, y_mean, label=dic_label[mean_var], color=color_mean, linewidth=lw_mean)
+
+        # 线性趋势（对索引做回归）
+        s1, _, _, p1, _ = stats.linregress(x, y_std)
+        s2, _, _, p2, _ = stats.linregress(x, y_mean)
+        print(std_var, f'{s1:.4f}', f'{p1:.4f}')
+        print(mean_var, f'{s2:.4f}', f'{p2:.4f}')
+
+        # 可选：在右侧上/下各标注 slope / p（上下对齐，同一 x 位置）
+        # x_pos = x.max() * 0.95
+        # y1 = np.nanmean(y_std)
+        # y2 = np.nanmean(y_mean)
+        # ax1.text(x_pos, y1 + 0.05 * np.nanstd(y_std), f'slope={s1:.4f}', color=color_std, ha='center', va='bottom',
+        #          fontsize=9)
+        # ax1.text(x_pos, y1 - 0.05 * np.nanstd(y_std), f'p={p1:.3f}', color=color_std, ha='center', va='top', fontsize=9)
+        # ax2.text(x_pos, y2 + 0.05 * np.nanstd(y_mean), f'slope={s2:.4f}', color=color_mean, ha='center', va='bottom',
+        #          fontsize=9)
+        # ax2.text(x_pos, y2 - 0.05 * np.nanstd(y_mean), f'p={p2:.3f}', color=color_mean, ha='center', va='top',
+        #          fontsize=9)
+
+        # x 轴标签：按移动窗口生成（与长度 n 对齐）
+        window_size=15
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        ax1.set_xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+        # 轴标签与颜色
+        ax1.set_ylabel('Composite LAI std (%/year)', color=color_std)
+        ax2.set_ylabel('Composite LAI mean (%/year)', color=color_mean)
+        ax1.tick_params(axis='y', colors=color_std)
+        ax2.tick_params(axis='y', colors=color_mean)
+        ax1.spines['left'].set_color(color_std)
+        ax2.spines['right'].set_color(color_mean)
+
+        # 网格只用左轴
+        ax1.grid(True, which='major', alpha=0.5)
+
+        # 合并图例
+        lines = [l1, l2]
+        labels = [l.get_label() for l in lines]
+
+
+
+        # plt.show()
+        # # plt.tight_layout()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+        #
+        # plt.legend()
+        plt.show()
+
+    def plot_relative_change_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\relative_change.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+        fig = plt.figure()
+        i = 1
+
+        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
+        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
+        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
+
+        variable_list = [
+                         'composite_LAI_relative_change_mean','LAI4g', 'SNU_LAI_relative_change',
+            'GLOBMAP_LAI_relative_change',
+                         ]
+        dic_label={'LAI4g':'LAI4g','SNU_LAI_relative_change':'SNU_LAI',
+                   'GLOBMAP_LAI_relative_change':'GLOBMAP_LAI',
+                   'composite_LAI_relative_change_mean':'Composite LAI'}
+        year_list=range(1983,2021)
+
+
+        result_dic = {}
+        for var in variable_list:
+
+            result_dic[var] = {}
+            data_dic = {}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                data_dic[year] = np.nanmean(vals)
+            result_dic[var] = data_dic
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+        flag=0
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            plt.plot(year_list, df_new[var], label=dic_label[var],linewidth=linewidth_list[flag], color=color_list[flag])
+            flag=flag+1
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(var, f'{slope:.2f}', f'{p_value:.2f}')
+        plt.ylabel('Relative change LAI (%)')
+        plt.grid(True)
+
+
+        plt.legend()
+        plt.show()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+    def statistic_trend_CV_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\\CV\\'
+        variable_list=['composite_LAI_CV','GlOBMAP_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                'silver',
+
+                'silver',
+                '#7b3294',
+            ]
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage (%)')
+                # plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.tight_layout()
+            # plt.show())
+        ## save pdf
+            plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_CV_bar.pdf')
+
+
+    def statistic_trend_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
+        variable_list=['GLOBMAP_LAI_relative_change','LAI4g','composite_LAI_relative_change_mean','SNU_LAI_relative_change']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                 '#844000',
+            'lightgray',
+
+            'lightgray',
+            '#064c6c',
+            ]
+
+            # color_list = [
+            #     '#844000',
+            #     '#fc9831',
+            #     '#fffbd4',
+            #     '#86b9d2',
+            #     '#064c6c',
+            # ]
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
+            # plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_trend_bar.pdf')
+            # plt.close()
+
+
 
 
 
@@ -10001,7 +10562,7 @@ def main():
     # CCI_landcover_preprocess().run()
 
 
-    # Figure2().run()
+    # Figure2_LAImin_LAImax().run()
 
     # Figure_beta().run()
     # Figure_std_mean_bivariate().run()
@@ -10012,9 +10573,9 @@ def main():
     # multi_regression_beta_TRENDY().run()
     # multi_regression_anomaly().run()
 
-    # Figure5().run()
+    Figure5().run()
 
-    partial_correlation().run()
+    # partial_correlation().run()
     # partial_correlation_TRENDY().run()
     # GAM().run()
 

@@ -1630,9 +1630,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\')
+                result_root + rf'\3mm\Dataframe\LAImin_LAImax_all_models_beta\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Trend_all.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1643,7 +1643,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1660,10 +1660,10 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
-        df=self.add_soil_to_df(df)
+        # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
         # # # # df=self.add_interaction_to_df(df)
 
@@ -2516,7 +2516,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Y\trend\\'
+        fdir = result_root + rf'\3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\trend\\'
 
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2529,7 +2529,7 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'median' in f:
+            if not 'max' in f:
                 continue
 
 
@@ -7642,12 +7642,12 @@ class TRENDY_CV:
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
         # self.TRENDY_ensemble()
-        self.TRENDY_ensemble_npy()
+        # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        # self.plot_CV_trend_among_models()
+        self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8565,7 +8565,7 @@ class TRENDY_CV:
                 err_trend_list.append(np.nan)
                 err_CV_list.append(np.nan)
             print(variable, np.nanmean(vals_trend), np.nanmean(vals_CV))
-        exit()
+        # exit()
 
 
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
@@ -8585,24 +8585,23 @@ class TRENDY_CV:
 
             ##markerborderwidth=1
 
-            plt.ylabel('Trends in LAI (%/year)', fontsize=12)
-            plt.xlabel('Trends in CVLAI (%/year)', fontsize=12)
+            plt.ylabel('Trends in LAI (%/yr)', fontsize=12)
+            plt.xlabel('Trends in CVLAI (%/yr)', fontsize=12)
             plt.ylim(-0.02,0.18)
             plt.xlim(-0.3, 0.5)
             plt.xticks(fontsize=12)
             ## xticks gap 0.05
-            plt.yticks(np.arange(-0.02, 0.2, 0.02))
+            plt.yticks(np.arange(-0.02, 0.2, 0.04))
             plt.yticks(fontsize=12)
             plt.legend()
         ## save imagine
-        # plt.axhline(y=0.068, color='k', linestyle='--', linewidth=1)
-        # plt.axvline(x=0.12, color='k', linestyle='--', linewidth=1)
-        # plt.savefig(result_root + rf'3mm\FIGURE\\LAI4g_detrend_CV_trend.pdf',  bbox_inches='tight')
+        plt.axhline(y=0.068, color='k', linestyle='--', linewidth=1)
+        plt.axvline(x=0.12, color='k', linestyle='--', linewidth=1)
+        plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
+
+
         #
-
-
-
-        plt.show()
+        # plt.show()
 
 
 
@@ -9015,13 +9014,13 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()
