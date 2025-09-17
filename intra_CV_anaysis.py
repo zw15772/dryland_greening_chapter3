@@ -4330,10 +4330,12 @@ class moving_window():
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
         fdir =result_root+ rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
-        outdir =result_root + (rf'3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\trend\\')
+        outdir =result_root + (rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'SNU' in f:
+                continue
 
             if not f.endswith('.npy'):
                 continue

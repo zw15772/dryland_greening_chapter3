@@ -1336,8 +1336,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         # 百分比标注
         # for i, b in enumerate(bars):
         #     val = perc.values[i]
-        #     if val > 0:
-        #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
+        #     if val > 0:    #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
         #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
 
         # ax.set_xticks(range(len(order)))
@@ -1348,8 +1347,8 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         outdir=result_root + rf'\3mm\FIGURE\\LAImax_LAImin\\'
         T.mk_dir(outdir, force=True)
 
-        plt.savefig(outdir + 'LAImax_LAImin_barplot_2.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # plt.savefig(outdir + 'LAImax_LAImin_barplot_2.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
         plt.show()
 
@@ -4171,8 +4170,8 @@ class partial_correlation():
         #     # self.statistic_trend_bar()
         #     self.plot_spatial_map_sig()
         # self.statistic_corr_boxplot() # use this
-        # self.box_plot_significant_differences()
-        self.plot_percentage()
+        self.box_plot_significant_differences()
+        # self.plot_percentage()
         # self.sensitivity_vs_climate_factors()
         # self.percentage_pft()
         # self.percentage_pft_old()
@@ -4740,6 +4739,7 @@ class partial_correlation():
 
 
 
+
         # 绘图
             x_label_dic={
                 f'{model}_sensitivity_zscore':'$\gamma$',
@@ -4836,7 +4836,7 @@ class partial_correlation():
         df_raw = self.df_clean(df_raw)
 
         # 土壤变量
-        var_list = ['S_SAND', 'S_SILT', 'S_CLAY']
+        var_list = ['Tree cover_mean', ]
 
         # 正负相关 mask
         mask_pos = df_raw['composite_LAI_median_detrended_sum_rainfall_ecosystem_year_CV_zscore'] > 0
@@ -4857,8 +4857,8 @@ class partial_correlation():
             }
 
             # 如果你想算比例（分布归一化）
-            hist_pos, bins = np.histogram(df_pos, bins=51, density=True)
-            hist_neg, _ = np.histogram(df_neg, bins=51, density=True)
+            hist_pos, bins = np.histogram(df_pos, bins=5, density=True)
+            hist_neg, _ = np.histogram(df_neg, bins=5, density=True)
 
             ## plt hist
 
@@ -4900,17 +4900,19 @@ class partial_correlation():
         from scipy import stats
 
         # ---------- load & clean ----------
-        dff = result_root + r'\3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        dff = result_root + r'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\Dataframe.df'
         df_raw = T.load_df(dff)
         df_raw = self.df_clean(df_raw)  # keep this immutable
 
         # variables to compare
-        var_list = ['Tree cover_trend','sum_rainfall_mean', 'sum_rainfall_trend', 'VPD_trend', 'sand']
+        var_list = [ 'sum_rainfall_trend', 'VPD_trend',
+                    'T_SAND', 'Non_tree_vegetation_mean',
+                    ]
 
         # grouping columns
         corr_cols = {
-            'Fq': 'composite_LAI_rainfall_frenquency_growing_season_zscore',
-            'IAV': 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore',
+            'Fq': 'composite_LAI_CV_intraannual_rainfall_ecosystem_year_zscore',
+            'IAV': 'composite_LAI_detrended_sum_rainfall_ecosystem_year_CV_zscore',
         }
 
         # colors
@@ -4955,25 +4957,34 @@ class partial_correlation():
 
         # axes formatting
         ylims = {
-            'sum_rainfall_trend': (-2.5, 3.6),
+            'sum_rainfall_trend': (-4, 7),
             'VPD_trend': (-0.0005, 0.0026),
             'sum_rainfall_mean': (-50, 801),
-            'sand': (200, 850),
+            'T_SAND': (0, 120),
+            'Non_tree_vegetation_mean': (20, 101),
+
+            'rooting_depth': (0,16),
         }
         yticks = {
-            'sum_rainfall_trend': np.arange(-2.5, 3.6, 1),
-            'VPD_trend': np.arange(-0.0005, 0.0026, 0.0005),
+            'sum_rainfall_trend': np.arange(-4, 7, 2),
+            'VPD_trend': np.arange(-0.0005, 0.0026, 0.001),
             'sum_rainfall_mean': np.arange(-50, 801, 200),
-            'sand': np.arange(200, 850, 100),
+            'T_SAND': np.arange(0, 120, 20),
+            'Non_tree_vegetation_mean': np.arange(20, 101, 20),
+
+            'rooting_depth': np.arange(0,16,5),
         }
         ylabels = {
             'sum_rainfall_trend': 'Trends in rainfall (mm/yr)',
             'sum_rainfall_mean': 'Mean rainfall (mm/yr)',
             'VPD_trend': 'Trends in VPD (kPa/yr)',
-            'sand': 'Sand (%)',
+            'T_SAND': 'Sand (%)',
+            'Non tree vegetation_trend': 'Trends in short vegetation (%/yr)',
+            'Non_tree_vegetation_mean': 'Mean short vegetation (%)',
+            'rooting_depth': 'Rooting depth (cm)',
         }
 
-        outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Figures\\'
+        outdir = result_root + rf'\3mm\FIGURE\patial_corr\\boxplot\\'
         T.mk_dir(outdir, force=True)
 
         # ---------- plot each variable ----------
@@ -5048,9 +5059,10 @@ class partial_correlation():
             annotate_p(ax, 4, 5, IAV_pos, IAV_neg, color=EDGE[('IAV', 'pos')])
 
             # save & close
-            plt.show()
-            # plt.savefig(outdir + f'{var}_boxplot.pdf', dpi=300, bbox_inches='tight')
-            # plt.close(fig)
+            # plt.tight_layout()
+            # plt.show()
+            plt.savefig(outdir + f'{var}_boxplot.pdf')
+            plt.close(fig)
 
     def sensitivity_vs_climate_factors(self):
         dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
@@ -5222,7 +5234,7 @@ class partial_correlation():
         from matplotlib.patches import Patch
 
         # ---------- load & clean ----------
-        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\statistics.df'
+        dff = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\Dataframe.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         # classes_all = df['landcover_classfication'].unique().tolist()
@@ -5234,8 +5246,8 @@ class partial_correlation():
         pft_list = ['Grass','Shrub','Deciduous','Evergreen']
 
         # 相关性（正/负）判断的列
-        col_Fq = 'composite_LAI_rainfall_frenquency_growing_season_zscore'
-        col_IAV = 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore'
+        col_Fq = 'composite_LAI_CV_intraannual_rainfall_ecosystem_year_zscore'
+        col_IAV = 'composite_LAI_detrended_sum_rainfall_ecosystem_year_CV_zscore'
         var_list=[col_Fq,col_IAV]
 
         # 颜色（按类编号）
@@ -5347,12 +5359,12 @@ class partial_correlation():
 
 
         # plt.tight_layout()
-        # plt.show()
+        plt.show()
 
-        outdir = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Figures\\'
-
-        plt.savefig(outdir + f'{group_col}_composition_Fq_vs_CVIAV_stacked1.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # outdir = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Figures\\'
+        #
+        # plt.savefig(outdir + f'{group_col}_composition_Fq_vs_CVIAV_stacked1.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
 
@@ -6140,7 +6152,7 @@ class partial_correlation_TRENDY():
         # self.model_list = ['TRENDY_mean' ]
 
 
-        for model in self.model_list:
+        # for model in self.model_list:
         #     outdir = self.outdir + rf'{model}\\'
         #     T.mk_dir(outdir, force=True)
         #     self.outpartial = outdir + rf'\partial_corr_{model}.npy'
@@ -6158,8 +6170,8 @@ class partial_correlation_TRENDY():
         #     # # # # # # self.check_data()
         #     self.plot_partial_correlation(outdir)
         #     self.plot_partial_correlation_p_value(outdir)
-            self.plot_spatial_map_sig()
-        # self.TRENDY_obs_heatmap() ## use this
+        #     self.plot_spatial_map_sig()
+        self.TRENDY_obs_heatmap() ## use this
         # self.TRENDY_obs_boxplots()
 
 
@@ -6613,13 +6625,13 @@ class partial_correlation_TRENDY():
         pass
 
     def TRENDY_obs_heatmap(self):
-        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\Dataframe.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
 
-        model_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g',
-                          'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        model_list = ['composite_LAI_median',  'LAI4g','GLOBMAP_LAI','SNU_LAI',
+                          'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -6627,8 +6639,9 @@ class partial_correlation_TRENDY():
 
                           'YIBs_S2_Monthly_lai']
 
-        variable_list=['sensitivity_zscore','rainfall_frenquency_zscore',
-                       'detrended_sum_rainfall_growing_season_zscore']
+        variable_list=['sensitivity_zscore',
+            'CV_intraannual_rainfall_ecosystem_year_zscore',
+                       'detrended_sum_rainfall_ecosystem_year_CV_zscore',]
 
 
 
@@ -6640,8 +6653,8 @@ class partial_correlation_TRENDY():
         # 填充数据（使用中位数或均值）
         for variable in variable_list:
             for model in model_list:
-                df = df.dropna(subset=f'{model}_{variable}_sig')
-                col = f'{model}_{variable}_sig'
+                df = df.dropna(subset=f'{model}_{variable}')
+                col = f'{model}_{variable}'
                 vals = df[col].values
                 vals = np.where((vals > 100) | (vals < -100), np.nan, vals)
                 median_val = np.nanmean(vals)
@@ -6650,12 +6663,13 @@ class partial_correlation_TRENDY():
         # 转换为 float 类型（必要时）
         heatmap_data = heatmap_data.astype(float)
 
-        dic_label_name = {'composite_LAI': 'Composite LAI',
-                          'SNU_LAI': 'SNU LAI',
-                          'GLOBMAP_LAI': 'GLOBMAP LAI',
-                          'LAI4g': 'LAI4g',
+        dic_label_name = {'composite_LAI_median': 'Composite',
+                          'LAI4g': 'GIMMS4g',
+                          'SNU_LAI': 'SNU',
+                          'GLOBMAP_LAI': 'GLOBMAP',
 
-                          'TRENDY_ensemble': 'TRENDY ensemble',
+
+                          'TRENDY_ensemble_median': 'TRENDY ensemble',
 
                           'CABLE-POP_S2_lai': 'CABLE-POP',
                           'CLASSIC_S2_lai': 'CLASSIC',
@@ -6674,8 +6688,9 @@ class partial_correlation_TRENDY():
 
                           }
         dic_variable_name={'sensitivity_zscore':'$\gamma$',
-                           'rainfall_frenquency_zscore':'Fq of rainfall',
-                           'detrended_sum_rainfall_growing_season_zscore':'CVInterannual rainfall'}
+                           'CV_intraannual_rainfall_ecosystem_year_zscore':'CVintra-rainfall',
+
+                           'detrended_sum_rainfall_ecosystem_year_CV_zscore':'CVinter-rainfall'}
 
         # 绘图
         plt.figure(figsize=(9, 2.5))  # 宽度14，高度3让每行比较清晰
@@ -6685,7 +6700,7 @@ class partial_correlation_TRENDY():
         #             linewidths=0.5)
 
         sns.heatmap(heatmap_data,cmap='coolwarm_r', cbar_kws={'label': 'Coefficient'},
-                    vmin=-0.4, vmax=0.4,
+                    vmin=-0.3, vmax=0.3,
 
                     linewidths=0.5)
 
@@ -6694,10 +6709,18 @@ class partial_correlation_TRENDY():
         ax = plt.gca()
         ax.set_xticklabels(dic_label_name.values(), rotation=90, fontsize=10, font='Arial')
         ax.set_yticklabels(dic_variable_name.values(), rotation=0, fontsize=10, font='Arial')
+        outdir=result_root + rf'\3mm\FIGURE\Figure3_attribution\\'
+        T.mkdir(outdir, force=True)
         plt.tight_layout()
 
+        plt.savefig(outdir + rf'heatmap.png', dpi=300, bbox_inches='tight')
+        plt.close()
 
-        plt.show()
+
+        # plt.tight_layout()
+
+
+        # plt.show()
 
     def TRENDY_obs_boxplots(self): ## obs and TRENDY boxplots comparison
         dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
@@ -8597,1342 +8620,6 @@ class Figure5():
         return df
 
 
-class multi_regression_anomaly():
-    def __init__(self):
-
-        self.fdirX = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\X\\'
-        self.fdirY = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\Y\\'
-
-        self.xvar = ['detrended_sum_rainfall_CV', 'composite_LAI_beta_mean',
-                     'CV_intraannual_rainfall_ecosystem_year', 'Fire_sum_average', 'sum_rainfall']
-
-        self.y_var = ['composite_LAI_detrend_CV']
-        # self.y_var = ['TRENDY_ensemble_composite_time_series_detrend_CV']
-
-        self.multi_regression_result_dir = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\slope\\'
-        T.mk_dir(self.multi_regression_result_dir, force=True)
-
-        self.multi_regression_result_f = self.multi_regression_result_dir + f'{self.y_var[0]}.npy'
-
-        pass
-
-    def run(self):
-        ### 0 this is for whole region training not pixel wised
-
-        # self.cal_multi_regression_beta_whole_area()
-
-        # step 1 build dataframe
-
-        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-        # #
-        # # # # # step 2 cal correlation
-        #
-        # # self.cal_multi_regression_R2()
-        # self.cal_multi_regression_beta_pixel_based(df)
-        # #
-        # # # # step 3 plot
-        # self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
-        # self.plt_multi_regression_result_p_value(self.multi_regression_result_dir, self.y_var[0])
-
-        # self.normalized_multi_regression()
-        # self.statistics_contribution()
-
-        # step 5
-        # self.calculate_trend_contribution()
-        # self.statistic_contribution()
-        self.statistic_Sensitivity()
-
-        pass
-
-    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
-
-        df = pd.DataFrame()
-
-        filey = fdir_Y + fy[0] + '_zscore.npy'
-        print(filey)
-
-        dic_y = T.load_npy(filey)
-        # array=np.load(filey)
-        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
-        pix_list = []
-        y_val_list = []
-
-        for pix in dic_y:
-            yvals = dic_y[pix][0:22]
-
-            if len(yvals) == 0:
-                continue
-            yvals = T.interp_nan(yvals)
-            yvals = np.array(yvals)
-            if yvals[0] == None:
-                continue
-
-            pix_list.append(pix)
-            y_val_list.append(yvals)
-        df['pix'] = pix_list
-        df[self.y_var[0]] = y_val_list
-
-        # build x
-
-        for xvar in fx_list:
-
-            # print(var_name)
-            x_val_list = []
-            filex = fdir_X + xvar + '_zscore.npy'
-            # filex = fdir_X + xvar + f'_{period}.npy'
-
-            # print(filex)
-            # exit()
-            # x_arr = T.load_npy(filex)
-            dic_x = T.load_npy(filex)
-            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
-                pix = row.pix
-                if not pix in dic_x:
-                    x_val_list.append([])
-                    continue
-                xvals = dic_x[pix][0:22]
-                xvals = np.array(xvals)
-                if len(xvals) == 0:
-                    x_val_list.append([])
-                    continue
-
-                xvals = T.interp_nan(xvals)
-                if xvals[0] == None:
-                    x_val_list.append([])
-                    continue
-
-                x_val_list.append(xvals)
-
-            # x_val_list = np.array(x_val_list)
-            df[xvar] = x_val_list
-        T.print_head_n(df)
-        ## save df
-        T.save_df(df, self.multi_regression_result_dir + fy[0] + '.df')
-        T.df_to_excel(df, self.multi_regression_result_dir + fy[0] + '.xlsx')
-
-        return df
-
-    def __linearfit(self, x, y):
-        '''
-        最小二乘法拟合直线
-        :param x:
-        :param y:
-        :return:
-        '''
-        N = float(len(x))
-        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
-        for i in range(0, int(N)):
-            sx += x[i]
-            sy += y[i]
-            sxx += x[i] * x[i]
-            syy += y[i] * y[i]
-            sxy += x[i] * y[i]
-        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
-        b = (sy - a * sx) / N
-        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
-        return a, b, r
-
-    def cal_multi_regression_beta_pixel_based(self, df):
-        import statsmodels.api as sm
-        import statsmodels.formula.api as smf
-        import pandas as pd
-
-        import joblib
-        from sklearn.metrics import r2_score
-
-        x_var_list = self.xvar
-
-        outf = self.multi_regression_result_f
-
-        multi_derivative = {}
-        R2_result = {}
-        p_value_result = {}
-
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            # print(row);exit()
-            pix = row.pix
-
-            y_vals = row[self.y_var[0]]
-            # y_vals = T.remove_np_nan(y_vals)
-            # y_vals = T.interp_nan(y_vals)
-            if len(y_vals) == 0:
-                continue
-
-            # y_vals_detrend = signal.detrend(y_vals)
-            #  calculate partial derivative with multi-regression
-            df_new = pd.DataFrame()
-            x_var_list_valid = []
-
-            for x in x_var_list:
-
-                x_vals = row[x]
-
-                if len(x_vals) == 0:
-                    continue
-
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                if len(x_vals) != len(y_vals):
-                    continue
-                # print(x_vals)
-                if x_vals[0] == None:
-                    continue
-
-                df_new[x] = x_vals
-
-                x_var_list_valid.append(x)
-            if len(df_new) <= 3:
-                continue
-            if len(x_var_list_valid) < 2:
-                continue
-            # T.print_head_n(df_new)
-
-            df_new['y'] = y_vals  # nodetrend
-
-            # T.print_head_n(df_new)
-            df_new = df_new.dropna(axis=1, how='all')
-
-            x_var_list_valid_new = []
-            for v_ in x_var_list_valid:
-                if not v_ in df_new:
-                    continue
-                else:
-                    x_var_list_valid_new.append(v_)
-            # T.print_head_n(df_new)
-            # x_var_list_valid_new.append('CO2:CRU')
-            # # x_var_list_valid_new.append('tmax:CRU')
-
-            df_new = df_new.dropna()
-            ## build multiregression model and consider interactioon
-
-            model = sm.OLS(df_new['y'], sm.add_constant(df_new[x_var_list_valid_new])).fit()
-
-            # 获取回归系数和 p-value
-            coef = model.params  # 系数
-            pvals = model.pvalues  # 每个系数的 p-value
-            rsq = model.rsquared  # R²
-
-            # 保存结果
-            coef_dic = dict(coef)  # 含常数项的系数
-            pval_dic = dict(pvals)  # 含常数项的 p-value
-
-            multi_derivative[pix] = coef_dic
-            p_value_result[pix] = pval_dic
-            R2_result[pix] = rsq
-
-        T.save_npy(multi_derivative, outf)
-        T.save_npy(p_value_result, outf.replace('.npy', '_p_value.npy'))
-        outfR2 = outf.replace('.npy', '_R2.npy')
-
-        DIC_and_TIF().pix_dic_to_tif(R2_result, outfR2.replace('.npy', '_R2.tif'))
-        T.save_npy(R2_result, outfR2)
-
-    pass
-
-    def cal_multi_regression_R2(self):
-        import statsmodels.api as sm
-        import statsmodels.formula.api as smf
-        import pandas as pd
-        from sklearn.metrics import r2_score
-        import joblib
-        dff = result_root + rf'\3mm\SHAP_beta\Dataframe\\\moving_window_zscore.df'
-        df = T.load_df(dff)
-
-        df = self.df_clean(df)
-        # print(df.columns);exit()
-        x_var_list = ['composite_LAI_beta', 'CV_intraannual_rainfall_ecosystem_year_zscore',
-                      'Fire_sum_average_zscore', 'detrended_sum_rainfall_CV_zscore', 'VPD_max_zscore',
-                      'rainfall_seasonality_all_year_zscore']
-        y_var = 'composite_LAI_CV_zscore'
-        df = df.dropna()
-        # for col in df.columns:
-        #     print(col)
-        # exit()
-        T.print_head_n(df)
-
-        X = df[x_var_list]
-        Y = df[y_var]
-
-        # print(X_train)
-        linear_model = LinearRegression()
-        linear_model.fit(X, Y)
-
-        y_pred = linear_model.predict(X)
-
-        ## calculate R2
-        R2 = r2_score(Y, y_pred)
-        plt.scatter(Y, y_pred)
-        plt.show()
-        print(R2);
-        exit()
-
-    pass
-
-    def plt_multi_regression_result(self, multi_regression_result_dir, y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        f = self.multi_regression_result_f
-
-        dic = T.load_npy(f)
-        var_list = []
-        for pix in dic:
-
-            vals = dic[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        for var_i in var_list:
-            # print(var_i)
-            spatial_dic = {}
-            for pix in dic:
-                r, c = pix
-                if r < 60:
-                    continue
-
-                landcover_value = crop_mask[pix]
-
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-                dic_i = dic[pix]
-                if not var_i in dic_i:
-                    continue
-                val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            print(var_i)
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}.tif')
-            std = np.nanstd(arr)
-            mean = np.nanmean(arr)
-            vmin = mean - std
-            vmax = mean + std
-            plt.figure()
-            # arr[arr > 0.1] = 1
-            plt.imshow(arr, vmin=-5, vmax=5)
-
-            plt.title(var_i)
-            plt.colorbar()
-
-        plt.show()
-
-    def plt_multi_regression_result_p_value(self, multi_regression_result_dir, y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        f = self.multi_regression_result_f.replace('.npy', '_p_value.npy')
-
-        dic = T.load_npy(f)
-        var_list = []
-        for pix in dic:
-
-            vals = dic[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        for var_i in var_list:
-            # print(var_i)
-            spatial_dic = {}
-            for pix in dic:
-                r, c = pix
-                if r < 60:
-                    continue
-
-                landcover_value = crop_mask[pix]
-
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-                dic_i = dic[pix]
-                if not var_i in dic_i:
-                    continue
-                val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            print(var_i)
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}_p_value.tif')
-            std = np.nanstd(arr)
-            mean = np.nanmean(arr)
-            vmin = mean - std
-            vmax = mean + std
-            plt.figure()
-            # arr[arr > 0.1] = 1
-            plt.imshow(arr, vmin=-5, vmax=5)
-
-            plt.title(var_i)
-            plt.colorbar()
-
-        plt.show()
-
-    def plt_R2_result(self, multi_regression_result_dir, y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        f = self.multi_regression_result_f
-
-        dic = T.load_npy(f)
-        var_list = []
-        for pix in dic:
-
-            vals = dic[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        for var_i in var_list:
-            # print(var_i)
-            spatial_dic = {}
-            for pix in dic:
-                r, c = pix
-                if r < 60:
-                    continue
-
-                landcover_value = crop_mask[pix]
-
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-                dic_i = dic[pix]
-                if not var_i in dic_i:
-                    continue
-                val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            print(var_i)
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}.tif')
-            std = np.nanstd(arr)
-            mean = np.nanmean(arr)
-            vmin = mean - std
-            vmax = mean + std
-            plt.figure()
-            # arr[arr > 0.1] = 1
-            plt.imshow(arr, vmin=-5, vmax=5)
-
-            plt.title(var_i)
-            plt.colorbar()
-
-        plt.show()
-
-    def normalized_multi_regression(self):
-        fdir = self.multi_regression_result_dir
-        spatial_dicts = {}
-        variables_list = []
-
-        for f in os.listdir(fdir):
-            if not f.endswith('.tif'):
-                continue
-
-            if 'Ternary_plot' in f:
-                continue
-            var_list = f.split('.')[0]
-            print(f)
-            fpath = join(fdir, f)
-            fname = f.split('.')[0]
-            spatial_dict_i = DIC_and_TIF().spatial_tif_to_dic(fpath)
-            spatial_dicts[fname] = spatial_dict_i
-            variables_list.append(fname)
-
-        df = T.spatial_dics_to_df(spatial_dicts)
-        df = df.dropna(subset=variables_list, how='any')
-        # T.print_head_n(df);exit()
-        df_abs = pd.DataFrame()
-        df_abs['pix'] = df['pix'].tolist()
-        for var_i in variables_list:
-            abs_vals = np.array(df[var_i].tolist())
-            abs_vals = np.abs(abs_vals)
-            df_abs[var_i] = abs_vals
-        # T.print_head_n(df_abs);exit()
-
-        norm_dict = {}
-        # T.add_dic_to_df()
-
-        for i, row in tqdm(df_abs.iterrows(), total=len(df_abs)):
-            # print(row[variables_list])
-            sum_vals = row[variables_list].sum()
-            # print(sum_vals)
-            # if sum_vals == 0:
-            #     sum_vals = np.nan
-            pix = row['pix']
-            norm_dict_i = {}
-            for var_i in variables_list:
-                var_i_norm = row[var_i] / sum_vals
-                norm_dict_i[f'{var_i}_norm'] = var_i_norm
-            norm_dict[pix] = norm_dict_i
-        df_abs = T.add_dic_to_df(df_abs, norm_dict, 'pix')
-        # T.print_head_n(df_abs);exit()
-
-        climate_weights_list = []
-        # for i,row in df_abs.iterrows():
-        #     # VPD_detrend_CV = row['VPD_detrend_CV_norm']
-        #     detrended_sum_rainfall_CV = row['detrended_sum_rainfall_CV_norm']
-        #     CV_intraannual_rainfall_ecosystem_year = row['CV_intraannual_rainfall_ecosystem_year_norm']
-        #     climate_sum = detrended_sum_rainfall_CV + CV_intraannual_rainfall_ecosystem_year
-        #     climate_weights_list.append(climate_sum)
-        # df_abs['climate_norm']=climate_weights_list
-        # T.save_df(df_abs, f'{self.multi_regression_result_dir}\\contributions.df')
-
-        rgb_arr = np.zeros((360, 720, 4))
-        # Ter = xymap.Ternary_plot()
-        Ter = xymap.Ternary_plot(
-            top_color=(67, 198, 219),
-            left_color=(255, 165, 00),
-            # left_color=(119,0,188),
-            right_color=(230, 0, 230),
-            # center_color=(85,85,85),
-            center_color=(230, 230, 230),
-            # center_color=(255,255,255),
-        )
-
-        for i, row in df_abs.iterrows():
-            pix = row['pix']
-            r, c = pix
-            climate_norm = row['CV_intraannual_rainfall_ecosystem_year_norm']
-            Fire_sum_max_norm = row['detrended_sum_rainfall_CV_norm']
-            composite_LAI_beta_mean_norm = row['composite_LAI_beta_mean_norm']
-            x, y, z = climate_norm, Fire_sum_max_norm, composite_LAI_beta_mean_norm
-            color = Ter.get_color(x, y, z)
-            color = color * 255
-            color = np.array(color, dtype=np.uint8)
-            alpha = 255
-            color = np.append(color, alpha)
-            # print(color);exit()
-
-            rgb_arr[r][c] = color
-        # xymap.GDAL_func().ar
-        rgb_arr = np.array(rgb_arr, dtype=np.uint8)
-        outtif = join(fdir, 'Ternary_plot.tif')
-        tif_template = join(fdir, os.listdir(fdir)[0])
-        print(rgb_arr)
-
-        xymap.GDAL_func().RGBA_to_tif(rgb_arr, outtif, tif_template)
-        grid_triangle_legend = Ter.grid_triangle_legend()
-        plt.imshow(grid_triangle_legend)
-        plt.show()
-        T.open_path_and_file(fdir)
-        exit()
-
-    def calculate_trend_contribution(self):
-        ## here I would like to calculate the trend contribution of each variable
-        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
-        ## load the trend of each variable
-        ## load the trend of the target variable
-        ## load multi regression result
-        ## calculate the trend contribution
-        trend_dir = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\input\X\\trend\\'
-
-        selected_vairables_list = self.xvar
-
-        trend_dict = {}
-        for variable in selected_vairables_list:
-            fpath = join(trend_dir, f'{variable}_zscore_trend.tif')
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            array[array < -9999] = np.nan
-            spatial_dict = D.spatial_arr_to_dic(array)
-            for pix in tqdm(spatial_dict, desc=variable):
-                r, c = pix
-                if r < 60:
-                    continue
-                val = spatial_dict[pix]
-                if np.isnan(val):
-                    continue
-                if not pix in trend_dict:
-                    trend_dict[pix] = {}
-                key = variable
-                trend_dict[pix][key] = spatial_dict[pix]
-
-        f = self.multi_regression_result_f
-        print(f)
-        print(isfile(f))
-        # exit()
-        dic_multiregression = T.load_npy(f)
-        var_list = []
-        for pix in dic_multiregression:
-
-            # landcover_value = crop_mask[pix]
-            # if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-            #     continue
-
-            vals = dic_multiregression[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        # print(var_list)
-        # exit()
-        for var_i in var_list:
-            spatial_dic = {}
-            for pix in dic_multiregression:
-                if not pix in trend_dict:
-                    continue
-
-                dic_i = dic_multiregression[pix]
-                if not var_i in dic_i:
-                    continue
-                val_multireg = dic_i[var_i]
-                if var_i not in trend_dict[pix]:
-                    continue
-
-                val_trend = trend_dict[pix][var_i]
-                val_contrib = val_multireg * val_trend
-                spatial_dic[pix] = val_contrib
-            arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
-            plt.colorbar()
-            plt.title(var_i)
-            plt.show()
-            outdir = join(self.multi_regression_result_dir, 'contribution')
-            T.mk_dir(outdir, force=True)
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, join(outdir, f'{var_i}_contrib.tif'))
-
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-        df = df[df['composite_LAI_detrend_CV_zscore_trend'] > 0]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
-
-    def statistic_contribution(self):
-        dff = result_root + rf'\3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\Dataframe\\Dataframe.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-
-        df.dropna(inplace=True)
-
-        selected_vairables_list = self.xvar
-        selected_vairables_list += ['residual']
-        result_stat_dict = {}
-
-        for variable in selected_vairables_list:
-            values = df[f'{variable}_contrib'].values  # df[variable].values
-            values = np.array(values)
-            values = values[values > -99]
-            values = values[values < 99]
-            values_average = np.nanmean(values)
-            values_std = np.nanstd(values)
-            values_CI = values_std * 1.96 / np.sqrt(len(values))
-            result_stat_dict[variable] = [values_average, values_CI]
-
-        ## plot
-
-        for variable in selected_vairables_list:
-            values_average, values_CI = result_stat_dict[variable]
-            plt.bar(variable, values_average, yerr=values_CI, width=0.5)
-        plt.show()
-
-        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
-        #
-
-    def statistic_Sensitivity(self):
-        dff = result_root + rf'3mm\Multiregression\Multiregression_result\OBS_fire_zscore\contribution\Dataframe\\Dataframe.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        df = df[df['composite_LAI_detrend_CV_zscore_trend'] > 0]
-        df.dropna(inplace=True)
-
-        selected_vairables_list = self.xvar
-        result_stat_dict = {}
-
-        for variable in selected_vairables_list:
-            values = df[variable].values
-            values = np.array(values)
-            values = values[values > -99]
-            values = values[values < 99]
-            values_average = np.nanmean(values)
-            values_std = np.nanstd(values)
-            values_CI = values_std * 1.96 / np.sqrt(len(values))
-            result_stat_dict[variable] = [values_average, values_CI]
-
-        ## plot
-        fig, ax = plt.subplots(figsize=(8, 6))
-
-        for variable in selected_vairables_list:
-            values_average, values_CI = result_stat_dict[variable]
-
-            bars = plt.bar(variable, values_average, width=0.5)
-
-        # 美化坐标轴和标签
-        ax.set_ylabel('Effect Size', fontsize=14)
-        ax.axhline(0, color='black', linewidth=0.8)
-
-        ax.set_xticklabels(selected_vairables_list, rotation=20, fontsize=12)
-
-        ax.tick_params(axis='y', labelsize=12)
-
-        plt.tight_layout()
-        plt.show()
-
-        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
-        #
-
-
-class multi_regression_zscore():
-    def __init__(self):
-
-        self.fdirX = result_root+rf'3mm\Multiregression\\zscore\\'
-        self.fdirY = result_root+rf'\3mm\Multiregression\\zscore\\'
-
-        self.xvar = ['detrended_sum_rainfall_CV', 'composite_LAI_beta_mean',
-                          'CV_intraannual_rainfall_ecosystem_year', ]
-
-        # self.y_var = ['composite_LAI_CV']
-        self.y_var = ['TRENDY_ensemble_composite_time_series_detrend_CV']
-
-        self.multi_regression_result_dir = result_root + rf'\3mm\\Multiregression\\Multiregression_result\\TRENDY\\'
-        T.mk_dir(self.multi_regression_result_dir, force=True)
-
-        self.multi_regression_result_f = self.multi_regression_result_dir+f'{self.y_var[0]}.npy'
-
-        pass
-
-    def run(self):
-
-        # #step 1 build dataframe
-
-        df=self.build_df(self.fdirX, self.fdirY,self.xvar,self.y_var)
-        #
-        # # # # step 2 cal correlation
-        self.cal_multi_regression_beta(df)
-        #
-        # # # step 3 plot
-        self.plt_multi_regression_result(self.multi_regression_result_dir,self.y_var[0])
-
-        self.normalized_multi_regression()
-        # self.statistics_contribution()
-        ## step 4 convert m2/m2/ppm to %/100ppm
-        # self.convert_CO2_sensitivity_unit()
-
-        # step 5
-        # self.calculate_trend_contribution()
-        # self.statistic_contribution()
-        # self.statistic_Sensitivity()
-
-        pass
-
-    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
-
-        df = pd.DataFrame()
-
-        filey = fdir_Y + fy[0] + '_zscore.npy'
-        print(filey)
-
-        dic_y = T.load_npy(filey)
-        # array=np.load(filey)
-        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
-        pix_list = []
-        y_val_list = []
-
-        for pix in dic_y:
-            yvals = dic_y[pix][0:22]
-
-            if len(yvals) == 0:
-                continue
-            yvals = T.interp_nan(yvals)
-            yvals = np.array(yvals)
-            if yvals[0] == None:
-                continue
-
-            pix_list.append(pix)
-            y_val_list.append(yvals)
-        df['pix'] = pix_list
-        df['y'] = y_val_list
-
-        # build x
-
-        for xvar in fx_list:
-
-            # print(var_name)
-            x_val_list = []
-            filex = fdir_X + xvar + '_zscore.npy'
-            # filex = fdir_X + xvar + f'_{period}.npy'
-
-            # print(filex)
-            # exit()
-            # x_arr = T.load_npy(filex)
-            dic_x = T.load_npy(filex)
-            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
-                pix = row.pix
-                if not pix in dic_x:
-                    x_val_list.append([])
-                    continue
-                xvals = dic_x[pix][0:22]
-                xvals = np.array(xvals)
-                if len(xvals) == 0:
-                    x_val_list.append([])
-                    continue
-
-                xvals = T.interp_nan(xvals)
-                if xvals[0] == None:
-                    x_val_list.append([])
-                    continue
-
-                x_val_list.append(xvals)
-
-            # x_val_list = np.array(x_val_list)
-            df[xvar] = x_val_list
-        T.print_head_n(df)
-        ## save df
-        T.save_df(df, self.multi_regression_result_dir + fy[0] + '.df')
-        T.df_to_excel(df, self.multi_regression_result_dir + fy[0] + '.xlsx')
-
-        return df
-
-    def __linearfit(self, x, y):
-        '''
-        最小二乘法拟合直线
-        :param x:
-        :param y:
-        :return:
-        '''
-        N = float(len(x))
-        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
-        for i in range(0, int(N)):
-            sx += x[i]
-            sy += y[i]
-            sxx += x[i] * x[i]
-            syy += y[i] * y[i]
-            sxy += x[i] * y[i]
-        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
-        b = (sy - a * sx) / N
-        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
-        return a, b, r
-
-    def cal_multi_regression_beta(self,df):
-        import statsmodels.api as sm
-        import statsmodels.formula.api as smf
-        import pandas as pd
-        import joblib
-
-
-        x_var_list = self.xvar
-
-        outf = self.multi_regression_result_f
-
-        multi_derivative = {}
-
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            # print(row);exit()
-            pix = row.pix
-
-            y_vals = row['y']
-            # y_vals = T.remove_np_nan(y_vals)
-            # y_vals = T.interp_nan(y_vals)
-            if len(y_vals) == 0:
-                continue
-
-            # y_vals_detrend = signal.detrend(y_vals)
-            #  calculate partial derivative with multi-regression
-            df_new = pd.DataFrame()
-            x_var_list_valid = []
-
-            for x in x_var_list:
-
-                x_vals = row[x]
-
-                if len(x_vals) == 0:
-                    continue
-
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                if len(x_vals) != len(y_vals):
-                    continue
-                # print(x_vals)
-                if x_vals[0] == None:
-                    continue
-
-                df_new[x] = x_vals
-
-                x_var_list_valid.append(x)
-            if len(df_new) <= 3:
-                continue
-            if len(x_var_list_valid) < 2:
-                continue
-            # T.print_head_n(df_new)
-
-            df_new['y'] = y_vals  # nodetrend
-
-            # T.print_head_n(df_new)
-            df_new = df_new.dropna(axis=1, how='all')
-
-            x_var_list_valid_new = []
-            for v_ in x_var_list_valid:
-                if not v_ in df_new:
-                    continue
-                else:
-                    x_var_list_valid_new.append(v_)
-            # T.print_head_n(df_new)
-            # x_var_list_valid_new.append('CO2:CRU')
-            # # x_var_list_valid_new.append('tmax:CRU')
-
-            df_new = df_new.dropna()
-            ## build multiregression model and consider interactioon
-
-            linear_model = LinearRegression()
-            # print(df_new['y'])
-
-            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
-            coef_ = np.array(linear_model.coef_)
-            coef_dic = dict(zip(x_var_list_valid_new, coef_))
-            # print(df_new['y'])
-            # exit()
-            multi_derivative[pix] = coef_dic
-        T.save_npy(multi_derivative, outf)
-
-    pass
-
-    def plt_multi_regression_result(self, multi_regression_result_dir, y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        f = self.multi_regression_result_f
-
-        dic = T.load_npy(f)
-        var_list = []
-        for pix in dic:
-
-
-            vals = dic[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        for var_i in var_list:
-            # print(var_i)
-            spatial_dic = {}
-            for pix in dic:
-                r, c = pix
-                if r < 60:
-                    continue
-
-                landcover_value = crop_mask[pix]
-
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-                dic_i = dic[pix]
-                if not var_i in dic_i:
-                    continue
-                val = dic_i[var_i]
-                spatial_dic[pix] = val
-            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            arr = arr * array_mask
-            print(var_i)
-
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, f'{multi_regression_result_dir}\\{var_i}.tif')
-            std = np.nanstd(arr)
-            mean = np.nanmean(arr)
-            vmin = mean - std
-            vmax = mean + std
-            plt.figure()
-            # arr[arr > 0.1] = 1
-            plt.imshow(arr, vmin=-5, vmax=5)
-
-            plt.title(var_i)
-            plt.colorbar()
-
-        plt.show()
-
-
-    def normalized_multi_regression(self):
-        fdir=self.multi_regression_result_dir
-        spatial_dicts={}
-        variables_list = []
-
-        for f in os.listdir(fdir):
-            if not f.endswith('.tif'):
-                continue
-
-            if 'Ternary_plot' in f:
-                continue
-            var_list=f.split('.')[0]
-            print(f)
-            fpath = join(fdir, f)
-            fname=f.split('.')[0]
-            spatial_dict_i = DIC_and_TIF().spatial_tif_to_dic(fpath)
-            spatial_dicts[fname] = spatial_dict_i
-            variables_list.append(fname)
-
-        df = T.spatial_dics_to_df(spatial_dicts)
-        df = df.dropna(subset=variables_list,how='any')
-        # T.print_head_n(df);exit()
-        df_abs= pd.DataFrame()
-        df_abs['pix'] = df['pix'].tolist()
-        for var_i in variables_list:
-            abs_vals=np.array(df[var_i].tolist())
-            abs_vals = np.abs(abs_vals)
-            df_abs[var_i]=abs_vals
-        # T.print_head_n(df_abs);exit()
-
-        norm_dict = {}
-        # T.add_dic_to_df()
-
-        for i,row in tqdm(df_abs.iterrows(),total=len(df_abs)):
-            # print(row[variables_list])
-            sum_vals = row[variables_list].sum()
-            # print(sum_vals)
-            # if sum_vals == 0:
-            #     sum_vals = np.nan
-            pix = row['pix']
-            norm_dict_i = {}
-            for var_i in variables_list:
-                var_i_norm = row[var_i] / sum_vals
-                norm_dict_i[f'{var_i}_norm'] = var_i_norm
-            norm_dict[pix] = norm_dict_i
-        df_abs = T.add_dic_to_df(df_abs, norm_dict, 'pix')
-        # T.print_head_n(df_abs);exit()
-
-        climate_weights_list = []
-        # for i,row in df_abs.iterrows():
-        #     # VPD_detrend_CV = row['VPD_detrend_CV_norm']
-        #     detrended_sum_rainfall_CV = row['detrended_sum_rainfall_CV_norm']
-        #     CV_intraannual_rainfall_ecosystem_year = row['CV_intraannual_rainfall_ecosystem_year_norm']
-        #     climate_sum = detrended_sum_rainfall_CV + CV_intraannual_rainfall_ecosystem_year
-        #     climate_weights_list.append(climate_sum)
-        # df_abs['climate_norm']=climate_weights_list
-        # T.save_df(df_abs, f'{self.multi_regression_result_dir}\\contributions.df')
-
-
-
-        rgb_arr = np.zeros((360,720,4))
-        # Ter = xymap.Ternary_plot()
-        Ter = xymap.Ternary_plot(
-            top_color=(67, 198, 219),
-            left_color=(255, 165, 00),
-            # left_color=(119,0,188),
-            right_color=(230, 0, 230),
-         # center_color=(85,85,85),
-            center_color=(230, 230, 230),
-            # center_color=(255,255,255),
-        )
-
-        for i, row in df_abs.iterrows():
-            pix = row['pix']
-            r,c = pix
-            climate_norm = row['CV_intraannual_rainfall_ecosystem_year_norm']
-            Fire_sum_max_norm = row['detrended_sum_rainfall_CV_norm']
-            composite_LAI_beta_mean_norm = row['composite_LAI_beta_mean_norm']
-            x,y,z = climate_norm, Fire_sum_max_norm, composite_LAI_beta_mean_norm
-            color = Ter.get_color(x,y,z)
-            color = color * 255
-            color = np.array(color,dtype=np.uint8)
-            alpha = 255
-            color = np.append(color, alpha)
-            # print(color);exit()
-
-            rgb_arr[r][c] = color
-        # xymap.GDAL_func().ar
-        rgb_arr = np.array(rgb_arr, dtype=np.uint8)
-        outtif = join(fdir, 'Ternary_plot.tif')
-        tif_template = join(fdir,os.listdir(fdir)[0])
-        print(rgb_arr)
-
-        xymap.GDAL_func().RGBA_to_tif(rgb_arr, outtif, tif_template)
-        grid_triangle_legend = Ter.grid_triangle_legend()
-        plt.imshow(grid_triangle_legend)
-        plt.show()
-        T.open_path_and_file(fdir)
-        exit()
-
-    def statistics_contribution(self):
-        file=join(self.multi_regression_result_dir,'contributions.df')
-        df=T.load_df(file)
-        df=self.df_clean(df)
-
-        pft_unique_list = ['Grass', 'Evergreen', 'Deciduous', 'Shrub']
-        result_dict={}
-        for pft in pft_unique_list:
-
-            df_pft = df[df['landcover_classfication']==pft]
-            climate_norm=df_pft['climate_norm'].tolist()
-            ## calculate norm more than 0.5% pixels numbers
-            climate_norm=np.array(climate_norm)
-            climate_norm_percent=len(climate_norm[climate_norm>0.4])/len(df_pft)*100
-
-            Fire_sum_max_norm=df_pft['Fire_sum_max_norm'].tolist()
-            Fire_sum_max_norm=np.array(Fire_sum_max_norm)
-            Fire_sum_max_norm_percent=len(Fire_sum_max_norm[Fire_sum_max_norm>0.4])/len(df_pft)*100
-
-            composite_LAI_beta_mean_norm=df_pft['composite_LAI_beta_mean_norm'].tolist()
-            composite_LAI_beta_mean_norm=np.array(composite_LAI_beta_mean_norm)
-            composite_LAI_beta_mean_norm_percent=len(composite_LAI_beta_mean_norm[composite_LAI_beta_mean_norm>0.4])/len(df_pft)*100
-
-            result_dict[pft]={'climate_norm':climate_norm_percent,'Fire_sum_max_norm':Fire_sum_max_norm_percent,
-                              'composite_LAI_beta_mean_norm':composite_LAI_beta_mean_norm_percent}
-        ## plot bar
-        for pft in pft_unique_list:
-            climate_norm_percent=result_dict[pft]['climate_norm']
-            Fire_sum_max_norm_percent=result_dict[pft]['Fire_sum_max_norm']
-            composite_LAI_beta_mean_norm_percent=result_dict[pft]['composite_LAI_beta_mean_norm']
-            plt.bar([1,2,3], [climate_norm_percent,Fire_sum_max_norm_percent,composite_LAI_beta_mean_norm_percent], tick_label=['climate_norm','Fire_sum_max_norm','composite_LAI_beta_mean_norm'])
-            plt.title(pft)
-            plt.show()
-
-
-
-
-
-
-    pass
-
-
-    def convert_CO2_sensitivity_unit(self):
-        period_list = ['1982_2020']
-        for period in period_list:
-            CO2_sensitivity_f = result_root + rf'multi_regression\\anomaly\\{period}\\CO2_LAI4g_{period}.tif'
-            average_LAI4g_f = result_root + rf'\state_variables\\\\LAI4g_{period}.npy'
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(CO2_sensitivity_f)
-            arr[arr < -99] = np.nan
-            dic_CO2_sensitivity = DIC_and_TIF().spatial_arr_to_dic(arr)
-
-            dic_LAI4g_average = T.load_npy(average_LAI4g_f)
-
-            for pix in dic_CO2_sensitivity:
-                CO2_sensitivity = dic_CO2_sensitivity[pix]
-                CO2_sensitivity = np.array(CO2_sensitivity, dtype=float)
-                if np.isnan(CO2_sensitivity):
-                    continue
-                if not pix in dic_LAI4g_average:
-                    continue
-                LAI_average = dic_LAI4g_average[pix]
-                LAI_average = np.array(LAI_average, dtype=float)
-
-                if np.isnan(LAI_average):
-                    continue
-                CO2_sensitivity = CO2_sensitivity / LAI_average * 100
-                if CO2_sensitivity < -99999:
-                    continue
-                dic_CO2_sensitivity[pix] = CO2_sensitivity
-            arr_new = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(dic_CO2_sensitivity)
-            arr_new[arr_new < -99] = np.nan
-            arr_new[arr_new > 99] = np.nan
-
-            # plt.imshow(arr_new)
-            # plt.colorbar()
-            # plt.show()
-
-            DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_new, f'{CO2_sensitivity_f.replace(".tif", "_scale.tif")}')
-            # DIC_and_TIF(pixelsize=0.25).pix_dic_to_tif(dic_CO2_sensitivity, f'{CO2_sensitivity_f.replace(".tif","_new.tif")}')
-            # T.save_npy(dic_CO2_sensitivity, CO2_sensitivity_f.replace('.tif', '.npy'))
-
-    def calculate_trend_contribution(self):
-        ## here I would like to calculate the trend contribution of each variable
-        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
-        ## load the trend of each variable
-        ## load the trend of the target variable
-        ## load multi regression result
-        ## calculate the trend contribution
-        trend_dir = result_root + rf'\3mm\Multiregression\Multiregression_result\Trend\\'
-
-        selected_vairables_list = [
-            'fire_ecosystem_year_average',
-            'sum_rainfall_growing_season',
-            'CV_intraannual_rainfall_growing_season',
-            'CV_intraannual_rainfall_ecosystem_year',
-        ]
-
-        trend_dict = {}
-        for variable in selected_vairables_list:
-            fpath = join(trend_dir, f'{variable}.tif')
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            array[array < -9999] = np.nan
-            spatial_dict = D.spatial_arr_to_dic(array)
-            for pix in tqdm(spatial_dict, desc=variable):
-                r, c = pix
-                if r < 60:
-                    continue
-                val = spatial_dict[pix]
-                if np.isnan(val):
-                    continue
-                if not pix in trend_dict:
-                    trend_dict[pix] = {}
-                key = variable
-                trend_dict[pix][key] = spatial_dict[pix]
-
-        f = self.multi_regression_result_f
-        print(f)
-        print(isfile(f))
-        # exit()
-        dic_multiregression = T.load_npy(f)
-        var_list = []
-        for pix in dic_multiregression:
-
-            # landcover_value = crop_mask[pix]
-            # if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-            #     continue
-
-            vals = dic_multiregression[pix]
-            for var_i in vals:
-                var_list.append(var_i)
-        var_list = list(set(var_list))
-        # print(var_list)
-        # exit()
-        for var_i in var_list:
-            spatial_dic = {}
-            for pix in dic_multiregression:
-                if not pix in trend_dict:
-                    continue
-
-                dic_i = dic_multiregression[pix]
-                if not var_i in dic_i:
-                    continue
-                val_multireg = dic_i[var_i]
-                if var_i not in trend_dict[pix]:
-                    continue
-
-                val_trend = trend_dict[pix][var_i]
-                val_contrib = val_multireg * val_trend
-                spatial_dic[pix] = val_contrib
-            arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
-            plt.colorbar()
-            plt.title(var_i)
-            plt.show()
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib,
-                                                   f'{self.multi_regression_result_dir}\\{var_i}_trend_contribution.tif')
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
-
-    def statistic_contribution(self):
-        dff=result_root + rf'3mm\Multiregression\Multiregression_result\contribution\Dataframe\\contribution.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        df = df[df['composite_LAI_beta_trend_growing_season'] > 0]
-        df.dropna(inplace=True)
-
-        selected_vairables_list = [
-            'CV_intraannual_rainfall_ecosystem_year_composite_LAI_beta_senstivity',
-            'CV_intraannual_rainfall_growing_season_composite_LAI_beta_senstivity',
-            'fire_ecosystem_year_average_composite_LAI_beta_senstivity',
-            'sum_rainfall_growing_season_composite_LAI_beta_senstivity',
-        ]
-        result_stat_dict={}
-
-
-
-        for variable in selected_vairables_list:
-            values=df[variable].values
-            values=np.array(values)
-            values=values[values>-99]
-            values=values[values<99]
-            values_average=np.nanmean(values)
-            values_std=np.nanstd(values)
-            values_CI=values_std*1.96/np.sqrt(len(values))
-            result_stat_dict[variable]=[values_average,values_CI]
-
-        ## plot
-
-
-        for variable in selected_vairables_list:
-            values_average,values_CI=result_stat_dict[variable]
-            plt.bar(variable,values_average,yerr=values_CI, width=0.5)
-        plt.show()
-
-        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
-        #
-
-    def statistic_Sensitivity(self):
-        dff = result_root + rf'3mm\Multiregression\partial_correlation\\partial_correlation_df.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        df = df[df['composite_LAI_beta_trend'] > 0]
-        df.dropna(inplace=True)
-
-        selected_vairables_list = [
-            'composite_LAI_beta_mean',
-            'detrended_sum_rainfall_CV',
-            'Fire_sum_max',
-
-        ]
-        result_stat_dict = {}
-
-        for variable in selected_vairables_list:
-            values = df[variable].values
-            values = np.array(values)
-            values = values[values > -99]
-            values = values[values < 99]
-            values_average = np.nanmean(values)
-            values_std = np.nanstd(values)
-            values_CI = values_std * 1.96 / np.sqrt(len(values))
-            result_stat_dict[variable] = [values_average, values_CI]
-
-        ## plot
-        fig, ax = plt.subplots(figsize=(8, 6))
-
-        for variable in selected_vairables_list:
-            values_average, values_CI = result_stat_dict[variable]
-
-
-
-            bars = plt.bar(variable, values_average,  width=0.5)
-
-
-
-        # 美化坐标轴和标签
-        ax.set_ylabel('Effect Size', fontsize=14)
-        ax.axhline(0, color='black', linewidth=0.8)
-
-        ax.set_xticklabels(selected_vairables_list, rotation=20, fontsize=12)
-
-        ax.tick_params(axis='y', labelsize=12)
-
-        plt.tight_layout()
-        plt.show()
-
-        # plt.savefig(result_root + rf'3mm\Multiregression\Multiregression_result\contribution\statistic.png')
-        #
 
 
 class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 and figure 3
@@ -9941,11 +8628,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.plot_CV_LAI()
+        self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
-        self.statistic_trend_CV_bar()
+        # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
 
 
@@ -10042,17 +8729,17 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         window_size = 15
 
         # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-        year_range = range(1982, 2021)
+        year_range = range(1983, 2021)
         year_range_str = []
         for year in year_range:
 
             start_year = year
             end_year = year + window_size - 1
-            if end_year > 2020:
+            if end_year > 2021:
                 break
             year_range_str.append(f'{start_year}-{end_year}')
         # plt.xticks(range(0, 23, 4))
-        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
         plt.yticks(np.arange(-30, 31, 10))
 
 
@@ -10098,10 +8785,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         variable_list=['composite_LAI_CV',
                        'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
             'GLOBMAP_LAI_detrend_CV',]
-        dic_label={'composite_LAI_CV':'Composite LAI',
-                   'LAI4g_detrend_CV':'LAI4g',
-                   'detrended_SNU_LAI_CV':'SNUV',
-                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',}
+        dic_label={'composite_LAI_CV':'Composite',
+                   'LAI4g_detrend_CV':'GIMMS4g',
+
+                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',
+                   'detrended_SNU_LAI_CV':'SNU',}
         year_list=range(0,24)
 
 
@@ -10179,32 +8867,32 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         window_size = 15
 
         # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-        year_range = range(1982, 2021)
+        year_range = range(1983, 2021)
         year_range_str = []
         for year in year_range:
 
             start_year = year
             end_year = year + window_size - 1
-            if end_year > 2020:
+            if end_year > 2021:
                 break
             year_range_str.append(f'{start_year}-{end_year}')
-        # plt.xticks(range(0, 23, 4))
-        plt.xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
         plt.yticks(np.arange(5, 25, 5))
-        # plt.yticks(np.arange(5, 50, 5))
-        # plt.xticks(range(0, 23, 3))
 
 
-        plt.ylabel(f'LAI CV (%)')
+
+        plt.ylabel(f'CVLAI (%/yr)')
 
         plt.grid(which='major', alpha=0.5)
         plt.legend(loc='upper left')
 
-        plt.show()
+        # plt.show()
         # plt.tight_layout()
-        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'\3mm\FIGURE\figure2CV\\'
+        T.mk_dir(out_pdf_fdir, force=True)
+        plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
         #
@@ -10573,11 +9261,11 @@ def main():
     # multi_regression_beta_TRENDY().run()
     # multi_regression_anomaly().run()
 
-    Figure5().run()
+    # Figure5().run()
 
-    # partial_correlation().run()
+    partial_correlation().run()
     # partial_correlation_TRENDY().run()
-    # GAM().run()
+    # PLOT_dataframe().run()
 
 
 

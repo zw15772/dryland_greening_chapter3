@@ -102,11 +102,11 @@ class Data_processing_2:
         # self.tif_to_dic()
         # self.interpolate_VCF()
         # self.interpolation()
-        self.mean()
+        # self.mean()
         # self.mean_rainfall()
         # self.zscore()
         # self.anomaly()
-        # self.composite_LAI()
+        self.composite_LAI()
 
 
 
@@ -870,10 +870,10 @@ class Data_processing_2:
 
     def composite_LAI(self):
 
-        infdir=result_root + rf'3mm\extract_composite_phenology_year\mean\\'
-        f_1=infdir+rf'SNU_LAI.npy'
-        f_2=infdir+rf'GLOBMAP_LAI.npy'
-        f_3=infdir+rf'LAI4g.npy'
+        infdir=result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
+        f_1=infdir+rf'SNU_LAI_detrend_CV.npy'
+        f_2=infdir+rf'GLOBMAP_LAI_detrend_CV.npy'
+        f_3=infdir+rf'LAI4g_detrend_CV.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -884,21 +884,21 @@ class Data_processing_2:
                 continue
             if not pix in dic3:
                 continue
-            value1=dic1[pix]['growing_season']
-            value2=dic2[pix]['growing_season']
-            value3=dic3[pix]['growing_season']
+            value1=dic1[pix]
+            value2=dic2[pix]
+            value3=dic3[pix]
 
 
             value1=np.array(value1)
             value2=np.array(value2)
             value3=np.array(value3)
-            if len(value1)!=38 or len(value2)!=38 or len(value3)!=38:
+            if len(value1)!=19 or len(value2)!=19 or len(value3)!=19:
                 print(pix,len(value1),len(value2),len(value3))
                 continue
             print(value1,value2,value3)
 
 
-            average_val=np.nanmean([value1,value2,value3],axis=0)
+            average_val=np.nanmedian([value1,value2,value3],axis=0)
 
             # print(average_val)
             if np.nanmean(average_val) >999:
@@ -908,15 +908,16 @@ class Data_processing_2:
             average_dic[pix]=average_val
 
             plt.plot(value1,color='blue')
-            plt.plot(value2,color='green')
-            plt.plot(value3,color='orange')
-            plt.plot(average_val,color='red')
-            plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
 
-        outdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\\mean\\'
+        outdir=result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
         Tools().mk_dir(outdir,force=True)
 
-        np.save(outdir+'composite_LAI_time_series_mean.npy',average_dic)
+        np.save(outdir+'composite_LAI_median_detrend_CV.npy',average_dic)
 
         pass
     def interpolate_VCF(self):
@@ -1630,9 +1631,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root + rf'\3mm\Dataframe\LAImin_LAImax_all_models_beta\\')
+                result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\statistics\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trend_all.df'
+        self.dff = self.this_class_arr + rf'statistics.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1660,8 +1661,8 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
-        # df=self.add_fire(df)
+        # df=self.add_trend_to_df(df)
+        df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
@@ -1679,7 +1680,7 @@ class build_dataframe():
         # # # # # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
-        # df=self.add_residual_to_df(df)
+        df=self.add_residual_to_df(df)
 
         # # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -2516,7 +2517,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\extract_GLOBMAP_phenology_year\moving_window_min_max_anaysis\trend\\'
+        fdir = result_root + rf'\3mm\VCF\trend\\'
 
         # variables_list = [
         #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2528,8 +2529,6 @@ class build_dataframe():
         #               'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
-                continue
-            if not 'max' in f:
                 continue
 
 
@@ -2627,8 +2626,8 @@ class build_dataframe():
         # df['residual_contrib'] = df['composite_LAI_detrend_CV_zscore_trend'] - (df['CV_intraannual_rainfall_ecosystem_year_contrib']+
         #                   df['detrended_sum_rainfall_CV_contrib']+df['Fire_sum_average_contrib']+df['composite_LAI_beta_mean_contrib'])
 
-        df['composite_LAI_median_residual_contrib'] = df['composite_LAI_median_detrend_CV_zscore_trend'] - (df['composite_LAI_median_sensitivity_zscore_contrib'] +
-                                                                          df['composite_LAI_median_detrended_sum_rainfall_ecosystem_year_CV_zscore_contrib'] + df['composite_LAI_median_CV_intraannual_rainfall_ecosystem_year_zscore_contrib']
+        df['LAI4g_residual_contrib'] = df['LAI4g_detrend_CV_zscore_trend'] - (df['LAI4g_sensitivity_zscore_contrib'] +
+                                                                          df['LAI4g_detrended_sum_rainfall_ecosystem_year_CV_zscore_contrib'] + df['LAI4g_CV_intraannual_rainfall_ecosystem_year_zscore_contrib']
 
                                                                           )
 
@@ -2641,7 +2640,7 @@ class build_dataframe():
         # fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
 
 
-        fdir=data_root+rf'\\Base_data\HWSD\tif\05\\'
+        fdir=data_root+rf'\Base_data\SoilGrid\SOIL_Grid_05_unify\weighted_average\\'
 
         for f in os.listdir(fdir):
             #
@@ -2695,14 +2694,11 @@ class build_dataframe():
 
 
     def add_mean_to_df(self, df):
-        fdir=rf'D:\Project3\Result\3mm\extract_composite_phenology_year\mean\\'
+        fdir=data_root+rf'\VCF\dryland_tiff\dic_interpolation\mean\\'
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
                 continue
             variable = (f.split('.')[0])
-            if not 'composite_LAI_mean' in variable:
-                continue
-
 
 
 
@@ -3734,7 +3730,8 @@ class greening_analysis():
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
-        self.plot_robinson()
+        # self.plot_robinson()
+        self.statistic_trend_bar()
         # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
         # self.plot_spatial_barplot_period()
@@ -4416,6 +4413,97 @@ class greening_analysis():
             outf = outdir + f+'.pdf'
             plt.savefig(outf)
             # plt.close()
+
+    def statistic_trend_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
+        variable_list=['GLOBMAP_LAI_relative_change','LAI4g','composite_LAI_relative_change_mean','SNU_LAI_relative_change']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#844000',
+                'lightgray',
+
+                'lightgray',
+                '#064c6c',
+            ]
+
+            # color_list = [
+            #     '#844000',
+            #     '#fc9831',
+            #     '#fffbd4',
+            #     '#86b9d2',
+            #     '#064c6c',
+            # ]
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            # plt.show()
+            outdir=result_root+rf'\3mm\FIGURE\Figure1_greening\\'
+            plt.savefig(outdir+f'{variable}.pdf', bbox_inches='tight', dpi=300)
+            plt.close()
+
 
     def heatmap(self):  ## plot trend as function of Aridity and precipitation trend
         ## plot trends as function of inter precipitaiton CV and intra precipitation CV
@@ -6530,7 +6618,7 @@ class TRENDY_trend:
         # self.extract_phenology_year()
         # self.extract_phenology_LAI_mean()
         # self.relative_change()
-        self.TRENDY_ensemble()
+        # self.TRENDY_ensemble()
         # self.weighted_average_LAI()
         # self.trend_analysis()
         # self.plt_basemap()
@@ -7641,13 +7729,13 @@ class TRENDY_CV:
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
-        # self.TRENDY_ensemble()
+        self.TRENDY_ensemble()
         # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        self.plot_CV_trend_among_models()
+        # self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8014,7 +8102,9 @@ class TRENDY_CV:
 
                       'YIBs_S2_Monthly_lai']
 
-        fdir_all = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        model_list = [ 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', ]
+
+        fdir_all = result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\trend\\\\'
         arr_list = []
 
         for model in model_list:
@@ -8044,9 +8134,9 @@ class TRENDY_CV:
         plt.imshow(arr_ensemble, cmap='RdYlGn')
         plt.colorbar()
         plt.show()
-        outdir=result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        outdir=result_root +  rf'\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\trend\\'
         T.mk_dir(outdir, force=True)
-        outf=outdir+'TRENDY_ensemble_median_trend.tif'
+        outf=outdir+'composite_LAI_detrend_CV_trend.tif'
         DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
 
 
