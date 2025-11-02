@@ -16,8 +16,7 @@ from scipy.ndimage import label
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
-from sympy.abc import alpha
-from sympy.printing.pretty.pretty_symbology import line_width
+
 
 from SI_anaysis import climate_variables
 
@@ -96,20 +95,25 @@ class multi_regression_beta():
         self.data_root = 'D:/Project3/Data/'
         self.result_root = 'D:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\'
-        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\'
+        self.fdirX=self.result_root+rf'3mm\moving_window_multi_regression\obs\moving_window\detrend\\'
+        self.fdir_Y=self.result_root+rf'\3mm\moving_window_multi_regression\obs\moving_window\detrend\\'
 
-        self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var = ['GLOBMAP_LAI_relative_change_detrend']
+        self.xvar_list = ['rainfall_frenquency_growing_season_zscore_detrend',
+                          'Tmax_growing_season_zscore_detrend','VPD_growing_season_zscore_detrend',
+                          'sum_rainfall_growing_season_zscore_detrend']
+        self.y_var = ['composite_LAI_zscore_detrend_median',]
 
 
     def run(self):
         # self.anomaly()
+        # exit()
         # self.detrend()
+        # exit()
         # self.moving_window_extraction()
+        # exit()
 
         self.window = 38-15+1
-        outdir = self.result_root + rf'3mm\moving_window_multi_regression\multiresult_relative_change_detrend\multi_regression_result_detrend_growing_season_GLOBMAP_LAI\\'
+        outdir = self.result_root + rf'\3mm\moving_window_multi_regression\obs\multi_regression_result\growing_season_detrend\\\'
         T.mk_dir(outdir, force=True)
 
         # # ####step 1 build dataframe
@@ -117,13 +121,13 @@ class multi_regression_beta():
 
             df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
             outf= outdir+rf'\\window{i:02d}.npy'
-            if os.path.isfile(outf):
-                continue
+            # if os.path.isfile(outf):
+            #     continue
             print(outf)
-        # #
+        #
             self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        ##step 2 crate individial files
-        self.plt_multi_regression_result(outdir,self.y_var)
+        ###step 2 crate individial files
+        self.plt_multi_regression_result(outdir,self.y_var)  #### !!!
 # #
         # ##step 3 covert to time series
 
@@ -131,7 +135,7 @@ class multi_regression_beta():
         ### step 4 build dataframe using build Dataframe function and then plot here
         # self.plot_moving_window_time_series() not use
         ## spatial trends of sensitivity
-        self.calculate_trend_trend(outdir)
+        # self.calculate_trend_trend(outdir)
         # self.composite_beta()
         # plot robinson
         # self.plot_robinson()
@@ -139,12 +143,19 @@ class multi_regression_beta():
 
     def anomaly(self):  ### anomaly GS
 
-        fdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\original\\'
+        fdir = rf'D:\Project3\Result\3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
 
-        outdir = rf'E:\Project3\Result\3mm\moving_window_multi_regression\\anomaly_ecosystem_year\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\zscore\zscore\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'rainfall_frenquency' in f:
+                continue
+            if 'detrend' in f:
+                continue
+            if not f.endswith('.npy'):
+                continue
+
 
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
@@ -163,7 +174,7 @@ class multi_regression_beta():
                 time_series = dic[pix]['ecosystem_year']
                 print(len(time_series))
 
-                time_series = np.array(time_series)
+                time_series = np.array(time_series,float)
 
                 time_series[time_series < -999] = np.nan
 
@@ -173,8 +184,9 @@ class multi_regression_beta():
                 # plt.show()
 
                 mean = np.nanmean(time_series)
+                std = np.nanstd(time_series)
 
-                delta_time_series = (time_series - mean)
+                delta_time_series = (time_series - mean)/std
 
                 # plt.plot(delta_time_series)
                 # plt.show()
@@ -192,11 +204,13 @@ class multi_regression_beta():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=result_root + rf'\3mm\moving_window_multi_regression\anomaly_ecosystem_year\\selected_variables\\'
-        outdir=result_root + rf'\3mm\moving_window_multi_regression\anomaly_ecosystem_year\\selected_variables\\detrend\\'
+        fdir=result_root + rf'\3mm\moving_window_multi_regression\zscore\\zscore\\'
+        outdir=result_root + rf'\3mm\moving_window_multi_regression\zscore\\detrend\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+
+
             if not f.endswith('.npy'):
                 continue
 
@@ -223,7 +237,7 @@ class multi_regression_beta():
                 r, c= pix
                 # print(len(dic[pix]))
                 time_series = dic[pix]
-                print(len(time_series))
+                # print(len(time_series));exit()
                 # print(time_series)
                 time_series=np.array(time_series,dtype=float)
                 # plt.plot(time_series)
@@ -245,8 +259,8 @@ class multi_regression_beta():
                 #     continue
                 time_series=T.interp_nan(time_series)
                 detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
-                # plt.plot(time_series)
-                # plt.plot(detrend_delta_time_series)
+                # plt.plot(time_series,color='blue')
+                # plt.plot(detrend_delta_time_series,color='red')
                 # plt.show()
 
                 detrend_zscore_dic[pix] = detrend_delta_time_series
@@ -255,9 +269,9 @@ class multi_regression_beta():
 
     def moving_window_extraction(self):
 
-        fdir_all = self.result_root + rf'3mm\moving_window_multi_regression\anomaly_ecosystem_year\selected_variables\detrend\\'
+        fdir_all = self.result_root + rf'\3mm\moving_window_multi_regression\zscore\\zscore\\'
 
-        outdir = self.result_root  + rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
+        outdir = self.result_root  + rf'\3mm\moving_window_multi_regression\zscore\\moving_window\\zscore\\'
         T.mk_dir(outdir, force=True)
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
@@ -293,7 +307,7 @@ class multi_regression_beta():
                 if np.isnan(np.nanmean(time_series)):
                     print('error')
                     continue
-                # print((len(time_series)))
+                print((len(time_series)))
                 ## if all values are identical, then continue
                 if np.nanmax(time_series) == np.nanmin(time_series):
                     continue
@@ -366,7 +380,9 @@ class multi_regression_beta():
             if len(dic_y[pix]) == 0:
                 continue
             vals = dic_y[pix][w]
-            # print(vals)
+            # plt.plot(vals)
+            # plt.show()
+
             # exit()
             if len(vals) == 0:
                 continue
@@ -593,8 +609,10 @@ class multi_regression_beta():
 
 
 
-        variable_list = ['sum_rainfall_detrend']
+        variable_list = ['sum_rainfall_growing_season_zscore','rainfall_frenquency_growing_season_zscore']
 
+        new_name={'sum_rainfall_growing_season_zscore': f'{y_var}_intersensitivity',
+                  'rainfall_frenquency_growing_season_zscore':f'{y_var}_intrasensitivity'}
 
 
         for variable in variable_list:
@@ -615,6 +633,7 @@ class multi_regression_beta():
 
 
                 array_list.append(array)
+
             array_list=np.array(array_list)
 
             ## array_list to dic
@@ -632,14 +651,16 @@ class multi_regression_beta():
                     continue
 
 
+
                 dic[pix]=array_list[:,r,c] ## extract time series
 
 
 
 
                 time_series=dic[pix]
+
                 time_series = np.array(time_series)
-                time_series = time_series*100  ###currently no multiply %/100mm
+                time_series = time_series
                 result_dic[pix]=time_series
                 if np.nanmean(dic[pix])<=5:
                     continue
@@ -649,7 +670,7 @@ class multi_regression_beta():
             print(outdir)
             # exit()
             T.mk_dir(outdir,force=True)
-            outf=outdir+rf'\\{variable}.npy'
+            outf=outdir+new_name[variable]+'.npy'
             np.save(outf,result_dic)
 
         pass
@@ -4136,60 +4157,62 @@ class partial_correlation():
         self.map_height = 8.2 * centimeter_factor
         pass
 
-        self.fdirX = result_root + rf'3mm\Multiregression\partial_correlation\Obs\\input\\X\\'
-        self.fdirY = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\\input\\Y\\'
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/'
+
+        self.fdirX = self.result_root + rf'\3mm\Multiregression\partial_correlation\Obs\input\X\\input\\'
+        self.fdirY = self.result_root + rf'\3mm\Multiregression\partial_correlation\Obs\input\Y\\'
+
+
 
     def run(self):
-
-        self.xvar_list = ['CV_intraannual_rainfall_ecosystem_year_zscore',
-                          'detrended_sum_rainfall_ecosystem_year_CV_zscore',
-                          ]
-
-        self.model_list = ['composite_LAI_median','GLOBMAP_LAI','SNU_LAI','LAI4g','composite_LAI',  ]
-
-
+        self.xvar_list = [
+                          'rainfall_frenquency_growing_season_zscore_detrend',
+                          'CV_intraannual_rainfall_growing_season_zscore','sum_rainfall_growing_season_CV_zscore_detrend']
+        self.model_list = ['composite_LAI_mean']
 
 
         for model in self.model_list:
-            self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\partial_corr2\\'
-            T.mk_dir(self.outdir, force=True)
-        #     self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
-        #     self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
-        #
-        #     y_var = f'{model}_detrend_CV_zscore.npy'
-        #     x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
-        #
-        #
-        #     df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-        #     #
-        #     self.cal_partial_corr(df,x_var_list, )
-        # #     #
-        # #     # # # # # # self.check_data()
-        #     self.plot_partial_correlation()
-        #     self.plot_partial_correlation_p_value()
-        #     # self.statistic_trend_bar()
-        #     self.plot_spatial_map_sig()
-        # self.statistic_corr_boxplot() # use this
-        self.box_plot_significant_differences()
-        # self.plot_percentage()
-        # self.sensitivity_vs_climate_factors()
-        # self.percentage_pft()
-        # self.percentage_pft_old()
+                self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\partial_corr3\\'
+                T.mk_dir(self.outdir, force=True)
+                self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
+                self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
 
-        #############################################################################
+                y_var = f'{model}_detrend_CV_zscore.npy'
+                x_var_list = self.xvar_list + [f'{model}_sensitivity_growing_season_zscore_detrend']
 
-            # self.maximum_partial_corr()
-            # self.normalized_partial_corr(model)
-            # self.normalized_partial_corr_unpacked(model)
-            # self.normalized_partial_corr_ensemble(model)
-        # self.plot_pdf()
-            # self.statistic_corr()
-            # self.statistic_trend()
 
-            # self.pft_test2()
-            # self.pft_max_label()
-            # self.pft_corr()
-            # self.aridity_bin()
+                # df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+                # #
+                # self.cal_partial_corr(df,x_var_list, )
+            #     #
+            #     # # # # # # self.check_data()
+            #     self.plot_partial_correlation()
+            #     self.plot_partial_correlation_p_value()
+                # self.statistic_trend_bar()
+                self.plot_spatial_map_sig()
+            # self.statistic_corr_boxplot() # use this
+            # self.box_plot_significant_differences()
+            # self.plot_percentage()
+            # self.sensitivity_vs_climate_factors()
+            # self.percentage_pft()
+            # self.percentage_pft_old()
+
+            #############################################################################
+
+                # self.maximum_partial_corr()
+                # self.normalized_partial_corr(model)
+                # self.normalized_partial_corr_unpacked(model)
+                # self.normalized_partial_corr_ensemble(model)
+            # self.plot_pdf()
+                # self.statistic_corr()
+                # self.statistic_trend()
+
+                # self.pft_test2()
+                # self.pft_max_label()
+                # self.pft_corr()
+                # self.aridity_bin()
 
 
     def check_data(self):
@@ -4674,7 +4697,7 @@ class partial_correlation():
             fdir = self.outdir + rf'\\{model}\\'
             outdir = self.outdir + rf'\\{model}\\sig\\'
             T.mk_dir(outdir, True)
-            new_variable_list = variable_list + [f'{model}_sensitivity_zscore']
+            new_variable_list = variable_list + [f'{model}_sensitivity_growing_season_zscore_detrend']
 
             for variable in new_variable_list:
                 f_trend_path = fdir + f'{variable}.tif'
@@ -4906,7 +4929,7 @@ class partial_correlation():
 
         # variables to compare
         var_list = [ 'sum_rainfall_trend', 'VPD_trend',
-                    'T_SAND', 'Non_tree_vegetation_mean',
+                    'T_SAND', 'Non_tree_vegetation_mean', 'Non tree vegetation_trend',
                     ]
 
         # grouping columns
@@ -7578,11 +7601,12 @@ class multi_regression_beta_TRENDY():
         self.data_root = 'D:/Project3/Data/'
         self.result_root = 'D:/Project3/Result/'
 
-        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_growing_season\\\\'
-        self.fdir_Y=self.result_root+rf'\\\3mm\relative_change_growing_season\moving_window_extraction\\'
+        self.fdirX=self.result_root+rf'\3mm\moving_window_multi_regression\TRENDY\\moving_window\detrend\\\\'
+        self.fdir_Y=self.result_root+rf'\\\3mm\moving_window_multi_regression\TRENDY\\moving_window\\detrend\\'
 
-        self.xvar_list = ['sum_rainfall_detrend','Tmax_detrend','VPD_detrend']
-        self.y_var_list =  ['TRENDY_ensemble_composite_time_series','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        self.xvar_list = ['rainfall_frenquency_growing_season','sum_rainfall_growing_season',
+                          'Tmax_growing_season','VPD_growing_season']
+        self.y_var_list =  ['TRENDY_ensemble_median','TRENDY_ensemble_mean','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -7597,38 +7621,38 @@ class multi_regression_beta_TRENDY():
         # self.anomaly()
         # self.detrend()
         # self.moving_window_extraction()
+        # exit()
 
-        self.window = 38-15+1
-
-
-        # # ####step 1 build dataframe
+        # self.window = 38-15+1
+        #
+        #
+        # # # ####step 1 build dataframe
         for y_var in self.y_var_list:
 
 
+            outdir = self.result_root + rf'\3mm\moving_window_multi_regression\TRENDY\multi_result\detrend\{y_var}\\'
+            # if os.path.isdir(outdir):
+            #     continue
+            T.mk_dir(outdir, force=True)
+        #     for i in range(self.window):
+        #
+        #         df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
+        #         outf= outdir+rf'\\window{i:02d}.npy'
+        #         if os.path.isfile(outf):
+        #             continue
+        #         print(outf)
+        #     # #
+        #         self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+        #     #step 2 crate individial files
+        #     self.plt_multi_regression_result(outdir,y_var)
+#
+        # ##step 3 covert to time series
 
-            outdir = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\\multiresult_relative_change_detrend_growing_season\{y_var}\\'
-#             # if os.path.isdir(outdir):
-#             #     continue
-#             T.mk_dir(outdir, force=True)
-#             for i in range(self.window):
-#
-#                 df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
-#                 outf= outdir+rf'\\window{i:02d}.npy'
-#                 if os.path.isfile(outf):
-#                     continue
-#                 print(outf)
-#             # #
-#                 self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-#             #step 2 crate individial files
-#             self.plt_multi_regression_result(outdir,y_var)
-# #
-#         # ##step 3 covert to time series
-#
-            # self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
+            self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
 #             # ## step 4 build dataframe using build Dataframe function and then plot here
 
             # # spatial trends of sensitivity
-            self.calculate_trend_trend(outdir)
+            # self.calculate_trend_trend(outdir)
             # self.composite_beta()
             # plot robinson
             # self.plot_robinson()
@@ -7752,9 +7776,9 @@ class multi_regression_beta_TRENDY():
 
     def moving_window_extraction(self):
 
-        fdir_all = self.result_root + rf'3mm\moving_window_multi_regression\anomaly_ecosystem_year\selected_variables\detrend\\'
+        fdir_all = self.result_root + rf'3mm\moving_window_multi_regression\TRENDY\input\zscore\Y\\'
 
-        outdir = self.result_root  + rf'\3mm\moving_window_multi_regression\moving_window\window_detrend_ecosystem_year\\'
+        outdir = self.result_root  + rf'\3mm\moving_window_multi_regression\TRENDY\moving_window\zscore\\'
         T.mk_dir(outdir, force=True)
         # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
         T.mk_dir(outdir, force=True)
@@ -7852,7 +7876,7 @@ class multi_regression_beta_TRENDY():
     def build_df(self, fdir_X, fdir_Y, xvar_list,y_var,w):
 
         df = pd.DataFrame()
-        dic_y=T.load_npy(fdir_Y+y_var+'_detrend.npy')
+        dic_y=T.load_npy(fdir_Y+y_var+'_zscore_detrend.npy')
         pix_list = []
         y_val_list=[]
 
@@ -7893,7 +7917,7 @@ class multi_regression_beta_TRENDY():
 
 
             x_val_list = []
-            x_arr = T.load_npy(fdir_X+xvar+'.npy')
+            x_arr = T.load_npy(fdir_X+xvar+'_zscore_detrend.npy')
             for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
                 pix = row.pix
                 if not pix in x_arr:
@@ -8098,7 +8122,10 @@ class multi_regression_beta_TRENDY():
 
 
 
-        variable_list = ['sum_rainfall_detrend']
+        variable_list = ['sum_rainfall_growing_season',
+                        'rainfall_frenquency_growing_season' ]
+        new_name={'sum_rainfall_growing_season':f'{y_var}_intersensitivity',
+                  'rainfall_frenquency_growing_season':f'{y_var}_intrasensitivity'}
 
 
 
@@ -8144,7 +8171,7 @@ class multi_regression_beta_TRENDY():
 
                 time_series=dic[pix]
                 time_series = np.array(time_series)
-                time_series = time_series*100  ###currently no multiply %/100mm
+                time_series = time_series
                 result_dic[pix]=time_series
                 if np.nanmean(dic[pix])<=5:
                     continue
@@ -8154,7 +8181,7 @@ class multi_regression_beta_TRENDY():
             print(outdir)
             # exit()
             T.mk_dir(outdir,force=True)
-            outf=outdir+rf'\\{y_var}_sensitivity.npy'
+            outf=outdir+new_name[variable]+'.npy'
             np.save(outf,result_dic)
 
         pass
@@ -9257,13 +9284,13 @@ def main():
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
-    # multi_regression_beta().run()
+    multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
     # multi_regression_anomaly().run()
 
     # Figure5().run()
 
-    partial_correlation().run()
+    # partial_correlation().run()
     # partial_correlation_TRENDY().run()
     # PLOT_dataframe().run()
 

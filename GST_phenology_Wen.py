@@ -78,7 +78,10 @@ class Phenology:
         pass
 
     def run(self):
-        # self.phenology_average()
+
+        # self.monthly_compose()
+        # self.per_pix()
+        # self.phenology_average_monthly()
 
         # self.GST()
         # self.plot_4GST_df()
@@ -88,8 +91,22 @@ class Phenology:
 
         pass
 
-    def phenology_average(self):
-        fdir_all = rf'E:\Project3\Data\LAI4g\dic_global\\'
+    def monthly_compose(self):
+        fdir_all = rf'D:\Project3\Data\LAI4g\scale\\'
+        outdir = rf'D:\Project3\Data\LAI4g\monthly_compose\\'
+        T.mk_dir(outdir)
+        Pre_Process().monthly_compose(fdir_all,outdir,method='max')
+        pass
+
+    def per_pix(self):
+        fdir = rf'D:\Project3\Data\LAI4g\monthly_compose\\'
+        outdir = rf'D:\Project3\Data\LAI4g\per_pix_monthly\\'
+        T.mk_dir(outdir)
+        Pre_Process().data_transform(fdir, outdir)
+
+
+    def phenology_average_biweekly(self):
+        fdir_all = rf'D:\Project3\Data\LAI4g\dic_global\\'
         spatial_dic=T.load_npy_dir(fdir_all)
         result_dic={}
 
@@ -122,13 +139,47 @@ class Phenology:
 
         np.save(outdir+'phenology_average_global.npy', result_dic)
 
+    def phenology_average_monthly(self):
+        fdir_all = rf'D:\Project3\Data\LAI4g\per_pix_monthly_global\\'
+        spatial_dic=T.load_npy_dir(fdir_all)
+        result_dic={}
+
+
+        for pix in spatial_dic:
+
+            val=spatial_dic[pix]
+            if T.is_all_nan(val):
+                continue
+
+            vals_reshape=val.reshape(-1,12)
+            # print(vals_reshape.shape)
+            # plt.imshow(vals_reshape, interpolation='nearest', cmap='jet')
+            # plt.colorbar()
+            # plt.show()
+            multiyear_mean = np.nanmean(vals_reshape, axis=0)
+            #
+            result_dic[pix]=multiyear_mean
+            # x=np.arange(0,24)
+            # xtick = [str(i) for i in x]
+            # plt.plot(x, multiyear_mean)
+            # plt.xticks(x, xtick)
+            # plt.xlabel('biweekly')
+            # plt.ylabel('LAI4g (m2/m2)')
+            #
+            # plt.show()
+        outdir=rf'D:\Project3\Data\LAI4g\\phenology_average_monthly\\'
+
+        Tools().mk_dir(outdir, force=True)
+
+        np.save(outdir+'phenology_average_monthly_global.npy', result_dic)
+
 #*****************************************
 # COMPUTE ONSET/OFFSET
 #*****************************************
 
     def GST(self):
-        fdir = rf'E:\Project3\Data\LAI4g\phenology_average\\phenology_average_dryland.npy'
-        outdir = rf'E:\Project3\Data\LAI4g\4GST_test\\'
+        fdir = rf'D:\Project3\Data\LAI4g\phenology_average_biweekly\\phenology_average_global.npy'
+        outdir = rf'D:\Project3\Data\LAI4g\4GST_test\\'
         T.mk_dir(outdir, force=True)
         spatial_dic = T.load_npy(fdir)
         spatial_dic_result = {}
@@ -138,12 +189,15 @@ class Phenology:
             # if r<120:
             #     continue
             LAI = spatial_dic[pix]
+            LAI[LAI<-9999]=np.nan
             if T.is_all_nan(LAI):
                 continue
+
             LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1d,days= self.divide_LAI_pieces(LAI)
             if LAI1d_1 is None:
                 continue
-            SeasType,SeasClss=self.compute_linear_regression_type_assign(LAI, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4, knan,LAI1d)
+
+            SeasType,SeasClss=self.compute_linear_regression_type_assign_new(LAI, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4, knan,LAI1d)
             SeasType, Onsets, Offsets = self.SOS_EOS(pix,LAI1d, SeasType,SeasClss,days)
             # print(SeasType, Onsets, Offsets)
             result_dict_i = {
@@ -230,6 +284,64 @@ class Phenology:
             return LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1d,days
         else:
             return [None] * 7
+
+    def compute_linear_regression_type_assign_new(self, LAI1, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4, knan, LAI1dr):
+        """
+        根据 LAI 年序列的分段线性回归结果，划分季节类型
+
+        Type 1: Evergreen (常绿，幅度小)
+        Type 2: Single season (一个生长季)
+        Type 3: Double season - 跨年双峰
+        Type 4: Double season - 一年内双峰
+        """
+
+        # 时间分段
+        time1 = np.arange(7)
+        time2 = time1 + 6
+        time3 = time1 + 12
+        time4 = time1 + 18
+
+        # 线性回归
+        linreg1, _, _, _, _ = stats.linregress(time1, LAI1d_1)
+        linreg2, _, _, _, _ = stats.linregress(time2, LAI1d_2)
+        linreg3, _, _, _, _ = stats.linregress(time3, LAI1d_3)
+        linreg4, _, _, _, _ = stats.linregress(time4, LAI1d_4)
+
+        # 统计量
+        LAImin = np.nanmin(LAI1)
+        LAImax = np.nanmax(LAI1)
+        LAImean = np.nanmean(LAI1)
+        SeasAmpl = LAImax - LAImin
+
+        # 初始化
+        SeasType = 0
+        SeasClss = 0
+
+        # -------- 常绿类 --------
+        if SeasAmpl < 0.25 * LAImean:  # 原来是 0.25，可以调整阈值
+            SeasType = 1
+
+        else:
+            # 缺失太多 / 平直 → 单季
+            if linreg1 == 0.0 or knan >= len(LAI1dr) / 2:
+                SeasType = 2
+
+            # 一年内双峰
+            elif linreg1 >= 0 and linreg2 <= 0 and linreg3 >= 0 and linreg4 <= 0:
+                SeasType = 4
+                SeasClss = 1
+
+            # 跨年双峰
+            elif linreg1 <= 0 and linreg2 >= 0 and linreg3 <= 0 and linreg4 >= 0:
+                SeasType = 3
+                SeasClss = 4
+
+            # 默认单季
+            else:
+                SeasType = 2
+
+        return SeasType, SeasClss
+
     def compute_linear_regression_type_assign(self, LAI1, LAI1d_1, LAI1d_2, LAI1d_3, LAI1d_4,knan,LAI1dr):
 
         # ********** Divide the time axis in 4 pieces *******
@@ -814,13 +926,13 @@ class Phenology:
         T.print_head_n(df_3)
 
     def plot_4GST_npy(self):  ##
-        f= rf'E:\Project3\Data\LAI4g\4GST_test\4GST_global.npy'
+        f= rf'D:\Project3\Data\LAI4g\4GST_test\4GST_global.npy'
         spatial_dic = T.load_npy(f)
         result_dic = {}
         vals_list = []
 
         for pix in spatial_dic:
-            val=spatial_dic[pix]['Offsets']
+            val=spatial_dic[pix]['Onsets']
             print(pix,val)
             try:
                 val=float(val)

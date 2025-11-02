@@ -1804,7 +1804,7 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        # self.pdp_shap()
+        self.pdp_shap()
         # # # # # #
         self.plot_pdp_shap()
         # self.plot_bar_landcover()

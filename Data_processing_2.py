@@ -8,7 +8,7 @@ from openpyxl.styles.builtins import percent
 # from green_driver_trend_contribution import *
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
-from sympy.codegen.cfunctions import isnan
+
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -104,9 +104,9 @@ class Data_processing_2:
         # self.interpolation()
         # self.mean()
         # self.mean_rainfall()
-        # self.zscore()
+        self.zscore()
         # self.anomaly()
-        self.composite_LAI()
+        # self.composite_LAI()
 
 
 
@@ -648,13 +648,28 @@ class Data_processing_2:
                 temp_dic = {}
         np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
     def mean(self):
-        f_mean=result_root+rf'\3mm\extract_composite_phenology_year\mean\\composite_LAI_time_series_mean.npy'
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        f_mean=data_root+rf'\VCF\dryland_tiff\dic_interpolation\Tree cover.npy'
 
         dic_mean=T.load_npy(f_mean)
         # arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_mean)
         # dic_trend=DIC_and_TIF().spatial_arr_to_dic(arr)
         result_dic={}
         for pix in dic_mean:
+            r, c = pix
+            if r < 60:
+                continue
+            landcover_value = crop_mask[pix]
+            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+            if dic_modis_mask[pix] == 12:
+                continue
 
             val=dic_mean[pix]
             val_mean=np.nanmean(val)
@@ -669,7 +684,7 @@ class Data_processing_2:
             result_dic[pix]=val_mean
         arr=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
 
-        outf=result_root+rf'\3mm\extract_composite_phenology_year\mean\\composite_LAI_mean.npy'
+        outf=data_root+rf'\VCF\dryland_tiff\dic_interpolation\\mean\\Tree cover_mean.npy'
 
         np.save(
             outf,
@@ -870,10 +885,10 @@ class Data_processing_2:
 
     def composite_LAI(self):
 
-        infdir=result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
-        f_1=infdir+rf'SNU_LAI_detrend_CV.npy'
-        f_2=infdir+rf'GLOBMAP_LAI_detrend_CV.npy'
-        f_3=infdir+rf'LAI4g_detrend_CV.npy'
+        infdir=result_root + rf'\3mm\moving_window_multi_regression\zscore\\'
+        f_1=infdir+rf'LAI4g_zscore.npy'
+        f_2=infdir+rf'GLOBMAP_LAI_zscore.npy'
+        f_3=infdir+rf'SNU_LAI_zscore.npy'
         dic1=np.load(f_1,allow_pickle=True).item()
         dic2=np.load(f_2,allow_pickle=True).item()
         dic3=np.load(f_3,allow_pickle=True).item()
@@ -892,7 +907,7 @@ class Data_processing_2:
             value1=np.array(value1)
             value2=np.array(value2)
             value3=np.array(value3)
-            if len(value1)!=19 or len(value2)!=19 or len(value3)!=19:
+            if len(value1)!=38 or len(value2)!=38 or len(value3)!=38:
                 print(pix,len(value1),len(value2),len(value3))
                 continue
             print(value1,value2,value3)
@@ -906,18 +921,18 @@ class Data_processing_2:
             if np.nanmean(average_val) <-999:
                 continue
             average_dic[pix]=average_val
-
-            plt.plot(value1,color='blue')
+            #
+            # plt.plot(value1,color='blue')
             # plt.plot(value2,color='green')
             # plt.plot(value3,color='orange')
             # plt.plot(average_val,color='red')
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
 
-        outdir=result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
+        outdir=result_root + rf'3mm\moving_window_multi_regression\zscore\\'
         Tools().mk_dir(outdir,force=True)
 
-        np.save(outdir+'composite_LAI_median_detrend_CV.npy',average_dic)
+        np.save(outdir+'composite_LAI_zscore_median.npy',average_dic)
 
         pass
     def interpolate_VCF(self):
@@ -1027,12 +1042,132 @@ class Data_processing_2:
             # plt.show()
         np.save(fdir+'interpolated', spatial_dic)
 
+    def nc_to_tif_template(self, fname, var_name, outdir, yearlist):
+        try:
+            ncin = Dataset(fname, 'r')
+            print(ncin.variables.keys())
+            # exit()
+            time = ncin.variables['time'][:]
 
+        except:
+            raise UserWarning('File not supported: ' + fname)
+        # lon,lat = np.nan,np.nan
+        try:
+            lat = ncin.variables['lat'][:]
+            lon = ncin.variables['lon'][:]
+        except:
+            try:
+                lat = ncin.variables['latitude'][:]
+                lon = ncin.variables['longitude'][:]
+            except:
+                try:
+                    lat = ncin.variables['lat_FULL'][:]
+                    lon = ncin.variables['lon_FULL'][:]
+                except:
+                    raise UserWarning('lat or lon not found')
+        shape = np.shape(lat)
+        try:
+            time = ncin.variables['time_counter'][:]
+            basetime_str = ncin.variables['time_counter'].units
+        except:
+            time = ncin.variables['time'][:]
+            basetime_str = ncin.variables['time'].units
 
+        basetime_unit = basetime_str.split('since')[0]
+        basetime_unit = basetime_unit.strip()
+        print(basetime_unit)
+        print(basetime_str)
+        if basetime_unit == 'days':
+            timedelta_unit = 'days'
+        elif basetime_unit == 'years':
+            timedelta_unit = 'years'
+        elif basetime_unit == 'month':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'months':
+            timedelta_unit = 'month'
+        elif basetime_unit == 'seconds':
+            timedelta_unit = 'seconds'
+        elif basetime_unit == 'hours':
+            timedelta_unit = 'hours'
+        else:
+            raise Exception('basetime unit not supported')
+        basetime = basetime_str.strip(f'{timedelta_unit} since ')
+        try:
+            basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d')
+        except:
+            try:
+                basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S')
+            except:
+                try:
+                    basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M:%S.%f')
+                except:
+                    try:
+                        basetime = datetime.datetime.strptime(basetime, '%Y-%m-%d %H:%M')
+                    except:
+                        try:
+                            basetime = datetime.datetime.strptime(basetime, '%Y-%m')
+                        except:
+                            try:
+                                basetime_ = basetime.split('T')[0]
+                                # print(basetime_)
+                                basetime = datetime.datetime.strptime(basetime_, '%Y-%m-%d')
+                                # print(basetime)
+                            except:
 
-
-
-
+                                raise UserWarning('basetime format not supported')
+        data = ncin.variables[var_name]
+        if len(shape) == 2:
+            xx, yy = lon, lat
+        else:
+            xx, yy = np.meshgrid(lon, lat)
+        for time_i in tqdm(range(len(time))):
+            if basetime_unit == 'days':
+                date = basetime + datetime.timedelta(days=int(time[time_i]))
+            elif basetime_unit == 'years':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                date2 = f'{int(base_year + time[time_i])}-01-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'month' or basetime_unit == 'months':
+                date1 = basetime.strftime('%Y-%m-%d')
+                base_year = basetime.year
+                base_month = basetime.month
+                date2 = f'{int(base_year + time[time_i] // 12)}-{int(base_month + time[time_i] % 12)}-01'
+                delta_days = Tools().count_days_of_two_dates(date1, date2)
+                date = basetime + datetime.timedelta(days=delta_days)
+            elif basetime_unit == 'seconds':
+                date = basetime + datetime.timedelta(seconds=int(time[time_i]))
+            elif basetime_unit == 'hours':
+                date = basetime + datetime.timedelta(hours=int(time[time_i]))
+            else:
+                raise Exception('basetime unit not supported')
+            time_str = time[time_i]
+            mon = date.month
+            year = date.year
+            if year not in yearlist:
+                continue
+            day = date.day
+            outf_name = f'{year}{mon:02d}{day:02d}.tif'
+            outpath = join(outdir, outf_name)
+            if isfile(outpath):
+                continue
+            arr = data[time_i]
+            arr = np.array(arr)
+            lon_list = []
+            lat_list = []
+            value_list = []
+            for i in range(len(arr)):
+                for j in range(len(arr[i])):
+                    lon_i = xx[i][j]
+                    if lon_i > 180:
+                        lon_i -= 360
+                    lat_i = yy[i][j]
+                    value_i = arr[i][j]
+                    lon_list.append(lon_i)
+                    lat_list.append(lat_i)
+                    value_list.append(value_i)
+            DIC_and_TIF().lon_lat_val_to_tif(lon_list, lat_list, value_list, outpath)
 
 
 pass
@@ -1631,9 +1766,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\statistics\\')
+                result_root +  rf'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'statistics.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1661,8 +1796,8 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
-        df=self.add_fire(df)
+        df=self.add_trend_to_df(df)
+        # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
@@ -1676,11 +1811,11 @@ class build_dataframe():
         # df=self.add_landcover_classfication_to_df(df)
         # # # # # # # df=self.dummies(df)
         # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_row(df)
         # # # # # # # # #
         # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
-        df=self.add_residual_to_df(df)
+        # df=self.add_residual_to_df(df)
 
         # # # #
         # df=self.add_rooting_depth_to_df(df)
@@ -2748,11 +2883,6 @@ class build_dataframe():
                                }
 
 
-
-
-
-
-
                                )
 
 
@@ -2826,7 +2956,7 @@ class build_dataframe():
 
     def add_landcover_data_to_df(self, df):
 
-        f = data_root + rf'\Base_data\\glc_025\\glc2000_05.tif'
+        f = data_root + rf'\Base_data\\GLC\\glc2000_v1_1_05_deg_unify.tif'
 
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
@@ -7729,8 +7859,8 @@ class TRENDY_CV:
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
-        self.TRENDY_ensemble()
-        # self.TRENDY_ensemble_npy()
+        # self.TRENDY_ensemble()
+        self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
@@ -8047,12 +8177,12 @@ class TRENDY_CV:
 
 
 
-        fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\\'
+        fdir = result_root + rf'\3mm\moving_window_multi_regression\TRENDY\input\detrend\Y\\'
 
         result_dic={}
 
         for model in model_list:
-            fpath = fdir + model + '_detrend_CV_zscore.npy'
+            fpath = fdir + model + '_zscore_detrend.npy'
             dic=T.load_npy(fpath)
             result_dic[model]=dic
         ## for each pixel calculate mean
@@ -8065,7 +8195,7 @@ class TRENDY_CV:
                 if pix not in result_dic[model]:
                     continue
                 vals = result_dic[model][pix]
-                if len(vals)!=24:
+                if len(vals)!=38:
                     continue
                 if vals is not None:
                     timeseries_list.append(np.array(vals))
@@ -8078,7 +8208,7 @@ class TRENDY_CV:
 
 
 
-                mean_ts = np.nanmedian(timeseries_list, axis=0)
+                mean_ts = np.nanmean(timeseries_list, axis=0)
 
                 # plt.plot(mean_ts,color='k',label='median')
                 # plt.legend()
@@ -8088,7 +8218,7 @@ class TRENDY_CV:
                 ensemble_mean_dic[pix] = mean_ts
 
 
-        outf=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\Y\TRENDY_ensemble_median_detrend_CV_zscore.npy'
+        outf=result_root + rf'\3mm\moving_window_multi_regression\TRENDY\input\detrend\Y\TRENDY_ensemble_mean_zscore_detrend.npy'
         T.save_npy(ensemble_mean_dic, outf)
 
 
@@ -9104,13 +9234,13 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

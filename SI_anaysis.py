@@ -1492,6 +1492,159 @@ class Partial_correlation():
 
         return m
 
+class Fire():
+    def __init__(self):
+        pass
+    def run(self):
+        # self.plot_spatial()
+        self.histogram()
+        # self.plot_spatial_SV()
+
+        pass
+    def histogram(self):
+        tiff=result_root + rf'\3mm\Fire\moving_window_extraction\\Fire_percentage_annual_mean.tif'
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr==999999]=np.nan
+        arr = arr[~np.isnan(arr)]
+        # arr_stastis=arr[arr>2]
+        # print(len(arr_stastis)/len(arr));exit()
+
+        fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+        ## y is percentage of pixels
+
+
+        n, bins = np.histogram(arr, bins=100)
+
+        # 转换为百分比
+        total = n.sum()
+        n_percent = (n / total) * 100
+
+        # 重新绘制百分比直方图
+        bin_width = np.diff(bins)
+        ax.bar(bins[:-1], n_percent, width=bin_width * 0.9,  # 0.9 = 10% gap
+               align="edge", alpha=0.75, color='grey')
+
+        ax.set_xlabel('Fraction of pixel area burned (%)',fontsize=10)
+        ax.set_ylabel('Area (%)',fontsize=10)
+        ax.set_xlim(0, 1)
+
+
+        # plt.show()
+        plt.savefig(result_root + rf'\3mm\FIGURE\\FIRE_SV\\Histogram.png', dpi=600, bbox_inches='tight')
+        plt.close()
+
+
+    def plot_spatial(self):
+        outdir = result_root + rf'\3mm\FIGURE\\FIRE\\'
+        T.mk_dir(outdir,True)
+        temp_root = result_root + rf'3mm\Fire\moving_window_extraction\\temp_root\\'
+
+
+
+        fdir = result_root + rf'\3mm\Fire\moving_window_extraction\\'
+
+
+
+
+
+
+        fig,ax=plt.subplots(1,1,figsize=(3.35,2.19))
+        fpath = fdir + f'Fire_percentage_annual_mean.tif'
+
+
+        # 画 Robinson 投影 + 栅格
+        m, mappable = Plot().plot_Robinson(
+            fpath, ax=ax, cmap='rocket_r', vmin=0, vmax=1
+        )
+
+
+        # 裁剪显示范围
+        lat_min, lat_max = -60, 60
+        lon_min, lon_max = -125, 155
+        x_min, _ = m(lon_min, 0)
+        x_max, _ = m(lon_max, 0)
+        _, y_min = m(0, lat_min)
+        _, y_max = m(0, lat_max)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        ##plot colorbar
+        cbar = fig.colorbar(
+            mappable, ax=ax,
+            orientation='horizontal', fraction=0.035, pad=0.04
+        )
+        cbar.set_label('Burned area (%/yr)', fontsize=11)
+
+
+
+
+    # 紧凑布局与间距
+        # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+        outf = outdir + '\\' + 'Fire' + '.png'
+        # plt.show()
+        plt.savefig(outf, dpi=600, bbox_inches='tight')
+        plt.close()
+
+
+    def plot_spatial_SV(self):
+        outdir = result_root + rf'\3mm\FIGURE\\FIRE_SV\\'
+        T.mk_dir(outdir,True)
+        temp_root = rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\mean\\temp_root\\'
+
+
+
+        fdir =rf'D:\Project3\Data\VCF\dryland_tiff\dic_interpolation\mean\\'
+
+
+
+
+
+
+        fig,ax=plt.subplots(1,1,figsize=(3.35,2.19))
+        fpath = fdir + f'Non tree vegetation_mean.tif'
+
+
+        # 画 Robinson 投影 + 栅格
+        m, mappable = Plot().plot_Robinson(
+            fpath, ax=ax, cmap='Spectral', vmin=0, vmax=100
+        )
+
+
+        # 裁剪显示范围
+        lat_min, lat_max = -60, 60
+        lon_min, lon_max = -125, 155
+        x_min, _ = m(lon_min, 0)
+        x_max, _ = m(lon_max, 0)
+        _, y_min = m(0, lat_min)
+        _, y_max = m(0, lat_max)
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        ##plot colorbar
+        cbar = fig.colorbar(
+            mappable, ax=ax,
+            orientation='horizontal', fraction=0.035, pad=0.04
+        )
+        cbar.set_label('Mean short vegetation (%)', fontsize=11)
+
+
+
+
+    # 紧凑布局与间距
+        # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+        outf = outdir + '\\' + 'Mean short vegetation' + '.png'
+        # plt.show()
+        plt.savefig(outf, dpi=600, bbox_inches='tight')
+        plt.close()
 
 class TRENDY_trend():
 
@@ -1564,7 +1717,7 @@ class TRENDY_trend():
             if not model=='TRENDY_ensemble_median':
                 Plot().plot_Robinson_significance_scatter(
                     m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
-                    linewidths=0.5, s=1, c='k', marker='x', zorder=111, res=4
+                    linewidths=0.5, s=.2, c='k', marker='.', zorder=111, res=2
                 )
             else:
                 continue
@@ -1663,7 +1816,7 @@ class TRENDY_trend():
 class TRENDY_CV_moving_window_robust():
 
     def trend_analysis_plot(self):
-        outdir = result_root + rf'3mm\FIGURE\moving_window_robust_test\20_year\\'
+        outdir = result_root + rf'3mm\FIGURE\moving_window_robust_test\10_year\\'
         T.mk_dir(outdir,True)
         temp_root = result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\\temp_root\\'
         model_list=['composite_LAI_median','GLOBMAP_LAI','LAI4g','SNU_LAI',]
@@ -1697,7 +1850,7 @@ class TRENDY_CV_moving_window_robust():
 
 
 
-        fdir = result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\trend\\\\'
+        fdir = result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\trend\\\\'
 
 
 
@@ -1722,7 +1875,7 @@ class TRENDY_CV_moving_window_robust():
 
             Plot().plot_Robinson_significance_scatter(
                 m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
-                linewidths=0.5, s=0.5, c='k', marker='x', zorder=111, res=4
+                linewidths=0.5, s=.2, c='k', marker='.', zorder=111, res=2
             )
 
 
@@ -1890,7 +2043,7 @@ class TRENDY_CV():
             if not model=='TRENDY_ensemble_median':
                 Plot().plot_Robinson_significance_scatter(
                     m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
-                    linewidths=0.5, s=1, c='k', marker='x', zorder=111, res=4
+                    linewidths=0.5, s=.2, c='k', marker='.', zorder=111, res=2
                 )
             else:
                 continue
@@ -3390,10 +3543,9 @@ class SHAP_CV():
         plt.ylim(0.6, 1.2)
         plt.show()
 
-class Fire():
 
 
-    pass
+
 
 class SHAP_rainfall_seasonality():
 
@@ -5110,8 +5262,9 @@ def main():
     # greening_analysis().run()
     # climate_variables().run()
     # TRENDY_trend().trend_analysis_plot()
-    TRENDY_CV_moving_window_robust().trend_analysis_plot()
+    # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
+    Fire().run()
     # Colormap().run()
     # Partial_correlation().run()
     # LAImax_LAImin_models().run()

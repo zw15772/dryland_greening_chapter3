@@ -10227,7 +10227,7 @@ class plot_dataframe():
 
         # self.plot_monthly_zscore_based_region()
         # self.plot_greening_trend_moisture_trend_heatmap()
-        # self.plot_greening_trend_moisture_relative_change_heatmap()
+        self.plot_greening_trend_moisture_relative_change_heatmap()
 
         # self.plot_anomaly_trendy_LAI()
         self.plot_anomaly_LAI_based_on_cluster() #### widely used

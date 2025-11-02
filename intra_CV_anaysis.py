@@ -4329,13 +4329,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\'
-        outdir =result_root + (rf'\3mm\moving_window_robust_test\moving_window_extraction_average\20_year\\trend\\')
+        fdir =result_root+ rf'3mm\Multiregression\partial_correlation\Obs\input\Y\\'
+        outdir =result_root + (rf'3mm\Multiregression\partial_correlation\Obs\input\Y\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'SNU' in f:
-                continue
+
 
             if not f.endswith('.npy'):
                 continue
@@ -5206,11 +5205,12 @@ class TRENDY_model:
         # self.TIFF_to_dic()
 
         # self.extract_annual_LAI()
-        # self.detrend()
+        # self.zscore()
+        self.detrend()
         # self.moving_window_extraction()
         # self.moving_window_CV_anaysis()
         # self.trend_analysis()
-        self.plt_basemap()
+        # self.plt_basemap()
 
         pass
     def TIFF_to_dic(self):
@@ -5294,8 +5294,8 @@ class TRENDY_model:
 
     def extract_annual_LAI(self):  ## extract annaul LAI
 
-        fdir_all = rf'E:\Project3\Data\TRENDY_LAI\TRENDY_LAI_DIC\\'
-        outdir = rf'E:Project3\Data\TRENDY_LAI\\extract_annual_LAI\\'
+        fdir_all = rf'D:\Project3\Data\TRENDY_LAI\TRENDY_LAI_DIC\\'
+        outdir = rf'D:Project3\Data\TRENDY_LAI\\extract_annual_LAI\\'
         for fdir in os.listdir(fdir_all):
 
 
@@ -5326,10 +5326,84 @@ class TRENDY_model:
 
         pass
 
+    def zscore(self):
+
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai',
+
+                      ]
+        # model_list=['SNU_LAI','LAI4g','GLOBMAP_LAI']
+        #
+        # outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\obs_climate\input\Y\\'
+        # Tools().mk_dir(outdir, force=True)
+        for model in model_list:
+            fdir = rf'D:\Project3\Data\TRENDY\S2\extract_phenology_LAI_mean\\'
+            outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\TRENDY\input\zscore\\'
+            T.mk_dir(outdir, force=True)
+            Tools().mk_dir(outdir, force=True)
+            f=f'{model}.npy'
+
+            dic = T.load_npy(fdir + f)
+            outf = outdir + f'{model}_zscore.npy'
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                time_series = dic[pix]['growing_season']
+                # print(time_series)
+
+                # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
+
+                if not isinstance(time_series, (list, np.ndarray)):
+                    print(f"{pix}: invalid time_series (not iterable): {time_series}")
+                    continue
+
+                time_series = np.array(time_series, dtype=float)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+                ## exclude nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # if np.nanmean(time_series) >999:
+                #     continue
+                if np.nanmean(time_series) < -999:
+                    continue
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                zscore = (time_series - mean) / np.nanstd(time_series)
+
+                zscore_dic[pix] = zscore
+
+                # plt.plot(time_series)
+                # plt.legend(['raw'])
+                # plt.show()
+                #
+                #
+                # plt.plot(zscore)
+                # plt.legend(['zscore'])
+                # # plt.legend(['raw','zscore'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
     def detrend(self): ## detrend LAI4g
 
-        fdir = rf'E:\Project3\Data\TRENDY_LAI\extract_annual_LAI\\'
-        outdir = rf'E:Project3\Data\TRENDY_LAI\\detrend\\'
+        fdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\TRENDY\input\zscore\Y\\'
+        outdir = rf'D:\Project3\Result\3mm\moving_window_multi_regression\TRENDY\input\detrend\Y\\'
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             dict = T.load_npy(fdir + f)
@@ -5491,14 +5565,14 @@ class TRENDY_model:
 
     def trend_analysis(self):  ##each window average trend
 
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_025.tif'
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
         crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
         MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample.tif'
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'E:\Project3\Data\TRENDY_LAI\moving_window_CV\\'
-        outdir = rf'E:\Project3\Data\TRENDY_LAI\trend_analysis\moving_window_CV\\'
+        fdir = rf'D:\Project3\Result\3mm\Multiregression\partial_correlation\Obs\input\Y\\'
+        outdir = rf'D:\Project3\Result\3mm\Multiregression\partial_correlation\Obs\input\Y\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -5915,11 +5989,11 @@ def main():
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()  ## use this
     # extract_LAI_phenology().run()  ## use this
-    # TRENDY_model().run()
+    TRENDY_model().run()
     # check_correlation().run()
 
 
-    moving_window().run()
+    # moving_window().run()
     # partial_correlation_CV().run()
 
     # PLOT().run()
