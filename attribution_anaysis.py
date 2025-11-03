@@ -85,7 +85,7 @@ centimeter_factor = 1/2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+result_root = 'D:/Project3/Result/Nov//'
 
 class processing_GLOBMAP():
     def __init__(self):
@@ -187,9 +187,7 @@ class processing_GLOBMAP():
                     # print(SOS_monthly,EOS_monthly)
                     # print(SOS,EOS)
 
-
                     time_series = spatial_dict[pix]
-
 
                     time_series = np.array(time_series)
                     if SOS_monthly>EOS_monthly:  ## south hemisphere
@@ -359,8 +357,8 @@ class processing_GLOBMAP():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\3mm\GLOBMAP\relative_change\\'
-        outdir = rf'D:\Project3\Result\3mm\GLOBMAP\relative_change\\trend_analysis\\'
+        fdir = rf'D:\Project3\Result\Nov\LAI4g\relative_change\\'
+        outdir = rf'D:\Project3\Result\Nov\LAI4g\relative_change\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -494,9 +492,9 @@ class processing_GLOBMAP():
                 #     continue
                 time_series=T.interp_nan(time_series)
                 detrend_delta_time_series = T.detrend_vals(time_series)
-                # plt.plot(time_series)
-                # plt.plot(detrend_delta_time_series)
-                # plt.show()
+                plt.plot(time_series)
+                plt.plot(detrend_delta_time_series)
+                plt.show()
 
                 detrend_zscore_dic[pix] = detrend_delta_time_series
 
@@ -684,7 +682,7 @@ class processing_LAI4g():
                 'growing_season': growing_season_mean_list,
             }
 
-        outf = outdir_CV + 'extract_annual_growing_season_LAI_mean.npy'
+        outf = outdir_CV + 'LAI4g_mean.npy'
 
         np.save(outf, result_dic)
 
@@ -1307,7 +1305,7 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
@@ -1315,7 +1313,7 @@ class moving_window():
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -1535,12 +1533,11 @@ class moving_window():
 
 
     def moving_window_CV_extraction_anaysis_LAI(self):
-        window_size=20
-        # growing_season_mode_list = ['growing_season', 'non_growing_season', 'ecosystem_year', ]
-        # for mode in growing_season_mode_list:
+        window_size=15
 
-        fdir = rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction\\20_year\\'
-        outdir = rf'D:\Project3\Result\3mm\moving_window_robust_test\moving_window_extraction_average\\20_year\\'
+
+        fdir = result_root + rf'\Nov\SNU_LAI\15_year\moving_window_extraction\\'
+        outdir = result_root + rf'\Nov\SNU_LAI\15_year\\\\moving_window_extraction_CV\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1561,7 +1558,8 @@ class moving_window():
             for pix in tqdm(dic):
                 trend_list = []
                 time_series_all = dic[pix]
-                if len(time_series_all)<19:  ##
+                # print(len(time_series_all));exit()
+                if len(time_series_all)<23:  ##
                     continue
                 time_series_all = np.array(time_series_all)
                 for ss in range(slides):
@@ -1833,8 +1831,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'3mm\Multiregression\partial_correlation\Obs\input\Y\\'
-        outdir =result_root + (rf'3mm\Multiregression\partial_correlation\Obs\input\Y\\')
+        fdir =result_root+ rf'\Nov\LAI4g\15_year\moving_window_extraction_CV\\'
+        outdir =result_root + (rf'\Nov\LAI4g\15_year\moving_window_extraction_CV\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -2200,12 +2198,292 @@ class moving_window():
 
 
         pass
+class average_LAI():
+    def __init__(self):
+        pass
+    def run(self):
+        # self.average_LAI_relative_change()
+        self.trend_analysis()
+        pass
+
+    def average_LAI_relative_change(self):
+
+        infdir = result_root
+        f_1 = infdir + rf'LAI4g\\relative_change\\\\LAI4g_relative_change.npy'
+        f_2 = infdir + rf'GLOBMAP\relative_change\\\\GLOBMAP_LAI_relative_change.npy'
+        f_3 = infdir + rf'SNU_LAI\relative_change\\\\SNU_LAI_relative_change.npy'
+        dic1 = np.load(f_1, allow_pickle=True).item()
+        dic2 = np.load(f_2, allow_pickle=True).item()
+        dic3 = np.load(f_3, allow_pickle=True).item()
+        average_dic = {}
+
+        for pix in tqdm(dic1):
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1 = dic1[pix]
+            value2 = dic2[pix]
+            value3 = dic3[pix]
+
+            value1 = np.array(value1)
+            value2 = np.array(value2)
+            value3 = np.array(value3)
+            if len(value1) < 38 or len(value2) < 38 or len(value3) < 38:
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+            print(len(value1), len(value2), len(value3))
+            if len(value1) != len(value2) or len(value2) != len(value3):
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+
+
+            average_val = np.nanmean([value1, value2, value3], axis=0)
+
+            # print(average_val)
+            if np.nanmean(average_val) > 999:
+                continue
+            if np.nanmean(average_val) < -999:
+                continue
+            average_dic[pix] = average_val
+            #
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+
+        outdir = result_root + rf'\Composite_LAI\\relative_change\\'
+        Tools().mk_dir(outdir, force=True)
+
+        np.save(outdir + 'composite_LAI_relative_change_mean.npy', average_dic)
+
+    def trend_analysis(self):  ##each window average trend
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = result_root+rf'\Composite_LAI\relative_change\\'
+        outdir = result_root+rf'\Composite_LAI\relative_change\\trend_analysis\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            # if not f.split('.')[0] in ['seasonal_rainfall_intervals', 'seasonal_rainfall_event_size',
+            #                            'rainfall_frequency', 'heavy_rainfall_days', 'rainfall_event_size',
+
+            outf = outdir + f.split('.')[0]
+            # if os.path.isfile(outf + '_trend.tif'):
+            #     continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                    ## ignore the last one year
+
+                # time_series = dic[pix][:-1]
+                time_series = dic[pix]
+                time_series = np.array(time_series)
+                # print(time_series)
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                # if len(set(time_series)) == 1:
+                #     continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
+            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+
+            # plt.imshow(arr_trend, cmap='jet', vmin=-0.01, vmax=0.01)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
+
+class processing_TRENDY():
+    def __init__(self):
+        pass
+
+    def run(self):
+        pass
+    def extract_phenology_monthly_variables(self):
+        fdir = rf'D:\Project3\Data\GLOBMAP\dic\\'
+
+        outdir = rf'D:\Project3\Data\GLOBMAP\\extract_phenology_monthly\\'
+
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        new_spatial_dic={}
+        for pix in phenology_dic:
+            val=phenology_dic[pix]['Offsets']
+            try:
+                val=float(val)
+            except:
+                continue
+
+            new_spatial_dic[pix]=val
+        spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        # plt.show()
+        # exit()
+        spatial_dict_gs_count = {}
+
+        for f in T.listdir(fdir):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
+            dic_DOY={15: 1,
+                     30: 1,
+                     45: 2,
+                     60: 2,
+                     75: 3,
+                     90: 3,
+                     105: 4,
+                     120: 4,
+                     135: 5,
+                     150: 5,
+                     165: 6,
+                     180: 6,
+                     195: 7,
+                     210: 7,
+                     225: 8,
+                     240: 8,
+                     255: 9,
+                     270: 9,
+                     285: 10,
+                     300: 10,
+                     315: 11,
+                     330: 11,
+                     345: 12,
+                     360: 12,
+                   }
+
+
+            result_dic = {}
+
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
+                    continue
+                # print(pix)
+
+                r, c = pix
+
+                SeasType=phenology_dic[pix]['SeasType']
+                if SeasType==2:
+
+                    SOS=phenology_dic[pix]['Onsets']
+                    try:
+                        SOS=float(SOS)
+
+                    except:
+                        continue
+
+                    SOS=int(SOS)
+                    SOS_monthly=dic_DOY[SOS]
+
+                    EOS=phenology_dic[pix]['Offsets']
+                    EOS=int(EOS)
+                    EOS_monthly=dic_DOY[EOS]
+                    # print(SOS_monthly,EOS_monthly)
+                    # print(SOS,EOS)
+
+                    time_series = spatial_dict[pix]
+
+                    time_series = np.array(time_series)
+                    if SOS_monthly>EOS_monthly:  ## south hemisphere
+                        time_series_flatten=time_series.flatten()
+                        time_series_reshape=time_series_flatten.reshape(-1,12)
+                        time_series_dict={}
+                        for y in range(len(time_series_reshape)):
+                            if y+1==len(time_series_reshape):
+                                break
+
+                            time_series_dict[y]=np.concatenate((time_series_reshape[y][SOS_monthly-1:],time_series_reshape[y+1][:EOS_monthly]))
+
+                    else:
+                        time_series_flatten = time_series.flatten()
+                        time_series_reshape = time_series_flatten.reshape(-1, 12)
+                        time_series_dict = {}
+                        for y in range(len(time_series_reshape)):
+                            time_series_dict[y] = time_series_reshape[y][SOS_monthly - 1:EOS_monthly]
+                    time_series_gs = []
+                    for y in range(len(time_series_dict)):
+                        time_series_gs.append(time_series_dict[y])
+                    time_series_gs = np.array(time_series_gs)
+
+                elif SeasType==3:
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_gs = np.reshape(time_series, (-1, 12))
+
+                else:
+                    SeasClss=phenology_dic[pix]['SeasClss']
+                    print(SeasType,SeasClss)
+                    continue
+                spatial_dict_gs_count[pix] = time_series_gs.shape[1]
+                result_dic[pix] = time_series_gs
+        # print(spatial_dict_gs_count)
+        # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
+        # # arr[arr<6] = np.nan
+        # plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
+        # plt.colorbar()
+        # plt.show()
+            np.save(outf, result_dic)
+
+
+
+
+    pass
 
 def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    moving_window().run()
+    # moving_window().run()
+    average_LAI().run()
     pass
 
 if __name__ == '__main__':
