@@ -99,12 +99,12 @@ class Data_processing_2:
 
         # self.extract_dryland_tiff()
 
-        # self.tif_to_dic()
+        self.tif_to_dic()
         # self.interpolate_VCF()
         # self.interpolation()
         # self.mean()
         # self.mean_rainfall()
-        self.zscore()
+        # self.zscore()
         # self.anomaly()
         # self.composite_LAI()
 
@@ -420,12 +420,13 @@ class Data_processing_2:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         array_mask[array_mask < 0] = np.nan
 
-        fdir_all =data_root+ rf'\GLEAM_SMRoot_tif_05\\'
-        outdir = join(fdir_all, 'drylang_tiff')
+        fdir_all =data_root+ rf'\LAI4g\\'
+        outdir = join(fdir_all, 'dryland_tiff_monthly\\')
         T.mk_dir(outdir, force=True)
 
         for fdir in T.listdir(fdir_all):
-            if not 'tif_05' in fdir_all:
+            print(fdir)
+            if not 'monthly_compose' in fdir:
                 continue
             for f in T.listdir(join(fdir_all, fdir)):
 
@@ -572,12 +573,11 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\ESA_CCI_LC_tif05\\'
-        outdir=rf'D:\Project3\Data\ESA_CCI_LC_tif05\\dic_05\\'
+        fdir_all = rf'D:\Project3\Data\SNU_LAI\dryland_tiff\\'
+        outdir=rf'D:\Project3\Data\SNU_LAI\dic\\'
         T.mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
-
         # 作为筛选条件
 
         all_array = []  #### so important  it should be go with T.mk_dic
@@ -1766,9 +1766,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\')
+                result_root +  rf'\3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Dataframe2.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1779,7 +1779,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1795,25 +1795,25 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
         # df=self.add_mean_to_df(df)
         # # # # df=self.add_interaction_to_df(df)
 
-        # # # #
+        # # #
         # df=self.add_aridity_to_df(df)
         # df=self.add_dryland_nondryland_to_df(df)
         # df=self.add_MODIS_LUCC_to_df(df)
         # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
         # df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # df=self.dummies(df)
+        # # # # # # # # df=self.dummies(df)
         # df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # # #
-        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_row(df)
+        # # # # # # # # # #
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -2041,7 +2041,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\ISBA-CTRIP_S2_lai\\ISBA-CTRIP_S2_lai_sensitivity_zscore.tif'
+        f = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\TRENDY_ensemble_median\TRENDY_ensemble_median_intersensitivity.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2588,23 +2588,26 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all=result_root+rf'3mm\Multiregression\partial_correlation\Obs\result\partial_corr2\\'
+        fdir_all = result_root + rf'3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\\'
         for fdir in os.listdir(fdir_all):
-            # if not 'median' in fdir:
+            # if not 'LAI4g' in fdir:
             #     continue
 
 
+            for f in os.listdir(join(fdir_all,fdir)):
+                if not 'color' in f:
+                    continue
+                if not f.endswith('.tif'):
+                    continue
+                # if 'p_value' in f:
+                #     continue
+                # if 'color' in f:
+                #     continue
 
 
-            # for f in os.listdir(join(fdir_all,fdir)):
-            #     if not 'color' in f:
-            #         continue
+            # fdir_sig=fdir_all+fdir+'\\sig\\'
 
-
-
-            fdir_sig=fdir_all+fdir+'\\sig\\'
-
-            for f in os.listdir(fdir_sig):
+            # for f in os.listdir(fdir_sig):
 
 
 
@@ -2652,14 +2655,14 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\VCF\trend\\'
+        fdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\\'
 
-        # variables_list = [
-        #                   'TRENDY_ensemble', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-        #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-        #                   'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-        #                   'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-        #                   'ORCHIDEE_S2_lai',]
+        variables_list = [
+                          'TRENDY_ensemble_mean', 'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',]
         # variable_list=['CV_intraannual_rainfall_trend','pi_average_trend',
         #               'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
         for f in os.listdir(fdir):
@@ -2682,9 +2685,6 @@ class build_dataframe():
             # else:
             #     fname = f'TRENDY_ensemble_{variable}'
             # print(fname)
-
-
-
 
 
 
@@ -9232,7 +9232,7 @@ class check_data_distribution():
 
 
 def main():
-     # Data_processing_2().run()
+     Data_processing_2().run()
     # # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
@@ -9240,7 +9240,7 @@ def main():
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

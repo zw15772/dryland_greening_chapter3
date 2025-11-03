@@ -99,7 +99,7 @@ class extract_water_year():  ## extract water year phenology year
         self.extract_phenology_monthly_variables()
         # self.extract_phenology_year_rainfall()
         # self.extract_phenology_year_temperature()
-        # self.spatial_plot()
+        self.spatial_plot()
         pass
 
     def extract_water_year_precip(self):
@@ -327,7 +327,7 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def extract_phenology_year_LAI(self):
-        fdir = rf'D:\Project3\Data\GLOBMAP\\'
+        fdir = rf'D:\Project3\Data\GLOBMAP\\dic\\'
 
         outdir=result_root+ rf'3mm\\GLOBMAP\\\phenology_year_extraction_dryland\\'
 
@@ -335,8 +335,7 @@ class extract_water_year():  ## extract water year phenology year
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
         phenology_dic = T.load_npy(f_phenology)
         for f in T.listdir(fdir):
-            if not 'dic' in f:
-                continue
+
             if not f.endswith('.npy'):
                 continue
 
@@ -567,16 +566,21 @@ class extract_water_year():  ## extract water year phenology year
             np.save(outf, result_dic)
 
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\dic_05\\'
+        fdir = rf'D:\Project3\Data\GLOBMAP\dic\\'
 
-        outdir = rf'D:\Project3\Data\GLEAM_SMRoot_tif_05\\extract_phenology_monthly_variables_SM\\'
+        outdir = rf'D:\Project3\Data\GLOBMAP\\extract_phenology_monthly\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         new_spatial_dic={}
         # for pix in phenology_dic:
-        #     val=phenology_dic[pix]['SeasType']
+        #     val=phenology_dic[pix]['Offsets']
+        #     try:
+        #         val=float(val)
+        #     except:
+        #         continue
+        #
         #     new_spatial_dic[pix]=val
         # spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
         # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
@@ -657,10 +661,10 @@ class extract_water_year():  ## extract water year phenology year
 
                         non_growing_season = vals[0:SOS_biweekly]
                         growing_season = vals[SOS_biweekly:]
-                        # print(growing_season)
+                        print(len(growing_season))
                         non_growing_season_list.append(non_growing_season)
                         growing_season_list.append(growing_season)
-                    # print(len(growing_season_list))
+                    # print(len(growing_season_list));exit()
                     non_growing_season_list = np.array(non_growing_season_list)
                     growing_season_list = np.array(growing_season_list)
 
@@ -694,11 +698,12 @@ class extract_water_year():  ## extract water year phenology year
 
 
     def spatial_plot(self):
-        fdir=rf'E:\Project3\Data\LAI4g\phenology_year_extraction_global\\'
+        fdir=rf'D:\Project3\Data\GLOBMAP\phenology_year_extraction_dryland\\'
         spatial_dict = T.load_npy_dir(fdir)
         result_dic={}
         for pix in spatial_dict:
             vals=spatial_dict[pix]['growing_season']
+
             length=len(vals)
             # average_num=np.nanmean(vals)
             result_dic[pix]=length
@@ -5988,8 +5993,8 @@ def main():
     # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
     # Extract_rainfall_phenology_daily().run()  ## use this
-    # extract_LAI_phenology().run()  ## use this
-    TRENDY_model().run()
+    extract_LAI_phenology().run()  ## use this
+    # TRENDY_model().run()
     # check_correlation().run()
 
 

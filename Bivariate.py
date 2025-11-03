@@ -101,7 +101,7 @@ class multi_regression_beta():
         self.xvar_list = ['rainfall_frenquency_growing_season_zscore_detrend',
                           'Tmax_growing_season_zscore_detrend','VPD_growing_season_zscore_detrend',
                           'sum_rainfall_growing_season_zscore_detrend']
-        self.y_var = ['composite_LAI_zscore_detrend_median',]
+        self.y_var_list = ['LAI4g_zscore_detrend','GLOBMAP_LAI_zscore_detrend','SNU_LAI_zscore_detrend']
 
 
     def run(self):
@@ -111,27 +111,30 @@ class multi_regression_beta():
         # exit()
         # self.moving_window_extraction()
         # exit()
+        for y_var in self.y_var_list:
+            # print(y_var)
 
-        self.window = 38-15+1
-        outdir = self.result_root + rf'\3mm\moving_window_multi_regression\obs\multi_regression_result\growing_season_detrend\\\'
-        T.mk_dir(outdir, force=True)
 
-        # # ####step 1 build dataframe
-        for i in range(self.window):
+            self.window = 38-15+1
+            outdir = self.result_root + rf'\3mm\moving_window_multi_regression\obs\multi_regression_result\growing_season_detrend\\{y_var}\\'
+            T.mk_dir(outdir, force=True)
 
-            df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, self.y_var,i)
-            outf= outdir+rf'\\window{i:02d}.npy'
-            # if os.path.isfile(outf):
-            #     continue
-            print(outf)
-        #
-            self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        ###step 2 crate individial files
-        self.plt_multi_regression_result(outdir,self.y_var)  #### !!!
-# #
-        # ##step 3 covert to time series
+            # # ####step 1 build dataframe
+            # for i in range(self.window):
+            #
+            #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
+            #     outf= outdir+rf'\\window{i:02d}.npy'
+            #     # if os.path.isfile(outf):
+            #     #     continue
+            #     print(outf)
+            # #
+            #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+            ###step 2 crate individial files
+            self.plt_multi_regression_result(outdir)  #### !!!
+    # #
+            # ##step 3 covert to time series
 
-        self.convert_files_to_time_series(outdir,self.y_var) ## 这里乘以100
+            self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
         ### step 4 build dataframe using build Dataframe function and then plot here
         # self.plot_moving_window_time_series() not use
         ## spatial trends of sensitivity
@@ -369,7 +372,7 @@ class multi_regression_beta():
     def build_df(self, fdir_X, fdir_Y, xvar_list,y_var,w):
 
         df = pd.DataFrame()
-        dic_y=T.load_npy(fdir_Y+y_var[0]+'.npy')
+        dic_y=T.load_npy(fdir_Y+y_var+'.npy')
         pix_list = []
         y_val_list=[]
 
@@ -544,7 +547,7 @@ class multi_regression_beta():
 
     pass
 
-    def plt_multi_regression_result(self, multi_regression_result_dir,y_var):
+    def plt_multi_regression_result(self, multi_regression_result_dir):
         fdir = multi_regression_result_dir
         for f in os.listdir(fdir):
             if not f.endswith('.npy'):
@@ -4168,30 +4171,34 @@ class partial_correlation():
 
     def run(self):
         self.xvar_list = [
-                          'rainfall_frenquency_growing_season_zscore_detrend',
-                          'CV_intraannual_rainfall_growing_season_zscore','sum_rainfall_growing_season_CV_zscore_detrend']
-        self.model_list = ['composite_LAI_mean']
+
+            'detrended_sum_rainfall_growing_season_CV_zscore',
+
+                         'CV_intraannual_rainfall_growing_season_zscore']
+        self.model_list = ['SNU_LAI','GLOBMAP_LAI','LAI4g']
+        self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\partial_corr3\\'
 
 
-        for model in self.model_list:
-                self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\partial_corr3\\'
-                T.mk_dir(self.outdir, force=True)
-                self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
-                self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
-
-                y_var = f'{model}_detrend_CV_zscore.npy'
-                x_var_list = self.xvar_list + [f'{model}_sensitivity_growing_season_zscore_detrend']
-
-
-                # df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-                # #
-                # self.cal_partial_corr(df,x_var_list, )
-            #     #
-            #     # # # # # # self.check_data()
-            #     self.plot_partial_correlation()
-            #     self.plot_partial_correlation_p_value()
+        # for model in self.model_list:
+        #         outdir=self.outdir+model+'\\'
+        #
+        #         T.mk_dir(outdir, force=True)
+        #         self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
+        #         self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
+        # #
+        #         y_var = f'{model}_detrend_CV_zscore.npy'
+        #         x_var_list = self.xvar_list + [f'{model}_intersensitivity']+[f'{model}_intrasensitivity']
+        #
+        #
+        #         df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+        #         #
+        #         self.cal_partial_corr(df,x_var_list, )
+        # #         #
+        #         # # # # # # self.check_data()
+        #         self.plot_partial_correlation()
+        #         self.plot_partial_correlation_p_value()
                 # self.statistic_trend_bar()
-                self.plot_spatial_map_sig()
+        self.plot_spatial_map_sig()
             # self.statistic_corr_boxplot() # use this
             # self.box_plot_significant_differences()
             # self.plot_percentage()
@@ -4695,9 +4702,10 @@ class partial_correlation():
         variable_list = self.xvar_list
         for model in model_list:
             fdir = self.outdir + rf'\\{model}\\'
-            outdir = self.outdir + rf'\\{model}\\sig\\'
+            print(fdir)
+            outdir = self.outdir + rf'{model}\\sig\\'
             T.mk_dir(outdir, True)
-            new_variable_list = variable_list + [f'{model}_sensitivity_growing_season_zscore_detrend']
+            new_variable_list = variable_list + [f'{model}_intersensitivity']+[f'{model}_intrasensitivity']
 
             for variable in new_variable_list:
                 f_trend_path = fdir + f'{variable}.tif'
@@ -4716,7 +4724,7 @@ class partial_correlation():
 
                 # plt.imshow(arr_corr)
                 # plt.colorbar()
-                outf = outdir + f'{variable}.tif'
+                outf = outdir  + f'{variable}.tif'
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
 
     pass
@@ -6146,6 +6154,8 @@ class partial_correlation():
 
 class partial_correlation_TRENDY():
     def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
 
 
         self.fdirX = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\Input\\X\\'
@@ -6155,14 +6165,14 @@ class partial_correlation_TRENDY():
 
     def run(self):
 
-        self.xvar_list = [  'CV_intraannual_rainfall_ecosystem_year_zscore',
-                          'detrended_sum_rainfall_ecosystem_year_CV_zscore',
+        self.xvar_list = [  'CV_intraannual_rainfall_growing_season_zscore',
+                          'detrended_sum_rainfall_growing_season_CV_zscore',
                           ]
 
 
-
-
-        self.model_list = ['TRENDY_ensemble_median','TRENDY_ensemble_mean','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        self.model_list = [
+                           'composite_LAI_median', 'LAI4g','GLOBMAP_LAI','SNU_LAI',
+                            'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -6170,9 +6180,10 @@ class partial_correlation_TRENDY():
 
                            'YIBs_S2_Monthly_lai',
 
+
                            ]
-        self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\partial_corr2\\'
-        # self.model_list = ['TRENDY_mean' ]
+        self.outdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\partial_corr3\\'
+
 
 
         # for model in self.model_list:
@@ -6182,25 +6193,29 @@ class partial_correlation_TRENDY():
         #     self.outpartial_pvalue = outdir + rf'\partial_pvalue_{model}.npy'
         #
         #     y_var = f'{model}_detrend_CV_zscore.npy'
-        #     x_var_list = self.xvar_list + [f'{model}_sensitivity_zscore']
+        #     x_var_list = self.xvar_list + [f'{model}_intersensitivity']+[f'{model}_intrasensitivity']
         #
         #
         #     df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
         #     # # #
         #     self.cal_partial_corr(df,x_var_list)
-        #     # # # # # # self.cal_single_correlation()
-        #     # # # # # # self.cal_single_correlation_ly()
-        #     # # # # # # self.check_data()
-        #     self.plot_partial_correlation(outdir)
-        #     self.plot_partial_correlation_p_value(outdir)
-        #     self.plot_spatial_map_sig()
-        self.TRENDY_obs_heatmap() ## use this
+            # # # # # # self.cal_single_correlation()
+            # # # # # # self.cal_single_correlation_ly()
+            # # # # # # self.check_data()
+            # self.plot_partial_correlation(outdir)
+            # self.plot_partial_correlation_p_value(outdir)
+        # self.plot_spatial_map_sig()
+        # self.max_correlation_with_sign()
+        # self.max_correlation_without_sign()
+        self.statistic_contribution_area_barplot_without_sign()
+        # self.statistic_contribution_area_barplot()
+        # self.TRENDY_obs_heatmap() ## use this
         # self.TRENDY_obs_boxplots()
 
 
             #### ####
 
-            # # self.maximum_partial_corr()
+            # self.maximum_partial_corr()
             # self.normalized_partial_corr(model)
             # self.normalized_partial_corr_ensemble(model)
             # self.normalized_partial_corr_unpacked(model)
@@ -6623,7 +6638,7 @@ class partial_correlation_TRENDY():
             fdir = self.outdir + rf'\\{model}\\'
             outdir = self.outdir + rf'\\{model}\\sig\\'
             T.mk_dir(outdir,True)
-            new_variable_list=variable_list+[f'{model}_sensitivity_zscore']
+            new_variable_list=variable_list+[f'{model}_intersensitivity']+[f'{model}_intrasensitivity']
 
             for variable in new_variable_list:
                 f_trend_path = fdir + f'{variable}.tif'
@@ -6831,7 +6846,320 @@ class partial_correlation_TRENDY():
             plt.show()
 
 
+    def max_correlation_with_sign(self):
 
+        dff = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\Dataframe.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        model_list = self.model_list
+
+        var_list = [
+            'detrended_sum_rainfall_growing_season_CV_zscore',
+            'CV_intraannual_rainfall_growing_season_zscore',
+            'intersensitivity',
+            'intrasensitivity'
+        ]
+
+        for model in tqdm(model_list):
+            outdir = self.outdir + model + '\\'
+            T.mk_dir(outdir, force=True)
+
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            max_var_sign_list = []
+            color_list = []
+
+            for _, row in df.iterrows():
+
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    max_var_sign_list.append(np.nan)
+                    color_list.append(np.nan)
+                    continue
+
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_val = vals_sens[idx_max]
+                max_var = var_list_sens[idx_max]
+
+                # === 符号 ===
+                max_var_sign = '+' if max_val > 0 else '-'
+
+                # === 颜色编码 ===
+                if 'intrasensitivity' in max_var:
+                    color = 8 if max_val > 0 else 1
+                elif 'intersensitivity' in max_var:
+                    color = 7 if max_val > 0 else 2
+                elif 'CV_intraannual_rainfall_growing_season_zscore' in max_var:
+                    color = 6 if max_val > 0 else 3
+                elif 'detrended_sum_rainfall_growing_season_CV_zscore' in max_var:
+                    color = 5 if max_val > 0 else 4
+                else:
+                    color = np.nan
+
+                max_var_list.append(max_var)
+                max_var_sign_list.append(max_var_sign)
+                color_list.append(color)
+
+            # === 写回结果 ===
+            df['max_var'] = max_var_list
+            df['max_var_sign'] = max_var_sign_list
+            df['color'] = color_list
+
+            # === 输出空间结果 ===
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            outtif = join(outdir, 'color_map.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, outtif)
+
+            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+            # plt.imshow(arr, interpolation='nearest')
+            # plt.title(f'Max partial correlation variable ({model})')
+            # plt.colorbar(label='color code')
+            # plt.show()
+
+    def max_correlation_without_sign(self):
+
+        dff = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\Dataframe2.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        model_list = self.model_list
+
+        var_list = [
+            'detrended_sum_rainfall_growing_season_CV_zscore',
+            'CV_intraannual_rainfall_growing_season_zscore',
+            'intersensitivity',
+            'intrasensitivity'
+        ]
+
+        for model in tqdm(model_list):
+            outdir = self.outdir + model + '\\'
+            T.mk_dir(outdir, force=True)
+
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            max_var_sign_list = []
+            color_list = []
+
+            for _, row in df.iterrows():
+
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    max_var_sign_list.append(np.nan)
+                    color_list.append(np.nan)
+                    continue
+
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+
+                max_var = var_list_sens[idx_max]
+
+
+
+                # === 颜色编码 ===
+                if 'intrasensitivity' in max_var:
+                    color = 1
+                elif 'intersensitivity' in max_var:
+                    color =2
+                elif 'CV_intraannual_rainfall_growing_season_zscore' in max_var:
+                    color = 3
+                elif 'detrended_sum_rainfall_growing_season_CV_zscore' in max_var:
+                    color = 4
+                else:
+                    color = np.nan
+
+                max_var_list.append(max_var)
+
+                color_list.append(color)
+
+            # === 写回结果 ===
+            df['max_var'] = max_var_list
+
+            df['color'] = color_list
+
+            # === 输出空间结果 ===
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            outtif = join(outdir, 'color_map.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, outtif)
+
+            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+            # plt.imshow(arr, interpolation='nearest')
+            # plt.title(f'Max partial correlation variable ({model})')
+            # plt.colorbar(label='color code')
+            # plt.show()
+
+    def statistic_contribution_area_barplot_without_sign(self):
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\Dataframe2.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        for col in df.columns:
+            print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1,2,3,4]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_color_map'
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'intrasen',
+
+                             2: 'intersen',
+
+
+                             3: 'CV rainfall intra',
+
+
+                             4: 'CV rainfall inter',
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 2,3,4]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 45)
+            plt.grid(axis='y', alpha=0.25)
+
+
+            plt.show()
+
+            #
+            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
+
+    def statistic_contribution_area_barplot(self):
+        dff = result_root + rf'3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\Dataframe2.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        for col in df.columns:
+            print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 8, 2, 7, 3, 6, 4, 5]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_color_map'
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'intrasen-',
+                             8: 'intrasen+',
+                             2: 'intersen-',
+                             7: 'intersen+',
+
+                             3: 'CV rainfall intra-',
+
+                             6: 'CV rainfall intra+',
+
+                             4: 'CV rainfall inter-',
+                             5: 'CV rainfall inter+',
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 8, 2, 7, 3, 6, 4, 5]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 20)
+            plt.grid(axis='y', alpha=0.25)
+
+
+            plt.show()
+
+            #
+            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
 
     def maximum_partial_corr(self):
         fdir=self.outdir
@@ -7634,17 +7962,17 @@ class multi_regression_beta_TRENDY():
             # if os.path.isdir(outdir):
             #     continue
             T.mk_dir(outdir, force=True)
-        #     for i in range(self.window):
-        #
-        #         df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
-        #         outf= outdir+rf'\\window{i:02d}.npy'
-        #         if os.path.isfile(outf):
-        #             continue
-        #         print(outf)
-        #     # #
-        #         self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-        #     #step 2 crate individial files
-        #     self.plt_multi_regression_result(outdir,y_var)
+            for i in range(self.window):
+
+                df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
+                outf= outdir+rf'\\window{i:02d}.npy'
+                if os.path.isfile(outf):
+                    continue
+                print(outf)
+            # #
+                self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
+            #step 2 crate individial files
+            self.plt_multi_regression_result(outdir,y_var)
 #
         # ##step 3 covert to time series
 
@@ -9284,14 +9612,14 @@ def main():
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()
-    multi_regression_beta().run()
+    # multi_regression_beta().run()
     # multi_regression_beta_TRENDY().run()
     # multi_regression_anomaly().run()
 
     # Figure5().run()
 
     # partial_correlation().run()
-    # partial_correlation_TRENDY().run()
+    partial_correlation_TRENDY().run()
     # PLOT_dataframe().run()
 
 
