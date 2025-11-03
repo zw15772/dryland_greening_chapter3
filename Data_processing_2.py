@@ -74,7 +74,7 @@ centimeter_factor = 1/2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+result_root = 'D:/Project3/Result/Nov/'
 class Data_processing_2:
 
     def __init__(self):
@@ -1766,9 +1766,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\3mm\Multiregression\partial_correlation\TRENDY\\Dataframe\\')
+                result_root +  rf'Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe2.df'
+        self.dff = self.this_class_arr + rf'Trends_CV.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1795,8 +1795,8 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
@@ -1804,14 +1804,14 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
         # # # # # # # # df=self.dummies(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
         # # # # # # # # # #
         df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
@@ -2041,7 +2041,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\TRENDY_ensemble_median\TRENDY_ensemble_median_intersensitivity.tif'
+        f = result_root + rf'TRENDY\S2\15_year\moving_window_extraction_CV\trend\CLM5_detrend_CV_trend.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2655,24 +2655,20 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\\'
+        fdir = result_root + rf'\TRENDY\S2\relative_change\trend_analysis\\'
 
         variables_list = [
-                          'TRENDY_ensemble_mean', 'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                          'ORCHIDEE_S2_lai',]
-        # variable_list=['CV_intraannual_rainfall_trend','pi_average_trend',
-        #               'heavy_rainfall_days_trend','VPD' ,'sum_rainfall_trend']
+                          'ORCHIDEE_S2_lai','YIBs']
+
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
 
 
-
-            # if not f.endswith('.tif'):
-            #     continue
 
             variable = (f.split('.')[0])
             print(variable)
@@ -7860,12 +7856,12 @@ class TRENDY_CV:
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
         # self.TRENDY_ensemble()
-        self.TRENDY_ensemble_npy()
+        # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        # self.plot_CV_trend_among_models()
+        self.plot_CV_trend_among_models()
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8711,20 +8707,19 @@ class TRENDY_CV:
 
     def plot_CV_trend_among_models(self):  ##plot CV and trend
 
-        color_list = ['green','#297270', '#299d8f', '#8ab07c', '#e66d50', '#a1a9d0',
+        color_list = ['black','black', 'black',  '#a1a9d0',
                       '#f0988c', '#b883d3','#ffff33', '#c4a5de',
                       '#E7483D', '#984ea3','#e41a1c',
-
                       '#9e9e9e', '#cfeaf1', '#f6cae5',
-                      '#98cccb', '#5867AF','#8FC751' ]
+                      '#98cccb', '#5867AF','black', '#e66d50',]
         ## I want use set 3 color
 
-        mark_size_list=[200]+[50]*3+[200]+[50]*14
-        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*14
+        mark_size_list=[50]*3+[50]*13+[200]*2
+        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
 
 
 
-        dff = result_root + rf'3mm\Dataframe\Trend_new\\Trend_2.df'
+        dff = result_root + rf'\Dataframe\\Trends_CV.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         T.print_head_n(df)
@@ -8732,12 +8727,12 @@ class TRENDY_CV:
         ## print column names
         # print(df.columns)
         # exit()
-        marker_list=['^','s', 'P','X','D',]*4
-        # marker_list = ['^', ] * 4 + ['s']*14
+        marker_list=['^','s','P','X',]*4+['s']+['^']+['D']
 
-        variables_list = ['composite_LAI_mean','LAI4g', 'GLOBMAP_LAI',
+
+        variables_list = ['LAI4g', 'GLOBMAP_LAI',
                           'SNU_LAI',
-                     'TRENDY_ensemble_mean','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                    'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -8749,27 +8744,19 @@ class TRENDY_CV:
         err_trend_list = []
         err_CV_list = []
 
+
         for variable in variables_list:
-            if variable=='LAI4g' or variable=='NDVI':
-                vals_trend=df[f'{variable}_trend'].values
-                vals_CV = df[f'{variable}_detrend_CV_trend'].values
-                vals_CV_p_value = df[f'{variable}_detrend_CV_p_value'].values
-            else:
-                vals_trend = df[f'{variable}_trend'].values
-                vals_CV = df[f'{variable}_detrend_CV_trend'].values
-                # vals_CV_p_value = df[f'{variable}_detrend_CV_p_value'].values
 
-
+            vals_trend = df[f'{variable}_relative_change_trend'].values
+            vals_CV = df[f'{variable}_detrend_CV_trend'].values
             vals_trend[vals_trend>999] = np.nan
             # vals_trend[vals_CV_p_value > 0.05] = np.nan
             vals_CV[vals_CV>999] = np.nan
             vals_trend[vals_trend < -999] = np.nan
             vals_trend[vals_trend < -10] = np.nan
-            vals_trend[vals_trend > 10] = np.nan
+            vals_trend[vals_trend > 99] = np.nan
             vals_CV[vals_CV < -999] = np.nan
             # vals_CV[vals_CV_p_value > 0.05] = np.nan
-
-
             vals_trend = vals_trend[~np.isnan(vals_trend)]
             # print(variable,np.nanmean(vals_trend))
             # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
@@ -8778,6 +8765,8 @@ class TRENDY_CV:
             vals_CV = vals_CV[~np.isnan(vals_CV)]
             vals_trend_list.append(np.nanmean(vals_trend))
             vals_CV_list.append(np.nanmean(vals_CV))
+
+
             if variable in ['composite_LAI_mean','TRENDY_ensemble_mean']:
                 err_trend_list.append(np.nanstd(vals_trend))
                 err_CV_list.append(np.nanstd(vals_CV))
@@ -8787,10 +8776,26 @@ class TRENDY_CV:
             print(variable, np.nanmean(vals_trend), np.nanmean(vals_CV))
         # exit()
 
+        # === 计算 ensemble 和 obs mean ===
+        obs_vars = ['LAI4g', 'GLOBMAP_LAI', 'SNU_LAI']
+        model_vars = [v for v in variables_list if v not in obs_vars]
+
+        obs_trend_mean = np.nanmean([vals_trend_list[variables_list.index(v)] for v in obs_vars])
+        obs_CV_mean = np.nanmean([vals_CV_list[variables_list.index(v)] for v in obs_vars])
+
+        model_trend_mean = np.nanmean([vals_trend_list[variables_list.index(v)] for v in model_vars])
+        print('obs mean', obs_trend_mean, obs_CV_mean)
+        model_CV_mean = np.nanmean([vals_CV_list[variables_list.index(v)] for v in model_vars])
+
+        # 把 ensemble 加入列表末尾
+        variables_plot = variables_list + ['OBS_mean', 'TRENDY_ensemble_mean']
+        vals_trend_plot = vals_trend_list + [obs_trend_mean, model_trend_mean]
+        vals_CV_plot = vals_CV_list + [obs_CV_mean, model_CV_mean]
 
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
         # plt.show()
         ##plot error bar
+
         plt.figure(figsize=(10*centimeter_factor, 8.2*centimeter_factor))
 
         self.map_width = 13 * centimeter_factor
@@ -8798,7 +8803,7 @@ class TRENDY_CV:
 
         err_trend_list = np.array(err_trend_list)
         err_CV_list = np.array(err_CV_list)
-        for i, (x, y, marker,color,var,mark_size) in enumerate(zip(vals_trend_list, vals_CV_list, marker_list, color_list,variables_list,mark_size_list)):
+        for i, (x, y, marker,color,var,mark_size) in enumerate(zip(vals_trend_plot, vals_CV_plot, marker_list, color_list, variables_plot,mark_size_list)):
             plt.scatter(y, x, marker=marker,color=color_list[i], label=var, s=mark_size, edgecolors='black',)
             # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
 
@@ -8807,21 +8812,21 @@ class TRENDY_CV:
 
             plt.ylabel('Trends in LAI (%/yr)', fontsize=12)
             plt.xlabel('Trends in CVLAI (%/yr)', fontsize=12)
-            plt.ylim(-0.02,0.18)
-            plt.xlim(-0.3, 0.5)
+            plt.ylim(-0.3,.9)
+            plt.xlim(-0.2, 0.5)
             plt.xticks(fontsize=12)
             ## xticks gap 0.05
-            plt.yticks(np.arange(-0.02, 0.2, 0.04))
+            plt.yticks(np.arange(-0.2, .9, 0.2), fontsize=12)
             plt.yticks(fontsize=12)
-            plt.legend()
+            # plt.legend()
         ## save imagine
-        plt.axhline(y=0.068, color='k', linestyle='--', linewidth=1)
-        plt.axvline(x=0.12, color='k', linestyle='--', linewidth=1)
-        plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
+        plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
+        plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
+        # plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
 
 
         #
-        # plt.show()
+        plt.show()
 
 
 
@@ -9232,7 +9237,7 @@ class check_data_distribution():
 
 
 def main():
-     Data_processing_2().run()
+     # Data_processing_2().run()
     # # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
@@ -9240,7 +9245,7 @@ def main():
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()
