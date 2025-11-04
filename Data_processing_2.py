@@ -573,8 +573,8 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\SNU_LAI\dryland_tiff\\'
-        outdir=rf'D:\Project3\Data\SNU_LAI\dic\\'
+        fdir_all = rf'D:\Project3\Data\CRU_monthly\Precip\dryland_tiff\\'
+        outdir=rf'D:\Project3\Data\CRU_monthly\Precip\dic\\'
         T.mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
@@ -9237,7 +9237,7 @@ class check_data_distribution():
 
 
 def main():
-     # Data_processing_2().run()
+     Data_processing_2().run()
     # # Phenology().run()
     # build_dataframe().run()
     # build_moving_window_dataframe().run()
@@ -9245,7 +9245,7 @@ def main():
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

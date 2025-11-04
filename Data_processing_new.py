@@ -906,11 +906,11 @@ class processing_SNU_LAI():
 
     def run(self):
 
-        # self.extract_phenology_monthly_variables()
+        self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
         # self.trend_analysis()
-        self.detrend()
+        # self.detrend()
         # self.deseanalized_detrend()
         pass
 
@@ -1036,12 +1036,13 @@ class processing_SNU_LAI():
                 spatial_dict_gs_count[pix] = time_series_gs.shape[1]
                 result_dic[pix] = time_series_gs
             # print(spatial_dict_gs_count)
-            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
-            # # arr[arr<6] = np.nan
-            # plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
-            # plt.colorbar()
-            # plt.show()
-            np.save(outf, result_dic)
+            # np.save(outf, result_dic)
+        arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
+        # arr[arr<6] = np.nan
+        plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
+        plt.colorbar()
+        plt.show()
+
 
     def extract_annual_growing_season_LAI_mean(self):  ## extract LAI average
         fdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
@@ -2333,7 +2334,73 @@ class average_LAI():
 
             np.save(outf + '_trend', arr_trend)
             np.save(outf + '_p_value', p_value_arr)
+class processing_composite_LAI():
+    def __init__(self):
+        pass
+    def run (self):
+        self.avarage_annual_growing_season_LAI_mean()
+        self.average_detrend_deseasonalized_composite_LAI()
+        pass
 
+    def avarage_annual_growing_season_LAI_mean(self):
+
+        f_GLOBMAP=data_root+ rf'\GLOBMAP\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_SNU_LAI=data_root+rf'\SNU_LAI\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_LAI4g=data_root+rf'\LAI4g\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        outf=result_root+rf'\Composite_LAI\\average_detrend_deseasonalized_composite_LAI.npy'
+        dic_GLOBMAP=T.load_npy(f_GLOBMAP)
+        dic_SNU_LAI=T.load_npy(f_SNU_LAI)
+        dic_LAI4g=T.load_npy(f_LAI4g)
+        result_dic={}
+
+        for pix in dic_GLOBMAP:
+            vals_GLOBMAP=dic_GLOBMAP[pix]
+            if pix not in dic_SNU_LAI:
+                continue
+            vals_SNU_LAI=dic_SNU_LAI[pix]
+            if pix not in dic_LAI4g:
+                continue
+            vals_LAI4g=dic_LAI4g[pix]
+            vals=np.nanmean([vals_GLOBMAP,vals_SNU_LAI,vals_LAI4g],axis=0)
+            # plt.imshow(vals,interpolation='nearest',cmap='jet'
+            #            )
+            # plt.show()
+            result_dic[pix]=vals
+
+        T.save_npy(result_dic,outf)
+
+
+    def average_detrend_deseasonalized_composite_LAI(self):
+
+        f_GLOBMAP=data_root+ rf'\GLOBMAP\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_SNU_LAI=data_root+rf'\SNU_LAI\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_LAI4g=data_root+rf'\LAI4g\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        outf=result_root+rf'\Composite_LAI\\average_detrend_deseasonalized_composite_LAI.npy'
+        dic_GLOBMAP=T.load_npy(f_GLOBMAP)
+        dic_SNU_LAI=T.load_npy(f_SNU_LAI)
+        dic_LAI4g=T.load_npy(f_LAI4g)
+        result_dic={}
+
+        for pix in dic_GLOBMAP:
+            vals_GLOBMAP=dic_GLOBMAP[pix]
+            if pix not in dic_SNU_LAI:
+                continue
+            vals_SNU_LAI=dic_SNU_LAI[pix]
+            if pix not in dic_LAI4g:
+                continue
+            vals_LAI4g=dic_LAI4g[pix]
+            vals=np.nanmean([vals_GLOBMAP,vals_SNU_LAI,vals_LAI4g],axis=0)
+            # plt.imshow(vals,interpolation='nearest',cmap='jet'
+            #            )
+            # plt.show()
+            result_dic[pix]=vals
+
+        T.save_npy(result_dic,outf)
+
+
+
+
+        pass
 class processing_TRENDY():
     def __init__(self):
         pass
@@ -2733,16 +2800,18 @@ class processing_climate_variable():
     def __init__(self):
         pass
     def run(self):
+        self.extract_phenology_monthly_variables()
         pass
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\SNU_LAI\dic\\'
+        fdir = rf'D:\Project3\Data\CRU_monthly\VPD\dic\\'
 
-        outdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
+        outdir = rf'D:\Project3\Data\CRU_monthly\\VPD\\extract_phenology_monthly\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         new_spatial_dic = {}
+
         for pix in phenology_dic:
             val = phenology_dic[pix]['Offsets']
             try:
@@ -2820,6 +2889,7 @@ class processing_climate_variable():
                     # print(SOS,EOS)
 
                     time_series = spatial_dict[pix]
+                    print(time_series)
 
                     time_series = np.array(time_series)
                     if SOS_monthly > EOS_monthly:  ## south hemisphere
@@ -2856,12 +2926,13 @@ class processing_climate_variable():
                 spatial_dict_gs_count[pix] = time_series_gs.shape[1]
                 result_dic[pix] = time_series_gs
             # print(spatial_dict_gs_count)
-            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
-            # # arr[arr<6] = np.nan
-            # plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
-            # plt.colorbar()
-            # plt.show()
             np.save(outf, result_dic)
+        arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
+        # arr[arr<6] = np.nan
+        plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
+        plt.colorbar()
+        plt.show()
+
 
     def extract_annual_growing_season_LAI_mean(self):  ## extract LAI average
         fdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
@@ -2913,8 +2984,8 @@ class processing_climate_variable():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root + rf'\Nov\SNU_LAI\extract_annual_growing_season_LAI_mean\\'
-        outdir = result_root + rf'Nov\SNU_LAI\\detrend\\'
+        fdir = result_root + rf'SNU_LAI\extract_annual_growing_season_LAI_mean\\'
+        outdir = result_root + rf'SNU_LAI\\detrend\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
