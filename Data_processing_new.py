@@ -2800,7 +2800,8 @@ class processing_climate_variable():
     def __init__(self):
         pass
     def run(self):
-        self.extract_phenology_monthly_variables()
+        # self.extract_phenology_monthly_variables()
+        self.extract_annual_growing_season_LAI_mean()
         pass
     def extract_phenology_monthly_variables(self):
         fdir = rf'D:\Project3\Data\CRU_monthly\VPD\dic\\'
@@ -2926,18 +2927,18 @@ class processing_climate_variable():
                 spatial_dict_gs_count[pix] = time_series_gs.shape[1]
                 result_dic[pix] = time_series_gs
             # print(spatial_dict_gs_count)
-            np.save(outf, result_dic)
+            # np.save(outf, result_dic)
         arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
-        # arr[arr<6] = np.nan
+        arr[arr>4] = np.nan
         plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
         plt.colorbar()
         plt.show()
 
 
     def extract_annual_growing_season_LAI_mean(self):  ## extract LAI average
-        fdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
+        fdir = rf'D:\Project3\Data\CRU_monthly\\Tmax\\extract_phenology_monthly\\'
 
-        outdir_CV = result_root + rf'\Nov\SNU_LAI\\extract_annual_growing_season_LAI_mean\\'
+        outdir_CV = result_root + rf'\CRU_monthly\\Tmax\\extract_annual_growing_season_mean\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -2971,78 +2972,11 @@ class processing_climate_variable():
                 'growing_season': growing_season_mean_list,
             }
 
-        outf = outdir_CV + 'extract_annual_growing_season_LAI_mean.npy'
+        outf = outdir_CV + 'annual_growing_season_Tmax_mean.npy'
 
         np.save(outf, result_dic)
 
-    def detrend(self):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root + rf'SNU_LAI\extract_annual_growing_season_LAI_mean\\'
-        outdir = result_root + rf'SNU_LAI\\detrend\\'
-        T.mk_dir(outdir, force=True)
-
-        for f in os.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-
-            print(f)
-
-            outf = outdir + f.split('.')[0] + '_detrend.npy'
-            # if isfile(outf):
-            #     continue
-            # dic=T.load_npy_dir(fdir+f+'\\')
-            dic = dict(np.load(fdir + f, allow_pickle=True, ).item())
-
-            detrend_zscore_dic = {}
-
-            for pix in tqdm(dic):
-                dryland_values = array_mask[pix]
-                if np.isnan(dryland_values):
-                    continue
-                crop_values = crop_mask[pix]
-                if crop_values == 16 or crop_values == 17 or crop_values == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-                r, c = pix
-                # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
-                print(len(time_series))
-                # print(time_series)
-                time_series = np.array(time_series, dtype=float)
-                # plt.plot(time_series)
-                # plt.show()
-                time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    continue
-                if np.std(time_series) == 0:
-                    continue
-                ##### if count of nan is more than 50%, then skip
-                if np.sum(np.isnan(time_series)) / len(time_series) > 0.5:
-                    continue
-                # mean = np.nanmean(time_series)
-                # std=np.nanstd(time_series)
-                # if std == 0:
-                #     continue
-                # delta_time_series = (time_series - mean) / std
-                # if np.isnan(time_series).any():
-                #     continue
-                time_series = T.interp_nan(time_series)
-                detrend_delta_time_series = T.detrend_vals(time_series)
-                # plt.plot(time_series)
-                # plt.plot(detrend_delta_time_series)
-                # plt.show()
-
-                detrend_zscore_dic[pix] = detrend_delta_time_series
-
-            np.save(outf, detrend_zscore_dic)
 
     pass
 def main():
