@@ -2729,14 +2729,259 @@ class processing_TRENDY():
 
 
     pass
+class processing_climate_variable():
+    def __init__(self):
+        pass
+    def run(self):
+        pass
+    def extract_phenology_monthly_variables(self):
+        fdir = rf'D:\Project3\Data\SNU_LAI\dic\\'
 
+        outdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
+
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        new_spatial_dic = {}
+        for pix in phenology_dic:
+            val = phenology_dic[pix]['Offsets']
+            try:
+                val = float(val)
+            except:
+                continue
+
+            new_spatial_dic[pix] = val
+        spatial_array = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        # plt.show()
+        # exit()
+        spatial_dict_gs_count = {}
+
+        for f in T.listdir(fdir):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
+            #     continue
+            # print(outf)
+            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
+            dic_DOY = {15: 1,
+                       30: 1,
+                       45: 2,
+                       60: 2,
+                       75: 3,
+                       90: 3,
+                       105: 4,
+                       120: 4,
+                       135: 5,
+                       150: 5,
+                       165: 6,
+                       180: 6,
+                       195: 7,
+                       210: 7,
+                       225: 8,
+                       240: 8,
+                       255: 9,
+                       270: 9,
+                       285: 10,
+                       300: 10,
+                       315: 11,
+                       330: 11,
+                       345: 12,
+                       360: 12,
+                       }
+
+            result_dic = {}
+
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
+                    continue
+                # print(pix)
+
+                r, c = pix
+
+                SeasType = phenology_dic[pix]['SeasType']
+                if SeasType == 2:
+
+                    SOS = phenology_dic[pix]['Onsets']
+                    try:
+                        SOS = float(SOS)
+
+                    except:
+                        continue
+
+                    SOS = int(SOS)
+                    SOS_monthly = dic_DOY[SOS]
+
+                    EOS = phenology_dic[pix]['Offsets']
+                    EOS = int(EOS)
+                    EOS_monthly = dic_DOY[EOS]
+                    # print(SOS_monthly,EOS_monthly)
+                    # print(SOS,EOS)
+
+                    time_series = spatial_dict[pix]
+
+                    time_series = np.array(time_series)
+                    if SOS_monthly > EOS_monthly:  ## south hemisphere
+                        time_series_flatten = time_series.flatten()
+                        time_series_reshape = time_series_flatten.reshape(-1, 12)
+                        time_series_dict = {}
+                        for y in range(len(time_series_reshape)):
+                            if y + 1 == len(time_series_reshape):
+                                break
+
+                            time_series_dict[y] = np.concatenate(
+                                (time_series_reshape[y][SOS_monthly - 1:], time_series_reshape[y + 1][:EOS_monthly]))
+
+                    else:
+                        time_series_flatten = time_series.flatten()
+                        time_series_reshape = time_series_flatten.reshape(-1, 12)
+                        time_series_dict = {}
+                        for y in range(len(time_series_reshape)):
+                            time_series_dict[y] = time_series_reshape[y][SOS_monthly - 1:EOS_monthly]
+                    time_series_gs = []
+                    for y in range(len(time_series_dict)):
+                        time_series_gs.append(time_series_dict[y])
+                    time_series_gs = np.array(time_series_gs)
+
+                elif SeasType == 3:
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_gs = np.reshape(time_series, (-1, 12))
+
+                else:
+                    SeasClss = phenology_dic[pix]['SeasClss']
+                    print(SeasType, SeasClss)
+                    continue
+                spatial_dict_gs_count[pix] = time_series_gs.shape[1]
+                result_dic[pix] = time_series_gs
+            # print(spatial_dict_gs_count)
+            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
+            # # arr[arr<6] = np.nan
+            # plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
+            # plt.colorbar()
+            # plt.show()
+            np.save(outf, result_dic)
+
+    def extract_annual_growing_season_LAI_mean(self):  ## extract LAI average
+        fdir = rf'D:\Project3\Data\SNU_LAI\\extract_phenology_monthly\\'
+
+        outdir_CV = result_root + rf'\Nov\SNU_LAI\\extract_annual_growing_season_LAI_mean\\'
+        # print(outdir_CV);exit()
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            ### annual year
+
+            vals_growing_season = spatial_dic[pix]
+            print(vals_growing_season.shape[1])
+            # plt.imshow(vals_growing_season)
+            # plt.colorbar()
+            # plt.show()
+            growing_season_mean_list = []
+
+            for val in vals_growing_season:
+                if T.is_all_nan(val):
+                    continue
+                val = np.array(val)
+
+                sum_growing_season = np.nanmean(val)
+
+                growing_season_mean_list.append(sum_growing_season)
+
+            result_dic[pix] = {
+                'growing_season': growing_season_mean_list,
+            }
+
+        outf = outdir_CV + 'extract_annual_growing_season_LAI_mean.npy'
+
+        np.save(outf, result_dic)
+
+    def detrend(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir = result_root + rf'\Nov\SNU_LAI\extract_annual_growing_season_LAI_mean\\'
+        outdir = result_root + rf'Nov\SNU_LAI\\detrend\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+
+            print(f)
+
+            outf = outdir + f.split('.')[0] + '_detrend.npy'
+            # if isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+            dic = dict(np.load(fdir + f, allow_pickle=True, ).item())
+
+            detrend_zscore_dic = {}
+
+            for pix in tqdm(dic):
+                dryland_values = array_mask[pix]
+                if np.isnan(dryland_values):
+                    continue
+                crop_values = crop_mask[pix]
+                if crop_values == 16 or crop_values == 17 or crop_values == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+                r, c = pix
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+                print(len(time_series))
+                # print(time_series)
+                time_series = np.array(time_series, dtype=float)
+                # plt.plot(time_series)
+                # plt.show()
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.std(time_series) == 0:
+                    continue
+                ##### if count of nan is more than 50%, then skip
+                if np.sum(np.isnan(time_series)) / len(time_series) > 0.5:
+                    continue
+                # mean = np.nanmean(time_series)
+                # std=np.nanstd(time_series)
+                # if std == 0:
+                #     continue
+                # delta_time_series = (time_series - mean) / std
+                # if np.isnan(time_series).any():
+                #     continue
+                time_series = T.interp_nan(time_series)
+                detrend_delta_time_series = T.detrend_vals(time_series)
+                # plt.plot(time_series)
+                # plt.plot(detrend_delta_time_series)
+                # plt.show()
+
+                detrend_zscore_dic[pix] = detrend_delta_time_series
+
+            np.save(outf, detrend_zscore_dic)
+
+    pass
 def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    moving_window().run()
+    # moving_window().run()
     # average_LAI().run()
     # processing_TRENDY().run()
+    processing_climate_variable().run()
     pass
 
 if __name__ == '__main__':
