@@ -96,20 +96,20 @@ class multiregression_intrasensitivity():
 
         pass
     def run(self):
-        # self.detrend_deseasonalized_LAI()
+        self.detrend_deseasonalized_LAI()
         # self.detrend_deseasonalized_climate()
         ## calculating intrasensitivity
 
         # self.calculating_multiregression_intrasensitivity()
         # self.trend_analysis()
         # self.moving_window_extraction()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
 
 
         pass
     def detrend_deseasonalized_LAI(self):
-        fdir=rf'D:\Project3\Data\SNU_LAI\extract_phenology_monthly\\'
-        outdir=rf'D:\Project3\Data\SNU_LAI\extract_phenology_monthly_detrend_deseason\\'
+        fdir=rf'D:\Project3\Data\LAI4g\extract_phenology_monthly\\'
+        outdir=rf'D:\Project3\Data\LAI4g\extract_phenology_monthly_detrend_deseason\\'
         T.mk_dir(outdir,force=True)
         dic=T.load_npy_dir(fdir)
         result_dic={}
@@ -124,7 +124,7 @@ class multiregression_intrasensitivity():
                 month_series = vals_T[i]
                 # plt.plot(month_series)
                 month_mean = np.nanmean(month_series)
-                deseason = month_series - month_mean
+                deseason = (month_series - month_mean)/month_mean
                 # plt.plot(deseason)
                 detrend_deseason = T.detrend_vals(deseason)
                 # plt.plot(detrend_deseason)
@@ -142,7 +142,7 @@ class multiregression_intrasensitivity():
             # plt.show()
 
             result_dic[pix] = deseason_arr
-        outf=outdir+'extract_phenology_monthly_detrend_deseason.npy'
+        outf=outdir+'extract_phenology_monthly_detrend_deseason_relative_change.npy'
 
         T.save_npy(result_dic, outf)
         pass
@@ -438,744 +438,170 @@ class multiregression_intersensitivity():
     def __init__(self):
 
 
-        self.fdirX= result_root+rf' \moving_window_multi_regression\obs\moving_window\detrend\\'
-        self.fdir_Y=result_root+rf' \moving_window_multi_regression\obs\moving_window\detrend\\'
+        self.fdirX= result_root+rf' \Multiregression_intersensitivity\input\\'
+        self.fdir_Y=result_root+rf' \Multiregression_intersensitivity\input\\'
 
-        self.xvar_list = ['rainfall_frenquency_growing_season_zscore_detrend',
-                          'Tmax_growing_season_zscore_detrend','VPD_growing_season_zscore_detrend',
+        self.xvar_list = ['Precip_sum_anomaly_detrend',
+                          'Tmax_anomaly_detrend',
                           'sum_rainfall_growing_season_zscore_detrend']
-        self.y_var_list = ['LAI4g_zscore_detrend','GLOBMAP_LAI_zscore_detrend','SNU_LAI_zscore_detrend']
+        self.y_var_list = ['composite_LAI_relative_change_detrend_mean','composite_LAI_relative_change_detrend_median',]
 
 
     def run(self):
         # self.anomaly()
-        # exit()
+        #
         # self.detrend()
         # exit()
-        self.moving_window_extraction()
-        exit()
-        for y_var in self.y_var_list:
-            # print(y_var)
+        # self.moving_window_extraction()
+        self.calculating_multiregression_intersensitivity()
+        # self.trend_analysis()
+        # self.plot_time_series()
+        # exit()
 
 
-            self.window = 38-15+1
-            outdir = self.result_root + rf'\3mm\moving_window_multi_regression\obs\multi_regression_result\growing_season_detrend\\{y_var}\\'
-            T.mk_dir(outdir, force=True)
 
-            # # ####step 1 build dataframe
-            # for i in range(self.window):
-            #
-            #     df_i = self.build_df(self.fdirX, self.fdir_Y, self.xvar_list, y_var,i)
-            #     outf= outdir+rf'\\window{i:02d}.npy'
-            #     # if os.path.isfile(outf):
-            #     #     continue
-            #     print(outf)
-            # #
-            #     self.cal_multi_regression_beta(df_i,self.xvar_list, outf)  # 修改参数
-            ###step 2 crate individial files
-            self.plt_multi_regression_result(outdir)  #### !!!
-    # #
-            # ##step 3 covert to time series
 
-            self.convert_files_to_time_series(outdir,y_var) ## 这里乘以100
-        ### step 4 build dataframe using build Dataframe function and then plot here
-        # self.plot_moving_window_time_series() not use
-        ## spatial trends of sensitivity
-        # self.calculate_trend_trend(outdir)
-        # self.composite_beta()
-        # plot robinson
-        # self.plot_robinson()
-        # self.plot_sensitivity_preicipation_trend()
 
-    def anomaly(self):  ### anomaly GS
 
-        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\\extract_annual_growing_season_mean\\'
+    def calculating_multiregression_intersensitivity(self):
+        import numpy as np
+        import statsmodels.api as sm
+        from tqdm import tqdm
 
-        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\\anomaly\\'
-        Tools().mk_dir(outdir, force=True)
+        # 假设这些是每个像素对应的字典，键是 pix，值是 (year, month)
+        fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\input\\'
+        fLAI=fdir+rf'\\composite_LAI_relative_change_detrend_median.npy'
+        f_temp=fdir+rf'\\Tmax_anomaly_detrend.npy'
+        f_precip=fdir+rf'\\Precip_sum_anomaly_detrend.npy'
 
-        for f in os.listdir(fdir):
+        dic_LAI = T.load_npy(fLAI)
+        dic_temp = T.load_npy(f_temp)
+        dic_precip = T.load_npy(f_precip)
 
-            if not f.endswith('.npy'):
+        out_beta={}
+
+        for pix in tqdm(dic_LAI):
+            if pix not in dic_temp or pix not in dic_precip:
                 continue
 
+            vals_LAI = np.array(dic_LAI[pix], dtype=float)
+            vals_temp = np.array(dic_temp[pix], dtype=float)
+            vals_precip = np.array(dic_precip[pix], dtype=float)
 
-            outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
-            # if os.path.isfile(outf):
-            #     continue
-            # dic=T.load_npy_dir(fdir+f+'\\')
+            # 要求二维 [n_windows, n_years_in_window]
+            if vals_LAI.ndim != 2:
+                continue
 
-            dic = np.load(fdir + f, allow_pickle=True, ).item()
+            n_windows, n_years = vals_LAI.shape
 
-            anomaly_dic = {}
+            beta_p_list = []
+            beta_t_list = []
+            p_p_list = []
+            p_t_list = []
 
-            for pix in tqdm(dic):
+            for w in range(n_windows):
+                y = vals_LAI[w, :]
+                x1 = vals_precip[w, :]
+                x2 = vals_temp[w, :]
 
-                r, c = pix
-
-                time_series = dic[pix]['growing_season']
-                print(len(time_series))
-
-                time_series = np.array(time_series,float)
-
-                time_series[time_series < -999] = np.nan
-
-                if np.isnan(np.nanmean(time_series)):
+                # 有效数据检查
+                mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2)
+                print(mask.sum())
+                if mask.sum() < 5:
+                    beta_p_list.append(np.nan)
+                    beta_t_list.append(np.nan)
+                    p_p_list.append(np.nan)
+                    p_t_list.append(np.nan)
                     continue
-                # plt.plot(time_series)
-                # plt.show()
 
-                mean = np.nanmean(time_series)
-                std = np.nanstd(time_series)
+                X = np.column_stack([x1[mask], x2[mask]])
+                X = sm.add_constant(X)
+                y_valid = y[mask]
 
-                delta_time_series = (time_series - mean)
-                #
-                # plt.plot(delta_time_series)
-                # plt.show()
+                try:
+                    model = sm.OLS(y_valid, X).fit()
+                    betas = model.params
+                    pvals = model.pvalues
+                    beta_p_list.append(betas[1])  # 降雨敏感性
+                    beta_t_list.append(betas[2])  # 温度敏感性
+                    p_p_list.append(pvals[1])
+                    p_t_list.append(pvals[2])
+                except:
+                    beta_p_list.append(np.nan)
+                    beta_t_list.append(np.nan)
+                    p_p_list.append(np.nan)
+                    p_t_list.append(np.nan)
 
-                anomaly_dic[pix] = delta_time_series
+            out_beta[pix] = {
+                'intersensitivity_precip_val': np.array(beta_p_list),
+                'intersensitivity_precip_pval': np.array(p_p_list),
+                'intersensitivity_temp_val': np.array(beta_t_list),
+                'intersensitivity_temp_pval': np.array(p_t_list)
 
-            np.save(outf, anomaly_dic)
+            }
 
-    def detrend(self):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=result_root + rf'\CRU_monthly\anomaly\\'
-        outdir=result_root + rf'\CRU_monthly\\detrend\\'
+        # === 保存输出 ===
+        outdir = r'D:\Project3\Result\Nov\Multiregression_intersensitivity\output\\composite_LAI_relative_change_detrend_median\\'
         T.mk_dir(outdir, force=True)
 
-        for f in os.listdir(fdir):
+        T.save_npy(out_beta, outdir + 'multiregression_intrasensitivity.npy')
+
+    def trend_analysis(self):
+        outdir=result_root+r'\Multiregression_intersensitivity\output\\'
+
+        f=result_root+rf'\Multiregression_intersensitivity\output\\multiregression_intrasensitivity.npy'
+        dic=T.load_npy(f)
+        result_dic={}
+        pvalue_result={}
+        for pix in dic:
+            vals=dic[pix]['intersensitivity_precip_val']
+
+            slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
+            result_dic[pix]=slope
+            pvalue_result[pix]=p_value
+        DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + 'multiregression_intrasensitivity_trend.tif')
+        DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + 'multiregression_intrasensitivity_pvalue.tif')
 
-
-            if not f.endswith('.npy'):
-                continue
-
-
-            print(f)
-
-            outf=outdir+f.split('.')[0]+'_detrend.npy'
-            # if isfile(outf):
-            #     continue
-            # dic=T.load_npy_dir(fdir+f+'\\')
-            dic = dict(np.load( fdir+f, allow_pickle=True, ).item())
-
-            detrend_zscore_dic={}
-
-            for pix in tqdm(dic):
-                dryland_values=array_mask[pix]
-                if np.isnan(dryland_values):
-                    continue
-                crop_values=crop_mask[pix]
-                if crop_values == 16 or crop_values == 17 or crop_values == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-                r, c= pix
-                # print(len(dic[pix]))
-                time_series = dic[pix]
-                # print(len(time_series));exit()
-                # print(time_series)
-                time_series=np.array(time_series,dtype=float)
-                # plt.plot(time_series)
-                # plt.show()
-                time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    continue
-                if np.std(time_series) == 0:
-                    continue
-                ##### if count of nan is more than 50%, then skip
-                if np.sum(np.isnan(time_series))/len(time_series) > 0.5:
-                    continue
-                # mean = np.nanmean(time_series)
-                # std=np.nanstd(time_series)
-                # if std == 0:
-                #     continue
-                # delta_time_series = (time_series - mean) / std
-                # if np.isnan(time_series).any():
-                #     continue
-                time_series=T.interp_nan(time_series)
-                detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
-                # plt.plot(time_series,color='blue')
-                # plt.plot(detrend_delta_time_series,color='red')
-                # plt.show()
-
-                detrend_zscore_dic[pix] = detrend_delta_time_series
-
-            np.save(outf, detrend_zscore_dic)
-
-    def moving_window_extraction(self):
-
-        fdir_all = result_root + rf'\CRU_monthly\detrend\\'
-
-        outdir = result_root  + rf'\CRU_monthly\detrend\\moving_window_extraction\\'
-        T.mk_dir(outdir, force=True)
-        # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
-        T.mk_dir(outdir, force=True)
-        for f in os.listdir(fdir_all):
-
-            if not f.endswith('.npy'):
-                continue
-
-            outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
-
-            # if os.path.isfile(outf):
-            #     continue
-            # if os.path.isfile(outf):
-            #     continue
-
-            dic = T.load_npy(fdir_all + f)
-            window = 15
-
-            new_x_extraction_by_window = {}
-            for pix in tqdm(dic):
-
-                time_series = dic[pix]
-                # time_series = dic[pix]
-
-                time_series = np.array(time_series)
-                # if T.is_all_nan(time_series):
-                #     continue
-                if len(time_series) == 0:
-                    continue
-
-                # time_series[time_series < -999] = np.nan
-                if np.isnan(np.nanmean(time_series)):
-                    print('error')
-                    continue
-                print((len(time_series)))
-                ## if all values are identical, then continue
-                if np.nanmax(time_series) == np.nanmin(time_series):
-                    continue
-
-                # new_x_extraction_by_window[pix] = self.forward_window_extraction_detrend_anomaly(time_series, window)
-                new_x_extraction_by_window[pix] = self.forward_window_extraction(time_series, window)
-
-            T.save_npy(new_x_extraction_by_window, outf)
-
-
-
-
-    def forward_window_extraction(self, x, window):
-        # 前窗滤波
-        # window = window-1
-        # 不改变数据长度
-
-        if window < 0:
-            raise IOError('window must be greater than 0')
-        elif window == 0:
-            return x
-        else:
-            pass
-
-        x = np.array(x)
-
-        # new_x = np.array([])
-        # plt.plot(x)
-        # plt.show()
-        new_x_extraction_by_window=[]
-        for i in range(len(x)+1):
-            if i + window >= len(x)+1:  ####revise  here!!
-                continue
-            else:
-                anomaly = []
-                relative_change_list=[]
-                x_vals=[]
-                for w in range(window):
-                    x_val=(x[i + w])
-                    x_vals.append(x_val)
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                # x_mean=np.nanmean(x_vals)
-
-                # for i in range(len(x_vals)):
-                #     if x_vals[0]==None:
-                #         continue
-                    # x_anomaly=(x_vals[i]-x_mean)
-                    # relative_change = (x_vals[i] - x_mean) / x_mean
-
-                    # relative_change_list.append(x_vals)
-                new_x_extraction_by_window.append(x_vals)
-        return new_x_extraction_by_window
-
-
-
-
-    def build_df(self, fdir_X, fdir_Y, xvar_list,y_var,w):
-
-        df = pd.DataFrame()
-        dic_y=T.load_npy(fdir_Y+y_var+'.npy')
-        pix_list = []
-        y_val_list=[]
-
-        for pix in dic_y:
-            r,c= pix
-
-
-            if len(dic_y[pix]) == 0:
-                continue
-            vals = dic_y[pix][w]
-            # plt.plot(vals)
-            # plt.show()
-
-            # exit()
-            if len(vals) == 0:
-                continue
-            vals = np.array(vals)
-            vals = np.array(vals,dtype=float)
-
-
-            vals[vals>999.0] = np.nan
-            vals[vals<-999.0] = np.nan
-
-            pix_list.append(pix)
-            y_val_list.append(vals)
-
-        df['pix'] = pix_list
-        df['y'] = y_val_list
-
-        ##df histogram
-
-
-
-        # build x
-
-        for xvar in xvar_list:
-
-
-            x_val_list = []
-            x_arr = T.load_npy(fdir_X+xvar+'.npy')
-            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
-                pix = row.pix
-                if not pix in x_arr:
-                    x_val_list.append([])
-                    continue
-                # print(len(x_arr[pix]))
-                if len(x_arr[pix]) < self.window:
-                    x_val_list.append([])
-                    continue
-                vals = x_arr[pix][w]
-                vals = np.array(vals)
-                vals = np.array(vals, dtype=float)
-                vals[vals > 999] = np.nan
-                vals[vals < -999] = np.nan
-                if len(vals) == 0:
-                    x_val_list.append([])
-                    continue
-                x_val_list.append(vals)
-
-            df[xvar] = x_val_list
-
-
-        return df
-
-
-
-    def __linearfit(self, x, y):
-        '''
-        最小二乘法拟合直线
-        :param x:
-        :param y:
-        :return:
-        '''
-        N = float(len(x))
-        sx, sy, sxx, syy, sxy = 0, 0, 0, 0, 0
-        for i in range(0, int(N)):
-            sx += x[i]
-            sy += y[i]
-            sxx += x[i] * x[i]
-            syy += y[i] * y[i]
-            sxy += x[i] * y[i]
-        a = (sy * sx / N - sxy) / (sx * sx / N - sxx)
-        b = (sy - a * sx) / N
-        r = -(sy * sx / N - sxy) / math.sqrt((sxx - sx * sx / N) * (syy - sy * sy / N))
-        return a, b, r
-
-
-    def cal_multi_regression_beta(self, df, x_var_list, outf):
-
-        multi_derivative = {}
-        multi_pvalue = {}
-
-
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-            pix = row.pix
-            r,c=pix
-
-            y_vals = row['y']
-            y_vals[y_vals<-999]=np.nan
-            y_vals = T.remove_np_nan(y_vals)
-            if len(y_vals) == 0:
-                continue
-            y_vals = np.array(y_vals)
-            # y_vals_detrend=signal.detrend(y_vals)
-
-
-            #  calculate partial derivative with multi-regression
-            df_new = pd.DataFrame()
-            x_var_list_valid = []
-
-            for x in x_var_list:
-                x_vals = row[x]
-
-                if len(x_vals) == 0:
-                    continue
-
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-                x_vals = T.interp_nan(x_vals)
-                # print(x_vals)
-                if x_vals[0] == None:
-                    continue
-                # x_vals_detrend = signal.detrend(x_vals) #detrend
-                df_new[x] = x_vals
-                # df_new[x] = x_vals_detrend   #detrend
-
-                x_var_list_valid.append(x)
-            if len(df_new) <= 3:
-                continue
-
-            df_new['y'] = y_vals  # nodetrend
-
-            # T.print_head_n(df_new)
-            df_new = df_new.dropna(axis=1, how='all')
-            x_var_list_valid_new = []
-            for v_ in x_var_list_valid:
-                if not v_ in df_new:
-                    continue
-                else:
-                    x_var_list_valid_new.append(v_)
-            # T.print_head_n(df_new)
-
-            df_new = df_new.dropna()
-            linear_model = LinearRegression()
-            # print(df_new['y'])
-
-            linear_model.fit(df_new[x_var_list_valid_new], df_new['y'])
-            # coef_ = np.array(linear_model.coef_) / y_mean
-            coef_ = np.array(linear_model.coef_)
-            coef_dic = dict(zip(x_var_list_valid_new, coef_))
-            ## pvalue
-            X=df_new[x_var_list_valid_new]
-            Y=df_new['y']
-            try:
-                sse = np.sum((linear_model.predict(X) -Y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
-
-                se = np.array([
-                    np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X))))
-                    for i in range(sse.shape[0])
-                ])
-
-                t = coef_ / se
-                p = 2 * (1 - stats.t.cdf(np.abs(t), Y.shape[0] - X.shape[1]))
-            except:
-                p=np.nan
-
-            multi_derivative[pix] = coef_dic
-            multi_pvalue[pix] = p
-
-        T.save_npy(multi_derivative, outf)
-        T.save_npy(multi_pvalue, outf.replace('.npy', '_pvalue.npy'))
-
-    pass
-
-    def plt_multi_regression_result(self, multi_regression_result_dir):
-        fdir = multi_regression_result_dir
-        for f in os.listdir(fdir):
-            if not f.endswith('.npy'):
-                continue
-            if 'pvalue' in f:
-                continue
-            print(f)
-
-            w=f.split('\\')[-1].split('.')[0][-2:]
-
-
-            w=int(w)
-
-            dic = T.load_npy(fdir+f)
-            var_list = []
-            for pix in dic:
-                # print(pix)
-                vals = dic[pix]
-                for var_i in vals:
-                    var_list.append(var_i)
-            var_list = list(set(var_list))
-            for var_i in var_list:
-                spatial_dic = {}
-                for pix in dic:
-                    dic_i = dic[pix]
-                    if not var_i in dic_i:
-                        continue
-                    val = dic_i[var_i]
-                    spatial_dic[pix] = val
-                arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-                outdir=fdir+'TIFF\\'
-                T.mk_dir(outdir)
-                outf=outdir+f.replace('.npy','')
-
-                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, outf + f'_{var_i}.tif')
-                std = np.nanstd(arr)
-                mean = np.nanmean(arr)
-                vmin = mean - std
-                vmax = mean + std
-                # plt.figure()
-                # arr[arr > 0.1] = 1
-                # plt.imshow(arr,vmin=-0.5,vmax=0.5)
-                #
-                # plt.title(var_i)
-                # plt.colorbar()
-
-            # plt.show()
-    def convert_files_to_time_series(self, multi_regression_result_dir,y_var):
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        # average_LAI_f = self.result_root + rf'state_variables\LAI4g_1982_2020.npy'
-        # average_LAI_dic = T.load_npy(average_LAI_f)  ### normalized Co2 effect
-
-
-        fdir = multi_regression_result_dir+'\\'+'TIFF\\'
-
-
-
-        variable_list = ['sum_rainfall_growing_season_zscore','rainfall_frenquency_growing_season_zscore']
-
-        new_name={'sum_rainfall_growing_season_zscore': f'{y_var}_intersensitivity',
-                  'rainfall_frenquency_growing_season_zscore':f'{y_var}_intrasensitivity'}
-
-
-        for variable in variable_list:
-            array_list = []
-
-            for f in os.listdir(fdir):
-
-                if not variable in f:
-                    continue
-                if not f.endswith('.tif'):
-                    continue
-                if 'pvalue' in f:
-                    continue
-                print(f)
-
-                array= ToRaster().raster2array(fdir+f)[0]
-                array = np.array(array)
-
-
-                array_list.append(array)
-
-            array_list=np.array(array_list)
-
-            ## array_list to dic
-            dic=DIC_and_TIF(pixelsize=0.5).void_spatial_dic()
-            result_dic = {}
-            for pix in dic:
-                r, c = pix
-
-                if r < 60:
-                    continue
-                landcover_value = crop_mask[pix]
-                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
-                    continue
-                if dic_modis_mask[pix] == 12:
-                    continue
-
-
-
-                dic[pix]=array_list[:,r,c] ## extract time series
-
-
-
-
-                time_series=dic[pix]
-
-                time_series = np.array(time_series)
-                time_series = time_series
-                result_dic[pix]=time_series
-                if np.nanmean(dic[pix])<=5:
-                    continue
-                # print(len(dic[pix]))
-                # exit()
-            outdir=multi_regression_result_dir+'\\'+'npy_time_series\\'
-            print(outdir)
-            # exit()
-            T.mk_dir(outdir,force=True)
-            outf=outdir+new_name[variable]+'.npy'
-            np.save(outf,result_dic)
 
         pass
 
-    def plot_moving_window_time_series(self):
-        df= T.load_df(result_root + rf'\3mm\Dataframe\moving_window_multi_regression\\phenology_LAI_mean_trend.df')
 
-        # variable_list = ['precip_detrend','rainfall_frenquency_detrend']
-        variable_list = ['precip', 'rainfall_frenquency','rainfall_seasonality_all_year','rainfall_intensity']
+    def plot_time_series(self):
+        f=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output\\multiregression_intrasensitivity.npy'
+        out_beta_dic=T.load_npy(f)
 
-        df=df.dropna()
-        df=self.df_clean(df)
+        for pix in out_beta_dic:
+            beta_p = np.array(out_beta_dic[pix]['intersensitivity_precip_val'])  # 降雨敏感性
+            beta_t = np.array(out_beta_dic[pix]['intersensitivity_temp_val'])  # 温度敏感性
 
-        fig = plt.figure()
-        i = 1
 
-        for variable in variable_list:
+            # 去掉异常值
+            beta_p[np.abs(beta_p) > 999] = np.nan
+            beta_t[np.abs(beta_t) > 999] = np.nan
 
-            ax = fig.add_subplot(2, 2, i)
-
-            vals = df[f'{variable}'].tolist()
-
-            vals_nonnan = []
-
-            for val in vals:
-                if type(val) == float:  ## only screening
-                    continue
-                if np.isnan(np.nanmean(val)):
-                    continue
-                if np.nanmean(val) <=-999:
-                    continue
-
-                vals_nonnan.append(val)
-            ###### calculate mean
-            vals_mean = np.array(vals_nonnan)  ## axis=0, mean of each row  竖着加
-            vals_mean = np.nanmean(vals_mean, axis=0)
-            vals_mean = vals_mean.tolist()
-            plt.plot(vals_mean, label=variable)
-
-            i = i + 1
-
-        plt.xlabel('year')
-
-        plt.ylabel(f'{variable}_LAI4g')
-        # plt.legend()
-
-        plt.show()
-    def calculate_trend_trend(self,outdir):  ## calculate the trend of trend
-
-    ## here input is the npy file
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        fdir=outdir+'\\npy_time_series\\'
-        outdir_trend=outdir+'\\trend\\'
-        T.mk_dir(outdir_trend,force=True)
+            # 绘制时间序列
+            plt.figure(figsize=(8, 4))
+            plt.plot(beta_p, marker='o', color='#1f78b4', label='β_precip (rainfall sensitivity)')
+            plt.plot(beta_t, marker='s', color='#e31a1c', label='β_temp (temperature sensitivity)')
+            plt.axhline(0, color='k', lw=1)
+            plt.xlabel('Moving window index')
+            plt.ylabel('Sensitivity coefficient')
+            plt.title(f'Intersensitivity time series at pixel {pix}')
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
 
 
 
 
-        for f in os.listdir(fdir):
-            if not f.endswith('npy'):
-                continue
-
-            if 'p_value' in f:
-                continue
-
-
-            dic = T.load_npy(fdir + f)
-
-            outf = outdir + f.split('.')[0] + f'_trend.npy'
-            print(outf)
 
 
 
-            trend_dic={}
-            p_value_dic={}
-
-            for pix in tqdm(dic):
-
-                time_series_all = dic[pix]
-                dryland_value=dic_dryland_mask[pix]
-                if np.isnan(dryland_value):
-                    continue
-                time_series_all = np.array(time_series_all)
-
-                if len(time_series_all) < 24:
-                    continue
-                time_series_all[time_series_all < -999] = np.nan
-
-                if np.isnan(np.nanmean(time_series_all)):
-                    print('error')
-                    continue
-                slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series_all)), time_series_all)
-
-                trend_dic[pix]=slope
-                p_value_dic[pix]=p_value
-
-            arr_trend=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
-            arr_p_value = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
-            # plt.imshow(arr_trend)
-            # plt.colorbar()
-            # plt.show()
-            outf = outdir_trend + f.split('.')[0] + f'_trend.tif'
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend,outf)
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_p_value, outf + '_p_value.tif')
-                ## save
-            # np.save(outf, trend_dic)
-            # np.save(outf+'_p_value', p_value_dic)
-
-            ##tiff
-
-    def composite_beta(self):
-        f_1=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\SNU_LAI\npy_time_series\\beta.npy'
-        f_2=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\LAI4g\npy_time_series\beta.npy'
-        f_3=rf'D:\Project3\Result\3mm\moving_window_multi_regression\multiresult_zscore_detrend\\GLOBALMAP\npy_time_series\\beta.npy'
-        dic1=np.load(f_1,allow_pickle=True).item()
-        dic2=np.load(f_2,allow_pickle=True).item()
-        dic3=np.load(f_3,allow_pickle=True).item()
-        average_dic= {}
-
-        for pix in dic1:
-            if not pix in dic2:
-                continue
-            if not pix in dic3:
-                continue
-            value1=dic1[pix]
-            value2=dic2[pix]
-            value3=dic3[pix]
-            value1[value1<-999]=np.nan
-            value2[value2<-999]=np.nan
-            value3[value3<-999]=np.nan
 
 
 
-            value1=np.array(value1)
-            value2=np.array(value2)
-            value3=np.array(value3)
-            if np.isnan(np.nanmean(value1)) or np.isnan(np.nanmean(value2)) or np.isnan(np.nanmean(value3)):
-                continue
-            if len(value1)!=24 or len(value2)!=24 or len(value3)!=24:
-                print(pix,len(value1),len(value2),len(value3))
-                continue
 
-
-            average_val=np.nanmean([value1,value2,value3],axis=0)
-            # print(average_val)
-            average_dic[pix]=average_val
-            # plt.plot(value1,color='blue')
-            # plt.plot(value2,color='green')
-            # plt.plot(value3,color='orange')
-            # plt.plot(average_val,color='red')
-            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
-            # plt.show()
-
-        np.save(rf'D:\Project3\Result\3mm\moving_window_multi_regression\\multiresult_zscore_detrend\composite_LAI\\composite_LAI_beta_mean.npy',average_dic)
 
 
 
@@ -1226,60 +652,223 @@ class multiregression_intersensitivity():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
-    def plot_significant_percentage_area(self):  ### insert bar plot for all spatial map to calculate percentage
 
-        dff = result_root + rf'3mm\Dataframe\Trend\\Trend.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-        ##plt histogram of LAI
-        df=df[df['LAI4g_1983_2020_trend']<30]
-        df=df[df['LAI4g_1983_2020_trend']>-30]
-
-        vals_p_value = df['LAI4g_1983_2020_p_value'].values
-        significant_browning_count = 0
-        non_significant_browning_count = 0
-        significant_greening_count = 0
-        non_significant_greening_count = 0
-
-        for i in range(len(vals_p_value)):
-            if vals_p_value[i] < 0.05:
-                if df['LAI4g_1983_2020_trend'].values[i] > 0:
-                    significant_greening_count = significant_greening_count + 1
-                else:
-                    significant_browning_count = significant_browning_count + 1
-            else:
-                if df['LAI4g_1983_2020_trend'].values[i] > 0:
-                    non_significant_browning_count = non_significant_browning_count + 1
-                else:
-                    non_significant_greening_count = non_significant_greening_count + 1
-            ## plot bar
-        ##calculate percentage
-        significant_greening_percentage = significant_greening_count / len(vals_p_value)*100
-        non_significant_greening_percentage = non_significant_greening_count / len(vals_p_value)*100
-        significant_browning_percentage = significant_browning_count / len(vals_p_value)*100
-        non_significant_browning_percentage = non_significant_browning_count / len(vals_p_value)*100
-
-        count = [non_significant_browning_percentage,significant_browning_percentage, significant_greening_percentage,
-
-                 non_significant_greening_percentage]
-        print(count)
-        labels = ['non_significant_browning','significant_browning', 'significant_greening',
-                  'non_significant_greening']
-        color_list=['navajowhite','chocolate','navy','lightblue',]
-        ##gap = 0.1
-        df_new=pd.DataFrame({'count':count})
-        df_new_T=df_new.T
+class multiregression_intersensitivity_TRENDY():
+    def __init__(self):
 
 
-        df_new_T.plot.barh( stacked=True, color=color_list,legend=False,width=0.1,)
-        ## add legend
-        plt.legend(labels)
+        self.fdirX= result_root+rf' \Multiregression_intersensitivity\input\\'
+        self.fdir_Y=result_root+rf' \Multiregression_intersensitivity\input\\'
 
-        plt.ylabel('Percentage (%)')
-        plt.tight_layout()
+        self.xvar_list = ['Precip_sum_anomaly_detrend',
+                          'Tmax_anomaly_detrend',
+                          'sum_rainfall_growing_season_zscore_detrend']
+        self.y_var_list = ['composite_LAI_relative_change_detrend_mean','composite_LAI_relative_change_detrend_median',]
 
-        plt.show()
 
+    def run(self):
+        # self.anomaly()
+        #
+        # self.detrend()
+        # exit()
+        # self.moving_window_extraction()
+        self.calculating_multiregression_intersensitivity()
+        # self.trend_analysis()
+        # self.plot_time_series()
+        # exit()
+
+
+
+
+    def calculating_multiregression_intersensitivity(self):
+        import numpy as np
+        import statsmodels.api as sm
+        from tqdm import tqdm
+
+        # 假设这些是每个像素对应的字典，键是 pix，值是 (year, month)
+        fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\input\\'
+        fLAI=fdir+rf'\\composite_LAI_relative_change_detrend_median.npy'
+        f_temp=fdir+rf'\\Tmax_anomaly_detrend.npy'
+        f_precip=fdir+rf'\\Precip_sum_anomaly_detrend.npy'
+
+        dic_LAI = T.load_npy(fLAI)
+        dic_temp = T.load_npy(f_temp)
+        dic_precip = T.load_npy(f_precip)
+
+        out_beta={}
+
+        for pix in tqdm(dic_LAI):
+            if pix not in dic_temp or pix not in dic_precip:
+                continue
+
+            vals_LAI = np.array(dic_LAI[pix], dtype=float)
+            vals_temp = np.array(dic_temp[pix], dtype=float)
+            vals_precip = np.array(dic_precip[pix], dtype=float)
+
+            # 要求二维 [n_windows, n_years_in_window]
+            if vals_LAI.ndim != 2:
+                continue
+
+            n_windows, n_years = vals_LAI.shape
+
+            beta_p_list = []
+            beta_t_list = []
+            p_p_list = []
+            p_t_list = []
+
+            for w in range(n_windows):
+                y = vals_LAI[w, :]
+                x1 = vals_precip[w, :]
+                x2 = vals_temp[w, :]
+
+                # 有效数据检查
+                mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2)
+                print(mask.sum())
+                if mask.sum() < 5:
+                    beta_p_list.append(np.nan)
+                    beta_t_list.append(np.nan)
+                    p_p_list.append(np.nan)
+                    p_t_list.append(np.nan)
+                    continue
+
+                X = np.column_stack([x1[mask], x2[mask]])
+                X = sm.add_constant(X)
+                y_valid = y[mask]
+
+                try:
+                    model = sm.OLS(y_valid, X).fit()
+                    betas = model.params
+                    pvals = model.pvalues
+                    beta_p_list.append(betas[1])  # 降雨敏感性
+                    beta_t_list.append(betas[2])  # 温度敏感性
+                    p_p_list.append(pvals[1])
+                    p_t_list.append(pvals[2])
+                except:
+                    beta_p_list.append(np.nan)
+                    beta_t_list.append(np.nan)
+                    p_p_list.append(np.nan)
+                    p_t_list.append(np.nan)
+
+            out_beta[pix] = {
+                'intersensitivity_precip_val': np.array(beta_p_list),
+                'intersensitivity_precip_pval': np.array(p_p_list),
+                'intersensitivity_temp_val': np.array(beta_t_list),
+                'intersensitivity_temp_pval': np.array(p_t_list)
+
+            }
+
+
+        # === 保存输出 ===
+        outdir = r'D:\Project3\Result\Nov\Multiregression_intersensitivity\output\\composite_LAI_relative_change_detrend_median\\'
+        T.mk_dir(outdir, force=True)
+
+        T.save_npy(out_beta, outdir + 'multiregression_intrasensitivity.npy')
+
+    def trend_analysis(self):
+        outdir=result_root+r'\Multiregression_intersensitivity\output\\'
+
+        f=result_root+rf'\Multiregression_intersensitivity\output\\multiregression_intrasensitivity.npy'
+        dic=T.load_npy(f)
+        result_dic={}
+        pvalue_result={}
+        for pix in dic:
+            vals=dic[pix]['intersensitivity_precip_val']
+
+            slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
+            result_dic[pix]=slope
+            pvalue_result[pix]=p_value
+        DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + 'multiregression_intrasensitivity_trend.tif')
+        DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + 'multiregression_intrasensitivity_pvalue.tif')
+
+
+        pass
+
+
+    def plot_time_series(self):
+        f=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output\\multiregression_intrasensitivity.npy'
+        out_beta_dic=T.load_npy(f)
+
+        for pix in out_beta_dic:
+            beta_p = np.array(out_beta_dic[pix]['intersensitivity_precip_val'])  # 降雨敏感性
+            beta_t = np.array(out_beta_dic[pix]['intersensitivity_temp_val'])  # 温度敏感性
+
+
+            # 去掉异常值
+            beta_p[np.abs(beta_p) > 999] = np.nan
+            beta_t[np.abs(beta_t) > 999] = np.nan
+
+            # 绘制时间序列
+            plt.figure(figsize=(8, 4))
+            plt.plot(beta_p, marker='o', color='#1f78b4', label='β_precip (rainfall sensitivity)')
+            plt.plot(beta_t, marker='s', color='#e31a1c', label='β_temp (temperature sensitivity)')
+            plt.axhline(0, color='k', lw=1)
+            plt.xlabel('Moving window index')
+            plt.ylabel('Sensitivity coefficient')
+            plt.title(f'Intersensitivity time series at pixel {pix}')
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def plot_robinson(self):
+
+        fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\\npy_time_series\trend\\'
+        temp_root = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\\npy_time_series\trend\\'
+        outdir = result_root+rf'\3mm\moving_window_multi_regression\moving_window\multi_regression_result_detrend_ecosystem_year\\npy_time_series\\\trend_plot\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+            if not 'trend' in f:
+                continue
+
+            fname = f.split('.')[0]
+            fname_p_value = fname.replace('trend', 'p_value')
+            print(fname_p_value)
+            fpath = fdir_trend + f
+            p_value_f = fdir_trend + fname_p_value+'.tif'
+            print(p_value_f)
+            # exit()
+            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-2, vmax=2, is_discrete=True, colormap_n=7, cmap='RdBu')
+
+            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
+            plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + f+'1.pdf'
+            plt.savefig(outf)
+            plt.close()
+
+    pass
+
+
+    def df_clean(self,df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df=df[df['row']>120]
+        df=df[df['Aridity']<0.65]
+        df=df[df['LC_max']<10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
 
 def main():
     # multiregression_intrasensitivity().run()

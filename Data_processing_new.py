@@ -439,8 +439,8 @@ class processing_GLOBMAP():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=result_root + rf'\Nov\GLOBMAP\extract_annual_growing_season_LAI_mean\\'
-        outdir=result_root + rf'Nov\GLOBMAP\\detrend\\'
+        fdir=result_root + rf'\LAI4g\relative_change\\'
+        outdir=result_root + rf'\LAI4g\\relative_change\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -469,7 +469,7 @@ class processing_GLOBMAP():
                     continue
                 r, c= pix
                 # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
                 print(len(time_series))
                 # print(time_series)
                 time_series=np.array(time_series,dtype=float)
@@ -492,9 +492,9 @@ class processing_GLOBMAP():
                 #     continue
                 time_series=T.interp_nan(time_series)
                 detrend_delta_time_series = T.detrend_vals(time_series)
-                plt.plot(time_series)
-                plt.plot(detrend_delta_time_series)
-                plt.show()
+                # plt.plot(time_series)
+                # plt.plot(detrend_delta_time_series)
+                # plt.show()
 
                 detrend_zscore_dic[pix] = detrend_delta_time_series
 
@@ -1306,7 +1306,7 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
@@ -1314,7 +1314,7 @@ class moving_window():
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
         # self.robinson()
 
@@ -1323,16 +1323,18 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\TRENDY\S2\detrend\\'
-        outdir = self.result_root + rf'\TRENDY\S2\15_year\moving_window_extraction\\'
-        # outdir = self.result_root + rf'\3mm\extract_LAI4g_phenology_year\moving_window_extraction\\'
+        fdir_all =result_root+ rf'\TRENDY\S2\relative_change\detrend_relative_change\\'
+        outdir = self.result_root + rf'\\TRENDY\S2\\relative_change\\moving_window_extraction\\'
+
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
 
             if not f.endswith('.npy'):
                 continue
+            # if not 'detrend' in f:
+            #     continue
 
-            #
+
             outf = outdir + f.split('.')[0] + '.npy'
             print(outf)
 
@@ -2195,20 +2197,58 @@ class moving_window():
 
 
         pass
-class average_LAI():
+
+
+
+class processing_composite_LAI():
     def __init__(self):
         pass
-    def run(self):
-        # self.average_LAI_relative_change()
-        self.trend_analysis()
+    def run (self):
+
+        # self.average_detrend_deseasonalized_composite_LAI()
+        self.average_LAI_detrend()
+        pass
+
+
+
+    def average_detrend_deseasonalized_composite_LAI(self):
+
+        f_GLOBMAP=data_root+ rf'\GLOBMAP\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_SNU_LAI=data_root+rf'\SNU_LAI\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        f_LAI4g=data_root+rf'\LAI4g\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
+        outf=result_root+rf'\Composite_LAI\\average_detrend_deseasonalized_composite_LAI.npy'
+        dic_GLOBMAP=T.load_npy(f_GLOBMAP)
+        dic_SNU_LAI=T.load_npy(f_SNU_LAI)
+        dic_LAI4g=T.load_npy(f_LAI4g)
+        result_dic={}
+
+        for pix in dic_GLOBMAP:
+            vals_GLOBMAP=dic_GLOBMAP[pix]
+            if pix not in dic_SNU_LAI:
+                continue
+            vals_SNU_LAI=dic_SNU_LAI[pix]
+            if pix not in dic_LAI4g:
+                continue
+            vals_LAI4g=dic_LAI4g[pix]
+            vals=np.nanmean([vals_GLOBMAP,vals_SNU_LAI,vals_LAI4g],axis=0)
+            # plt.imshow(vals,interpolation='nearest',cmap='jet'
+            #            )
+            # plt.show()
+            result_dic[pix]=vals
+
+        T.save_npy(result_dic,outf)
+
+
+
+
         pass
 
     def average_LAI_relative_change(self):
 
         infdir = result_root
-        f_1 = infdir + rf'LAI4g\\relative_change\\\\LAI4g_relative_change.npy'
-        f_2 = infdir + rf'GLOBMAP\relative_change\\\\GLOBMAP_LAI_relative_change.npy'
-        f_3 = infdir + rf'SNU_LAI\relative_change\\\\SNU_LAI_relative_change.npy'
+        f_1 = infdir + rf'LAI4g\\anomaly\\\\LAI4g_detrend.npy'
+        f_2 = infdir + rf'GLOBMAP\anomaly\\\\GLOBMAP_detrend.npy'
+        f_3 = infdir + rf'SNU_LAI\anomaly\\\\SNU_LAI_detrend.npy'
         dic1 = np.load(f_1, allow_pickle=True).item()
         dic2 = np.load(f_2, allow_pickle=True).item()
         dic3 = np.load(f_3, allow_pickle=True).item()
@@ -2251,10 +2291,64 @@ class average_LAI():
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
 
-        outdir = result_root + rf'\Composite_LAI\\relative_change\\'
+        outdir = result_root + rf'\Composite_LAI\\anomaly_detrend\\'
         Tools().mk_dir(outdir, force=True)
 
-        np.save(outdir + 'composite_LAI_relative_change_mean.npy', average_dic)
+        np.save(outdir + 'composite_LAI_anomaly_detrend_mean.npy', average_dic)
+
+
+    def average_LAI_detrend(self):
+
+        infdir = result_root
+        f_1 = infdir + rf'LAI4g\\relative_change\\\\LAI4g_relative_change_detrend.npy'
+        f_2 = infdir + rf'GLOBMAP\relative_change\\\\GLOBMAP_LAI_relative_change_detrend.npy'
+        f_3 = infdir + rf'SNU_LAI\relative_change\\\\SNU_LAI_relative_change_detrend.npy'
+        dic1 = np.load(f_1, allow_pickle=True).item()
+        dic2 = np.load(f_2, allow_pickle=True).item()
+        dic3 = np.load(f_3, allow_pickle=True).item()
+        average_dic = {}
+
+        for pix in tqdm(dic1):
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1 = dic1[pix]
+            value2 = dic2[pix]
+            value3 = dic3[pix]
+
+            value1 = np.array(value1)
+            value2 = np.array(value2)
+            value3 = np.array(value3)
+            if len(value1) < 38 or len(value2) < 38 or len(value3) < 38:
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+            print(len(value1), len(value2), len(value3))
+            if len(value1) != len(value2) or len(value2) != len(value3):
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+
+
+            average_val = np.nanmedian([value1, value2, value3], axis=0)
+
+            # print(average_val)
+            if np.nanmean(average_val) > 999:
+                continue
+            if np.nanmean(average_val) < -999:
+                continue
+            average_dic[pix] = average_val
+            #
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+
+        outdir = result_root + rf'\Composite_LAI\\relative_change_detrend\\'
+        Tools().mk_dir(outdir, force=True)
+
+        np.save(outdir + 'composite_LAI_relative_change_detrend_median.npy', average_dic)
 
     def trend_analysis(self):  ##each window average trend
 
@@ -2334,73 +2428,79 @@ class average_LAI():
 
             np.save(outf + '_trend', arr_trend)
             np.save(outf + '_p_value', p_value_arr)
-class processing_composite_LAI():
-    def __init__(self):
-        pass
-    def run (self):
-        self.avarage_annual_growing_season_LAI_mean()
-        self.average_detrend_deseasonalized_composite_LAI()
-        pass
 
-    def avarage_annual_growing_season_LAI_mean(self):
 
-        f_GLOBMAP=data_root+ rf'\GLOBMAP\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        f_SNU_LAI=data_root+rf'\SNU_LAI\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        f_LAI4g=data_root+rf'\LAI4g\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        outf=result_root+rf'\Composite_LAI\\average_detrend_deseasonalized_composite_LAI.npy'
-        dic_GLOBMAP=T.load_npy(f_GLOBMAP)
-        dic_SNU_LAI=T.load_npy(f_SNU_LAI)
-        dic_LAI4g=T.load_npy(f_LAI4g)
-        result_dic={}
+    def detrend(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        for pix in dic_GLOBMAP:
-            vals_GLOBMAP=dic_GLOBMAP[pix]
-            if pix not in dic_SNU_LAI:
+        fdir=result_root + rf'\Composite_LAI\relative_change\\'
+        outdir=result_root + rf'\Composite_LAI\\relative_change\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
                 continue
-            vals_SNU_LAI=dic_SNU_LAI[pix]
-            if pix not in dic_LAI4g:
-                continue
-            vals_LAI4g=dic_LAI4g[pix]
-            vals=np.nanmean([vals_GLOBMAP,vals_SNU_LAI,vals_LAI4g],axis=0)
-            # plt.imshow(vals,interpolation='nearest',cmap='jet'
-            #            )
-            # plt.show()
-            result_dic[pix]=vals
-
-        T.save_npy(result_dic,outf)
 
 
-    def average_detrend_deseasonalized_composite_LAI(self):
+            print(f)
 
-        f_GLOBMAP=data_root+ rf'\GLOBMAP\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        f_SNU_LAI=data_root+rf'\SNU_LAI\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        f_LAI4g=data_root+rf'\LAI4g\extract_phenology_monthly_detrend_deseason\\extract_phenology_monthly_detrend_deseason.npy'
-        outf=result_root+rf'\Composite_LAI\\average_detrend_deseasonalized_composite_LAI.npy'
-        dic_GLOBMAP=T.load_npy(f_GLOBMAP)
-        dic_SNU_LAI=T.load_npy(f_SNU_LAI)
-        dic_LAI4g=T.load_npy(f_LAI4g)
-        result_dic={}
+            outf=outdir+f.split('.')[0]+'_detrend.npy'
+            # if isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+            dic = dict(np.load( fdir+f, allow_pickle=True, ).item())
 
-        for pix in dic_GLOBMAP:
-            vals_GLOBMAP=dic_GLOBMAP[pix]
-            if pix not in dic_SNU_LAI:
-                continue
-            vals_SNU_LAI=dic_SNU_LAI[pix]
-            if pix not in dic_LAI4g:
-                continue
-            vals_LAI4g=dic_LAI4g[pix]
-            vals=np.nanmean([vals_GLOBMAP,vals_SNU_LAI,vals_LAI4g],axis=0)
-            # plt.imshow(vals,interpolation='nearest',cmap='jet'
-            #            )
-            # plt.show()
-            result_dic[pix]=vals
+            detrend_zscore_dic={}
 
-        T.save_npy(result_dic,outf)
+            for pix in tqdm(dic):
+                dryland_values=array_mask[pix]
+                if np.isnan(dryland_values):
+                    continue
+                crop_values=crop_mask[pix]
+                if crop_values == 16 or crop_values == 17 or crop_values == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+                r, c= pix
+                # print(len(dic[pix]))
+                time_series = dic[pix]['growing_season']
+                print(len(time_series))
+                # print(time_series)
+                time_series=np.array(time_series,dtype=float)
+                # plt.plot(time_series)
+                # plt.show()
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.std(time_series) == 0:
+                    continue
+                ##### if count of nan is more than 50%, then skip
+                if np.sum(np.isnan(time_series))/len(time_series) > 0.5:
+                    continue
+                # mean = np.nanmean(time_series)
+                # std=np.nanstd(time_series)
+                # if std == 0:
+                #     continue
+                # delta_time_series = (time_series - mean) / std
+                # if np.isnan(time_series).any():
+                #     continue
+                time_series=T.interp_nan(time_series)
+                detrend_delta_time_series = T.detrend_vals(time_series)
+                # plt.plot(time_series)
+                # plt.plot(detrend_delta_time_series)
+                # plt.show()
+
+                detrend_zscore_dic[pix] = detrend_delta_time_series
+
+            np.save(outf, detrend_zscore_dic)
 
 
-
-
-        pass
 class processing_TRENDY():
     def __init__(self):
         pass
@@ -2410,7 +2510,8 @@ class processing_TRENDY():
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
         # self.trend_analysis()
-        self.detrend()
+        # self.detrend()
+        self.TRENDY_ensemble_npy()
         pass
 
     def extract_phenology_monthly_variables(self):
@@ -2736,15 +2837,16 @@ class processing_TRENDY():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir_all=result_root + rf'\TRENDY\S2\extract_annual_growing_season_LAI_mean\\'
-        outdir=result_root + rf'\TRENDY\S2\\detrend\\'
+        fdir_all=result_root + rf'\TRENDY\S2\relative_change\\relative_change\\'
+        outdir=result_root + rf'\TRENDY\S2\\relative_change\\detrend_relative_change\\'
         T.mk_dir(outdir, force=True)
 
-        for fdir in os.listdir(fdir_all):
+        for f in os.listdir(fdir_all):
 
-            fpath = join(fdir_all, fdir, f'{fdir}_LAI.npy')
+            fpath = join( fdir_all, f)
+            fname=f.split('.')[0]
 
-            outf=outdir + f'\\{fdir}_detrend.npy'
+            outf=outdir + f'\\{fname}_detrend.npy'
 
             dic = dict(np.load( fpath, allow_pickle=True, ).item())
 
@@ -2761,7 +2863,7 @@ class processing_TRENDY():
                     continue
                 r, c= pix
                 # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
                 print(len(time_series))
                 # print(time_series)
                 time_series=np.array(time_series,dtype=float)
@@ -2791,6 +2893,68 @@ class processing_TRENDY():
                 detrend_zscore_dic[pix] = detrend_delta_time_series
 
             np.save(outf, detrend_zscore_dic)
+
+    def TRENDY_ensemble_npy(self):
+        composite_LAI_reference=result_root + rf'\LAI4g\relative_change\\LAI4g_relative_change_detrend.npy'
+
+        composite_LAI = dict(np.load(composite_LAI_reference, allow_pickle=True, ).item())
+
+        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+
+        fdir = result_root + rf'\TRENDY\S2\relative_change\detrend_relative_change\\'
+
+        result_dic={}
+
+        for model in model_list:
+            fpath = fdir + model + '_relative_change_detrend.npy'
+            dic=T.load_npy(fpath)
+            result_dic[model]=dic
+        ## for each pixel calculate mean
+        all_pixels = list(result_dic[model_list[0]].keys())
+        ensemble_mean_dic = {}
+
+        for pix in all_pixels:
+            timeseries_list = []
+            for model in model_list:
+                if pix not in result_dic[model]:
+                    continue
+                vals = result_dic[model][pix]
+                vals_Ref = composite_LAI[pix]
+
+                # print(model, len(result_dic[model][pix]))
+                if len(vals)!= len(vals_Ref):
+                    continue
+                if np.all(np.isnan(vals)):
+                    continue
+
+                timeseries_list.append(vals)
+            print(len(timeseries_list))
+
+            if timeseries_list:
+                # stack 成 (13, T) 然后对 axis=0 平均
+                timeseries_list = np.array(timeseries_list)
+                for time_series in timeseries_list:
+                    plt.plot(time_series)
+
+
+
+                mean_ts = np.nanmedian(timeseries_list, axis=0)
+
+                # plt.plot(mean_ts,color='k',label='median')
+                # plt.legend()
+                #
+                # plt.show()
+
+                ensemble_mean_dic[pix] = mean_ts
+
+
+        outf=result_root + rf'TRENDY\S2\relative_change\detrend_relative_change\TRENDY_ensemble_relative_change_detrend_median.npy'
+        T.save_npy(ensemble_mean_dic, outf)
 
 
 
@@ -2936,9 +3100,9 @@ class processing_climate_variable():
 
 
     def extract_annual_growing_season_LAI_mean(self):  ## extract LAI average
-        fdir = rf'D:\Project3\Data\CRU_monthly\\Tmax\\extract_phenology_monthly\\'
+        fdir = rf'D:\Project3\Data\CRU_monthly\\Precip\\extract_phenology_monthly\\'
 
-        outdir_CV = result_root + rf'\CRU_monthly\\Tmax\\extract_annual_growing_season_mean\\'
+        outdir_CV = result_root + rf'\CRU_monthly\\extract_annual_growing_season_mean\\'
         # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
@@ -2964,7 +3128,7 @@ class processing_climate_variable():
                     continue
                 val = np.array(val)
 
-                sum_growing_season = np.nanmean(val)
+                sum_growing_season = np.nansum(val)
 
                 growing_season_mean_list.append(sum_growing_season)
 
@@ -2972,9 +3136,132 @@ class processing_climate_variable():
                 'growing_season': growing_season_mean_list,
             }
 
-        outf = outdir_CV + 'annual_growing_season_Tmax_mean.npy'
+        outf = outdir_CV + 'Precip_sum.npy'
 
         np.save(outf, result_dic)
+
+    def anomaly(self):  ### anomaly GS
+
+        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\\'
+
+        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\\anomaly\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+            if not f.endswith('.npy'):
+                continue
+
+            outf = outdir + f.split('.')[0] + '_anomaly.npy'
+            print(outf)
+            # if os.path.isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+
+            dic = np.load(fdir + f, allow_pickle=True, ).item()
+
+            anomaly_dic = {}
+
+            for pix in tqdm(dic):
+
+                r, c = pix
+
+                time_series = dic[pix]['growing_season']
+                print(len(time_series))
+
+                time_series = np.array(time_series, float)
+
+                time_series[time_series < -999] = np.nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # plt.plot(time_series)
+                # plt.show()
+
+                mean = np.nanmean(time_series)
+                std = np.nanstd(time_series)
+
+                delta_time_series = (time_series - mean)
+                #
+                # plt.plot(delta_time_series)
+                # plt.show()
+
+                anomaly_dic[pix] = delta_time_series
+
+            np.save(outf, anomaly_dic)
+
+    def detrend(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir=result_root + rf'\CRU_monthly\anomaly\\'
+        outdir=result_root + rf'\CRU_monthly\\detrend\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+
+            if not f.endswith('.npy'):
+                continue
+
+
+            print(f)
+
+            outf=outdir+f.split('.')[0]+'_detrend.npy'
+            # if isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+            dic = dict(np.load( fdir+f, allow_pickle=True, ).item())
+
+            detrend_zscore_dic={}
+
+            for pix in tqdm(dic):
+                dryland_values=array_mask[pix]
+                if np.isnan(dryland_values):
+                    continue
+                crop_values=crop_mask[pix]
+                if crop_values == 16 or crop_values == 17 or crop_values == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+                r, c= pix
+                # print(len(dic[pix]))
+                time_series = dic[pix]
+                # print(len(time_series));exit()
+                # print(time_series)
+                time_series=np.array(time_series,dtype=float)
+                # plt.plot(time_series)
+                # plt.show()
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.std(time_series) == 0:
+                    continue
+                ##### if count of nan is more than 50%, then skip
+                if np.sum(np.isnan(time_series))/len(time_series) > 0.5:
+                    continue
+                # mean = np.nanmean(time_series)
+                # std=np.nanstd(time_series)
+                # if std == 0:
+                #     continue
+                # delta_time_series = (time_series - mean) / std
+                # if np.isnan(time_series).any():
+                #     continue
+                time_series=T.interp_nan(time_series)
+                detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
+                # plt.plot(time_series,color='blue')
+                # plt.plot(detrend_delta_time_series,color='red')
+                # plt.show()
+
+                detrend_zscore_dic[pix] = detrend_delta_time_series
+
+            np.save(outf, detrend_zscore_dic)
+
 
 
 
@@ -2983,10 +3270,11 @@ def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    # moving_window().run()
-    # average_LAI().run()
+    moving_window().run()
+    # processing_composite_LAI().run()
+
     # processing_TRENDY().run()
-    processing_climate_variable().run()
+    # processing_climate_variable().run()
     pass
 
 if __name__ == '__main__':
