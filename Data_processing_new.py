@@ -2206,8 +2206,9 @@ class processing_composite_LAI():
         pass
     def run (self):
 
-        self.average_detrend_deseasonalized_composite_LAI()
+        # self.average_detrend_deseasonalized_composite_LAI()
         # self.average_LAI_detrend()
+        self.average_LAI_detrend_CV()
         pass
 
 
@@ -2350,6 +2351,59 @@ class processing_composite_LAI():
         Tools().mk_dir(outdir, force=True)
 
         np.save(outdir + 'composite_LAI_relative_change_detrend_median.npy', average_dic)
+
+    def average_LAI_detrend_CV(self):
+
+        infdir = result_root+'\partial_correlation\Obs\input\Y\\'
+        f_1 = infdir + rf'\\SNU_LAI_detrend_CV.npy'
+        f_2 = infdir + rf'\\GLOBMAP_LAI_detrend_CV.npy'
+        f_3 = infdir + rf'\\LAI4g_detrend_CV.npy'
+        dic1 = np.load(f_1, allow_pickle=True).item()
+        dic2 = np.load(f_2, allow_pickle=True).item()
+        dic3 = np.load(f_3, allow_pickle=True).item()
+        average_dic = {}
+
+        for pix in tqdm(dic1):
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1 = dic1[pix]
+            value2 = dic2[pix]
+            value3 = dic3[pix]
+
+            value1 = np.array(value1)
+            value2 = np.array(value2)
+            value3 = np.array(value3)
+            if len(value1) < 24 or len(value2) < 24 or len(value3) < 24:
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+            print(len(value1), len(value2), len(value3))
+            if len(value1) != len(value2) or len(value2) != len(value3):
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+
+
+            average_val = np.nanmean([value1, value2, value3], axis=0)
+
+            # print(average_val)
+            if np.nanmean(average_val) > 999:
+                continue
+            if np.nanmean(average_val) < -999:
+                continue
+            average_dic[pix] = average_val
+            #
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+
+        outdir = result_root + rf'\Composite_LAI\\CV\\'
+        Tools().mk_dir(outdir, force=True)
+
+        np.save(outdir + 'composite_LAI_detrend_CV_mean.npy', average_dic)
 
     def trend_analysis(self):  ##each window average trend
 
@@ -3278,7 +3332,7 @@ class processing_daily_rainfall():
     def run(self):
         # self.extract_rainfall_CV_daily()
         # self.extract_rainfall_CV_monthly()
-        self.calculating_colinearity()
+
         pass
 
     def extract_phenology_year_based_daily_rainfall(self):
@@ -3439,30 +3493,17 @@ class processing_daily_rainfall():
 
         np.save(outf, result_dic)
 
-    def calculating_colinearity(self):
-        fdir=r'D:\Project3\Result\Nov\partial_correlation\colinear_test\\'
-        for f in os.listdir(fdir):
-            if not 'CV_monthly_rainfall_average' in f:
-                continue
 
-            spatial_dic=T.load_npy(fdir+f)
-            for pix in spatial_dic:
-                val=spatial_dic[pix]
-                print(len(val))
-                plt.plot(val)
-                plt.show()
-
-        pass
 def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
     # moving_window().run()
-    # processing_composite_LAI().run()
+    processing_composite_LAI().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
-    processing_daily_rainfall().run()
+    # processing_daily_rainfall().run()
     pass
 
 if __name__ == '__main__':

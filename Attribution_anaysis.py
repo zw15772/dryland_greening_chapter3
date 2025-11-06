@@ -871,10 +871,422 @@ class multiregression_intersensitivity_TRENDY():
 
         return df
 
+
+class partial_correlation:
+    def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = 'D:/Project3/Result/Nov/'
+
+        self.fdirX = self.result_root + rf'\Multiregression\partial_correlation\Obs\input\\X\\'
+        self.fdirY = self.result_root + rf'\Multiregression\partial_correlation\Obs\input\\Y\\'
+
+        pass
+    def run(self):
+        # self.calculating_colinearity_pixel()
+        # self.calc_colinearity_global()
+        ##### step3 calculating
+        self.xvar_list = [
+
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average']
+        self.model_list = ['SNU_LAI', 'GLOBMAP_LAI', 'LAI4g']
+        self.outdir = result_root + rf'\partial_correlation\Obs\result\\'
+
+        for model in self.model_list:
+                outdir=self.outdir+model+'\\'
+
+                T.mk_dir(outdir, force=True)
+                self.outpartial = self.outdir + rf'\partial_corr_{model}.npy'
+                self.outpartial_pvalue = self.outdir + rf'\partial_pvalue_{model}.npy'
+        #
+                y_var = f'{model}_detrend_CV_zscore.npy'
+                x_var_list = self.xvar_list + [f'{model}_sensitivity']
+
+
+                df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+                #
+                self.cal_partial_corr(df,x_var_list, )
+        # #         #
+        #         # # # # # # self.check_data()
+        #         self.plot_partial_correlation()
+        #         self.plot_partial_correlation_p_value()
+        # self.statistic_trend_bar()
+        self.plot_spatial_map_sig()
+        pass
+
+
+    def calculating_colinearity_pixel(self):
+
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from statsmodels.stats.outliers_influence import variance_inflation_factor
+        from tqdm import tqdm
+
+        fdir = r'D:\Project3\Result\Nov\partial_correlation\colinear_test\\'
+
+        # === 1. 读取4个变量 ===
+        var_names = [
+            'composite_LAI_median_sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+            'CV_monthly_rainfall_average'
+        ]
+        dic_all = {}
+        for f in os.listdir(fdir):
+            for name in var_names:
+                if name in f:
+                    dic_all[name] = T.load_npy(fdir + f)
+
+        print(f"Loaded {len(dic_all)} variables:", list(dic_all.keys()))
+
+        # === 2. 遍历所有像素 ===
+        pix_list = list(dic_all[var_names[0]].keys())
+        colinear_dic = {}
+
+        for pix in tqdm(pix_list, desc='Checking colinearity'):
+            # --- 检查像素是否在所有字典中 ---
+            if not all(pix in dic_all[v] for v in var_names):
+                continue
+
+            vals = []
+            for v in var_names:
+                val=dic_all[v][pix]
+                if isinstance(val, dict):
+                    if 'intersensitivity_precip_val' in val:
+                        arr = np.array(val['intersensitivity_precip_val'], dtype=float)
+                    else:
+                        continue
+                else:
+                    arr = np.array(val, dtype=float)
+                vals.append(arr)
+
+            vals = np.array(vals)  # shape: (4, T)
+            if vals.shape[1] < 10:  # 太短不分析
+                continue
+
+            # --- 去nan并转置成 (T, 4) ---
+            vals = vals.T
+            if np.isnan(vals).any():
+                vals = vals[~np.isnan(vals).any(axis=1)]
+
+            if vals.shape[0] < 10:
+                continue
+
+            df = pd.DataFrame(vals, columns=var_names)
+
+            # === (A) 计算相关矩阵 ===
+            corr = df.corr()
+            plt.imshow(corr, interpolation='nearest', cmap='jet',vmin=-1,vmax=1)
+            plt.colorbar()
+            plt.title(pix)
+            plt.show()
+
+            # === (B) 计算VIF ===
+            X = df.values
+            vif_values = [variance_inflation_factor(X, i) for i in range(X.shape[1])]
+            vif_dic = dict(zip(var_names, vif_values))
+
+            colinear_dic[pix] = {
+                'corr': corr.values,
+                'vif': vif_dic
+            }
+
+        print(f"Finished {len(colinear_dic)} valid pixels.")
+
+        # === 3. 输出结果 ===
+        # outf = r'D:\Project3\Result\Nov\partial_correlation\colinear_test\colinear_summary.npy'
+        # T.save_npy(colinear_dic, outf)
+        # print("Saved:", outf)
+
+    import numpy as np
+    import pandas as pd
+    from statsmodels.stats.outliers_influence import variance_inflation_factor
+    import matplotlib.pyplot as plt
+
+    def calc_colinearity_global(self):
+        import numpy as np
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from statsmodels.stats.outliers_influence import variance_inflation_factor
+        from tqdm import tqdm
+        fdir = r'D:\Project3\Result\Nov\partial_correlation\colinear_test\\'
+
+        # === 1. 载入四个变量 ===
+        var_names = [
+            'composite_LAI_median_sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+            'CV_monthly_rainfall_average'
+        ]
+        dic_all = {}
+        for f in os.listdir(fdir):
+            for name in var_names:
+                if name in f:
+                    dic_all[name] = T.load_npy(fdir + f)
+
+        print(f"Loaded {len(dic_all)} variables:", list(dic_all.keys()))
+        # print("dic_all keys:", list(dic_all.keys()))
+
+        # === 2. 对齐像素 ===
+        pix_all = set.intersection(*[set(dic_all[v].keys()) for v in var_names])
+
+        all_data = {v: [] for v in var_names}
+
+        # === 3. 提取所有像素的值并拼接 ===
+        for pix in pix_all:
+            vals = {}
+
+            for v in var_names:
+                val = dic_all[v][pix]
+                if isinstance(val, dict):  # composite_LAI_median_sensitivity
+                    val = val.get('intersensitivity_precip_val', np.nan)
+                arr = np.array(val, dtype=float).ravel()
+                if np.all(np.isnan(arr)):
+                    continue
+                vals[v] = arr
+
+            # 检查长度一致
+            if len({len(vals[k]) for k in vals}) != 1:
+                continue
+
+            for v in var_names:
+                all_data[v].extend(vals[v])
+
+        # === 4. 组合成 DataFrame ===
+        df = pd.DataFrame(all_data)
+        df = df.dropna()
+
+        print(df.shape)  # (N, 4)
+
+        # === 5. 计算相关矩阵 ===
+        corr = df.corr()
+        print("\nCorrelation Matrix:")
+        print(corr)
+
+        plt.imshow(corr, cmap='coolwarm', vmin=-1, vmax=1)
+        plt.xticks(np.arange(len(var_names)), var_names, rotation=45, ha='right')
+        plt.yticks(np.arange(len(var_names)), var_names)
+        plt.colorbar(label='Pearson r')
+        plt.title('Global correlation matrix')
+        plt.tight_layout()
+        plt.show()
+
+        # === 6. 计算 VIF ===
+        X = df.values
+        vif = [variance_inflation_factor(X, i) for i in range(X.shape[1])]
+        vif_result = dict(zip(var_names, vif))
+        print("\nVariance Inflation Factors (VIF):")
+        for k, v in vif_result.items():
+            print(f"{k}: {v:.2f}")
+
+    def build_df(self,fdir_X,fdir_Y,fx_list,fy):
+        df = pd.DataFrame()
+
+        filey = fdir_Y + fy
+        print(filey)
+
+        dic_y = T.load_npy(filey)
+        # array=np.load(filey)
+        # dic_y=DIC_and_TIF().spatial_arr_to_dic(array)
+        pix_list = []
+        y_val_list = []
+
+        for pix in dic_y:
+            yvals = dic_y[pix]
+
+            if len(yvals) == 0:
+                continue
+            yvals = T.interp_nan(yvals)
+            yvals = np.array(yvals)
+            yvals=yvals
+            if yvals[0] == None:
+                continue
+
+            pix_list.append(pix)
+            y_val_list.append(yvals)
+        df['pix'] = pix_list
+        df['y'] = y_val_list
+
+        # build x
+
+        for xvar in fx_list:
+
+            # print(var_name)
+            x_val_list = []
+            filex = fdir_X + xvar+'.npy'
+
+
+            # print(filex)
+            # exit()
+            # x_arr = T.load_npy(filex)
+            dic_x = T.load_npy(filex)
+            for i, row in tqdm(df.iterrows(), total=len(df), desc=xvar):
+                pix = row.pix
+                if not pix in dic_x:
+                    x_val_list.append([])
+                    continue
+                xvals = dic_x[pix]
+                xvals = np.array(xvals)
+                xvals = xvals
+                if len(xvals) == 0:
+                    x_val_list.append([])
+                    continue
+
+                xvals = T.interp_nan(xvals)
+                if xvals[0] == None:
+                    x_val_list.append([])
+                    continue
+
+                x_val_list.append(xvals)
+
+            # x_val_list = np.array(x_val_list)
+            df[xvar] = x_val_list
+        T.print_head_n(df)
+
+        # exit()
+
+        return df
+
+    def cal_partial_corr(self,df,x_var_list, ):
+
+
+
+
+        partial_correlation_dic= {}
+        partial_p_value_dic = {}
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row.pix
+
+            y_vals = row['y']
+            # y_vals = T.remove_np_nan(y_vals)
+            # y_vals = T.interp_nan(y_vals)
+            if len(y_vals) == 0:
+                continue
+
+            # y_vals_detrend = signal.detrend(y_vals)
+            #  calculate partial derivative with multi-regression
+            df_new = pd.DataFrame()
+            x_var_list_valid = []
+
+            for x in x_var_list:
+
+                x_vals = row[x]
+
+                if len(x_vals) == 0:
+                    continue
+
+                if np.isnan(np.nanmean(x_vals)):
+                    continue
+                # x_vals = T.interp_nan(x_vals)
+                # if len(y_vals) == 18:
+                #     x_vals = x_vals[:-1]
+
+                if len(x_vals) != len(y_vals):
+                    continue
+                # print(x_vals)
+                if x_vals[0] == None:
+                    continue
+                # x_vals_detrend = signal.detrend(x_vals) #detrend
+                df_new[x] = x_vals
+                # df_new[x] = x_vals_detrend   #detrend
+
+                x_var_list_valid.append(x)
+            if len(df_new) <= 3:
+                continue
+
+            df_new['y'] = y_vals  # nodetrend
+
+            # T.print_head_n(df_new)
+            df_new = df_new.dropna(axis=1, how='all')
+            x_var_list_valid_new = []
+            for v_ in x_var_list_valid:
+                if not v_ in df_new:
+                    continue
+                else:
+                    x_var_list_valid_new.append(v_)
+            # T.print_head_n(df_new)
+
+            df_new = df_new.dropna()
+
+            if len(df_new) <= 3:
+                continue
+            partial_correlation = {}
+            partial_correlation_p_value = {}
+            for x in x_var_list_valid_new:
+                x_var_list_valid_new_cov = copy.copy(x_var_list_valid_new)
+                # print(x_var_list_valid_new_cov)
+                x_var_list_valid_new_cov.remove(x)
+                # print(x_var_list_valid_new_cov)
+                r, p = self.partial_corr(df_new, x, 'y', x_var_list_valid_new_cov)
+                partial_correlation[x] = r
+                partial_correlation_p_value[x] = p
+
+            partial_correlation_dic[pix] = partial_correlation
+            partial_p_value_dic[pix] = partial_correlation_p_value
+        T.save_npy(partial_correlation_dic, outf_corr)
+        T.save_npy(partial_p_value_dic, outf_pvalue)
+
+    def partial_corr(self, df, x, y, cov):
+        df = pd.DataFrame(df)
+        df = df.replace([np.inf, -np.inf], np.nan)
+        # print(df)
+        df = df.dropna()
+        # try:
+        # print(x)
+        # print(y)
+        stats_result = pg.partial_corr(data=df, x=x, y=y, covar=cov, method='pearson').round(3)
+        r = float(stats_result['r'])
+        p = float(stats_result['p-val'])
+        return r, p
+
+    def plot_spatial_map_sig(self):
+
+        model_list = self.model_list
+        variable_list = self.xvar_list
+        for model in model_list:
+            fdir = self.outdir + rf'\\{model}\\'
+            print(fdir)
+            outdir = self.outdir + rf'{model}\\sig\\'
+            T.mk_dir(outdir, True)
+            new_variable_list = variable_list + [f'{model}_intersensitivity']+[f'{model}_intrasensitivity']
+
+            for variable in new_variable_list:
+                f_trend_path = fdir + f'{variable}.tif'
+                f_pvalue_path = fdir + f'{variable}_p_value.tif'
+
+                arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+                arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+                # plt.imshow(arr_corr)
+                # plt.colorbar()
+                # plt.show()
+                arr_corr[arr_corr < -99] = np.nan
+                arr_corr[arr_corr > 99] = np.nan
+                arr_pvalue[arr_pvalue > 99] = np.nan
+                arr_pvalue[arr_pvalue < -99] = np.nan
+                arr_corr[arr_pvalue > 0.05] = np.nan
+
+                # plt.imshow(arr_corr)
+                # plt.colorbar()
+                outf = outdir  + f'{variable}.tif'
+                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
+
+
+
+
+
+
+
 def main():
-    multiregression_intrasensitivity().run()
+    # multiregression_intrasensitivity().run()
     # multiregression_intersensitivity().run()
     # multiregression_intersensitivity_TRENDY().run()
+    partial_correlation().run()
 
     pass
 

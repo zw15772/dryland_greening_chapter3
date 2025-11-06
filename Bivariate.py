@@ -4310,8 +4310,7 @@ class partial_correlation():
     def cal_partial_corr(self,df,x_var_list, ):
 
 
-        outf_corr = self.outpartial
-        outf_pvalue = self.outpartial_pvalue
+
 
         partial_correlation_dic= {}
         partial_p_value_dic = {}
