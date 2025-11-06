@@ -1310,11 +1310,11 @@ class moving_window():
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
         # self.robinson()
 
@@ -1538,8 +1538,8 @@ class moving_window():
     def moving_window_CV_extraction_anaysis_LAI(self):
         window_size=15
 
-        fdir = result_root + rf'\TRENDY\S2\15_year\moving_window_extraction\\'
-        outdir = result_root + rf'\\TRENDY\S2\15_year\\\\moving_window_extraction_CV\\'
+        fdir = result_root + rf'\SNU_LAI\15_year\moving_window_extraction\\'
+        outdir = result_root + rf'\SNU_LAI\15_year\moving_window_extraction_CV\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1650,9 +1650,9 @@ class moving_window():
                     # print(average)
 
                     trend_list.append(average)
-                # plt.plot(trend_list)
-                #
-                # plt.show()
+                plt.plot(trend_list)
+
+                plt.show()
 
                 trend_dic[pix] = trend_list
 
@@ -1834,8 +1834,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\TRENDY\S2\15_year\moving_window_extraction_CV\\'
-        outdir =result_root + (rf'\TRENDY\S2\15_year\moving_window_extraction_CV\\trend\\')
+        fdir =result_root+ rf'\SNU_LAI\15_year\moving_window_extraction_CV\\'
+        outdir =result_root + (rf'\SNU_LAI\15_year\moving_window_extraction_CV\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -2392,6 +2392,7 @@ class processing_composite_LAI():
             if np.nanmean(average_val) < -999:
                 continue
             average_dic[pix] = average_val
+            # average_dic[pix] = len(average_val)
             #
             # plt.plot(value1,color='blue')
             # plt.plot(value2,color='green')
@@ -2399,6 +2400,10 @@ class processing_composite_LAI():
             # plt.plot(average_val,color='red')
             # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
             # plt.show()
+        # array=DIC_and_TIF().pix_dic_to_spatial_arr(average_dic,)
+        # plt.imshow(array,vmin=24,vmax=25)
+        # plt.colorbar()
+        # plt.show()
 
         outdir = result_root + rf'\Composite_LAI\\CV\\'
         Tools().mk_dir(outdir, force=True)
@@ -3493,17 +3498,37 @@ class processing_daily_rainfall():
 
         np.save(outf, result_dic)
 
+def check_data():
+    fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output_TRENDY\\'
+    for f in os.listdir(fdir):
 
+        result_dic={}
+
+        dic=np.load(fdir+f, allow_pickle=True, encoding='latin1').item()
+        for pix in dic:
+            vals=dic[pix]['intersensitivity_precip_val']
+            vals_len=len(vals)
+            result_dic[pix]=vals_len
+        arr=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
+        plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=24,vmax=25)
+        plt.title(f)
+        plt.colorbar()
+        plt.show()
+
+
+
+    pass
 def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
     # moving_window().run()
-    processing_composite_LAI().run()
+    # processing_composite_LAI().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
+    check_data()
     pass
 
 if __name__ == '__main__':

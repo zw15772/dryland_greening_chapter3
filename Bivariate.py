@@ -4308,6 +4308,7 @@ class partial_correlation():
         return df
 
     def cal_partial_corr(self,df,x_var_list, ):
+        outf_corr=self.outpartial
 
 
 
