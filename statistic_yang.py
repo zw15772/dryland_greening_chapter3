@@ -628,8 +628,6 @@ class SHAP:
         plt.show()
 
 
-
-
     def discard_vif_vars(self,df, x_vars_list):
         ##################实时计算#####################
         vars_list_copy = copy.copy(x_vars_list)

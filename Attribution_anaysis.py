@@ -96,20 +96,20 @@ class multiregression_intrasensitivity():
 
         pass
     def run(self):
-        self.detrend_deseasonalized_LAI()
+        # self.detrend_deseasonalized_LAI()
         # self.detrend_deseasonalized_climate()
         ## calculating intrasensitivity
 
         # self.calculating_multiregression_intrasensitivity()
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.moving_window_extraction()
         # self.moving_window_average_anaysis()
 
 
         pass
     def detrend_deseasonalized_LAI(self):
-        fdir=rf'D:\Project3\Data\LAI4g\extract_phenology_monthly\\'
-        outdir=rf'D:\Project3\Data\LAI4g\extract_phenology_monthly_detrend_deseason\\'
+        fdir=rf'D:\Project3\Data\SNU_LAI\extract_phenology_monthly\\'
+        outdir=rf'D:\Project3\Data\SNU_LAI\extract_phenology_monthly_detrend_deseason\\'
         T.mk_dir(outdir,force=True)
         dic=T.load_npy_dir(fdir)
         result_dic={}
@@ -118,17 +118,19 @@ class multiregression_intrasensitivity():
             n_years, n_months = vals.shape
             vals_T = vals.T
 
+            # plt.imshow(vals_T,interpolation='nearest',cmap='jet')
+            # plt.show()
 
             deseason_detrend_T = []
             for i in range(n_months):
                 month_series = vals_T[i]
                 # plt.plot(month_series)
                 month_mean = np.nanmean(month_series)
-                deseason = (month_series - month_mean)/month_mean
+                deseason = (month_series - month_mean)/month_mean*100
                 # plt.plot(deseason)
                 detrend_deseason = T.detrend_vals(deseason)
                 # plt.plot(detrend_deseason)
-                # # plt.legend(['month_series','deseason','detrend_deseason'])
+                # plt.legend(['month_series','deseason','detrend_deseason'])
                 # plt.show()
                 deseason_detrend_T.append(detrend_deseason)
             # plt.imshow(deseason_detrend_T,interpolation='nearest',cmap='jet'
@@ -191,10 +193,10 @@ class multiregression_intrasensitivity():
 
         # 假设这些是每个像素对应的字典，键是 pix，值是 (year, month)
         fdir=rf'D:\Project3\Result\Nov\Multiregression_intrasensitivity\input\\'
-        fLAI=fdir+rf'\\average_detrend_deseasonalized_composite_LAI.npy'
+        fLAI=fdir+rf'\\composite_LAI_relative_change_detrend_median.npy'
         f_temp=fdir+rf'\\Tmax_detrend_deseason.npy'
         f_precip=fdir+rf'\\Precip_detrend_deseason.npy'
-        f_vpd=fdir+rf'\\VPD_detrend_deseason.npy'
+
         dic_LAI = T.load_npy(fLAI)
         dic_temp = T.load_npy(f_temp)
         dic_precip = T.load_npy(f_precip)
@@ -448,11 +450,7 @@ class multiregression_intersensitivity():
 
 
     def run(self):
-        # self.anomaly()
-        #
-        # self.detrend()
-        # exit()
-        # self.moving_window_extraction()
+
         self.calculating_multiregression_intersensitivity()
         # self.trend_analysis()
         # self.plot_time_series()
@@ -667,102 +665,105 @@ class multiregression_intersensitivity_TRENDY():
 
 
     def run(self):
-        # self.anomaly()
-        #
-        # self.detrend()
-        # exit()
-        # self.moving_window_extraction()
+
         self.calculating_multiregression_intersensitivity()
         # self.trend_analysis()
         # self.plot_time_series()
         # exit()
 
 
-
-
     def calculating_multiregression_intersensitivity(self):
         import numpy as np
         import statsmodels.api as sm
         from tqdm import tqdm
+        yvar_list = ['TRENDY_ensemble_mean',
+                      'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai',]
 
         # 假设这些是每个像素对应的字典，键是 pix，值是 (year, month)
-        fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\input\\'
-        fLAI=fdir+rf'\\composite_LAI_relative_change_detrend_median.npy'
-        f_temp=fdir+rf'\\Tmax_anomaly_detrend.npy'
-        f_precip=fdir+rf'\\Precip_sum_anomaly_detrend.npy'
+        fdir=result_root+rf'\Multiregression_intersensitivity\input_TRENDY\\'
+        for yvar in yvar_list:
 
-        dic_LAI = T.load_npy(fLAI)
-        dic_temp = T.load_npy(f_temp)
-        dic_precip = T.load_npy(f_precip)
+            fLAI = fdir + rf'\\{yvar}_relative_change_detrend.npy'
+            f_temp=fdir+rf'\\Tmax_anomaly_detrend.npy'
+            f_precip=fdir+rf'\\Precip_sum_anomaly_detrend.npy'
 
-        out_beta={}
+            dic_LAI = T.load_npy(fLAI)
+            dic_temp = T.load_npy(f_temp)
+            dic_precip = T.load_npy(f_precip)
 
-        for pix in tqdm(dic_LAI):
-            if pix not in dic_temp or pix not in dic_precip:
-                continue
+            out_beta={}
 
-            vals_LAI = np.array(dic_LAI[pix], dtype=float)
-            vals_temp = np.array(dic_temp[pix], dtype=float)
-            vals_precip = np.array(dic_precip[pix], dtype=float)
-
-            # 要求二维 [n_windows, n_years_in_window]
-            if vals_LAI.ndim != 2:
-                continue
-
-            n_windows, n_years = vals_LAI.shape
-
-            beta_p_list = []
-            beta_t_list = []
-            p_p_list = []
-            p_t_list = []
-
-            for w in range(n_windows):
-                y = vals_LAI[w, :]
-                x1 = vals_precip[w, :]
-                x2 = vals_temp[w, :]
-
-                # 有效数据检查
-                mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2)
-                print(mask.sum())
-                if mask.sum() < 5:
-                    beta_p_list.append(np.nan)
-                    beta_t_list.append(np.nan)
-                    p_p_list.append(np.nan)
-                    p_t_list.append(np.nan)
+            for pix in tqdm(dic_LAI):
+                if pix not in dic_temp or pix not in dic_precip:
                     continue
 
-                X = np.column_stack([x1[mask], x2[mask]])
-                X = sm.add_constant(X)
-                y_valid = y[mask]
+                vals_LAI = np.array(dic_LAI[pix], dtype=float)
+                vals_temp = np.array(dic_temp[pix], dtype=float)
+                vals_precip = np.array(dic_precip[pix], dtype=float)
 
-                try:
-                    model = sm.OLS(y_valid, X).fit()
-                    betas = model.params
-                    pvals = model.pvalues
-                    beta_p_list.append(betas[1])  # 降雨敏感性
-                    beta_t_list.append(betas[2])  # 温度敏感性
-                    p_p_list.append(pvals[1])
-                    p_t_list.append(pvals[2])
-                except:
-                    beta_p_list.append(np.nan)
-                    beta_t_list.append(np.nan)
-                    p_p_list.append(np.nan)
-                    p_t_list.append(np.nan)
+                # 要求二维 [n_windows, n_years_in_window]
+                if vals_LAI.ndim != 2:
+                    continue
 
-            out_beta[pix] = {
-                'intersensitivity_precip_val': np.array(beta_p_list),
-                'intersensitivity_precip_pval': np.array(p_p_list),
-                'intersensitivity_temp_val': np.array(beta_t_list),
-                'intersensitivity_temp_pval': np.array(p_t_list)
+                n_windows, n_years = vals_LAI.shape
 
-            }
+                beta_p_list = []
+                beta_t_list = []
+                p_p_list = []
+                p_t_list = []
+
+                for w in range(n_windows):
+                    y = vals_LAI[w, :]
+                    x1 = vals_precip[w, :]
+                    x2 = vals_temp[w, :]
+
+                    # 有效数据检查
+                    mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2)
+                    print(mask.sum())
+                    if mask.sum() < 5:
+                        beta_p_list.append(np.nan)
+                        beta_t_list.append(np.nan)
+                        p_p_list.append(np.nan)
+                        p_t_list.append(np.nan)
+                        continue
+
+                    X = np.column_stack([x1[mask], x2[mask]])
+                    X = sm.add_constant(X)
+                    y_valid = y[mask]
+
+                    try:
+                        model = sm.OLS(y_valid, X).fit()
+                        betas = model.params
+                        pvals = model.pvalues
+                        beta_p_list.append(betas[1])  # 降雨敏感性
+                        beta_t_list.append(betas[2])  # 温度敏感性
+                        p_p_list.append(pvals[1])
+                        p_t_list.append(pvals[2])
+                    except:
+                        beta_p_list.append(np.nan)
+                        beta_t_list.append(np.nan)
+                        p_p_list.append(np.nan)
+                        p_t_list.append(np.nan)
+
+                out_beta[pix] = {
+                    'intersensitivity_precip_val': np.array(beta_p_list),
+                    'intersensitivity_precip_pval': np.array(p_p_list),
+                    'intersensitivity_temp_val': np.array(beta_t_list),
+                    'intersensitivity_temp_pval': np.array(p_t_list)
+
+                }
 
 
-        # === 保存输出 ===
-        outdir = r'D:\Project3\Result\Nov\Multiregression_intersensitivity\output\\composite_LAI_relative_change_detrend_median\\'
-        T.mk_dir(outdir, force=True)
+            # === 保存输出 ===
+            outdir = result_root + rf'Multiregression_intersensitivity\output_TRENDY\\'
+            T.mk_dir(outdir, force=True)
 
-        T.save_npy(out_beta, outdir + 'multiregression_intrasensitivity.npy')
+            T.save_npy(out_beta, outdir + f'{yvar}_sensitivity.npy')
 
     def trend_analysis(self):
         outdir=result_root+r'\Multiregression_intersensitivity\output\\'
@@ -871,8 +872,9 @@ class multiregression_intersensitivity_TRENDY():
         return df
 
 def main():
-    # multiregression_intrasensitivity().run()
-    multiregression_intersensitivity().run()
+    multiregression_intrasensitivity().run()
+    # multiregression_intersensitivity().run()
+    # multiregression_intersensitivity_TRENDY().run()
 
     pass
 
