@@ -1311,7 +1311,8 @@ class moving_window():
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
-        # self.moving_window_max_min_anaysis()
+        # self.moving_window_max_anaysis()
+        # self.moving_window_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
         self.trend_analysis()
@@ -1323,8 +1324,8 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\Composite_LAI\detrend_deseasonal\\'
-        outdir = self.result_root + rf'\Composite_LAI\detrend_deseasonal\\\\moving_window_extraction\\'
+        fdir_all =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\'
+        outdir = self.result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\\\\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -1659,22 +1660,81 @@ class moving_window():
                 ## save
             np.save(outf, trend_dic)
 
-    def moving_window_max_min_anaysis(self): ## each window calculating the average
+    def moving_window_min_anaysis(self): ## each window calculating the average
+        window_size = 15
+
+        fdir = result_root + rf'TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction\\'
+        outdir = result_root + rf'\TRENDY\S2\relative_change\detrend_relative_change\\moving_window_extraction_max_min\\'
+        T.mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+            if not 'detrend' in f:
+                continue
+
+
+
+            dic = T.load_npy(fdir + f)
+            # outf = outdir + 'GLOBMAP' + f'_min.npy'
+
+
+            outf = outdir + f.split('.')[0] + f'_min.npy'
+            print(outf)
+
+            trend_dic = {}
+
+
+            for pix in tqdm(dic):
+                trend_list = []
+
+                time_series_all = dic[pix]
+                time_series_all = np.array(time_series_all)
+                # print(time_series_all)
+                if np.isnan(np.nanmean(time_series_all)):
+                    print('error')
+                    continue
+                slides=len(time_series_all)
+                print(slides)
+                for ss in range(slides):
+
+
+                    ### if all values are identical, then continue
+                    if len(time_series_all)<24:
+                        continue
+
+
+                    time_series = time_series_all[ss]
+                    # print(time_series)
+                    # if np.nanmax(time_series) == np.nanmin(time_series):
+                    #     continue
+                    # print(len(time_series))
+                    ##average
+                    average=np.nanmin(time_series)
+                    # print(average)
+
+                    trend_list.append(average)
+
+                trend_dic[pix] = trend_list
+
+                ## save
+            np.save(outf, trend_dic)
+
+
+    def moving_window_max_anaysis(self): ## each window calculating the average
         window_size = 15
 
 
-        fdir =result_root+ rf'\3mm\Fire\moving_window_extraction\\'
-        outdir = result_root+rf'\3mm\Fire\moving_window_extraction\\'
+        fdir =result_root+ rf'TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction\\'
+        outdir = result_root+rf'\TRENDY\S2\relative_change\detrend_relative_change\\moving_window_extraction_max_min\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'sum' in f:
+            if not 'detrend' in f:
                 continue
 
 
 
             dic = T.load_npy(fdir + f)
 
-            slides = 36 - window_size+1   ## revise!!
+
+
             outf = outdir + f.split('.')[0] + f'_max.npy'
             print(outf)
 
@@ -1690,11 +1750,13 @@ class moving_window():
                 if np.isnan(np.nanmean(time_series_all)):
                     print('error')
                     continue
+                slides=len(time_series_all)
+                print(slides)
                 for ss in range(slides):
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<22:
+                    if len(time_series_all)<24:
                         continue
 
 
@@ -1713,6 +1775,7 @@ class moving_window():
 
                 ## save
             np.save(outf, trend_dic)
+
 
 
     def moving_window_std_anaysis(self):
@@ -1834,11 +1897,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\SNU_LAI\15_year\moving_window_extraction_CV\\'
-        outdir =result_root + (rf'\SNU_LAI\15_year\moving_window_extraction_CV\\trend\\')
+        fdir =result_root+ rf'\LAI4g\relative_change\moving_window_extraction_max_min\\'
+        outdir =result_root + (rf'\LAI4g\relative_change\moving_window_extraction_max_min\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+
 
 
             if not f.endswith('.npy'):
@@ -2208,7 +2272,9 @@ class processing_composite_LAI():
 
         # self.average_detrend_deseasonalized_composite_LAI()
         # self.average_LAI_detrend()
-        self.average_LAI_detrend_CV()
+        # self.average_LAI_detrend_CV()
+        # self.average_LAImax_LAImin()
+        self.trend_analysis()
         pass
 
 
@@ -2352,6 +2418,64 @@ class processing_composite_LAI():
 
         np.save(outdir + 'composite_LAI_relative_change_detrend_median.npy', average_dic)
 
+    def average_LAImax_LAImin(self):
+
+
+        f_1 = result_root + rf'\LAI4g\relative_change\moving_window_extraction_max_min\\\\LAI4g_min.npy'
+        f_2 = result_root + rf'GLOBMAP\relative_change\moving_window_extraction_max_min\\\\GLOBMAP_min.npy'
+        f_3 = result_root + rf'SNU_LAI\relative_change\moving_window_extraction_max_min\\\\SNU_LAI_min.npy'
+        dic1 = np.load(f_1, allow_pickle=True).item()
+        dic2 = np.load(f_2, allow_pickle=True).item()
+        dic3 = np.load(f_3, allow_pickle=True).item()
+        average_dic = {}
+
+        for pix in tqdm(dic1):
+            if not pix in dic2:
+                continue
+            if not pix in dic3:
+                continue
+            value1 = dic1[pix]
+            value2 = dic2[pix]
+            value3 = dic3[pix]
+
+            value1 = np.array(value1)
+            value2 = np.array(value2)
+            value3 = np.array(value3)
+            if len(value1) < 24 or len(value2) < 24 or len(value3) < 24:
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+            print(len(value1), len(value2), len(value3))
+            if len(value1) != len(value2) or len(value2) != len(value3):
+                print(pix, len(value1), len(value2), len(value3))
+                continue
+
+
+            average_val = np.nanmean([value1, value2, value3], axis=0)
+
+            # print(average_val)
+            if np.nanmean(average_val) > 999:
+                continue
+            if np.nanmean(average_val) < -999:
+                continue
+            average_dic[pix] = average_val
+            # average_dic[pix] = len(average_val)
+            #
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+        # array=DIC_and_TIF().pix_dic_to_spatial_arr(average_dic,)
+        # plt.imshow(array,vmin=24,vmax=25)
+        # plt.colorbar()
+        # plt.show()
+
+        outdir = result_root + rf'\Composite_LAI\\LAImin_LAImax\\'
+        Tools().mk_dir(outdir, force=True)
+
+        np.save(outdir + 'composite_LAImin_mean.npy', average_dic)
+
     def average_LAI_detrend_CV(self):
 
         infdir = result_root+'\partial_correlation\Obs\input\Y\\'
@@ -2418,8 +2542,8 @@ class processing_composite_LAI():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\Composite_LAI\relative_change\\'
-        outdir = result_root+rf'\Composite_LAI\relative_change\\trend_analysis\\'
+        fdir = result_root+rf'\Composite_LAI\LAImin_LAImax\\'
+        outdir = result_root+rf'\Composite_LAI\LAImin_LAImax\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3026,7 +3150,9 @@ class processing_climate_variable():
     def run(self):
         # self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
+        # self.relative_change()
         # self.detrend()
+
 
 
         pass
@@ -3253,6 +3379,71 @@ class processing_climate_variable():
 
             np.save(outf, anomaly_dic)
 
+    def relative_change(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\\'
+        outdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\\relative_change\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+
+            outf = outdir + f.split('.')[0] + '_relative_change.npy'
+            # if isfile(outf):
+            #     continue
+            # print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            relative_change = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                time_series = dic[pix]['growing_season']
+                print(time_series)
+
+                # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
+
+                if not isinstance(time_series, (list, np.ndarray)):
+                    print(f"{pix}: invalid time_series (not iterable): {time_series}")
+                    continue
+
+                time_series = np.array(time_series, dtype=float)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+                ## exclude nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # if np.nanmean(time_series) >999:
+                #     continue
+                if np.nanmean(time_series) < -999:
+                    continue
+                time_series = time_series
+                mean = np.nanmean(time_series)
+
+                relative_change[pix] = (time_series - mean) / mean * 100
+
+                # plt.plot(time_series)
+                # plt.legend(['raw'])
+                # # plt.show()
+                #
+                # plt.plot(relative_change[pix])
+                # plt.legend(['zscore'])
+                # plt.legend(['raw','zscore'])
+                # plt.show()
+
+                ## save
+            np.save(outf, relative_change)
+
+
     def detrend(self):
         NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
@@ -3262,11 +3453,13 @@ class processing_climate_variable():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\\'
-        outdir=result_root + rf'\CRU_monthly\\extract_annual_growing_season_mean\\detrend\\'
+        fdir=result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\\'
+        outdir=result_root + rf'\CRU_monthly\\extract_annual_growing_season_mean\\relative_change\\detrend\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'sum' in f:
+                continue
 
 
             if not f.endswith('.npy'):
@@ -3294,7 +3487,7 @@ class processing_climate_variable():
                     continue
                 r, c= pix
                 # print(len(dic[pix]))
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
                 # print(len(time_series));exit()
                 # print(time_series)
                 time_series=np.array(time_series,dtype=float)
@@ -3337,6 +3530,9 @@ class processing_daily_rainfall():
     def run(self):
         # self.extract_rainfall_CV_daily()
         # self.extract_rainfall_CV_monthly()
+        self.extract_rainfall_sum()
+        # self.relative_change()
+        self.detrend()
 
         pass
 
@@ -3430,6 +3626,184 @@ class processing_daily_rainfall():
         plt.colorbar()
         plt.show()
 
+    def extract_rainfall_sum(self):  ## extract CV of rainfall ready for multiregression
+        fdir = rf'D:\Project3\Data\CRU-JRA\Precip\extract_phenology_year_based_daily_rainfall\\'
+        outdir_CV = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]
+            # plt.imshow(vals)
+            # plt.show()
+
+            CV_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+                val = np.array(val)
+
+
+                sum=np.nansum(val)
+                # print(CV)
+                CV_list.append(sum)
+            result_dic[pix] = CV_list
+
+        outf = outdir_CV + 'rainfall_sum.npy'
+
+        np.save(outf, result_dic)
+
+    def relative_change(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+        fdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\\'
+        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\\relative_change\\'
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            if not 'sum' in f:
+                continue
+
+            outf = outdir + f.split('.')[0] + '_relative_change.npy'
+            # if isfile(outf):
+            #     continue
+            # print(outf)
+
+            dic = T.load_npy(fdir + f)
+
+            relative_change = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                time_series = dic[pix]
+                print(time_series)
+
+                # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
+
+                if not isinstance(time_series, (list, np.ndarray)):
+                    print(f"{pix}: invalid time_series (not iterable): {time_series}")
+                    continue
+
+                time_series = np.array(time_series, dtype=float)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+                ## exclude nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # if np.nanmean(time_series) >999:
+                #     continue
+                if np.nanmean(time_series) < -999:
+                    continue
+                time_series = time_series
+                mean = np.nanmean(time_series)
+
+                relative_change[pix] = (time_series - mean) / mean * 100
+
+                # plt.plot(time_series)
+                # plt.legend(['raw'])
+                # # plt.show()
+                #
+                # plt.plot(relative_change[pix])
+                # plt.legend(['zscore'])
+                # plt.legend(['raw','zscore'])
+                # plt.show()
+
+                ## save
+            np.save(outf, relative_change)
+
+
+    def detrend(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir=result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\relative_change\\'
+        outdir=result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\relative_change\\detrend\\'
+        T.mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+            if not 'sum' in f:
+                continue
+
+
+            if not f.endswith('.npy'):
+                continue
+
+
+            print(f)
+
+            outf=outdir+f.split('.')[0]+'_detrend.npy'
+            # if isfile(outf):
+            #     continue
+            # dic=T.load_npy_dir(fdir+f+'\\')
+            dic = dict(np.load( fdir+f, allow_pickle=True, ).item())
+
+            detrend_zscore_dic={}
+
+            for pix in tqdm(dic):
+                dryland_values=array_mask[pix]
+                if np.isnan(dryland_values):
+                    continue
+                crop_values=crop_mask[pix]
+                if crop_values == 16 or crop_values == 17 or crop_values == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+                r, c= pix
+                # print(len(dic[pix]))
+                time_series = dic[pix]
+                # print(len(time_series));exit()
+                # print(time_series)
+                time_series=np.array(time_series,dtype=float)
+                # plt.plot(time_series)
+                # plt.show()
+                time_series[time_series < -999] = np.nan
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                if np.std(time_series) == 0:
+                    continue
+                ##### if count of nan is more than 50%, then skip
+                if np.sum(np.isnan(time_series))/len(time_series) > 0.5:
+                    continue
+                # mean = np.nanmean(time_series)
+                # std=np.nanstd(time_series)
+                # if std == 0:
+                #     continue
+                # delta_time_series = (time_series - mean) / std
+                # if np.isnan(time_series).any():
+                #     continue
+                time_series=T.interp_nan(time_series)
+                detrend_delta_time_series = signal.detrend(time_series)+np.nanmean(time_series)
+                # plt.plot(time_series,color='blue')
+                # plt.plot(detrend_delta_time_series,color='red')
+                # plt.show()
+
+                detrend_zscore_dic[pix] = detrend_delta_time_series
+
+            np.save(outf, detrend_zscore_dic)
+
+
+
+
     def extract_rainfall_CV_daily(self):  ## extract CV of rainfall ready for multiregression
         fdir = rf'D:\Project3\Data\CRU-JRA\Precip\extract_phenology_year_based_daily_rainfall\\'
         outdir_CV = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\\'
@@ -3518,17 +3892,20 @@ def check_data():
 
 
     pass
+
+
+
 def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    # moving_window().run()
+    moving_window().run()
     # processing_composite_LAI().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
-    check_data()
+    # check_data()
     pass
 
 if __name__ == '__main__':

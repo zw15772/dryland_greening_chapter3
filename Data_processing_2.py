@@ -1245,17 +1245,17 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\')
+                    result_root + rf'\bivariate\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
-        df=self.append_attributes(df)
+        # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
@@ -1378,7 +1378,7 @@ class build_moving_window_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\3mm\Multiregression\anomaly\composite_LAI_beta_mean_anomaly.npy'
+        f = rf'D:\Project3\Result\Nov\Composite_LAI\LAImin_LAImax\\\composite_LAImax_median.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1407,19 +1407,18 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['composite_LAI_beta_mean_anomaly'] = change_rate_list
+        df['composite_LAImax_median'] = change_rate_list
         return df
     def add_window_to_df(self, df):
         threshold = self.threshold
 
-        fdir=result_root+rf'\3mm\extract_composite_phenology_year\STD_relative_change_std_mean\composite_LAI\\'
+        fdir=result_root+rf'\bivariate\rainfall_max_min\\'
 
 
 
 
         for f in os.listdir(fdir):
-            if not 'composite_LAI_relative_change_detrend_mean' in f:
-                continue
+
 
 
 
@@ -1430,7 +1429,7 @@ class build_moving_window_dataframe():
 
 
 
-            # print(variable)
+            print(variable)
 
 
             if not f.endswith('.npy'):
@@ -1441,7 +1440,7 @@ class build_moving_window_dataframe():
             NDVI_list = []
             for i, row in tqdm(df.iterrows(), total=len(df)):
 
-                window = row.year
+                window = row.window
                 # pix = row.pix
                 pix = row['pix']
                 r, c = pix
@@ -1465,7 +1464,7 @@ class build_moving_window_dataframe():
                 ##### if len vals is 38, the end of list add np.nan
 
                 #
-                if len(vals) == 22:
+                if len(vals) == 24:
                     ## add twice nan at the end
                     # vals=np.append([np.nan,np.nan,np.nan,np.nan,np.nan,np.nan], vals,)
                     vals=np.append(vals,[np.nan,np.nan])
@@ -1766,9 +1765,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'Dataframe\\')
+                result_root +  rf'\bivariate\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trends_CV.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1779,7 +1778,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1796,7 +1795,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
@@ -1804,16 +1803,16 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # # # #
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # # # # # # #
+        # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -1823,7 +1822,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
@@ -2655,7 +2654,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\TRENDY\S2\relative_change\trend_analysis\\'
+        fdir = result_root + rf'\bivariate\LAImin_LAImax\trend_analysis\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2872,9 +2871,10 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'detrended_sum_rainfall_growing_season_zscore_sig': 'TRENDY_ensemble_detrended_sum_rainfall_growing_season_zscore_sig',
+        df = df.rename(columns={'composite_LAImax_median_trend': 'composite_LAI_median_max_trend',
 
-                              'rainfall_frenquency_zscore_sig': 'TRENDY_ensemble_rainfall_frenquency_zscore_sig',
+                              'composite_LAImin_median_trend': 'composite_LAI_median_min_trend',
+
 
                                }
 
@@ -8685,6 +8685,7 @@ class TRENDY_CV:
             CV_val[CV_val < -99] = np.nan
             result_dic[f'{threhold1}-{threhold2}'] = CV_val
         ## bar boxplot
+        plt.figure(figsize=(self.map_width, self.map_height))
         for i in range(len(threhold_list) - 1):
             threhold1 = threhold_list[i]
             threhold2 = threhold_list[i + 1]
@@ -8714,7 +8715,7 @@ class TRENDY_CV:
                       '#98cccb', '#5867AF','black', '#e66d50',]
         ## I want use set 3 color
 
-        mark_size_list=[50]*3+[50]*13+[200]*2
+        mark_size_list=[50]*3+[50]*13+[150]*2
         # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
 
 
@@ -8795,11 +8796,12 @@ class TRENDY_CV:
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
         # plt.show()
         ##plot error bar
+        # plt.figure(figsize=(self.map_width, self.map_height))
 
-        plt.figure(figsize=(10*centimeter_factor, 8.2*centimeter_factor))
+        plt.figure(figsize=(13*centimeter_factor, 10*centimeter_factor))
 
-        self.map_width = 13 * centimeter_factor
-        self.map_height = 8.2 * centimeter_factor
+        # self.map_width = 13 * centimeter_factor
+        # self.map_height = 8.2 * centimeter_factor
 
         err_trend_list = np.array(err_trend_list)
         err_CV_list = np.array(err_CV_list)
@@ -9237,9 +9239,9 @@ class check_data_distribution():
 
 
 def main():
-     Data_processing_2().run()
+     # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()

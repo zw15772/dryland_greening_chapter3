@@ -84,7 +84,7 @@ centimeter_factor = 1/2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+result_root = 'D:/Project3/Result/Nov//'
 
 
 
@@ -946,7 +946,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.bivariate_map()
+        self.bivariate_map()
 
         self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
@@ -962,22 +962,22 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         import xymap
 
 
-        fdir =result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
+        fdir =result_root + rf'\Composite_LAI\LAImin_LAImax\trend_analysis\\\\'
 
-        outdir =result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        outdir =result_root + (rf'bivariate\\LAI\\')
 
         T.mkdir(outdir)
 
         # outtif = join(outdir,'CV_trend2.tif')
-        outtif = join(outdir, 'LAImin_LAImax_test.tif')
+        outtif = join(outdir, 'LAI_bivariate_median.tif')
 
-        fpath1 = join(fdir,'composite_LAI_detrend_relative_change_max_trend.tif')
+        fpath1 = join(fdir,'composite_LAImax_median_trend.tif')
         # fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
-        fpath2 = join(fdir,'composite_LAI_detrend_relative_change_min_trend.tif')
+        fpath2 = join(fdir,'composite_LAImin_median_trend.tif')
         # fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
 
         #1
-        tif1_label, tif2_label = 'LAImax_trend','LAImin_trend'
+        tif1_label, tif2_label = 'LAImax','LAImin'
         #2
         # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
 
@@ -1044,15 +1044,14 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
 
     def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
 
-        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
-        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
-        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
+        fdir_trend = result_root + rf'\bivariate\\LAI\\'
+        temp_root = result_root + rf'\bivariate\\LAI\\'
+        outdir = result_root + rf'\\bivariate\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
-            if not 'LAImin_LAImax_test' in f:
-                continue
+
 
             if not f.endswith('.tif'):
                 continue
@@ -8983,12 +8982,14 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        self.plot_CV_LAI()
+        # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
+        # self.plot_rainfallmax_min()
         # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
+        self.TRENDY_LAImin_LAImax()
 
 
         pass
@@ -9007,102 +9008,80 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         return df
 
     def plot_LAImax_LAImin(self):
-        df = T.load_df(
-            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
-
-        df=self.df_clean(df)
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+        df = self.df_clean(df)
         print(len(df))
 
+        variable_list = ['composite_LAImax_median', 'composite_LAImin_median']
+        dic_label = {'composite_LAImax_median': 'LAImax',
+                     'composite_LAImin_median': 'LAImin'}
+        color_dic = {'composite_LAImax_median': 'purple',
+                     'composite_LAImin_median': 'teal'}
 
-
-        color_list = ['purple', 'teal', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
-                      'pink', 'grey',
-                      'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [2, 2 ]
-
-
-
-        variable_list = ['composite_LAI_detrend_relative_change_min',
-                         'composite_LAI_detrend_relative_change_max',  ]
-        dic_label = {'composite_LAI_detrend_relative_change_min': 'LAImin',
-                     'composite_LAI_detrend_relative_change_max': 'LAImax',}
         year_list = range(0, 24)
-
         result_dic = {}
+        std_dic = {}
 
+        # === 计算每个窗口的均值和标准差 ===
         for var in variable_list:
-
-            result_dic[var] = {}
-
-            data_dic = {}
-
-
+            mean_dic, std_dic_i = {}, {}
             for year in year_list:
-                df_i = df[df['year'] == year]
+                df_i = df[df['window'] == year]
+                vals = np.array(df_i[var].tolist(), dtype=float)
+                mean_dic[year] = np.nanmean(vals)
+                std_dic_i[year] = np.nanstd(vals)
+            result_dic[var] = mean_dic
+            std_dic[var] = std_dic_i
 
-                vals = df_i[f'{var}'].tolist()
+        df_mean = pd.DataFrame(result_dic)
+        df_std = pd.DataFrame(std_dic)
 
-
-                data_dic[year] = np.nanmean(vals)
-
-            result_dic[var] = data_dic
-
-        ##dic to df
-
-        df_new = pd.DataFrame(result_dic)
-
-        flag = 0
-        plt.figure(figsize=(self.map_width*1.6, self.map_height))
-        slope_dic={}
+        # === 绘图 ===
+        plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-                slope_dic[var]=slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            color = color_dic[var]
 
+            # 计算线和阴影区
+            y = df_mean[var]
+            yerr = df_std[var]
+            years = list(year_list)
 
-                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag],
-                         color=color_list[flag])
+            # 背景阴影 (mean ± std)
+            plt.fill_between(years,
+                             y - yerr,
+                             y + yerr,
+                             color=color,
+                             alpha=0.1)
 
+            # 主趋势线
+            plt.plot(years, y, color=color, linewidth=2.5,
+                     label=dic_label[var], marker='o')
 
+            # 拟合趋势线 + 注释
+            slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
+            print(var, slope, p_value)
+            x_pos = max(years) * 0.85
+            y_pos = y.mean()
+            plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos - 12, f'p={p_value:.3f}', fontsize=10, color=color)
 
-
-
-                flag = flag + 1
-
-        for var in variable_list:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
-            print(slope,p_value, )
-            x_pos = max(year_list) * 0.9  # 例如在靠近右边
-            # 选择一个固定的y位置（可以用数据的均值或最大最小值调节）
-            y_base = df_new[var].mean()
-
-            # 在同一列上下显示
-            plt.text(x_pos, y_base +3, f'slope={slope:.2f}', fontsize=12, ha='center')
-            plt.text(x_pos, y_base - 1, f'p={p_value:.2f}', fontsize=12, ha='center')
-
-
-
+        # === X轴标签（15年滑窗） ===
         window_size = 15
-
-        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
         year_range = range(1983, 2021)
         year_range_str = []
         for year in year_range:
-
             start_year = year
             end_year = year + window_size - 1
             if end_year > 2021:
                 break
             year_range_str.append(f'{start_year}-{end_year}')
-        # plt.xticks(range(0, 23, 4))
+
         plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
-        plt.yticks(np.arange(-30, 31, 10))
-
-
-
-
-        plt.grid(which='major', alpha=0.5)
+        plt.ylabel('Relative change(%)', fontsize=12)
+        plt.grid(alpha=0.4)
         plt.legend(loc='upper left')
-
+        plt.tight_layout()
         plt.show()
 
         # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
@@ -9110,6 +9089,87 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # plt.close()
 
         pass
+
+    def plot_rainfallmax_min(self):
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+        df = self.df_clean(df)
+        print(len(df))
+
+        variable_list = ['Precip_sum_detrend_max', 'Precip_sum_detrend_min']
+        dic_label = {'Precip_sum_detrend_max': 'Precip_max',
+                     'Precip_sum_detrend_min': 'Precip_min'}
+        color_dic = {'Precip_sum_detrend_max': 'purple',
+                     'Precip_sum_detrend_min': 'teal'}
+
+        year_list = range(0, 24)
+        result_dic = {}
+        std_dic = {}
+
+        # === 计算每个窗口的均值和标准差 ===
+        for var in variable_list:
+            mean_dic, std_dic_i = {}, {}
+            for year in year_list:
+                df_i = df[df['window'] == year]
+                vals = np.array(df_i[var].tolist(), dtype=float)
+                mean_dic[year] = np.nanmean(vals)
+                std_dic_i[year] = np.nanstd(vals)
+            result_dic[var] = mean_dic
+            std_dic[var] = std_dic_i
+
+        df_mean = pd.DataFrame(result_dic)
+        df_std = pd.DataFrame(std_dic)
+
+        # === 绘图 ===
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            color = color_dic[var]
+
+            # 计算线和阴影区
+            y = df_mean[var]
+            yerr = df_std[var]
+            years = list(year_list)
+
+            # 背景阴影 (mean ± std)
+            plt.fill_between(years,
+                             y - yerr,
+                             y + yerr,
+                             color=color,
+                             alpha=0.1)
+
+            # 主趋势线
+            plt.plot(years, y, color=color, linewidth=2.5,
+                     label=dic_label[var], marker='o')
+
+            # 拟合趋势线 + 注释
+            slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
+            print(var, slope, p_value)
+            x_pos = max(years) * 0.85
+            y_pos = y.mean()
+            plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos - 100, f'p={p_value:.3f}', fontsize=10, color=color)
+
+        # === X轴标签（15年滑窗） ===
+        window_size = 15
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.ylabel('Relative change(%)', fontsize=12)
+        plt.grid(alpha=0.4)
+        plt.legend(loc='upper left')
+        plt.tight_layout()
+        plt.show()
+
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
     def plot_CV_LAI(self):  ##### plot for 4 clusters
@@ -9595,6 +9655,92 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             plt.show()
             # plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_trend_bar.pdf')
             # plt.close()
+    def TRENDY_LAImin_LAImax(self):
+        dff=result_root+rf'\bivariate\Dataframe\\Dataframe.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        for column in df.columns:
+            print(column)
+        # exit()
+
+        variables_list = ['composite_LAI_median', 'LAI4g',   'GLOBMAP','SNU_LAI',
+                           'TRENDY_ensemble_median',
+                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+        values_max_list=[]
+        values_min_list=[]
+
+        for variable in variables_list:
+            if variable in ['composite_LAI_median','LAI4g',  'GLOBMAP','SNU_LAI','TRENDY_ensemble_median']:
+
+                values_min = df[f'{variable}_min_trend'].values
+                values_max = df[f'{variable}_max_trend'].values
+            else:
+                values_min=df[f'{variable}_relative_change_detrend_min_trend'].values
+                values_max=df[f'{variable}_relative_change_detrend_max_trend'].values
+            values_max_list.append(values_max)
+            values_min_list.append(values_min)
+        values_min_list=np.array(values_min_list)
+        values_max_list=np.array(values_max_list)
+        values_max_list_mean=np.nanmean(values_max_list,axis=1)
+        values_min_list_mean=np.nanmean(values_min_list,axis=1)
+        ## add legend
+
+        fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+        dic_label_name = {'composite_LAI_mean': 'Composite',
+                          'LAI4g':'LAI4g',
+
+                          'GLOBMAP': 'GLOBMAP',
+                          'SNU_LAI': 'SNU',
+
+                          'TRENDY_ensemble_median': 'TRENDY ensemble',
+                          'CABLE-POP_S2_lai': 'CABLE-POP',
+                          'CLASSIC_S2_lai': 'CLASSIC',
+                          'CLM5': 'CLM5',
+                          'DLEM_S2_lai': 'DLEM',
+                          'IBIS_S2_lai': 'IBIS',
+                          'ISAM_S2_lai': 'ISAM',
+                          'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                          'JSBACH_S2_lai': 'JSBACH',
+                          'JULES_S2_lai': 'JULES',
+                          'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                          'LPX-Bern_S2_lai': 'LPX-Bern',
+                          'ORCHIDEE_S2_lai': 'ORCHIDEE',
+
+                          'YIBs_S2_Monthly_lai': 'YIBs',
+                          'LAI4g': 'GIMMS4g',
+
+                          }
+
+
+        plt.bar(variables_list,values_max_list_mean,color='#96cccb',width=0.7,edgecolor='black',label='Trend in LAImax',)
+        plt.bar(variables_list,values_min_list_mean,color='#f6cae5',width=0.7,edgecolor='black',label='Trend in LAImin',)
+        plt.legend()
+
+        # plt.xticks(np.arange(len(variables_list)),variables_list,rotation=45)
+
+        ## add y=0
+        plt.hlines(0, -0.5, len(variables_list) - 0.5, colors='black', linestyles='dashed')
+        plt.ylabel('(%/yr)')
+        plt.axhline(y=0, color='grey', linestyle='-')
+        labels = [dic_label_name.get(v, v) for v in variables_list]
+        ax.set_xticks(range(len(variables_list)))
+        # ax.set_xticklabels(labels, rotation=90, fontsize=10, font='Arial')
+        # plt.tight_layout()
+        # plt.show()
+        print(values_max_list_mean)
+        print(values_min_list_mean)
+        print(variables_list)
+        outdir=result_root+rf'\FIGURE\\figure4\\'
+        T.mk_dir(outdir,force=True)
+        outf=outdir+rf'barplot.pdf'
+        plt.savefig(outf,dpi=300,bbox_inches='tight')
+        plt.savefig(outf, dpi=300, )
 
 
 
@@ -9619,8 +9765,8 @@ def main():
     # Figure5().run()
 
     # partial_correlation().run()
-    partial_correlation_TRENDY().run()
-    # PLOT_dataframe().run()
+    # partial_correlation_TRENDY().run()
+    PLOT_dataframe().run()
 
 
 

@@ -5992,8 +5992,8 @@ def main():
     #extract_heatevent().run()
     # extract_water_year().run()  ## extract water year and phenology year
     # extract_rainfall_annual_based_on_daily().run()
-    # Extract_rainfall_phenology_daily().run()  ## use this
-    extract_LAI_phenology().run()  ## use this
+    Extract_rainfall_phenology_daily().run()  ## use this
+    # extract_LAI_phenology().run()  ## use this
     # TRENDY_model().run()
     # check_correlation().run()
 
