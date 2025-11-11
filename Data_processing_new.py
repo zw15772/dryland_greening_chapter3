@@ -1897,8 +1897,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\LAI4g\relative_change\moving_window_extraction_max_min\\'
-        outdir =result_root + (rf'\LAI4g\relative_change\moving_window_extraction_max_min\\trend\\')
+        fdir =result_root+ rf'\TRENDY\S2\relative_change\relative_change\\'
+        outdir =result_root + (rf'\TRENDY\S2\relative_change\relative_change\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1906,6 +1906,8 @@ class moving_window():
 
 
             if not f.endswith('.npy'):
+                continue
+            if not 'ensemble' in f:
                 continue
 
 
@@ -3079,7 +3081,7 @@ class processing_TRENDY():
             np.save(outf, detrend_zscore_dic)
 
     def TRENDY_ensemble_npy(self):
-        composite_LAI_reference=result_root + rf'\LAI4g\relative_change\\LAI4g_relative_change_detrend.npy'
+        composite_LAI_reference=result_root + rf'\Composite_LAI\relative_change\\composite_LAI_mean_relative_change.npy'
 
         composite_LAI = dict(np.load(composite_LAI_reference, allow_pickle=True, ).item())
 
@@ -3090,12 +3092,12 @@ class processing_TRENDY():
                       'ORCHIDEE_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        fdir = result_root + rf'\TRENDY\S2\relative_change\detrend_relative_change\\'
+        fdir = result_root + rf'\TRENDY\S2\relative_change\relative_change\\'
 
         result_dic={}
 
         for model in model_list:
-            fpath = fdir + model + '_relative_change_detrend.npy'
+            fpath = fdir + model + '_relative_change.npy'
             dic=T.load_npy(fpath)
             result_dic[model]=dic
         ## for each pixel calculate mean
@@ -3103,6 +3105,8 @@ class processing_TRENDY():
         ensemble_mean_dic = {}
 
         for pix in all_pixels:
+            if pix not in composite_LAI:
+                continue
             timeseries_list = []
             for model in model_list:
                 if pix not in result_dic[model]:
@@ -3127,7 +3131,7 @@ class processing_TRENDY():
 
 
 
-                mean_ts = np.nanmedian(timeseries_list, axis=0)
+                mean_ts = np.nanmean(timeseries_list, axis=0)
 
                 # plt.plot(mean_ts,color='k',label='median')
                 # plt.legend()
@@ -3137,7 +3141,7 @@ class processing_TRENDY():
                 ensemble_mean_dic[pix] = mean_ts
 
 
-        outf=result_root + rf'TRENDY\S2\relative_change\detrend_relative_change\TRENDY_ensemble_relative_change_detrend_median.npy'
+        outf=result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\TRENDY_ensemble_mean_relative_change.npy'
         T.save_npy(ensemble_mean_dic, outf)
 
 

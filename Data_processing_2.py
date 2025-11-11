@@ -1765,9 +1765,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\bivariate\\Dataframe\\')
+                result_root +  rf'\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Trends_CV.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1795,7 +1795,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
@@ -2654,7 +2654,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\bivariate\LAImin_LAImax\trend_analysis\\'
+        fdir = result_root + rf'TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2666,6 +2666,9 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
+            if not 'ensemble' in f:
+                continue
+
 
 
 
@@ -2871,9 +2874,9 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'composite_LAImax_median_trend': 'composite_LAI_median_max_trend',
+        df = df.rename(columns={'composite_LAI_detrend_CV_median_trend': 'composite_LAI_median_detrend_CV_trend',
 
-                              'composite_LAImin_median_trend': 'composite_LAI_median_min_trend',
+                              'composite_LAI_detrend_CV_mean_trend': 'composite_LAI_mean_detrend_CV_trend',
 
 
                                }
@@ -7861,7 +7864,8 @@ class TRENDY_CV:
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        self.plot_CV_trend_among_models()
+        self.plot_CV_trend_among_models() ## calculating mean obs and TRENDY
+        # self.plot_CV_trend_among_models2()  ## TRENDY enseble and obs mean as input
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
         # self.plot_sign_between_LAI_NDVI()
@@ -8173,12 +8177,12 @@ class TRENDY_CV:
 
 
 
-        fdir = result_root + rf'\3mm\moving_window_multi_regression\TRENDY\input\detrend\Y\\'
+        fdir = result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\\'
 
         result_dic={}
 
         for model in model_list:
-            fpath = fdir + model + '_zscore_detrend.npy'
+            fpath = fdir + model + '_detrend_CV.npy'
             dic=T.load_npy(fpath)
             result_dic[model]=dic
         ## for each pixel calculate mean
@@ -8191,7 +8195,7 @@ class TRENDY_CV:
                 if pix not in result_dic[model]:
                     continue
                 vals = result_dic[model][pix]
-                if len(vals)!=38:
+                if len(vals)<24:
                     continue
                 if vals is not None:
                     timeseries_list.append(np.array(vals))
@@ -8214,7 +8218,7 @@ class TRENDY_CV:
                 ensemble_mean_dic[pix] = mean_ts
 
 
-        outf=result_root + rf'\3mm\moving_window_multi_regression\TRENDY\input\detrend\Y\TRENDY_ensemble_mean_zscore_detrend.npy'
+        outf=result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\TRENDY_ensemble_mean_detrend_CV.npy'
         T.save_npy(ensemble_mean_dic, outf)
 
 
@@ -8706,16 +8710,16 @@ class TRENDY_CV:
 
 
 
-    def plot_CV_trend_among_models(self):  ##plot CV and trend
+    def plot_CV_trend_among_models(self):  ##calculating mean obs and TRENDY in program
 
-        color_list = ['black','black', 'black',  '#a1a9d0',
-                      '#f0988c', '#b883d3','#ffff33', '#c4a5de',
-                      '#E7483D', '#984ea3','#e41a1c',
-                      '#9e9e9e', '#cfeaf1', '#f6cae5',
-                      '#98cccb', '#5867AF','black', '#e66d50',]
+        color_list = ['black','black', 'black',  'Lime',
+                      '#f0988c', 'yellow', 'Aqua',
+                      '#E7483D', '#ffff33','#984ea3',#ffff33',','#e41a1c',
+                      '#9e9e9e', '#cfeaf1', 'green',
+                      '#98cccb', 'DarkGoldenrod','DodgerBlue', 'black','#e66d50',]
         ## I want use set 3 color
 
-        mark_size_list=[50]*3+[50]*13+[150]*2
+        mark_size_list=[50]*3+[50]*13+[200]*2
         # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
 
 
@@ -8787,6 +8791,7 @@ class TRENDY_CV:
         model_trend_mean = np.nanmean([vals_trend_list[variables_list.index(v)] for v in model_vars])
         print('obs mean', obs_trend_mean, obs_CV_mean)
         model_CV_mean = np.nanmean([vals_CV_list[variables_list.index(v)] for v in model_vars])
+        print('model mean', model_trend_mean, model_CV_mean)
 
         # 把 ensemble 加入列表末尾
         variables_plot = variables_list + ['OBS_mean', 'TRENDY_ensemble_mean']
@@ -8824,8 +8829,112 @@ class TRENDY_CV:
         ## save imagine
         plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
         plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
-        # plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
+        outdir=result_root + rf'\FIGURE\\Figure4\\'
+        plt.savefig(outdir+ rf'\\LAI4g_detrend_CV_trend.pdf',  bbox_inches='tight')
 
+
+        #
+        # plt.show()
+
+    def plot_CV_trend_among_models2(self):  ##here not calculating mean in program
+
+        color_list = ['black', 'black', 'black', '#a1a9d0',
+                      '#f0988c', '#b883d3', '#ffff33', '#c4a5de',
+                      '#E7483D', '#984ea3', '#e41a1c',
+                      '#9e9e9e', '#cfeaf1', '#f6cae5',
+                      '#98cccb', '#5867AF', 'black', '#e66d50', ]
+        ## I want use set 3 color
+
+        mark_size_list = [200] * 1+[50] * 3 +[200] * 1+ [50] * 13
+        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
+
+        dff = result_root + rf'\Dataframe\\Trends_CV.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        T.print_head_n(df)
+        print(df.columns.tolist())
+        ## print column names
+        # print(df.columns)
+        # exit()
+        marker_list = ['^', 's', 'P', 'X', 'D'] * 4
+
+        variables_list = ['composite_LAI_median','LAI4g', 'GLOBMAP_LAI',
+                          'SNU_LAI',
+                          'TRENDY_ensemble_median',
+                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+        vals_trend_list = []
+        vals_CV_list = []
+        err_trend_list = []
+        err_CV_list = []
+
+        for variable in variables_list:
+
+            vals_trend = df[f'{variable}_relative_change_trend'].values
+            vals_CV = df[f'{variable}_detrend_CV_trend'].values
+            vals_trend[vals_trend > 999] = np.nan
+            # vals_trend[vals_CV_p_value > 0.05] = np.nan
+            vals_CV[vals_CV > 999] = np.nan
+            vals_trend[vals_trend < -999] = np.nan
+            vals_trend[vals_trend < -10] = np.nan
+            vals_trend[vals_trend > 99] = np.nan
+            vals_CV[vals_CV < -999] = np.nan
+            # vals_CV[vals_CV_p_value > 0.05] = np.nan
+            vals_trend = vals_trend[~np.isnan(vals_trend)]
+            # print(variable,np.nanmean(vals_trend))
+            # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
+            # plt.title(variable)
+            # plt.show()
+            vals_CV = vals_CV[~np.isnan(vals_CV)]
+            vals_trend_list.append(np.nanmean(vals_trend))
+            vals_CV_list.append(np.nanmean(vals_CV))
+
+
+        # exit()
+
+
+        # 把 ensemble 加入列表末尾
+        variables_plot = variables_list
+        vals_trend_plot = vals_trend_list
+        vals_CV_plot = vals_CV_list
+
+        # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
+        # plt.show()
+        ##plot error bar
+        # plt.figure(figsize=(self.map_width, self.map_height))
+
+        plt.figure(figsize=(13 * centimeter_factor, 10 * centimeter_factor))
+
+        # self.map_width = 13 * centimeter_factor
+        # self.map_height = 8.2 * centimeter_factor
+
+        err_trend_list = np.array(err_trend_list)
+        err_CV_list = np.array(err_CV_list)
+        for i, (x, y, marker, color, var, mark_size) in enumerate(
+                zip(vals_trend_plot, vals_CV_plot, marker_list, color_list, variables_plot, mark_size_list)):
+            plt.scatter(y, x, marker=marker, color=color_list[i], label=var, s=mark_size, edgecolors='black', )
+            # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
+
+            ##markerborderwidth=1
+
+            plt.ylabel('Trends in LAI (%/yr)', fontsize=12)
+            plt.xlabel('Trends in CVLAI (%/yr)', fontsize=12)
+            plt.ylim(-0.3, .9)
+            plt.xlim(-0.2, 0.5)
+            plt.xticks(fontsize=12)
+            ## xticks gap 0.05
+            plt.yticks(np.arange(-0.2, .9, 0.2), fontsize=12)
+            plt.yticks(fontsize=12)
+            # plt.legend()
+        ## save imagine
+        plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
+        plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
+        # plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
 
         #
         plt.show()
@@ -9241,13 +9350,13 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    # TRENDY_CV().run()
+    TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()
