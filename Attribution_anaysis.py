@@ -443,16 +443,12 @@ class multiregression_intersensitivity():
         self.fdirX= result_root+rf' \Multiregression_intersensitivity\input\\'
         self.fdir_Y=result_root+rf' \Multiregression_intersensitivity\input\\'
 
-        self.xvar_list = ['Precip_sum_anomaly_detrend',
-                          'Tmax_anomaly_detrend',
-                    ]
-        self.y_var_list = ['composite_LAI_relative_change_detrend_mean','composite_LAI_relative_change_detrend_median',]
 
 
     def run(self):
 
-        self.calculating_multiregression_intersensitivity()
-        # self.trend_analysis()
+        # self.calculating_multiregression_intersensitivity()
+        self.trend_analysis()
         # self.plot_time_series()
         # exit()
 
@@ -479,10 +475,12 @@ class multiregression_intersensitivity():
             fLAI = fdir + rf'\\{yvar}.npy'
             f_temp = fdir + rf'\\Tmax_anomaly_detrend.npy'
             f_precip = fdir + rf'\\Precip_sum_anomaly_detrend.npy'
+            f_VPD=fdir + rf'\\VPD_anomaly_detrend.npy'
 
             dic_LAI = T.load_npy(fLAI)
             dic_temp = T.load_npy(f_temp)
             dic_precip = T.load_npy(f_precip)
+            dic_vpd=T.load_npy(f_VPD)
 
             out_beta = {}
 
@@ -493,6 +491,7 @@ class multiregression_intersensitivity():
                 vals_LAI = np.array(dic_LAI[pix], dtype=float)
                 vals_temp = np.array(dic_temp[pix], dtype=float)
                 vals_precip = np.array(dic_precip[pix], dtype=float)
+                vals_vpd = np.array(dic_vpd[pix], dtype=float)
 
                 # 要求二维 [n_windows, n_years_in_window]
                 if vals_LAI.ndim != 2:
@@ -502,25 +501,31 @@ class multiregression_intersensitivity():
 
                 beta_p_list = []
                 beta_t_list = []
+                beta_vpd_list=[]
                 p_p_list = []
                 p_t_list = []
+                p_vpd_list=[]
 
                 for w in range(n_windows):
                     y = vals_LAI[w, :]
                     x1 = vals_precip[w, :]
                     x2 = vals_temp[w, :]
+                    x3=vals_vpd[w,:]
 
                     # 有效数据检查
-                    mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2)
+                    mask = ~np.isnan(y) & ~np.isnan(x1) & ~np.isnan(x2) & ~np.isnan(x3)
                     # print(mask.sum())
                     if mask.sum() < 5:
                         beta_p_list.append(np.nan)
                         beta_t_list.append(np.nan)
+                        beta_vpd_list.append(np.nan)
                         p_p_list.append(np.nan)
                         p_t_list.append(np.nan)
+                        p_vpd_list.append(np.nan)
+
                         continue
 
-                    X = np.column_stack([x1[mask], x2[mask]])
+                    X = np.column_stack([x1[mask], x2[mask],x3[mask]])
                     X = sm.add_constant(X)
                     y_valid = y[mask]
 
@@ -530,8 +535,12 @@ class multiregression_intersensitivity():
                         pvals = model.pvalues
                         beta_p_list.append(betas[1])  # 降雨敏感性
                         beta_t_list.append(betas[2])  # 温度敏感性
+                        beta_vpd_list.append(betas[3])  ## vpd 敏感性
+
                         p_p_list.append(pvals[1])
                         p_t_list.append(pvals[2])
+                        p_vpd_list.append(pvals[3])
+
                     except:
                         beta_p_list.append(np.nan)
                         beta_t_list.append(np.nan)
@@ -544,7 +553,10 @@ class multiregression_intersensitivity():
                     'intersensitivity_precip_val': np.array(beta_p_list),
                     'intersensitivity_precip_pval': np.array(p_p_list),
                     'intersensitivity_temp_val': np.array(beta_t_list),
-                    'intersensitivity_temp_pval': np.array(p_t_list)
+                    'intersensitivity_temp_pval': np.array(p_t_list),
+                    'intersensitivity_vpd_val': np.array(beta_vpd_list),
+                    'intersensitivity_vpd_pval': np.array(p_vpd_list),
+
 
                 }
 
@@ -553,26 +565,33 @@ class multiregression_intersensitivity():
             outdir = r'D:\Project3\Result\Nov\Multiregression_intersensitivity\output_obs\\'
             T.mk_dir(outdir, force=True)
 
-            T.save_npy(out_beta, outdir + f'{yvar}_sensitivity.npy')
+            T.save_npy(out_beta, outdir + f'{yvar}_sensitivity2.npy')
 
     def trend_analysis(self):
-        outdir=result_root+r'\Multiregression_intersensitivity\output\\'
-
-        f=result_root+rf'\Multiregression_intersensitivity\output\\multiregression_intrasensitivity.npy'
-        dic=T.load_npy(f)
-        result_dic={}
-        pvalue_result={}
-        for pix in dic:
-            vals=dic[pix]['intersensitivity_precip_val']
-
-            slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
-            result_dic[pix]=slope
-            pvalue_result[pix]=p_value
-        DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + 'multiregression_intrasensitivity_trend.tif')
-        DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + 'multiregression_intrasensitivity_pvalue.tif')
+        fdir=result_root+r'\Multiregression_intersensitivity\output_obs\\'
+        outdir=result_root+r'\Multiregression_intersensitivity\output_obs\\trend\\'
+        T.mk_dir(outdir,force=True)
+        for f in os.listdir(fdir):
+            if not 'composite_LAI_relative_change_detrend_median_sensitivity2' in f:
+                continue
+            fname=f.split('.')[0]
 
 
-        pass
+            fpath=join(fdir,f)
+            dic=T.load_npy(fpath)
+            result_dic={}
+            pvalue_result={}
+            for pix in dic:
+                vals=dic[pix]['intersensitivity_precip_val']
+
+                slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
+                result_dic[pix]=slope
+                pvalue_result[pix]=p_value
+            DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + f'{fname}_trend2.tif')
+            DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + f'{fname}_pvalue2.tif')
+
+
+            pass
 
 
     def plot_time_series(self):
@@ -668,10 +687,7 @@ class multiregression_intersensitivity_TRENDY():
         self.fdirX= result_root+rf' \Multiregression_intersensitivity\input\\'
         self.fdir_Y=result_root+rf' \Multiregression_intersensitivity\input\\'
 
-        self.xvar_list = ['Precip_sum_anomaly_detrend',
-                          'Tmax_anomaly_detrend',
-                          'sum_rainfall_growing_season_zscore_detrend']
-        self.y_var_list = ['composite_LAI_relative_change_detrend_mean','composite_LAI_relative_change_detrend_median',]
+
 
 
     def run(self):
@@ -894,6 +910,17 @@ class partial_correlation_obs:
 
         self.fdirX = self.result_root + rf'\input\\X\\'
         self.fdirY = self.result_root + rf'\input\\Y\\'
+        # self.model_list = [
+        #     'composite_LAI_median', 'LAI4g', 'GLOBMAP_LAI', 'SNU_LAI',
+        #     'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        #     'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+        #     'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+        #     'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+        #     'ORCHIDEE_S2_lai',
+        #
+        #     'YIBs_S2_Monthly_lai',
+        #
+        # ]
 
         pass
     def run(self):
@@ -927,8 +954,15 @@ class partial_correlation_obs:
         # #         # # # # # # self.check_data()
         #         self.plot_partial_correlation()
         #         self.plot_partial_correlation_p_value()
+
+
         # self.statistic_trend_bar()
-        self.plot_spatial_map_sig()
+        # self.plot_spatial_map_sig()
+        self.statistic_corr_boxplot()
+
+        # self.max_correlation_without_trend()
+        # self.max_correlation_with_trend()
+        # self.statistic_partial_trends_dorminant()
         pass
 
 
@@ -1413,8 +1447,467 @@ class partial_correlation_obs:
                 outf = outdir  + f'{variable}.tif'
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
 
+    def statistic_corr_boxplot(self):
+        """
+        绘制 partial correlation 的分布（仅针对 CVLAI 上升区域）
+        显示 sensitivity (γ), CV_inter, CV_intra 的箱线图
+        """
+
+        # === 1. 读取数据 ===
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        # === 仅保留CVLAI显著上升的像素 ===
+        df = df[df['composite_LAI_detrend_CV_median_trend'] > 0]
+        df = df[df['composite_LAI_detrend_CV_median_p_value'] < 0.05]
+
+        # === 2. 变量设置 ===
+        variable_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        label_dic = {
+            'sensitivity': r'$\gamma$',
+            'Precip_sum_detrend_CV': r'$CV_{inter}$',
+            'CV_daily_rainfall_average': r'$CV_{intra}$',
+        }
 
 
+
+        # === 4. 数据提取 ===
+
+        for model in self.model_list:
+            result_dic = {}
+            # if 'composite_LAI_median' not in model:
+            #     continue
+
+            for variable in variable_list:
+                new_variable = f'{model}_{variable}'
+                if new_variable not in df.columns:
+                    continue
+
+                vals = np.array(df[new_variable].tolist(), dtype=float)
+                vals[(vals > 99) | (vals < -99)] = np.nan
+                vals = vals[~np.isnan(vals)]
+                result_dic[new_variable] = vals
+
+        # === 5. 按 variable_list 顺序组织数据 ===
+            data_list = []
+            x_labels = []
+
+            for var in variable_list:
+                key = f'{model}_{var}'
+                if key in result_dic:
+                    data_list.append(result_dic[key])
+                    x_labels.append(label_dic[var])
+
+                    # 设置颜色
+            color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f599a1']
+            dark_colors = ['#774685', 'Olive', 'Salmon', '#c3646f']  # 可以改为你自定义的 darken_color 函数
+
+            # 绘图
+            fig, ax = plt.subplots(figsize=(4, 3))
+
+            box = ax.boxplot(
+                data_list,
+                patch_artist=True,
+                widths=0.4,
+                showfliers=False
+
+            )
+
+            # 自定义颜色
+            # === 美化箱线图（让 median、whisker 与箱体颜色一致） ===
+            for i, patch in enumerate(box['boxes']):
+                face_color = color_list[i]
+                edge_color = dark_colors[i]
+
+                # 箱体
+                patch.set_facecolor(face_color)
+                patch.set_edgecolor(edge_color)
+                patch.set_linewidth(1.5)
+
+                # 中位线
+                box['medians'][i].set_color(edge_color)
+                box['medians'][i].set_linewidth(1.8)
+
+                # 上下须（whisker）
+                box['whiskers'][2 * i].set_color(edge_color)
+                box['whiskers'][2 * i + 1].set_color(edge_color)
+                box['whiskers'][2 * i].set_linewidth(1.2)
+                box['whiskers'][2 * i + 1].set_linewidth(1.2)
+
+                # 顶部和底部横线（caps）
+                box['caps'][2 * i].set_color(edge_color)
+                box['caps'][2 * i + 1].set_color(edge_color)
+                box['caps'][2 * i].set_linewidth(1.2)
+                box['caps'][2 * i + 1].set_linewidth(1.2)
+
+            # 设置x轴
+
+            plt.xticks(range(1, len(x_labels) + 1), x_labels, fontsize=10)
+            plt.xlabel('')
+            plt.ylabel('Partial correlation', fontsize=10)
+
+            plt.axhline(0, color='gray', linestyle='--')
+            # plt.tight_layout()
+            # plt.show()
+
+            outdir=result_root + rf'\FIGURE\Figure4\\'
+            Tools().mk_dir(outdir, force=True)
+
+            outf=join(outdir,f'{model}_partial_correlation_boxplot.pdf')
+            plt.savefig(outf,bbox_inches='tight',dpi=300
+
+            )
+            plt.close()
+
+    def darken_color(self, color, amount=0.7):
+        """
+        给颜色加深，amount 越小越深 (0~1之间)
+        """
+        import matplotlib.colors as mcolors
+        c = mcolors.to_rgb(color)
+        return tuple([max(0, x * amount) for x in c])
+
+    def max_correlation_without_trend(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_detrend_CV_median_trend'] > 0]
+        df = df[df['composite_LAI_detrend_CV_median_p_value'] < 0.05]
+
+        model_list = self.model_list
+
+        var_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        for model in tqdm(model_list):
+
+            outdir = result_root + rf'\partial_correlation\Obs\result\\{model}\\'
+            T.mk_dir(outdir, force=True)
+
+            # === 拼接变量名称 ===
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            color_list = []
+            trend_val_list = []
+
+            for _, row in df.iterrows():
+                # === 提取该像素下的 sensitivity 值 ===
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    color_list.append(np.nan)
+                    trend_val_list.append(np.nan)
+                    continue
+
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_var = var_list[idx_max]  # 注意取原始名字 (e.g. 'sensitivity')
+
+                # === 嵌套逻辑：dominant + trend方向 ===
+                if 'sensitivity' in max_var:
+                        color = 1
+                elif 'Precip_sum_detrend_CV' in max_var:
+
+                        color = 2
+
+                elif 'CV_daily_rainfall_average' in max_var:
+
+                        color = 3
+
+                else:
+                    color = np.nan
+
+                max_var_list.append(max_var)
+                color_list.append(color)
+
+
+            df['max_var'] = max_var_list
+            df['color'] = color_list
+
+
+
+            # === 写出 color_map ===
+            outdir= result_root + rf'\partial_correlation\Obs\result\\{model}\\'
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            out_tif = join(outdir, 'dominant_color_map_without_trend.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
+
+    def max_correlation_with_trend(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_detrend_CV_median_trend'] > 0]
+        df = df[df['composite_LAI_detrend_CV_median_p_value'] < 0.05]
+
+        model_list = self.model_list
+
+        var_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        for model in tqdm(model_list):
+
+            outdir = result_root + rf'\partial_correlation\Obs\result\\{model}\\'
+            T.mk_dir(outdir, force=True)
+
+            # === 拼接变量名称 ===
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            color_list = []
+            trend_val_list = []
+
+            for _, row in df.iterrows():
+                # === 提取该像素下的 sensitivity 值 ===
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    color_list.append(np.nan)
+                    trend_val_list.append(np.nan)
+                    continue
+
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_var = var_list[idx_max]  # 注意取原始名字 (e.g. 'sensitivity')
+
+                # === 对应趋势列名 ===
+                if 'sensitivity' in max_var:
+                    trend_col = f'{model}_{max_var}_trend'
+                else:
+                    trend_col = f'{max_var}_trend'
+
+                if trend_col in df.columns:
+                    trend_val = row[trend_col]
+                else:
+                    trend_val = np.nan
+
+                # === 嵌套逻辑：dominant + trend方向 ===
+                if 'sensitivity' in max_var:
+                    if trend_val > 999:
+                        color=np.nan
+                    elif trend_val < -999:
+                        color=np.nan
+                    elif trend_val > 0:
+                        color = 2
+                    elif trend_val < 0:
+                        color = 1
+                    else:
+                        color = np.nan
+
+                elif 'Precip_sum_detrend_CV' in max_var:
+                    if trend_val > 999:
+                        color=np.nan
+                    elif trend_val < -999:
+                        color=np.nan
+                    elif trend_val > 0:
+                        color = 4
+                    elif trend_val < 0:
+                        color = 3
+                    else:
+                        color = np.nan
+
+                elif 'CV_daily_rainfall_average' in max_var:
+                    if trend_val > 999:
+                        color=np.nan
+                    elif trend_val < -999:
+                        color=np.nan
+                    elif trend_val > 0:
+                        color = 6
+                    elif trend_val < 0:
+                        color = 5
+                    else:
+                        color = np.nan
+
+                else:
+                    color = np.nan
+
+                max_var_list.append(max_var)
+                color_list.append(color)
+                trend_val_list.append(trend_val)
+
+            df['max_var'] = max_var_list
+            df['color'] = color_list
+
+            # === 写出 color_map ===
+            outdir = result_root + rf'\partial_correlation\Obs\result\\{model}\\'
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            out_tif = join(outdir, 'dominant_color_map_with_trend.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
+
+    def statistic_partial_trends_dorminant(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df=df[df['composite_LAI_detrend_CV_median_trend']>0]
+        df=df[df['composite_LAI_detrend_CV_median_p_value']<0.05]
+
+
+        for col in df.columns:
+            print(col)
+
+        model_list = self.model_list
+        model_list=['composite_LAI_median']
+
+        result_dic = {}
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 2, 3, 4, 5, 6, ]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_dominant_color_map_with_trend'
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        # === 按变量分组 (+, -) ===
+        group_pairs = {
+            'γ': [1, 2],
+            'CV_inter': [3, 4],
+            'CV_intra': [5, 6],
+        }
+
+        # === 可视化 ===
+        plt.figure(figsize=(3, 3))
+        x_labels = list(group_pairs.keys())
+        x = np.arange(len(x_labels))
+
+
+        # 颜色设定：负号 = 蓝色，正号 = 红色
+        color_minus = '#4A90E2'  # 蓝
+        color_plus = '#E94E77'  # 红
+
+        for i, model in enumerate(model_list):
+            bar_bottom = np.zeros(len(group_pairs))
+            for j, (group_name, pair) in enumerate(group_pairs.items()):
+                val_minus = result_dic[pair[0]][i]
+                val_plus = result_dic[pair[1]][i]
+                # 绘制堆叠
+                plt.bar(x[j] + i * 0.15, val_minus, width=0.7, color=color_minus)
+                plt.bar(x[j] + i * 0.15, val_plus, bottom=val_minus, width=0.7, color=color_plus)
+
+        # === 外观设置 ===
+        plt.xticks(x + (len(model_list) - 1) * 0.15 / 2, x_labels, rotation=0)
+        plt.ylabel('Area (%)')
+
+        plt.legend(['negative trend', 'positive trend'], loc='upper right')
+        plt.tight_layout()
+        plt.show()
+
+
+
+    def statistic_contribution_area_barplot(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        for col in df.columns:
+                print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 2, 3, 4, 5, 6, ]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_dorminant_color_map'
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'Trends gamma+',
+                             2: 'Trends gamma-',
+                             3:'Trends CV_intra+',
+                             4:'Trends CV_intra-',
+                             5:'Trends CV_inter+',
+                             6:'Trends CV_inter-'
+
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 2, 3, 4, 5, 6]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 20)
+            plt.grid(axis='y', alpha=0.25)
+
+
+            plt.show()
+
+            #
+            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
 
 class partial_correlation_TRENDY():
     def __init__(self):
@@ -1951,9 +2444,9 @@ class partial_correlation_TRENDY():
 
 def main():
     # multiregression_intrasensitivity().run()
-    # multiregression_intersensitivity().run()
+    multiregression_intersensitivity().run()
     # multiregression_intersensitivity_TRENDY().run()
-    partial_correlation().run()
+    # partial_correlation_obs().run()
 
     pass
 

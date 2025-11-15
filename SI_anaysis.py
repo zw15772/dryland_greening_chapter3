@@ -86,7 +86,7 @@ centimeter_factor = 1/2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+result_root = 'D:/Project3/Result/Nov//'
 
 class greening_analysis():
 
@@ -1276,8 +1276,7 @@ class Colormap():
             percentage_list = []
             sum = 0
             df = df.dropna(subset=[f'{model}_color_map'])
-            sum2=0
-            sum2_list=[]
+
 
             for ii in [1, 2, 3, 4, 5, 6]:
                 df_ii = df[df[f'{model}_color_map'] == ii]
@@ -1286,13 +1285,12 @@ class Colormap():
 
                 percent = len(df_ii) / len(df) * 100
                 sum = sum + percent
-                if ii in [4]:
-                    sum2 = sum2 + percent
+
 
                 percentage_list.append(percent)
             # print(percentage_list)
             # print(sum);
-            print(sum2)
+
 
             # exit()
 
@@ -1649,11 +1647,11 @@ class Fire():
 class TRENDY_trend():
 
     def trend_analysis_plot(self):
-        outdir = result_root + rf'\3mm\FIGURE\\trends_all_models_greening\\'
+        outdir = result_root + rf'\FIGURE\Figure1\\'
         T.mk_dir(outdir,True)
-        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+        temp_root = result_root + rf'\TRENDY\S2\relative_change\relative_change\\temp_root\\'
 
-        model_list = ['SNU_LAI_relative_change', 'GLOBMAP_LAI_relative_change', 'composite_LAI_relative_change_mean',
+        model_list = ['SNU_LAI', 'GLOBMAP_LAI', 'composite_LAI_median',
                       'LAI4g',
                       'TRENDY_ensemble_median',
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -1692,7 +1690,7 @@ class TRENDY_trend():
 
 
 
-        fdir = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\'
+        fdir = result_root + rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\'
 
         color_list = ['#844000', '#fc9831', '#fffbd4', '#86b9d2', '#064c6c']
         my_cmap2 = T.cmap_blend(color_list, n_colors=5)
@@ -1706,8 +1704,8 @@ class TRENDY_trend():
 
         for i, model in enumerate(model_list):
             fig,ax=plt.subplots(1,1,figsize=(3.35,2.19))
-            fpath = fdir + f'{model}_trend.tif'
-            f_pvalue = fdir + f'{model}_p_value.tif'
+            fpath = fdir + f'{model}_relative_change_trend.tif'
+            f_pvalue = fdir + f'{model}_relative_change_p_value.tif'
 
             # 画 Robinson 投影 + 栅格
             m, mappable = Plot().plot_Robinson(
@@ -5261,10 +5259,10 @@ class calculate_longterm_CV():
 def main():
     # greening_analysis().run()
     # climate_variables().run()
-    # TRENDY_trend().trend_analysis_plot()
+    TRENDY_trend().trend_analysis_plot()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
-    Fire().run()
+    # Fire().run()
     # Colormap().run()
     # Partial_correlation().run()
     # LAImax_LAImin_models().run()

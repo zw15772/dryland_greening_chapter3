@@ -1325,7 +1325,7 @@ class moving_window():
 
 
         fdir_all =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\'
-        outdir = self.result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\\\\\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\\\\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -1353,6 +1353,8 @@ class moving_window():
 
                 # time_series = dic[pix][mode]
                 time_series = dic[pix]
+                # plt.plot(time_series)
+                # plt.show()
 
 
                 time_series = np.array(time_series)
@@ -1663,8 +1665,8 @@ class moving_window():
     def moving_window_min_anaysis(self): ## each window calculating the average
         window_size = 15
 
-        fdir = result_root + rf'TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction\\'
-        outdir = result_root + rf'\TRENDY\S2\relative_change\detrend_relative_change\\moving_window_extraction_max_min\\'
+        fdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\moving_window_extraction\\'
+        outdir = result_root + rf'CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\moving_window_extraction_max_min\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             if not 'detrend' in f:
@@ -1687,7 +1689,7 @@ class moving_window():
 
                 time_series_all = dic[pix]
                 time_series_all = np.array(time_series_all)
-                # print(time_series_all)
+                # print(len(time_series_all));exit()
                 if np.isnan(np.nanmean(time_series_all)):
                     print('error')
                     continue
@@ -1713,6 +1715,8 @@ class moving_window():
                     trend_list.append(average)
 
                 trend_dic[pix] = trend_list
+                # plt.plot(trend_dic[pix])
+                # plt.show()
 
                 ## save
             np.save(outf, trend_dic)
@@ -1722,8 +1726,8 @@ class moving_window():
         window_size = 15
 
 
-        fdir =result_root+ rf'TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction\\'
-        outdir = result_root+rf'\TRENDY\S2\relative_change\detrend_relative_change\\moving_window_extraction_max_min\\'
+        fdir =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\moving_window_extraction\\'
+        outdir = result_root+rf'CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\moving_window_extraction_max_min\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
             if not 'detrend' in f:
@@ -1897,8 +1901,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\TRENDY\S2\relative_change\relative_change\\'
-        outdir =result_root + (rf'\TRENDY\S2\relative_change\relative_change\\trend\\')
+        fdir =result_root+ rf'\Multiregression_contribution\Obs\input\Y\zscore\\'
+        outdir =result_root + (rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1907,9 +1911,6 @@ class moving_window():
 
             if not f.endswith('.npy'):
                 continue
-            if not 'ensemble' in f:
-                continue
-
 
 
 
@@ -3155,7 +3156,8 @@ class processing_climate_variable():
         # self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
-        # self.detrend()
+        self.detrend()
+        # self.trend_analysis()
 
 
 
@@ -3521,6 +3523,100 @@ class processing_climate_variable():
                 detrend_zscore_dic[pix] = detrend_delta_time_series
 
             np.save(outf, detrend_zscore_dic)
+
+    def trend_analysis(self):  ##each window average trend
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\\'
+        outdir =result_root + (rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\\trend\\')
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+
+
+            if not f.endswith('.npy'):
+                continue
+
+
+
+            outf = outdir + f.split('.')[0]
+            if os.path.isfile(outf + '_trend.tif'):
+                continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            # dic=T.load_npy_dir(fdir)
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                    ## ignore the last one year
+
+                # time_series = dic[pix][:-1]
+                time_series = dic[pix]
+                # print((time_series))
+                # exit()
+                time_series = np.array(time_series)
+                average = np.nanmean(time_series)
+                # print(time_series)
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                # if len(set(time_series)) == 1:
+                #     continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+
+
+            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
+
+            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+
+            # plt.imshow(arr_trend, cmap='jet', vmin=1, vmax=1)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
+
+        T.open_path_and_file(outdir)
+
 
 
 

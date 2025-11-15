@@ -16,41 +16,47 @@ centimeter_factor = 1/2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
-result_root = 'D:/Project3/Result/'
+result_root = 'D:/Project3/Result/Nov/'
 
 class Delta_regression:
 
     def __init__(self):
-        self.xvar = ['CV_intraannual_rainfall_ecosystem_year_zscore',
-                     'detrended_sum_rainfall_ecosystem_year_CV_zscore',  ]
+        self.xvar = ['Precip_sum_detrend_CV_zscore',
+                     'CV_daily_rainfall_average_zscore',  ]
 
         # self.model_list = ['composite_LAI_median','composite_LAI_mean']
 
-        self.model_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
+        self.model_list = ['composite_LAI_mean','composite_LAI_median', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
 
-        self.outdir = rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\'
-        T.mkdir(self.outdir)
+        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\\result\\'
+        T.mkdir(self.outdir, True)
 
         pass
 
 
     def run(self):
-        df = self.load_df()
+
+        ## step 1 zscore
+        # self.zscore()
+        ## step 2 build dataframe manually
+        # df=self.build_df()
+        # self.append_attributes(df)
+        # self.append_value(df)
+
+
         # self.do_multi_regression()
 
-        # for model in self.model_list:
-        #     x_list=self.xvar+[model+'_sensitivity_zscore']
-        #     self.do_multi_regression_control_experiment(model,x_list) ## use this but the result is the same
-        #
-        #
-        #     self.calculate_trend_contribution(model,x_list)
-        # self.ensemble_trend_contribution()
-        # self.normalized_contribution()
+        for model in self.model_list:
+            x_list=self.xvar+[model+'_sensitivity_zscore']
+            # self.do_multi_regression_control_experiment(model,x_list) ## use this but the result is the same
 
-        # self.max_correlation_with_sign()## use this
-        # self.Figure2_robinson()
-        self.statistic_contribution()  ## use this
+
+            # self.calculate_trend_contribution(model,x_list)
+
+
+        self.statistic_contribution_no_residual()  ## use this
         # self.statistic_contribution_area()  ## use this
+        # self.Figure2_robinson()
 
 
         ###########################################3
@@ -71,6 +77,155 @@ class Delta_regression:
         # self.calculate_mean()
 
         pass
+
+    def zscore(self):
+        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
+        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
+        dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
+
+        fdir = result_root + rf'\Multiregression_contribution\Obs\input\Y\\'
+        outdir = result_root + rf'\Multiregression_contribution\Obs\input\Y\\zscore\\'
+        T.mk_dir(outdir, force=True)
+        Tools().mk_dir(outdir, force=True)
+        for f in os.listdir(fdir):
+
+
+            dic = T.load_npy(fdir + f)
+            outf = outdir + f.split('.')[0] + '_zscore.npy'
+
+            zscore_dic = {}
+
+            for pix in tqdm(dic):
+
+                if pix not in dic_dryland_mask:
+                    continue
+
+                # time_series = dic[pix]['intersensitivity_precip_val']
+                time_series = dic[pix]
+
+                # # 检查 time_series 是否为 list 或 array（防止是 float/NaN）
+
+                if not isinstance(time_series, (list, np.ndarray)):
+                    print(f"{pix}: invalid time_series (not iterable): {time_series}")
+                    continue
+
+                time_series = np.array(time_series, dtype=float)
+                # time_series = time_series[3:37]
+
+                print(len(time_series))
+                ## exclude nan
+
+                if np.isnan(np.nanmean(time_series)):
+                    continue
+                # if np.nanmean(time_series) >999:
+                #     continue
+                if np.nanmean(time_series) < -999:
+                    continue
+                time_series = time_series
+                mean = np.nanmean(time_series)
+                zscore = (time_series - mean) / np.nanstd(time_series)
+
+                zscore_dic[pix] = zscore
+
+                # plt.plot(time_series)
+                # plt.legend(['raw'])
+                # # plt.show()
+                #
+                # #
+                # plt.plot(zscore)
+                # plt.legend(['zscore'])
+                # # # plt.legend(['raw','zscore'])
+                # plt.show()
+
+                ## save
+            np.save(outf, zscore_dic)
+
+    def build_df(self,):
+
+        fdir = result_root+rf'\Multiregression_contribution\Obs\input\X\zscore\\'
+        all_dic = {}
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            if not 'zscore' in f:
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir + f
+
+            dic = T.load_npy(fpath)
+            key_name = fname
+
+            all_dic[key_name] = dic
+        # print(all_dic.keys())
+        df = T.spatial_dics_to_df(all_dic)
+        T.print_head_n(df)
+
+
+        return df
+
+    def append_attributes(self, df):  ## add attributes
+        fdir = result_root+rf'\Multiregression_contribution\Obs\input\Y\zscore\\'
+
+        for f in tqdm(os.listdir(fdir)):
+            if not f.endswith('.npy'):
+                continue
+
+
+            # array=np.load(fdir+f)
+            # dic = DIC_and_TIF().spatial_arr_to_dic(array)
+            dic = T.load_npy(fdir + f)
+            key_name = f.split('.')[0]
+            # if not key_name in var_list:
+            #     continue
+            print(key_name)
+
+            # df[key_name] = df['pix'].map(dic)
+            # T.print_head_n(df)
+            df = T.add_spatial_dic_to_df(df, dic, key_name)
+        T.save_df(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.df')
+        T.df_to_excel(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.xlsx')
+
+
+
+        return df
+
+
+    # def append_value(self, df):  ##补齐
+    #
+    #
+    #
+    #     for col in df.columns:
+    #
+    #         vals_new = []
+    #
+    #         for i, row in tqdm(df.iterrows(), total=len(df), desc=f'append {col}'):
+    #             pix = row['pix']
+    #             r, c = pix
+    #             if r<60:
+    #                 continue
+    #             vals = row[col]
+    #             print(vals)
+    #             if type(vals) == float:
+    #                 vals_new.append(np.nan)
+    #                 continue
+    #             vals = np.array(vals)
+    #             print(len(vals))
+    #
+    #             if len(vals) == 25:
+    #
+    #                 vals = np.append(vals, np.nan)
+    #                 vals_new.append(vals)
+    #
+    #             vals_new.append(vals)
+    #
+    #             # exit()
+    #         df[col] = vals_new
+
+        # T.save_df(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.df')
+        # T.df_to_excel(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.xlsx')
 
     def do_multi_regression(self):
         self.outdir = self.outdir
@@ -135,8 +290,28 @@ class Delta_regression:
         spatial_dict = {}
         for i,row in tqdm(df.iterrows(),total=len(df)):
             pix = row['pix']
+
+            # === 检查变量是否都存在并获取长度 ===
+            length_dict = {}
+            valid = True
+            for var_i in var_list:
+                val = row[var_i]
+                if isinstance(val, float) or len(val) == 0:
+                    valid = False
+                    break
+                length_dict[var_i] = len(val)
+
+            # === 如果长度不匹配，则跳过该像素 ===
+            if len(set(length_dict.values())) > 1:
+                print(f"Length mismatch at pixel {row['pix']}:")
+                for k, v in length_dict.items():
+                    print(f"   {k}: length={v}")
+                continue
+
+
             df_i = pd.DataFrame()
             success = 0
+
             for var_i in var_list:
                 if type(row[var_i]) == float:
                     success = 0
@@ -147,20 +322,18 @@ class Delta_regression:
                 else:
                     success = 1
                 df_i[var_i] = row[var_i]
+
             if not success:
                 continue
+            print(df_i[x_list])
             X = df_i[x_list]
-            ### add interaction terms
-
 
             y = df_i[mode_name+'_detrend_CV_zscore']
-
 
             X=sm.add_constant(X)
             model = sm.OLS(y, X).fit()
             y_pred = model.predict(X)
             # delta_y = y - y_pred
-
 
             dict_i = {}
 
@@ -193,21 +366,26 @@ class Delta_regression:
         ## load the trend of the target variable
         ## load multi regression result
         ## calculate the trend contribution
-        trend_dir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\X\trend\\'
+        trend_dir = result_root + rf'\Multiregression_contribution\Obs\input\X\zscore\trend\\'
+
+
 
         selected_vairables_list = x_list
 
         trend_dict = {}
         for variable in selected_vairables_list:
             fpath = join(trend_dir, f'{variable}_trend.tif')
+
             array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
             array[array < -9999] = np.nan
             spatial_dict = D.spatial_arr_to_dic(array)
             for pix in tqdm(spatial_dict, desc=variable):
+
                 r, c = pix
                 if r < 60:
                     continue
                 val = spatial_dict[pix]
+
                 if np.isnan(val):
                     continue
                 if not pix in trend_dict:
@@ -218,7 +396,7 @@ class Delta_regression:
 
         outdir = self.outdir + f'\\{y_variable}\\'
 
-
+##################### multiregression slope
         fdir_slope=outdir
 
         multiregression_dic={}
@@ -231,6 +409,20 @@ class Delta_regression:
             multiregression_dic[f.split('.')[0]] = dic_multiregression
 
 
+############# Y trend
+        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\'
+        fy_trend=join(fdir_Y,f'{y_variable}_detrend_CV_zscore_trend.tif')
+        fy_trend_p_value = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
+
+
+        arr_y_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+            join(fdir_slope, fy_trend))
+        arr_y_trend_p_value, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+            join(fdir_slope, fy_trend_p_value)
+        )
+        dic_y_trend = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend)
+        dic_y_trend_p_value = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend_p_value)
+
 
                 # exit()
         for var_i in x_list:
@@ -238,7 +430,19 @@ class Delta_regression:
             for pix in tqdm(dic_multiregression, desc=var_i):
                 if not pix in trend_dict:
                     continue
+                print(dic_y_trend[pix])
+                if not pix in dic_y_trend:
+                    continue
+                trend_y=dic_y_trend[pix]
+                if not pix in dic_y_trend_p_value:
+                    continue
+                p_value=dic_y_trend_p_value[pix]
+                if p_value>0.05:
+                    continue
 
+
+                if trend_y<0:
+                    continue
                 vals = multiregression_dic[var_i][pix]
                 if vals < -9999:
                     continue
@@ -248,13 +452,13 @@ class Delta_regression:
                     continue
 
                 val_trend = trend_dict[pix][var_i]
-                val_contrib = val_multireg * val_trend
+                val_contrib = val_multireg * val_trend/trend_y*100
                 spatial_dic[pix] = val_contrib
             arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
-            plt.colorbar()
-            plt.title(var_i)
-            plt.show()
+            # plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest',vmin=-20,vmax=20)
+            # plt.colorbar()
+            # plt.title(var_i)
+            # plt.show()
 
 
 
@@ -607,14 +811,108 @@ class Delta_regression:
             plt.savefig(outf)
             # plt.close()
 
-    def statistic_contribution(self):
+    def statistic_contribution_no_residual(self):
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import os
 
-        model_list = [ 'LAI4g', ]
-        # model_list = ['composite_LAI_median', ]
-
-        dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\statistics\\statistics.df'
+        dff = result_root + rf'\Multiregression_contribution\Obs\Dataframe\\statistics.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
+
+
+        # === 配色方案 ===
+        color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f599a1']
+        dark_colors = ['#774685', 'Olive', 'Salmon', '#c3646f']  # 可以改为你自定义的 darken_color 函数
+
+
+        for model in self.model_list:
+            # === 变量名 ===
+            fixed_order = [
+                f'{model}_sensitivity_zscore_contrib',
+                f'{model}_Precip_sum_detrend_CV_zscore_contrib',
+                f'{model}_CV_daily_rainfall_average_zscore_contrib'
+            ]
+
+            label_map = {
+                f'{model}_sensitivity_zscore_contrib': 'γ',
+                f'{model}_Precip_sum_detrend_CV_zscore_contrib': 'CV_inter',
+                f'{model}_CV_daily_rainfall_average_zscore_contrib': 'CV_intra'
+            }
+
+            means, sems, labels = [], [], []
+
+            df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
+            df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
+
+            # === 计算平均值和标准误差 ===
+            for var in fixed_order:
+                if var not in df.columns:
+                    continue
+                vals = np.array(df[var].values, dtype=float)
+                vals[(vals > 99) | (vals < -99)] = np.nan
+                vals = vals[~np.isnan(vals)]
+                if len(vals) == 0:
+                    continue
+
+                mean_val = np.nanmean(vals)
+                sem_val = np.nanstd(vals) / np.sqrt(len(vals))  # 标准误差
+                means.append(mean_val)
+                sems.append(sem_val)
+                labels.append(label_map[var])
+
+            # === 绘图 ===
+            fig, ax = plt.subplots(figsize=(4, 3))
+            x = np.arange(len(labels))
+            colors = color_list
+            edges = dark_colors
+
+            bars = ax.bar(
+                x, means, width=0.5,
+                color=colors, edgecolor=edges, linewidth=1.2, zorder=2
+            )
+
+            # 误差线
+            for xi, mean, sem, edge in zip(x, means, sems, edges):
+                ax.errorbar(
+                    xi, mean, yerr=sem,
+                    fmt='none', ecolor=edge, elinewidth=1.2, capsize=4, zorder=3
+                )
+
+            # 美化
+            ax.axhline(0, color='gray', linestyle='--', lw=1)
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels, fontsize=12)
+            ax.set_ylabel('Attribution of CVLAI (%)', fontsize=12)
+            ax.set_yticklabels(ax.get_yticks(), fontsize=12)
+            # ax.spines['top'].set_visible(False)
+            # ax.spines['right'].set_visible(False)
+            # ax.spines['left'].set_linewidth(1)
+            # ax.spines['bottom'].set_linewidth(1)
+            ax.tick_params(axis='y', width=1, length=3)
+            ax.tick_params(axis='x', width=1, length=0)
+            # plt.tight_layout()
+
+            # === 输出保存 ===
+            outdir =result_root + rf'\FIGURE\\Figure4\\'
+            print(outdir)
+
+            Tools().mk_dir(outdir, force=True)
+            outf = os.path.join(outdir, f'{model}_relative_contribution.pdf')
+            plt.savefig(outf, bbox_inches='tight', dpi=300)
+            # plt.show()
+            # plt.close()
+
+    def statistic_contribution(self):
+
+        model_list = self.model_list
+
+
+        dff = result_root + rf'\Multiregression_contribution\Obs\Dataframe\\statistics.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_detrend_CV_median_trend'] > 0]
+        df = df[df['composite_LAI_detrend_CV_median_p_value'] < 0.05]
 
 
         # 设置变量名
@@ -626,8 +924,6 @@ class Delta_regression:
             for variable in self.xvar:
                 x_list.append(f'{model}_{variable}_contrib')
             x_list.append(f'{model}_sensitivity_zscore_contrib')
-
-
 
 
             labels, means, sems, = [], [], []
@@ -644,7 +940,7 @@ class Delta_regression:
                 values[values > 99] = np.nan
                 values[values < -99] = np.nan
                 values = values[~np.isnan(values)]
-                values_100 = values * 100
+                values_100 = values
 
 
                 vals_CV_obs = df[f'{model}_detrend_CV_zscore_trend'].values
@@ -652,8 +948,8 @@ class Delta_regression:
                 values_average = np.nanmean(values)
 
 
-                valus_relative_contribution = (values_average) / vals_CV_obs_mean * 100
-                standard_error = np.nanstd(values_100)  ## 要乘以100 才可以 否则数据两级不一样
+                valus_relative_contribution = (values_average)
+                standard_error = np.nanstd(values_100)
                 result_stat_dict[f'{model}_{variable}']=[valus_relative_contribution,sems]
 
                 labels.append(variable)
@@ -674,9 +970,6 @@ class Delta_regression:
                 "sems": np.array(sems),
 
             }
-
-
-
 
 
         for model in model_list:
@@ -748,7 +1041,7 @@ class Delta_regression:
             # plt.tight_layout()
 
             # #
-            # plt.show()
+            plt.show()
             outdir=result_root+rf'\3mm\FIGURE\Figure3_attribution\\'
             outf=join(outdir,f'{model}_relative_contribution.pdf')
             plt.savefig(outf,bbox_inches='tight',dpi=300)
@@ -1218,7 +1511,8 @@ class Delta_regression:
 
 
     def load_df(self):
-        dff = rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\Dataframe.df'
+        dff=result_root+'\Multiregression_contribution\Obs\Dataframe\\Dataframe.df'
+
         df = T.load_df(dff)
         # exit()
         # start_year = 0

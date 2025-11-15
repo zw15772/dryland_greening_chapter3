@@ -1250,12 +1250,12 @@ class build_moving_window_dataframe():
         self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
-        # df=self.build_df(df)
+        df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
@@ -1730,10 +1730,9 @@ class build_moving_window_dataframe():
 
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\3mm\Fire\moving_window_extraction\\'
+        fdir=result_root+rf'\bivariate\rainfall_max_min\trend\\'
         for f in os.listdir(fdir):
-            if not 'Fire_percentage_annual_sum' in f:
-                continue
+
             if not f.endswith('.tif'):
                 continue
             print(f)
@@ -1765,9 +1764,9 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Dataframe\\')
+                result_root +  rf'Multiregression_contribution\\Obs\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trends_CV.df'
+        self.dff = self.this_class_arr + rf'statistics.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1803,16 +1802,16 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
         # # # # # # # # # df=self.dummies(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
         # # # # # # # # # # #
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -1822,7 +1821,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
@@ -2040,7 +2039,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'TRENDY\S2\15_year\moving_window_extraction_CV\trend\CLM5_detrend_CV_trend.tif'
+        f = result_root + rf'\Multiregression_contribution\Obs\result\composite_LAI_mean\composite_LAI_mean_sensitivity_zscore.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2587,23 +2586,18 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'3mm\Multiregression\partial_correlation\TRENDY\partial_corr3\\'
+        fdir_all = result_root + rf'\Multiregression_contribution\Obs\result\\'
         for fdir in os.listdir(fdir_all):
-            # if not 'LAI4g' in fdir:
+            # if not 'sig' in fdir:
             #     continue
 
-
             for f in os.listdir(join(fdir_all,fdir)):
-                if not 'color' in f:
-                    continue
+
                 if not f.endswith('.tif'):
                     continue
-                # if 'p_value' in f:
-                #     continue
-                # if 'color' in f:
-                #     continue
 
 
+            #
             # fdir_sig=fdir_all+fdir+'\\sig\\'
 
             # for f in os.listdir(fdir_sig):
@@ -2612,8 +2606,6 @@ class build_dataframe():
 
                 if not f.endswith('.tif'):
                     continue
-
-
 
                 variable=(f.split('.')[0])
                 if 'sensitivity' in variable:
@@ -2654,7 +2646,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\'
+        fdir = result_root + rf'Multiregression_contribution\Obs\input\Y\zscore\trend\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2666,22 +2658,21 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            if not 'ensemble' in f:
-                continue
-
+            # if not 'ensemble' in f:
+            #     continue
 
 
 
             variable = (f.split('.')[0])
             print(variable)
 
-            variable = (f.split('.')[0])
+
 
 
             # if 'sensitivity' in variable:
             #     fname = variable
             # else:
-            #     fname = f'TRENDY_ensemble_{variable}'
+            #     fname = f'composite_{variable}'
             # print(fname)
 
 
@@ -3859,8 +3850,8 @@ class greening_analysis():
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
-        # self.plot_robinson()
-        self.statistic_trend_bar()
+        self.plot_robinson()
+        # self.statistic_trend_bar()
         # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
         # self.plot_spatial_barplot_period()
@@ -4514,9 +4505,9 @@ class greening_analysis():
     def plot_robinson(self):
 
         # fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        fdir_trend = result_root+rf'\3mm\product_consistency\relative_change\Trend\\'
-        temp_root = result_root+rf'\product_consistency\relative_change\\temp_plot\\'
-        outdir = result_root+rf'3mm\\product_consistency\Robinson\\'
+        fdir_trend = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\'
+        temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
+        outdir = result_root+rf'FIGURE\\Figure1\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -4534,14 +4525,16 @@ class greening_analysis():
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-0.3, vmax=0.3, is_discrete=True, colormap_n=7,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
 
-            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.2, marker='.')
-            plt.title(f'{fname}')
-            # plt.show()
-            outf = outdir + f+'.pdf'
-            plt.savefig(outf)
+            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
+            # plt.title(f'{fname}')
+            plt.show()
+            # outf = outdir + f+'.pdf'
+            # plt.savefig(outf)
             # plt.close()
+            # T.open_path_and_file(outdir)
+            # exit()
 
     def statistic_trend_bar(self):
         fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
@@ -5208,12 +5201,20 @@ class Plot_Robinson:
         fpath_resample = fpath_clip + 'resample.tif'
         ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
         fpath_resample_ortho = fpath_resample + 'Robinson.tif'
-        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 100000)
-        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample_ortho)
-
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 10000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        # lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        # lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # arr_reproj, originX_reproj, originY_reproj, pixelWidth_reproj, pixelHeight_reproj = ToRaster().raster2array(fpath_resample_ortho)
+        # lon_list_reproj = np.arange(originX_reproj, originX_reproj + pixelWidth_reproj * arr_reproj.shape[1], pixelWidth_reproj)
+        # lat_list_reproj = np.arange(originY_reproj, originY_reproj + pixelHeight_reproj * arr_reproj.shape[0], pixelHeight_reproj)
+        # arr = m.transform_scalar(arr, lon_list, lat_list[::-1], len(lon_list_reproj), len(lat_list_reproj))
         arr = Tools().mask_999999_arr(arr, warning=False)
         arr[arr > sig_level] = np.nan
-        D_resample = DIC_and_TIF(tif_template=fpath_resample_ortho)
+        # plt.figure()
+        # plt.imshow(arr,interpolation='nearest',cmap='jet')
+        # plt.show()
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
         #
         os.remove(fpath_clip)
         os.remove(fpath_resample_ortho)
@@ -5221,6 +5222,7 @@ class Plot_Robinson:
 
         spatial_dict = D_resample.spatial_arr_to_dic(arr)
         lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+        # keys = spatial_dict.keys()
 
         lon_list = []
         lat_list = []
@@ -5233,12 +5235,13 @@ class Plot_Robinson:
             lat_list.append(lat)
         lon_list = np.array(lon_list)
         lat_list = np.array(lat_list)
-        lon_list = lon_list - originX
-        lat_list = lat_list + originY
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
         lon_list = lon_list + pixelWidth / 2
         lat_list = lat_list + pixelHeight / 2
+        # print(lon_list)
         # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
-        m.scatter(lon_list, lat_list, latlon=False, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
                   linewidths=linewidths)
 
         return m
@@ -5283,31 +5286,61 @@ class Plot_Robinson:
             cmap = Tools().cmap_blend(color_list)
         elif type(cmap) == str:
             cmap = plt.get_cmap(cmap)
-        if not is_reproj:
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-        else:
-            fpath_robinson = self.Robinson_reproj(fpath, fpath + '_robinson-reproj.tif', res=res)
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_robinson)
-            os.remove(fpath_robinson)
-        originY1 = copy.copy(originY)
-        arr = Tools().mask_999999_arr(arr, warning=False)
-        arr_m = ma.masked_where(np.isnan(arr), arr)
-        originX = 0
-        originY = originY * 2
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
         lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
         lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
-        lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
-        ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+        # print(np.shape(arr))
+        # plt.imshow(arr)
+        # plt.show()
+        if not is_reproj:
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        else:
+            fpath_robinson = self.Robinson_reproj(fpath, fpath + '_robinson-reproj.tif', res=res)
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_robinson)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            # print(originX, originY, pixelWidth, pixelHeight)
+            arr_reproj[arr_reproj<-9999] = np.nan
+            # plt.imshow(arr_reproj,interpolation='nearest')
+            # plt.show()
+            os.remove(fpath_robinson)
+            # print(fpath_robinson)
+            # exit()
+        # originY1 = copy.copy(originY)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr_m = ma.masked_where(np.isnan(arr), arr)
+        # originX = 0
+        # originY = originY * 2
+        # originY = 0
 
+        # lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+        # print(lon_list.shape)
+        # plt.imshow(arr_m)
+        # plt.show()
+        # exit()
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
+        # print(lon_list)
+        # print(lat_list)
+        # m = Basemap(projection='robin', lon_0=0,ax=ax, resolution='c')
+        arr_m = m.transform_scalar(arr_m,lon_list,lat_list[::-1],len(lon_list_reproj)*1,len(lat_list_reproj)*1,order=0)
+        # m.transform_vector()
+        # plt.imshow(arr_m,interpolation='nearest')
+        # plt.show()
+
+        # ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+        ret = m.imshow(arr_m[::-1], cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,interpolation='nearest')
         # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
         # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # plt.show()
         # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
         # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
         # for obj in meridict:
         #     line = meridict[obj][0][0]
         # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
-        # polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+        # polys = m.fillcontinents(color='#eeeeee', lake_color='#EFEFEF', zorder=90)
+        # plt.show()
         if is_plot_colorbar:
             if is_discrete:
                 bounds = np.linspace(vmin, vmax, colormap_n)
@@ -9350,13 +9383,13 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
     # TRENDY_trend().run()
-    TRENDY_CV().run()
+    # TRENDY_CV().run()
     # multi_regression_beta().run()
     # multi_regression_temporal_patterns().run()
     # bivariate_analysis().run()

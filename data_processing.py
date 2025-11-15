@@ -15267,7 +15267,7 @@ def main():
     # plot_dataframe().run()
     # growth_rate().run()
     # plt_moving_dataframe().run()
-    check_data().run()
+    # check_data().run()
     # Dataframe_func().run()
     # Check_plot().run()
 

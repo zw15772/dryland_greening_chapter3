@@ -946,12 +946,12 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        self.bivariate_map()
-
-        self.Figure_robinson_reprojection()
+        # self.bivariate_map()
+        #
+        # self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
 
-        # self.barplot_area_percentage()
+        self.barplot_area_percentage()
 
         # self.statistic_pdf()
 
@@ -962,22 +962,22 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         import xymap
 
 
-        fdir =result_root + rf'\Composite_LAI\LAImin_LAImax\trend_analysis\\\\'
+        fdir =result_root + rf'\bivariate\rainfall_max_min\trend\\\\'
 
-        outdir =result_root + (rf'bivariate\\LAI\\')
+        outdir =result_root + (rf'bivariate\\rainfall\\')
 
         T.mkdir(outdir)
 
         # outtif = join(outdir,'CV_trend2.tif')
-        outtif = join(outdir, 'LAI_bivariate_median.tif')
+        outtif = join(outdir, 'Precip_bivariate.tif')
 
-        fpath1 = join(fdir,'composite_LAImax_median_trend.tif')
-        # fpath1 = join(fdir,'composite_LAI_CV_trend.tif')
-        fpath2 = join(fdir,'composite_LAImin_median_trend.tif')
-        # fpath2 = join(fdir,'composite_LAI_relative_change_mean_trend.tif')
+        fpath1 = join(fdir,'Precip_sum_relative_change_detrend_max_trend.tif')
+
+        fpath2 = join(fdir,'Precip_sum_relative_change_detrend_min_trend.tif')
+
 
         #1
-        tif1_label, tif2_label = 'LAImax','LAImin'
+        tif1_label, tif2_label = 'precip_max','precip_min'
         #2
         # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
 
@@ -1044,8 +1044,8 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
 
     def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
 
-        fdir_trend = result_root + rf'\bivariate\\LAI\\'
-        temp_root = result_root + rf'\bivariate\\LAI\\'
+        fdir_trend = result_root + rf'\bivariate\\rainfall\\'
+        temp_root = result_root + rf'\bivariate\\rainfall\\'
         outdir = result_root + rf'\\bivariate\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
@@ -1320,13 +1320,14 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
     def barplot_area_percentage(self):
         ## plot bivariate plot of LAImin and LAImax
 
-        dff = result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
+        dff = result_root + rf'\bivariate\Dataframe\\Dataframe.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        col_min = 'composite_LAI_detrend_relative_change_min_trend'
-        col_max = 'composite_LAI_detrend_relative_change_max_trend'
-        s_min = pd.to_numeric(df[col_min], errors='coerce')
-        s_max = pd.to_numeric(df[col_max], errors='coerce')
+        df_unique = df.groupby(['pix', ], as_index=False).mean(numeric_only=True)
+
+        s_min = df_unique['Precip_sum_relative_change_detrend_min_trend']
+        s_max = df_unique['Precip_sum_relative_change_detrend_max_trend']
+
         s_min = s_min.where(s_min.between(-99, 99))
         s_max = s_max.where(s_max.between(-99, 99))
 
@@ -1338,18 +1339,22 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
             (s_max < 0) & (s_min < 0),
         ]
         choices = ['both positive (++): LAImax↑, LAImin↑ ',
-                   'positive & negative (+-): LAImin↑ LAImax↓',
-                   'negative & positive (-+): LAImin↓ LAImax↑',
+                   'positive & negative (+-): LAImax↑, LAImin↓ ',
+                   'negative & positive (-+): LAImax↓, LAImin↑ ',
                    'both negative (--): LAImin↓ LAImax↓']
 
-        df = df.copy()
-        df['class'] = np.select(conditions, choices, default=np.nan)
+
+
+        df_unique['class'] = np.select(conditions, choices, default='NaN')
+
+
 
         # 3) 计算各类百分比（排除 NaN），并固定显示顺序
         order = choices  # 固定顺序与上面一致
-        counts = pd.value_counts(pd.Categorical(df['class'], categories=order), dropna=True)
+        counts = pd.value_counts(pd.Categorical(df_unique['class'], categories=order), dropna=True)
         total = counts.sum() if counts.sum() > 0 else 1
         perc = (counts / total * 100).reindex(order).fillna(0)
+        print(perc)
 
         # 4) 画图
         fig, ax = plt.subplots(figsize=(3, 3))
@@ -1367,11 +1372,11 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         ax.set_ylabel('Area (%)')
         ax.set_ylim(0, max(perc.max() * 1.25, 10))  # 留一点顶部空间
         ax.axhline(0, color='grey', lw=1)
-        outdir=result_root + rf'\3mm\FIGURE\\LAImax_LAImin\\'
+        outdir=result_root + rf'\FIGURE\Figure2\\'
         T.mk_dir(outdir, force=True)
 
-        # plt.savefig(outdir + 'LAImax_LAImin_barplot_2.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        plt.savefig(outdir + 'barplot_insert_rainfall.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         plt.show()
 
@@ -4197,8 +4202,8 @@ class partial_correlation():
         #         self.plot_partial_correlation()
         #         self.plot_partial_correlation_p_value()
                 # self.statistic_trend_bar()
-        self.plot_spatial_map_sig()
-            # self.statistic_corr_boxplot() # use this
+        # self.plot_spatial_map_sig()
+        self.statistic_corr_boxplot() # use this
             # self.box_plot_significant_differences()
             # self.plot_percentage()
             # self.sensitivity_vs_climate_factors()
@@ -4732,6 +4737,7 @@ class partial_correlation():
         dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\result\Dataframe\\Dataframe.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
+
 
         # df.dropna(inplace=True)
 
@@ -8986,10 +8992,10 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
-        # self.plot_rainfallmax_min()
+        self.plot_rainfallmax_min()
         # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
-        self.TRENDY_LAImin_LAImax()
+        # self.TRENDY_LAImin_LAImax()
 
 
         pass
@@ -9081,12 +9087,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.ylabel('Relative change(%)', fontsize=12)
         plt.grid(alpha=0.4)
         plt.legend(loc='upper left')
-        plt.tight_layout()
-        plt.show()
+        # plt.tight_layout()
+        # plt.show()
 
-        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         pass
 
@@ -9095,11 +9102,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         df = self.df_clean(df)
         print(len(df))
 
-        variable_list = ['Precip_sum_detrend_max', 'Precip_sum_detrend_min']
-        dic_label = {'Precip_sum_detrend_max': 'Precip_max',
-                     'Precip_sum_detrend_min': 'Precip_min'}
-        color_dic = {'Precip_sum_detrend_max': 'purple',
-                     'Precip_sum_detrend_min': 'teal'}
+        variable_list = ['Precip_sum_relative_change_detrend_max', 'Precip_sum_relative_change_detrend_min']
+        dic_label = {'Precip_sum_relative_change_detrend_max': 'IAV Precip max',
+                     'Precip_sum_relative_change_detrend_min': 'IAV Precip min'}
+        color_dic = {'Precip_sum_relative_change_detrend_max': 'purple',
+                     'Precip_sum_relative_change_detrend_min': 'teal'}
 
         year_list = range(0, 24)
         result_dic = {}
@@ -9146,8 +9153,8 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             print(var, slope, p_value)
             x_pos = max(years) * 0.85
             y_pos = y.mean()
-            plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
-            plt.text(x_pos, y_pos - 100, f'p={p_value:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos + 10, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos - 10, f'p={p_value:.3f}', fontsize=10, color=color)
 
         # === X轴标签（15年滑窗） ===
         window_size = 15
@@ -9164,12 +9171,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.ylabel('Relative change(%)', fontsize=12)
         plt.grid(alpha=0.4)
         plt.legend(loc='upper left')
-        plt.tight_layout()
-        plt.show()
+        # plt.tight_layout()
+        # plt.show()
 
-        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_precipmax_precipmin.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
     def plot_CV_LAI(self):  ##### plot for 4 clusters
@@ -9736,7 +9744,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         print(values_max_list_mean)
         print(values_min_list_mean)
         print(variables_list)
-        outdir=result_root+rf'\FIGURE\\figure4\\'
+        outdir=result_root+rf'\FIGURE\\Figure3\\'
         T.mk_dir(outdir,force=True)
         outf=outdir+rf'barplot.pdf'
         plt.savefig(outf,dpi=300,bbox_inches='tight')
@@ -9751,7 +9759,7 @@ def main():
     # CCI_landcover_preprocess().run()
 
 
-    # Figure2_LAImin_LAImax().run()
+    Figure2_LAImin_LAImax().run()
 
     # Figure_beta().run()
     # Figure_std_mean_bivariate().run()
@@ -9766,7 +9774,7 @@ def main():
 
     # partial_correlation().run()
     # partial_correlation_TRENDY().run()
-    PLOT_dataframe().run()
+    # PLOT_dataframe().run()
 
 
 
