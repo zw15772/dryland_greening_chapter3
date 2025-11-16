@@ -358,113 +358,90 @@ class Delta_regression:
             DIC_and_TIF().pix_dic_to_tif(spatial_dict_i,outf)
         T.open_path_and_file(outdir)
 
+    def calculate_trend_contribution(self, y_variable, x_list):
+        """
+        Calculate the trend contribution of each variable:
+        contribution = slope(x, y) * trend(x) / trend(y) * 100
+        """
 
-    def calculate_trend_contribution(self,y_variable,x_list):
-        ## here I would like to calculate the trend contribution of each variable
-        ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
-        ## load the trend of each variable
-        ## load the trend of the target variable
-        ## load multi regression result
-        ## calculate the trend contribution
         trend_dir = result_root + rf'\Multiregression_contribution\Obs\input\X\zscore\trend\\'
-
-
-
-        selected_vairables_list = x_list
-
         trend_dict = {}
-        for variable in selected_vairables_list:
+
+        # === Load trend for each X variable ===
+        for variable in x_list:
             fpath = join(trend_dir, f'{variable}_trend.tif')
 
-            array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+
+            array, _, _, _, _ = ToRaster().raster2array(fpath)
             array[array < -9999] = np.nan
-            spatial_dict = D.spatial_arr_to_dic(array)
-            for pix in tqdm(spatial_dict, desc=variable):
+            spatial_dict = DIC_and_TIF().spatial_arr_to_dic(array)
 
-                r, c = pix
-                if r < 60:
-                    continue
-                val = spatial_dict[pix]
-
+            for pix, val in tqdm(spatial_dict.items(), desc=f'Loading {variable} trend'):
                 if np.isnan(val):
                     continue
-                if not pix in trend_dict:
+                if pix[0] < 60:  # skip high latitude
+                    continue
+                if pix not in trend_dict:
                     trend_dict[pix] = {}
-                key = variable
-                trend_dict[pix][key] = spatial_dict[pix]
+                trend_dict[pix][variable] = val
+
+        # === Load multiregression slopes ===
+        fdir_slope = self.outdir + f'\\{y_variable}\\'
 
 
-        outdir = self.outdir + f'\\{y_variable}\\'
-
-##################### multiregression slope
-        fdir_slope=outdir
-
-        multiregression_dic={}
+        multiregression_dic = {}
         for f in os.listdir(fdir_slope):
-            if not f.endswith('.tif'):
+            if not f.endswith('.tif') or 'contrib' in f:
+                continue
+            arr, _, _, _, _ = ToRaster().raster2array(join(fdir_slope, f))
+            multiregression_dic[f.split('.')[0]] = DIC_and_TIF().spatial_arr_to_dic(arr)
+
+
+        # === Load Y trend and p-value ===
+        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\trend\\'
+        fy_trend = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_trend.tif')
+        fy_pval = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
+
+        arr_y_trend, _, _, _, _ = ToRaster().raster2array(fy_trend)
+        arr_y_pval, _, _, _, _ = ToRaster().raster2array(fy_pval)
+
+        dic_y_trend = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend)
+        dic_y_pval = DIC_and_TIF().spatial_arr_to_dic(arr_y_pval)
+
+        # === Calculate contribution ===
+        for var_i in x_list:
+            if var_i not in multiregression_dic:
+                print(f"Missing slope for {var_i}")
                 continue
 
-            arr_multiregression, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_slope,f))
-            dic_multiregression = DIC_and_TIF().spatial_arr_to_dic(arr_multiregression)
-            multiregression_dic[f.split('.')[0]] = dic_multiregression
-
-
-############# Y trend
-        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\'
-        fy_trend=join(fdir_Y,f'{y_variable}_detrend_CV_zscore_trend.tif')
-        fy_trend_p_value = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
-
-
-        arr_y_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-            join(fdir_slope, fy_trend))
-        arr_y_trend_p_value, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-            join(fdir_slope, fy_trend_p_value)
-        )
-        dic_y_trend = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend)
-        dic_y_trend_p_value = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend_p_value)
-
-
-                # exit()
-        for var_i in x_list:
             spatial_dic = {}
-            for pix in tqdm(dic_multiregression, desc=var_i):
-                if not pix in trend_dict:
+            for pix in tqdm(multiregression_dic[var_i], desc=f'Calculating {var_i} contribution'):
+                if pix not in trend_dict or var_i not in trend_dict[pix]:
                     continue
-                print(dic_y_trend[pix])
-                if not pix in dic_y_trend:
-                    continue
-                trend_y=dic_y_trend[pix]
-                if not pix in dic_y_trend_p_value:
-                    continue
-                p_value=dic_y_trend_p_value[pix]
-                if p_value>0.05:
+                if pix not in dic_y_trend or pix not in dic_y_pval:
                     continue
 
-
-                if trend_y<0:
+                trend_y = dic_y_trend[pix]
+                p_value = dic_y_pval[pix]
+                if np.isnan(trend_y) or np.isnan(p_value):
                     continue
-                vals = multiregression_dic[var_i][pix]
-                if vals < -9999:
+                if p_value > 0.05 or abs(trend_y) < 1e-6:
+                    continue
+                if trend_y < 0:
                     continue
 
-                val_multireg = vals
-                if var_i not in trend_dict[pix]:
+                val_multireg = multiregression_dic[var_i][pix]
+                if np.isnan(val_multireg) or val_multireg < -9999:
                     continue
 
                 val_trend = trend_dict[pix][var_i]
-                val_contrib = val_multireg * val_trend/trend_y*100
+                val_contrib = val_multireg * val_trend / trend_y * 100
                 spatial_dic[pix] = val_contrib
+
+            # === Output contribution map ===
             arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            # plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest',vmin=-20,vmax=20)
-            # plt.colorbar()
-            # plt.title(var_i)
-            # plt.show()
-
-
-
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, join(outdir, f'{var_i}_contrib.tif'))
-
+            outpath = join(fdir_slope, f'{var_i}_trend_contrib.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, outpath)
 
 
 
@@ -841,9 +818,14 @@ class Delta_regression:
             }
 
             means, sems, labels = [], [], []
+            print(len(df))
+
+
 
             df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
             df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
+            #
+            # print(len(df));exit()
 
             # === 计算平均值和标准误差 ===
             for var in fixed_order:
@@ -860,6 +842,7 @@ class Delta_regression:
                 means.append(mean_val)
                 sems.append(sem_val)
                 labels.append(label_map[var])
+            print(f'{model}:', means)
 
             # === 绘图 ===
             fig, ax = plt.subplots(figsize=(4, 3))
@@ -868,7 +851,7 @@ class Delta_regression:
             edges = dark_colors
 
             bars = ax.bar(
-                x, means, width=0.5,
+                x, means, width=0.4,
                 color=colors, edgecolor=edges, linewidth=1.2, zorder=2
             )
 

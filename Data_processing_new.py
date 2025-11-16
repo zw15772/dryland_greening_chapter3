@@ -2696,9 +2696,9 @@ class processing_TRENDY():
         # self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
-        # self.trend_analysis()
+        self.trend_analysis()
         # self.detrend()
-        self.TRENDY_ensemble_npy()
+        # self.TRENDY_ensemble_npy()
         pass
 
     def extract_phenology_monthly_variables(self):
@@ -2944,8 +2944,8 @@ class processing_TRENDY():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = rf'D:\Project3\Result\Nov\TRENDY\S2\relative_change\\'
-        outdir = rf'D:\Project3\Result\Nov\TRENDY\S2\relative_change\\trend_analysis\\'
+        fdir = result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\\'
+        outdir =result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3999,10 +3999,10 @@ def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    moving_window().run()
+    # moving_window().run()
     # processing_composite_LAI().run()
 
-    # processing_TRENDY().run()
+    processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
     # check_data()
