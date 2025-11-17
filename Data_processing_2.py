@@ -2590,6 +2590,8 @@ class build_dataframe():
         fdir_all = result_root + rf'partial_correlation\TRENDY\result\\'
         for fdir in os.listdir(fdir_all):
 
+            if not 'TRENDY_ensemble_mean2'in fdir:
+                    continue
 
             for f in os.listdir(join(fdir_all,fdir)):
                 if not 'color' in f:
@@ -2597,12 +2599,13 @@ class build_dataframe():
 
                 if not f.endswith('.tif'):
                     continue
-
             #
+            # #
             # fdir_sig=fdir_all+fdir+'\\sig_nomask\\'
-            # print(fdir_sig);exit()
-
+            # # print(fdir_sig);exit()
+            #
             # for f in os.listdir(fdir_sig):
+
 
                 if not f.endswith('.tif'):
                     continue
@@ -4533,11 +4536,11 @@ class greening_analysis():
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
             plt.show()
-            # outf = outdir + f+'.pdf'
-            # plt.savefig(outf)
-            # plt.close()
-            # T.open_path_and_file(outdir)
-            # exit()
+            outf = outdir + f+'.pdf'
+            plt.savefig(outf)
+            plt.close()
+            T.open_path_and_file(outdir)
+            exit()
 
     def statistic_trend_bar(self):
         fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
@@ -7894,13 +7897,13 @@ class TRENDY_CV:
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
-        # self.TRENDY_ensemble()
+        self.TRENDY_ensemble()
         # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
 
         # self.plot_CV_trend_bin() ## plot CV vs. trend in observations
-        self.plot_CV_trend_among_models() ## calculating mean obs and TRENDY
+        # self.plot_CV_trend_among_models() ## calculating mean obs and TRENDY
         # self.plot_CV_trend_among_models2()  ## TRENDY enseble and obs mean as input
         # self.bar_plot_continent()
         # self.CV_Aridity_gradient_plot()
@@ -8268,13 +8271,13 @@ class TRENDY_CV:
 
                       'YIBs_S2_Monthly_lai']
 
-        model_list = [ 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', ]
+        # model_list = [ 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', ]
 
-        fdir_all = result_root + rf'\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\trend\\\\'
+        fdir_all = result_root + rf'\partial_correlation\TRENDY\result\\\\'
         arr_list = []
 
         for model in model_list:
-            fpath=fdir_all+model+'_detrend_CV_trend.tif'
+            fpath=join(fdir_all,model, 'sig_nomask', 'CV_daily_rainfall_average.tif')#fdir_all+model+'sig_nomask'+'_sensitivity.tif'
             # for f in os.listdir(fdir_all):
 
 
@@ -8292,7 +8295,7 @@ class TRENDY_CV:
             arr[arr < -99] = np.nan
 
             arr_list.append(arr)
-
+        print(len(arr_list))
 
         arr_ensemble = np.nanmedian(arr_list, axis=0)
         arr_ensemble[arr_ensemble > 99] = np.nan
@@ -8300,10 +8303,10 @@ class TRENDY_CV:
         plt.imshow(arr_ensemble, cmap='RdYlGn')
         plt.colorbar()
         plt.show()
-        outdir=result_root +  rf'\3mm\moving_window_robust_test\moving_window_extraction_average\10_year\trend\\'
-        T.mk_dir(outdir, force=True)
-        outf=outdir+'composite_LAI_detrend_CV_trend.tif'
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
+        # outdir=result_root +  rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median\\'
+        # T.mk_dir(outdir, force=True)
+        # outf=outdir+'CV_daily_rainfall_average.tif'
+        # DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
 
 
 
@@ -9386,11 +9389,11 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
-    # greening_analysis().run()
+    greening_analysis().run()
     # TRENDY_trend().run()
     # TRENDY_CV().run()
     # multi_regression_beta().run()

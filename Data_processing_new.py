@@ -3972,6 +3972,8 @@ class processing_daily_rainfall():
 
         np.save(outf, result_dic)
 
+
+
 def check_data():
     fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output_TRENDY\\'
     for f in os.listdir(fdir):

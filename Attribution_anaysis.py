@@ -2266,13 +2266,16 @@ class partial_correlation_TRENDY():
 
 class partial_correlation_TRENDY_obs_comparision():
     def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
 
         # self.model_list = [
         #
         #
         # ]
-        self.model_list=['composite_LAI_median', 'LAI4g', 'GLOBMAP_LAI', 'SNU_LAI',
-          'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        self.model_list=[ 'composite_LAI_median', 'LAI4g', 'GLOBMAP_LAI', 'SNU_LAI',
+         'TRENDY_ensemble_mean2','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
             'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
             'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
             'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -2282,7 +2285,9 @@ class partial_correlation_TRENDY_obs_comparision():
 
     def run(self):
         # self.statistic_barplot_partial_correlation()
-        self.max_correlation_without_sign()
+        # self.max_correlation_without_sign()
+        # self.TRENDY_ensemble()
+        self.statistic_contribution_area_barplot()
         pass
 
     def statistic_barplot_partial_correlation(self):
@@ -2359,8 +2364,8 @@ class partial_correlation_TRENDY_obs_comparision():
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
-        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
+        # df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
+        # df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
 
         model_list = self.model_list
 
@@ -2371,6 +2376,8 @@ class partial_correlation_TRENDY_obs_comparision():
         ]
 
         for model in tqdm(model_list):
+            if not 'TRENDY_ensemble_mean2' in model:
+                continue
 
             outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
             T.mk_dir(outdir, force=True)
@@ -2426,12 +2433,53 @@ class partial_correlation_TRENDY_obs_comparision():
             out_tif = join(outdir, 'dominant_color_map_without_sign.tif')
             DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
 
+    def TRENDY_ensemble(self):
+
+        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+
+                      'YIBs_S2_Monthly_lai']
+
+        # model_list = [ 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', ]
+
+        fdir_all = result_root + rf'\partial_correlation\TRENDY\result\\\\'
+        arr_list = []
+
+        for model in model_list:
+            fpath = join(fdir_all, model, 'sig_nomask', f'{model}_sensitivity.tif')
+            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            arr[(arr > 99) | (arr < -99)] = np.nan
+            arr_list.append(arr)
+
+        arr_stack = np.stack(arr_list, axis=0)
+
+        # --- Step 1: 构建交集 mask ---
+        valid_mask = np.all(~np.isnan(arr_stack), axis=0)
+
+        # --- Step 2: 仅在交集像元上求平均 ---
+        arr_ensemble = np.where(valid_mask, np.nanmedian(arr_stack, axis=0), np.nan)
+
+        # --- Step 3: 输出结果 ---
+        plt.imshow(arr_ensemble, cmap='RdYlGn')
+        plt.colorbar(label="Ensemble sensitivity")
+
+        plt.show()
+
+        outdir = result_root + rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median_intersection\\'
+        T.mk_dir(outdir, force=True)
+        outf = join(outdir, 'TRENDY_ensemble_mean_intersection_sensitivity.tif')
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
+
+
+
     def statistic_partial_trends_dorminant(self):
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        df=df[df['composite_LAI_detrend_CV_median_trend']>0]
-        df=df[df['composite_LAI_detrend_CV_median_p_value']<0.05]
+
 
 
         for col in df.columns:
@@ -2489,9 +2537,11 @@ class partial_correlation_TRENDY_obs_comparision():
         plt.show()
 
     def statistic_contribution_area_barplot(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
 
         for col in df.columns:
                 print(col)
@@ -2501,11 +2551,21 @@ class partial_correlation_TRENDY_obs_comparision():
 
         result_dic = {}
 
+        pix_sets = []
+        for model in model_list:
+            col = f'{model}_dominant_color_map_without_sign'
+            pix_valid = set(df[~df[col].isna()]['pix'])
+            pix_sets.append(pix_valid)
+
+        pix_common = set.intersection(*pix_sets)
+        df_common = df[df['pix'].isin(pix_common)]
+
         # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-        for ii in [1, 2, 3, 4, 5, 6, ]:
+        for ii in [1, 2, 3, ]:
             percentage_list = []
             for model in model_list:
-                col = f'{model}_dorminant_color_map'
+                col = f'{model}_dominant_color_map_without_sign'
+
                 df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
                 df_ii = df_mask[df_mask[col] == ii]
                 percent_ii = len(df_ii) / len(df_mask) * 100.0
@@ -2513,12 +2573,9 @@ class partial_correlation_TRENDY_obs_comparision():
             result_dic[ii] = percentage_list
         pprint(result_dic)
 
-        dic_variable_name = {1: 'Trends gamma+',
-                             2: 'Trends gamma-',
-                             3:'Trends CV_intra+',
-                             4:'Trends CV_intra-',
-                             5:'Trends CV_inter+',
-                             6:'Trends CV_inter-'
+        dic_variable_name = {1: 'gamma',
+                             2: 'CV_inter',
+                             3:'CV_intra',
 
 
                              }
@@ -2531,7 +2588,7 @@ class partial_correlation_TRENDY_obs_comparision():
         df_new = pd.DataFrame(result_dic, index=model_list)
 
         # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
-        for ii in [1, 2, 3, 4, 5, 6]:
+        for ii in [1, 2, 3]:
             vals = df_new[ii].values
             n_all = len(vals)
             n_obs = 4  # 前 4 个是 obs
@@ -2559,7 +2616,7 @@ class partial_correlation_TRENDY_obs_comparision():
                     transform=ax.transAxes, ha='left', va='top',
                     fontsize=12, fontfamily='Arial',
                     bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
-            ax.set_ylim(0, 20)
+            ax.set_ylim(0, 70)
             plt.grid(axis='y', alpha=0.25)
 
 
