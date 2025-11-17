@@ -3974,6 +3974,7 @@ class processing_daily_rainfall():
 
 
 
+
 def check_data():
     fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output_TRENDY\\'
     for f in os.listdir(fdir):

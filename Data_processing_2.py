@@ -3856,7 +3856,7 @@ class greening_analysis():
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
-        self.plot_robinson()
+        # self.plot_robinson()
         # self.statistic_trend_bar()
         # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()

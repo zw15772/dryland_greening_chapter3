@@ -88,6 +88,775 @@ this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
 result_root = 'D:/Project3/Result/Nov//'
 
+class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 and figure 3
+    def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+    def run (self):
+        # self.plot_CV_LAI()
+        # self.plot_relative_change_LAI()
+        # self.plot_std()
+        # self.plot_LAImax_LAImin()
+        self.plot_rainfallmax_min()
+        # self.statistic_trend_CV_bar()
+        # self.statistic_trend_bar()
+        # self.TRENDY_LAImin_LAImax()
+
+
+        pass
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def plot_LAImax_LAImin(self):
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+        df = self.df_clean(df)
+        print(len(df))
+
+        variable_list = ['composite_LAImax_median', 'composite_LAImin_median']
+        dic_label = {'composite_LAImax_median': 'LAImax',
+                     'composite_LAImin_median': 'LAImin'}
+        color_dic = {'composite_LAImax_median': 'purple',
+                     'composite_LAImin_median': 'teal'}
+
+        year_list = range(0, 24)
+        result_dic = {}
+        std_dic = {}
+
+        # === 计算每个窗口的均值和标准差 ===
+        for var in variable_list:
+            mean_dic, std_dic_i = {}, {}
+            for year in year_list:
+                df_i = df[df['window'] == year]
+                vals = np.array(df_i[var].tolist(), dtype=float)
+                mean_dic[year] = np.nanmean(vals)
+                std_dic_i[year] = np.nanstd(vals)
+            result_dic[var] = mean_dic
+            std_dic[var] = std_dic_i
+
+        df_mean = pd.DataFrame(result_dic)
+        df_std = pd.DataFrame(std_dic)
+
+        # === 绘图 ===
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            color = color_dic[var]
+
+            # 计算线和阴影区
+            y = df_mean[var]
+            yerr = df_std[var]
+            years = list(year_list)
+
+            # 背景阴影 (mean ± std)
+            plt.fill_between(years,
+                             y - yerr,
+                             y + yerr,
+                             color=color,
+                             alpha=0.1)
+
+            # 主趋势线
+            plt.plot(years, y, color=color, linewidth=2.5,
+                     label=dic_label[var], marker='o')
+
+            # 拟合趋势线 + 注释
+            slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
+            print(var, slope, p_value)
+            x_pos = max(years) * 0.85
+            y_pos = y.mean()
+            plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos - 12, f'p={p_value:.3f}', fontsize=10, color=color)
+
+        # === X轴标签（15年滑窗） ===
+        window_size = 15
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.ylabel('Relative change(%)', fontsize=12)
+        plt.grid(alpha=0.4)
+        plt.legend(loc='upper left')
+        # plt.tight_layout()
+        # plt.show()
+
+        out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+        pass
+
+    def plot_rainfallmax_min(self):
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+        df = self.df_clean(df)
+        print(len(df))
+
+        variable_list = ['Precip_sum_relative_change_detrend_max', 'Precip_sum_relative_change_detrend_min']
+        dic_label = {'Precip_sum_relative_change_detrend_max': 'IAV Precip max',
+                     'Precip_sum_relative_change_detrend_min': 'IAV Precip min'}
+        color_dic = {'Precip_sum_relative_change_detrend_max': 'purple',
+                     'Precip_sum_relative_change_detrend_min': 'teal'}
+
+        year_list = range(0, 24)
+        result_dic = {}
+        std_dic = {}
+
+        # === 计算每个窗口的均值和标准差 ===
+        for var in variable_list:
+            mean_dic, std_dic_i = {}, {}
+            for year in year_list:
+                df_i = df[df['window'] == year]
+                vals = np.array(df_i[var].tolist(), dtype=float)
+                mean_dic[year] = np.nanmean(vals)
+                std_dic_i[year] = np.nanstd(vals)
+            result_dic[var] = mean_dic
+            std_dic[var] = std_dic_i
+
+        df_mean = pd.DataFrame(result_dic)
+        df_std = pd.DataFrame(std_dic)
+
+        # === 绘图 ===
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            color = color_dic[var]
+
+            # 计算线和阴影区
+            y = df_mean[var]
+            yerr = df_std[var]
+            years = list(year_list)
+
+            # 背景阴影 (mean ± std)
+            plt.fill_between(years,
+                             y - yerr,
+                             y + yerr,
+                             color=color,
+                             alpha=0.1)
+
+            # 主趋势线
+            plt.plot(years, y, color=color, linewidth=2.5,
+                     label=dic_label[var], marker='o')
+
+            # 拟合趋势线 + 注释
+            slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
+            print(var, slope, p_value)
+            x_pos = max(years) * 0.85
+            y_pos = y.mean()
+            plt.text(x_pos, y_pos + 10, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            plt.text(x_pos, y_pos - 10, f'p={p_value:.3f}', fontsize=10, color=color)
+
+        # === X轴标签（15年滑窗） ===
+        window_size = 15
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.ylabel('Relative change(%)', fontsize=12)
+        plt.grid(alpha=0.4)
+        plt.legend(loc='upper left')
+        # plt.tight_layout()
+        # plt.show()
+
+        out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_precipmax_precipmin.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+    def plot_CV_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+
+
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+
+        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
+        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
+        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
+
+        variable_list=['composite_LAI_CV',
+                       'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
+            'GLOBMAP_LAI_detrend_CV',]
+        dic_label={'composite_LAI_CV':'Composite',
+                   'LAI4g_detrend_CV':'GIMMS4g',
+
+                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',
+                   'detrended_SNU_LAI_CV':'SNU',}
+        year_list=range(0,24)
+
+
+        result_dic = {}
+        CI_dic={}
+        std_dic={}
+
+        for var in variable_list:
+
+            result_dic[var] = {}
+            CI_dic[var] = {}
+            data_dic = {}
+            CI_dic_data={}
+            std_dic_data={}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                SEM=stats.sem(vals)
+                CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
+                std=np.nanstd(vals)
+                CI_dic_data[year]=CI
+                std_dic_data[year]=std
+
+                data_dic[year] = np.nanmean(vals)
+
+
+
+
+            result_dic[var] = data_dic
+            CI_dic[var]=CI_dic_data
+            std_dic[var]=std_dic_data
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+
+        flag = 0
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            if var == 'composite_LAI_CV':
+                ## plot CI bar
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
+                         )
+                ## fill std
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
+
+                ## fill CI
+                # ci_low = [CI_dic[var][y][0] for y in year_list]
+                # ci_high = [CI_dic[var][y][1] for y in year_list]
+                # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+
+                ## std
+
+
+
+            else:
+                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag])
+
+                # std = [std_dic[var][y] for y in year_list]
+                # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
+                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+
+            flag = flag + 1
+        ## if var == 'composite_LAI_CV': plot CI bar
+
+
+        window_size = 15
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.yticks(np.arange(5, 25, 5))
+
+
+
+        plt.ylabel(f'CVLAI (%/yr)')
+
+        plt.grid(which='major', alpha=0.5)
+        plt.legend(loc='upper left')
+
+        # plt.show()
+        # plt.tight_layout()
+        out_pdf_fdir = result_root + rf'\3mm\FIGURE\figure2CV\\'
+        T.mk_dir(out_pdf_fdir, force=True)
+        plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+
+        #
+        # plt.legend()
+        # plt.show()
+
+    def plot_std(self):  ##### plot for 4 clusters
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from scipy import stats
+
+        # === 读数据 ===
+        df = T.load_df(result_root + rf'\3mm\product_consistency\dataframe\moving_window.df')
+        df = self.df_clean(df)
+
+        # 用实际存在的 year 索引，避免和 x 轴标签长度不一致
+        year_list = sorted(df['year'].astype(int).unique())
+        n = len(year_list)
+        x = np.arange(n)
+
+        # 两条变量：左轴 std，右轴 mean
+        std_var = 'composite_LAI_relative_change_detrend_std'
+        mean_var = 'composite_LAI_relative_change_detrend_mean'
+
+        dic_label = {
+            mean_var: 'Composite LAI mean',
+            std_var: 'Composite LAI std',
+        }
+
+        # 聚合到每个窗口（year）上的均值
+        def agg_mean(var):
+            vals = []
+            for y in year_list:
+                v = df.loc[df['year'] == y, var].to_numpy(dtype=float)
+                v = v[~np.isnan(v)]
+                vals.append(np.nan if len(v) == 0 else np.nanmean(v))
+            return np.array(vals, dtype=float)
+
+        y_std = agg_mean(std_var)
+        y_mean = agg_mean(mean_var)
+
+        # === 画图：双轴 ===
+        fig, ax1 = plt.subplots(figsize=(self.map_width, self.map_height))
+        ax2 = ax1.twinx()
+
+        color_std = 'purple'
+        color_mean = 'teal'
+        lw_std = lw_mean = 2
+
+        l1, = ax1.plot(x, y_std, label=dic_label[std_var], color=color_std, linewidth=lw_std)
+        l2, = ax2.plot(x, y_mean, label=dic_label[mean_var], color=color_mean, linewidth=lw_mean)
+
+        # 线性趋势（对索引做回归）
+        s1, _, _, p1, _ = stats.linregress(x, y_std)
+        s2, _, _, p2, _ = stats.linregress(x, y_mean)
+        print(std_var, f'{s1:.4f}', f'{p1:.4f}')
+        print(mean_var, f'{s2:.4f}', f'{p2:.4f}')
+
+        # 可选：在右侧上/下各标注 slope / p（上下对齐，同一 x 位置）
+        # x_pos = x.max() * 0.95
+        # y1 = np.nanmean(y_std)
+        # y2 = np.nanmean(y_mean)
+        # ax1.text(x_pos, y1 + 0.05 * np.nanstd(y_std), f'slope={s1:.4f}', color=color_std, ha='center', va='bottom',
+        #          fontsize=9)
+        # ax1.text(x_pos, y1 - 0.05 * np.nanstd(y_std), f'p={p1:.3f}', color=color_std, ha='center', va='top', fontsize=9)
+        # ax2.text(x_pos, y2 + 0.05 * np.nanstd(y_mean), f'slope={s2:.4f}', color=color_mean, ha='center', va='bottom',
+        #          fontsize=9)
+        # ax2.text(x_pos, y2 - 0.05 * np.nanstd(y_mean), f'p={p2:.3f}', color=color_mean, ha='center', va='top',
+        #          fontsize=9)
+
+        # x 轴标签：按移动窗口生成（与长度 n 对齐）
+        window_size=15
+        year_range = range(1983, 2021)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2021:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        ax1.set_xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+
+        # 轴标签与颜色
+        ax1.set_ylabel('Composite LAI std (%/year)', color=color_std)
+        ax2.set_ylabel('Composite LAI mean (%/year)', color=color_mean)
+        ax1.tick_params(axis='y', colors=color_std)
+        ax2.tick_params(axis='y', colors=color_mean)
+        ax1.spines['left'].set_color(color_std)
+        ax2.spines['right'].set_color(color_mean)
+
+        # 网格只用左轴
+        ax1.grid(True, which='major', alpha=0.5)
+
+        # 合并图例
+        lines = [l1, l2]
+        labels = [l.get_label() for l in lines]
+
+
+
+        # plt.show()
+        # # plt.tight_layout()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+        #
+        # plt.legend()
+        plt.show()
+
+    def plot_relative_change_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\3mm\product_consistency\dataframe\\relative_change.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+
+
+        fig = plt.figure()
+        i = 1
+
+        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
+        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
+        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
+
+        variable_list = [
+                         'composite_LAI_relative_change_mean','LAI4g', 'SNU_LAI_relative_change',
+            'GLOBMAP_LAI_relative_change',
+                         ]
+        dic_label={'LAI4g':'LAI4g','SNU_LAI_relative_change':'SNU_LAI',
+                   'GLOBMAP_LAI_relative_change':'GLOBMAP_LAI',
+                   'composite_LAI_relative_change_mean':'Composite LAI'}
+        year_list=range(1983,2021)
+
+
+        result_dic = {}
+        for var in variable_list:
+
+            result_dic[var] = {}
+            data_dic = {}
+
+            for year in year_list:
+                df_i = df[df['year'] == year]
+
+                vals = df_i[f'{var}'].tolist()
+                data_dic[year] = np.nanmean(vals)
+            result_dic[var] = data_dic
+        ##dic to df
+
+        df_new = pd.DataFrame(result_dic)
+        flag=0
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            plt.plot(year_list, df_new[var], label=dic_label[var],linewidth=linewidth_list[flag], color=color_list[flag])
+            flag=flag+1
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(var, f'{slope:.2f}', f'{p_value:.2f}')
+        plt.ylabel('Relative change LAI (%)')
+        plt.grid(True)
+
+
+        plt.legend()
+        plt.show()
+        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+
+    def statistic_trend_CV_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\\CV\\'
+        variable_list=['composite_LAI_CV','GlOBMAP_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                'silver',
+
+                'silver',
+                '#7b3294',
+            ]
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage (%)')
+                # plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.tight_layout()
+            # plt.show())
+        ## save pdf
+            plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_CV_bar.pdf')
+
+
+    def statistic_trend_bar(self):
+        fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
+        variable_list=['GLOBMAP_LAI_relative_change','LAI4g','composite_LAI_relative_change_mean','SNU_LAI_relative_change']
+        for variable in variable_list:
+            f_trend_path=fdir+f'{variable}_trend.tif'
+            f_pvalue_path=fdir+f'{variable}_p_value.tif'
+            result_dic={}
+
+            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
+            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
+            arr_corr[arr_corr<-99]=np.nan
+            arr_corr[arr_corr>99]=np.nan
+            arr_corr=arr_corr[~np.isnan(arr_corr)]
+
+            arr_pvalue[arr_pvalue<-99]=np.nan
+            arr_pvalue[arr_pvalue>99]=np.nan
+            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
+            ## corr negative and positive
+            arr_corr = arr_corr.flatten()
+            arr_pvalue = arr_pvalue.flatten()
+            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
+            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
+
+
+            ## significant positive and negative
+            ## 1 is significant and 2 positive or negative
+
+            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
+            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
+
+
+            # 满足条件的像元数
+            count_positive_sig = np.sum(mask_pos)
+            count_negative_sig = np.sum(mask_neg)
+
+            # 百分比
+            significant_positive = (count_positive_sig / len(arr_corr)) * 100
+            significant_negative = (count_negative_sig / len(arr_corr)) * 100
+            result_dic = {
+
+                'sig neg': significant_negative,
+                'non sig neg': arr_neg,
+                'non sig pos': arr_pos,
+                'sig pos': significant_positive
+
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                 '#844000',
+            'lightgray',
+
+            'lightgray',
+            '#064c6c',
+            ]
+
+            # color_list = [
+            #     '#844000',
+            #     '#fc9831',
+            #     '#fffbd4',
+            #     '#86b9d2',
+            #     '#064c6c',
+            # ]
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            plt.show()
+            # plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_trend_bar.pdf')
+            # plt.close()
+    def TRENDY_LAImin_LAImax(self):
+        dff=result_root+rf'\bivariate\Dataframe\\Dataframe.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        for column in df.columns:
+            print(column)
+        # exit()
+
+        variables_list = ['composite_LAI_median', 'LAI4g',   'GLOBMAP','SNU_LAI',
+                           'TRENDY_ensemble_median',
+                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+        values_max_list=[]
+        values_min_list=[]
+
+        for variable in variables_list:
+            if variable in ['composite_LAI_median','LAI4g',  'GLOBMAP','SNU_LAI','TRENDY_ensemble_median']:
+
+                values_min = df[f'{variable}_min_trend'].values
+                values_max = df[f'{variable}_max_trend'].values
+            else:
+                values_min=df[f'{variable}_relative_change_detrend_min_trend'].values
+                values_max=df[f'{variable}_relative_change_detrend_max_trend'].values
+            values_max_list.append(values_max)
+            values_min_list.append(values_min)
+        values_min_list=np.array(values_min_list)
+        values_max_list=np.array(values_max_list)
+        values_max_list_mean=np.nanmean(values_max_list,axis=1)
+        values_min_list_mean=np.nanmean(values_min_list,axis=1)
+        ## add legend
+
+        fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+        dic_label_name = {'composite_LAI_mean': 'Composite',
+                          'LAI4g':'LAI4g',
+
+                          'GLOBMAP': 'GLOBMAP',
+                          'SNU_LAI': 'SNU',
+
+                          'TRENDY_ensemble_median': 'TRENDY ensemble',
+                          'CABLE-POP_S2_lai': 'CABLE-POP',
+                          'CLASSIC_S2_lai': 'CLASSIC',
+                          'CLM5': 'CLM5',
+                          'DLEM_S2_lai': 'DLEM',
+                          'IBIS_S2_lai': 'IBIS',
+                          'ISAM_S2_lai': 'ISAM',
+                          'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                          'JSBACH_S2_lai': 'JSBACH',
+                          'JULES_S2_lai': 'JULES',
+                          'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                          'LPX-Bern_S2_lai': 'LPX-Bern',
+                          'ORCHIDEE_S2_lai': 'ORCHIDEE',
+
+                          'YIBs_S2_Monthly_lai': 'YIBs',
+                          'LAI4g': 'GIMMS4g',
+
+                          }
+
+
+        plt.bar(variables_list,values_max_list_mean,color='#96cccb',width=0.7,edgecolor='black',label='Trend in LAImax',)
+        plt.bar(variables_list,values_min_list_mean,color='#f6cae5',width=0.7,edgecolor='black',label='Trend in LAImin',)
+        plt.legend()
+
+        # plt.xticks(np.arange(len(variables_list)),variables_list,rotation=45)
+
+        ## add y=0
+        plt.hlines(0, -0.5, len(variables_list) - 0.5, colors='black', linestyles='dashed')
+        plt.ylabel('(%/yr)')
+        plt.axhline(y=0, color='grey', linestyle='-')
+        labels = [dic_label_name.get(v, v) for v in variables_list]
+        ax.set_xticks(range(len(variables_list)))
+        # ax.set_xticklabels(labels, rotation=90, fontsize=10, font='Arial')
+        # plt.tight_layout()
+        # plt.show()
+        print(values_max_list_mean)
+        print(values_min_list_mean)
+        print(variables_list)
+        outdir=result_root+rf'\FIGURE\\Figure3\\'
+        T.mk_dir(outdir,force=True)
+        outf=outdir+rf'barplot.pdf'
+        plt.savefig(outf,dpi=300,bbox_inches='tight')
+        plt.savefig(outf, dpi=300, )
+
+
 class greening_analysis(): ##not used
 
     def __init__(self):
@@ -597,6 +1366,8 @@ class greening_analysis(): ##not used
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+
 class climate_variables:
     def __init__(self):
         pass
@@ -949,7 +1720,7 @@ class climate_variables:
 
         return m
 
-class Plot_Robinson:
+class Plot_Robinson_remote_sensing:
     def __init__(self):
         # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
         self.map_width = 15.3 * centimeter_factor
@@ -969,6 +1740,241 @@ class Plot_Robinson:
             '#86b9d2',
             '#064c6c',
         ]
+        # Blue represents high values, and red represents low values.
+        plt.figure(figsize=(self.map_width, self.map_height))
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
+
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=20,
+                                           c='k', marker='x',
+                                           zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 10000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        # lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        # lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # arr_reproj, originX_reproj, originY_reproj, pixelWidth_reproj, pixelHeight_reproj = ToRaster().raster2array(fpath_resample_ortho)
+        # lon_list_reproj = np.arange(originX_reproj, originX_reproj + pixelWidth_reproj * arr_reproj.shape[1], pixelWidth_reproj)
+        # lat_list_reproj = np.arange(originY_reproj, originY_reproj + pixelHeight_reproj * arr_reproj.shape[0], pixelHeight_reproj)
+        # arr = m.transform_scalar(arr, lon_list, lat_list[::-1], len(lon_list_reproj), len(lat_list_reproj))
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        # plt.figure()
+        # plt.imshow(arr,interpolation='nearest',cmap='jet')
+        # plt.show()
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+        # keys = spatial_dict.keys()
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # print(lon_list)
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+
+    def plot_Robinson(self, fpath, ax=None, cmap=None, vmin=None, vmax=None, is_plot_colorbar=True, is_reproj=True,
+                      res=25000, is_discrete=False, colormap_n=11):
+        '''
+        :param fpath: tif file
+        :param is_reproj: if True, reproject file from 4326 to Robinson
+        :param res: resolution, meter
+        ## trend color list
+        '''
+        # color_list = [
+        #     '#844000',
+        #     '#fc9831',
+        #     '#fffbd4',
+        #     '#86b9d2',
+        #     '#064c6c',
+        # ]
+        ### CV list
+
+        color_list = [
+            '#008837',
+            '#a6dba0',
+            '#f7f7f7',
+            '#c2a5cf',
+            '#7b3294',
+        ]
+        # std_list=[ '#e66101',
+        #            '#fdb863',
+        #            '#f7f7f7',
+        #            '#b2abd2',
+        #            '#5e3c99',
+        #
+        # ]
+        # Blue represents high values, and red represents low values.
+        if ax == None:
+            # plt.figure(figsize=(10, 10))
+            ax = plt.subplot(1, 1, 1)
+        if cmap is None:
+            cmap = Tools().cmap_blend(color_list)
+        elif type(cmap) == str:
+            cmap = plt.get_cmap(cmap)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # print(np.shape(arr))
+        # plt.imshow(arr)
+        # plt.show()
+        if not is_reproj:
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        else:
+            fpath_robinson = self.Robinson_reproj(fpath, fpath + '_robinson-reproj.tif', res=res)
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_robinson)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            # print(originX, originY, pixelWidth, pixelHeight)
+            arr_reproj[arr_reproj<-9999] = np.nan
+            # plt.imshow(arr_reproj,interpolation='nearest')
+            # plt.show()
+            os.remove(fpath_robinson)
+            # print(fpath_robinson)
+            # exit()
+        # originY1 = copy.copy(originY)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr_m = ma.masked_where(np.isnan(arr), arr)
+        # originX = 0
+        # originY = originY * 2
+        # originY = 0
+
+        # lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+        # print(lon_list.shape)
+        # plt.imshow(arr_m)
+        # plt.show()
+        # exit()
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
+        # print(lon_list)
+        # print(lat_list)
+        # m = Basemap(projection='robin', lon_0=0,ax=ax, resolution='c')
+        arr_m = m.transform_scalar(arr_m,lon_list,lat_list[::-1],len(lon_list_reproj)*1,len(lat_list_reproj)*1,order=0)
+        # m.transform_vector()
+        # plt.imshow(arr_m,interpolation='nearest')
+        # plt.show()
+
+        # ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+        ret = m.imshow(arr_m[::-1], cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,interpolation='nearest')
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # plt.show()
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='whitesmoke', lake_color='#EFEFEF', zorder=90)
+        # plt.show()
+        if is_plot_colorbar:
+            if is_discrete:
+                bounds = np.linspace(vmin, vmax, colormap_n)
+                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+                cax, kw = mpl.colorbar.make_axes(ax, location='bottom', pad=0.05, shrink=0.5)
+                cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, boundaries=bounds, ticks=bounds,
+                                                 orientation='horizontal')
+            else:
+                cbar = plt.colorbar(ret, ax=ax, shrink=0.5, location='bottom', pad=0.05)
+        return m, ret
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+
+
+class Plot_Robinson_TRENDY:
+    def __init__(self):
+        # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+
+    def robinson_template(self):
+        '''
+                :param fpath: tif file
+                :param is_reproj: if True, reproject file from 4326 to Robinson
+                :param res: resolution, meter
+                '''
+
         # Blue represents high values, and red represents low values.
         plt.figure(figsize=(self.map_width, self.map_height))
         m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
@@ -1051,22 +2057,22 @@ class Plot_Robinson:
         :param res: resolution, meter
         ## trend color list
         '''
-        color_list = [
-            '#844000',
-            '#fc9831',
-            '#fffbd4',
-            '#86b9d2',
-            '#064c6c',
-        ]
+        # color_list = [
+        #     '#844000',
+        #     '#fc9831',
+        #     '#fffbd4',
+        #     '#86b9d2',
+        #     '#064c6c',
+        # ]
         ### CV list
 
-        # color_list = [
-        #     '#008837',
-        #     '#a6dba0',
-        #     '#f7f7f7',
-        #     '#c2a5cf',
-        #     '#7b3294',
-        # ]
+        color_list = [
+            '#008837',
+            '#a6dba0',
+            '#f7f7f7',
+            '#c2a5cf',
+            '#7b3294',
+        ]
         # std_list=[ '#e66101',
         #            '#fdb863',
         #            '#f7f7f7',
@@ -1127,15 +2133,15 @@ class Plot_Robinson:
 
         # ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
         ret = m.imshow(arr_m[::-1], cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,interpolation='nearest')
-        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
-        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
         # plt.show()
-        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
-        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
-        # for obj in meridict:
-        #     line = meridict[obj][0][0]
-        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
-        # polys = m.fillcontinents(color='#eeeeee', lake_color='#EFEFEF', zorder=90)
+        meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        for obj in meridict:
+            line = meridict[obj][0][0]
+        coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        polys = m.fillcontinents(color='#eeeeee', lake_color='#EFEFEF', zorder=90)
         # plt.show()
         if is_plot_colorbar:
             if is_discrete:
@@ -1704,9 +2710,10 @@ class Fire():
         plt.savefig(outf, dpi=600, bbox_inches='tight')
         plt.close()
 
-class TRENDY_trend():
+class Trends_obs_and_model():
     def run(self):
-        self.plot_remote_sensing()
+        # self.plot_remote_sensing()
+        self.plot_TRENDY()
 
     def plot_remote_sensing(self): ## put main ms. so pdf
 
@@ -1746,7 +2753,7 @@ class TRENDY_trend():
             exit()
 
 
-    def trend_analysis_plot(self):
+    def plot_TRENDY(self):
         outdir = result_root + rf'\FIGURE\Figure1\\'
         T.mk_dir(outdir,True)
         temp_root = result_root + rf'\TRENDY\S2\relative_change\relative_change\\temp_root\\'
@@ -1808,14 +2815,14 @@ class TRENDY_trend():
             f_pvalue = fdir + f'{model}_relative_change_p_value.tif'
 
             # 画 Robinson 投影 + 栅格
-            m, mappable = Plot().plot_Robinson(
-                fpath, ax=ax, cmap=my_cmap2, vmin=-0.3, vmax=0.3
+            m, mappable = Plot_Robinson_TRENDY().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=-1, vmax=1
             )
             #叠加显著性
-            if not model=='TRENDY_ensemble_median':
-                Plot().plot_Robinson_significance_scatter(
+            if not model=='TRENDY_ensemble_median1':
+                Plot_Robinson_TRENDY().plot_Robinson_significance_scatter(
                     m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
-                    linewidths=0.5, s=.2, c='k', marker='.', zorder=111, res=2
+                    linewidths=0.5, s=.5, c='k', marker='.', zorder=111, res=2
                 )
             else:
                 continue
@@ -2070,16 +3077,59 @@ class TRENDY_CV_moving_window_robust():
         return
 
 
-class TRENDY_CV():
+class Trends_CV_obs_and_model():
+    def __init__(self):
+        pass
+    def run(self):
+        # self.plot_remote_sensing()
+        self.plot_TRENDY()
 
-    def trend_analysis_plot(self):
-        outdir = result_root + rf'\3mm\FIGURE\\trends_all_models_CV\\'
+    def plot_remote_sensing(self): ## put main ms. so pdf
+
+
+        fdir_trend = result_root+rf'\Composite_LAI\CV\trend\\'
+        temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
+        outdir = result_root+rf'FIGURE\\Figure2\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+            if not 'mean' in f:
+                continue
+
+            if not f.endswith('.tif'):
+                continue
+            if 'p_value' in f:
+                continue
+
+
+            f_trend=fdir_trend+'composite_LAI_detrend_CV_mean_trend.tif'
+            f_p_value = fdir_trend + 'composite_LAI_detrend_CV_mean_p_value.tif'
+            print(f_p_value)
+
+
+
+            # exit()
+            plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
+            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(f_trend, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
+
+            Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,f_p_value,temp_root,0.05, s=0.5, marker='.')
+            # plt.title(f'{fname}')
+            # plt.show()
+            outf = outdir + f+'.pdf'
+            plt.savefig(outf)
+            plt.close()
+            T.open_path_and_file(outdir)
+            exit()
+
+    def plot_TRENDY(self):
+        outdir = result_root + rf'\FIGURE\Figure2\\'
         T.mk_dir(outdir,True)
-        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
-        model_list=['composite_LAI','GLOBMAP','LAI4g','SNU_LAI',]
+        temp_root = result_root + rf'\TRENDY\S2\relative_change\relative_change\\temp_root\\'
 
-        model_list = [
-                      'TRENDY_ensemble_median','TRENDY_ensemble_composite_time_series',
+        model_list = ['SNU_LAI', 'GLOBMAP_LAI',
+                      'LAI4g',
+                      'TRENDY_ensemble_median',
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai','ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -2088,13 +3138,13 @@ class TRENDY_CV():
                       'YIBs_S2_Monthly_lai']
 
 
-        dic_name = {'SNU_LAI':'SNU',
-                    'GLOBMAP_LAI':'GLOBMAP',
-                    'composite_LAI': 'Composite',
+
+        dic_name = {'SNU_LAI_relative_change':'SNU',
+                    'GLOBMAP_LAI_relative_change':'GLOBMAP',
+                    'composite_LAI_relative_change_mean': 'Composite',
 
 
             'LAI4g': 'GIMMS4g',
-                    'TRENDY_ensemble_composite_time_series': 'TRENDY_ensemble',
                     'TRENDY_ensemble_median':'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
@@ -2116,9 +3166,17 @@ class TRENDY_CV():
 
 
 
-        fdir = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
+        fdir = result_root + rf'\TRENDY\S2\15_year\moving_window_extraction_CV\trend_analysis\\'
 
 
+        color_list = [
+            '#008837',
+            '#a6dba0',
+            '#f7f7f7',
+            '#c2a5cf',
+            '#7b3294',
+        ]
+        my_cmap2 = T.cmap_blend(color_list, n_colors=5)
 
         # 7×3 画布（共 21 格，当前有 19 个模型）
         # fig, axes = plt.subplots(10, 2, figsize=(10, 25), sharex=False, sharey=False)
@@ -2129,19 +3187,18 @@ class TRENDY_CV():
 
         for i, model in enumerate(model_list):
             fig,ax=plt.subplots(1,1,figsize=(3.35,2.19))
-
             fpath = fdir + f'{model}_detrend_CV_trend.tif'
             f_pvalue = fdir + f'{model}_detrend_CV_p_value.tif'
 
             # 画 Robinson 投影 + 栅格
-            m, mappable = Plot().plot_Robinson(
-                fpath, ax=ax, cmap='PRGn_r', vmin=-1, vmax=1
+            m, mappable = Plot_Robinson_TRENDY().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=-1, vmax=1
             )
-            # 叠加显著性
-            if not model=='TRENDY_ensemble_median':
-                Plot().plot_Robinson_significance_scatter(
+            #叠加显著性
+            if not model=='TRENDY_ensemble_median1':
+                Plot_Robinson_TRENDY().plot_Robinson_significance_scatter(
                     m, f_pvalue, temp_root, sig_level=0.05, ax=ax,
-                    linewidths=0.5, s=.2, c='k', marker='.', zorder=111, res=2
+                    linewidths=0.5, s=.5, c='k', marker='.', zorder=111, res=2
                 )
             else:
                 continue
@@ -2160,14 +3217,17 @@ class TRENDY_CV():
             ax.set_xticks([])
             ax.set_yticks([])
 
-            ## cbar
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
 
-         ###plot colorbar
-            # cbar = fig.colorbar(
-            #     mappable, ax=ax,
-            #     orientation='horizontal', fraction=0.035, pad=0.04
-            # )
-            # cbar.set_label('Trends in CVLAI (%/yr)', fontsize=11)
+
+
+        # 共享色标（水平放在底部）
+        # cbar = fig.colorbar(
+        #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+        #     orientation='horizontal', fraction=0.035, pad=0.04
+        # )
+        # cbar.set_label('Trend (% per year)', fontsize=11)
 
         # 紧凑布局与间距
             # plt.subplots_adjust(hspace=0.08, wspace=0.02)
@@ -2695,9 +3755,10 @@ class calculate_longterm_CV():
         pass
 
 def main():
-    # greening_analysis().run()
-    # climate_variables().run()
-    TRENDY_trend().run()
+
+
+    # Trends_obs_and_model().run()  ## Figure 1
+    Trends_CV_obs_and_model().run()  ## Figure 2
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
