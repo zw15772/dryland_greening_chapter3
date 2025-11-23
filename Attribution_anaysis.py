@@ -956,13 +956,14 @@ class partial_correlation_obs:
         #         self.plot_partial_correlation_p_value()
 
 
-        # self.statistic_trend_bar()
-        # self.plot_spatial_map_sig()
-        # self.statistic_corr_boxplot()
 
-        self.max_correlation_without_sign()
-        # self.max_correlation_with_trend()
-        # self.statistic_partial_trends_dorminant()
+        # self.plot_spatial_map_sig()
+
+
+        # self.statistic_corr_boxplot()
+        self.statistic_percentage()
+        #
+
         pass
 
 
@@ -1423,22 +1424,23 @@ class partial_correlation_obs:
             variable_list = self.xvar_list
             fdir = self.result_root + rf'\result\\'+model+'\\'
             print(fdir)
-            outdir = self.result_root + rf'\result\\{model}\\sig_nomask\\'
+            # outdir = self.result_root + rf'\result\\{model}\\sig_nomask\\'
+            outdir = self.result_root + rf'\result\\{model}\\sig\\'
             T.mk_dir(outdir, True)
             new_variable_list = variable_list + [f'{model}_sensitivity']
 
-            # fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\'
-            # fy_trend = join(fdir_Y, f'{model}_detrend_CV_zscore_trend.tif')
-            # fy_trend_p_value = join(fdir_Y, f'{model}_detrend_CV_zscore_p_value.tif')
-            #
-            # arr_y_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-            #    fy_trend)
-            # arr_y_trend_p_value, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-            #     fy_trend_p_value)
-            #
-            # ## mask
-            # mask = np.ones_like(arr_y_trend)
-            # mask[(arr_y_trend_p_value > 0.05) | (arr_y_trend <= 0)] = np.nan
+            fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\'
+            fy_trend = join(fdir_Y, f'{model}_detrend_CV_zscore_trend.tif')
+            fy_trend_p_value = join(fdir_Y, f'{model}_detrend_CV_zscore_p_value.tif')
+
+            arr_y_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+               fy_trend)
+            arr_y_trend_p_value, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
+                fy_trend_p_value)
+
+            ## mask
+            mask = np.ones_like(arr_y_trend)
+            mask[(arr_y_trend_p_value > 0.05) & (arr_y_trend <= 0)] = np.nan
             # plt.imshow(arr_y_trend)
             # plt.colorbar()
             # plt.show()
@@ -1460,7 +1462,7 @@ class partial_correlation_obs:
                 arr_corr[arr_pvalue > 0.05] = np.nan
 
                 # === ★ 叠加 LAI 正趋势掩膜 ★
-                # arr_corr[np.isnan(mask)] = np.nan
+                arr_corr[np.isnan(mask)] = np.nan
 
 
                 #
@@ -1469,6 +1471,52 @@ class partial_correlation_obs:
                 # plt.show()
                 outf = outdir  + f'{variable}.tif'
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
+
+    def statistic_percentage(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        print(len(df))
+
+        # === 仅保留CVLAI显著上升的像素 ===
+
+        # === 2. 变量设置 ===
+        variable_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        label_dic = {
+            'sensitivity': r'$\gamma$',
+            'Precip_sum_detrend_CV': r'$CV_{inter}$',
+            'CV_daily_rainfall_average': r'$CV_{intra}$',
+        }
+
+        # === 4. 数据提取 ===
+
+        for model in self.model_list:
+            if not 'composite_LAI_median' in model:
+                continue
+
+            result_dic = {}
+
+            # print(len(df));exit()
+            for variable in variable_list:
+                new_variable = f'{model}_{variable}'
+                if new_variable not in df.columns:
+                    continue
+
+                vals = np.array(df[new_variable].tolist(), dtype=float)
+                vals[(vals > 99) | (vals < -99)] = np.nan
+                vals = vals[~np.isnan(vals)]
+                vals_pos = vals[vals > 0]
+                vals_neg = vals[vals < 0]
+                vals_pos_percent = len(vals_pos) / len(vals)
+                vals_neg_percent = len(vals_neg) / len(vals)
+                result_dic[new_variable] = [vals_pos_percent, vals_neg_percent]
+        pprint(result_dic)
+
 
     def statistic_corr_boxplot(self):
         """
@@ -1508,8 +1556,7 @@ class partial_correlation_obs:
 
             result_dic = {}
 
-            df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
-            df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
+
             # print(len(df));exit()
             for variable in variable_list:
                 new_variable = f'{model}_{variable}'
@@ -1519,6 +1566,7 @@ class partial_correlation_obs:
                 vals = np.array(df[new_variable].tolist(), dtype=float)
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
+
                 vals_mean=np.mean(vals)
                 print(vals_mean)
                 result_dic[new_variable] = vals
@@ -1583,7 +1631,7 @@ class partial_correlation_obs:
 
             plt.axhline(0, color='gray', linestyle='--')
             # plt.tight_layout()
-            # plt.show()
+            plt.show()
 
             outdir=result_root + rf'\FIGURE\Figure4\\'
             Tools().mk_dir(outdir, force=True)
@@ -1606,89 +1654,6 @@ class partial_correlation_obs:
 
 
 
-
-
-
-    def statistic_contribution_area_barplot(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
-
-        for col in df.columns:
-                print(col)
-
-        model_list=self.model_list
-
-
-        result_dic = {}
-
-        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-        for ii in [1, 2, 3, 4, 5, 6, ]:
-            percentage_list = []
-            for model in model_list:
-                col = f'{model}_dorminant_color_map'
-                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
-                df_ii = df_mask[df_mask[col] == ii]
-                percent_ii = len(df_ii) / len(df_mask) * 100.0
-                percentage_list.append(percent_ii)
-            result_dic[ii] = percentage_list
-        pprint(result_dic)
-
-        dic_variable_name = {1: 'Trends gamma+',
-                             2: 'Trends gamma-',
-                             3:'Trends CV_intra+',
-                             4:'Trends CV_intra-',
-                             5:'Trends CV_inter+',
-                             6:'Trends CV_inter-'
-
-
-                             }
-
-        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
-        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
-                     + ['#F7DAD4'] * (len(model_list) - 5)
-
-        # 用模型名作为行索引，便于对齐
-        df_new = pd.DataFrame(result_dic, index=model_list)
-
-        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
-        for ii in [1, 2, 3, 4, 5, 6]:
-            vals = df_new[ii].values
-            n_all = len(vals)
-            n_obs = 4  # 前 4 个是 obs
-            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
-
-            # 构造 x 位置：models 整体右移形成间隔
-            x = np.arange(n_all, dtype=float)
-            x[n_obs:] += gap
-
-            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
-            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
-
-            # 在第一个柱子的高度画虚线（只跨 models 区域）
-            y_ref = vals[0]  # 第一个柱子的高度
-            xmin = x[0] - 0.4  # 第一个柱子的左边缘
-            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
-            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
-
-                # 可选：标出 obs/models 分界
-            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
-
-            # plt.ylabel('Area percentage (%)')
-            plt.xticks([])
-            ax.text(0.02, 0.98, dic_variable_name[ii],
-                    transform=ax.transAxes, ha='left', va='top',
-                    fontsize=12, fontfamily='Arial',
-                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
-            ax.set_ylim(0, 20)
-            plt.grid(axis='y', alpha=0.25)
-
-
-            plt.show()
-
-            #
-            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
-            # plt.close()
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -2275,7 +2240,7 @@ class partial_correlation_TRENDY_obs_comparision():
         #
         # ]
         self.model_list=[ 'composite_LAI_median', 'LAI4g', 'GLOBMAP_LAI', 'SNU_LAI',
-         'TRENDY_ensemble_mean2','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+         'TRENDY_ensemble_median_2','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
             'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
             'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
             'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
@@ -2286,11 +2251,12 @@ class partial_correlation_TRENDY_obs_comparision():
     def run(self):
         # self.statistic_barplot_partial_correlation()
         # self.max_correlation_without_sign()
-        # self.TRENDY_ensemble()
+
+        # self.Plot_robinson()
         self.statistic_contribution_area_barplot()
         pass
 
-    def statistic_barplot_partial_correlation(self):
+    def statistic_barplot_partial_correlation(self): ## not used
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
@@ -2364,8 +2330,8 @@ class partial_correlation_TRENDY_obs_comparision():
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        # df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
-        # df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
 
         model_list = self.model_list
 
@@ -2376,8 +2342,8 @@ class partial_correlation_TRENDY_obs_comparision():
         ]
 
         for model in tqdm(model_list):
-            if not 'TRENDY_ensemble_mean2' in model:
-                continue
+            # if not 'TRENDY_ensemble_mean2' in model:
+            #     continue
 
             outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
             T.mk_dir(outdir, force=True)
@@ -2433,115 +2399,45 @@ class partial_correlation_TRENDY_obs_comparision():
             out_tif = join(outdir, 'dominant_color_map_without_sign.tif')
             DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
 
-    def TRENDY_ensemble(self):
 
-        model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                      'ORCHIDEE_S2_lai',
 
-                      'YIBs_S2_Monthly_lai']
+    def Plot_robinson(self):
 
-        # model_list = [ 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', ]
-
-        fdir_all = result_root + rf'\partial_correlation\TRENDY\result\\\\'
-        arr_list = []
-
-        for model in model_list:
-            fpath = join(fdir_all, model, 'sig_nomask', f'{model}_sensitivity.tif')
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            arr[(arr > 99) | (arr < -99)] = np.nan
-            arr_list.append(arr)
-
-        arr_stack = np.stack(arr_list, axis=0)
-
-        # --- Step 1: 构建交集 mask ---
-        valid_mask = np.all(~np.isnan(arr_stack), axis=0)
-
-        # --- Step 2: 仅在交集像元上求平均 ---
-        arr_ensemble = np.where(valid_mask, np.nanmedian(arr_stack, axis=0), np.nan)
-
-        # --- Step 3: 输出结果 ---
-        plt.imshow(arr_ensemble, cmap='RdYlGn')
-        plt.colorbar(label="Ensemble sensitivity")
-
-        plt.show()
-
-        outdir = result_root + rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median_intersection\\'
+        fdir_trend = result_root + rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median2\\'
+        # fdir_trend = result_root + rf'\partial_correlation\Obs\result\\composite_LAI_median\\'
+        temp_root = result_root + rf'FIGURE\Robinson\\temp_root\\'
+        outdir = result_root + rf'FIGURE\Figure4\\Robinson\\'
         T.mk_dir(outdir, force=True)
-        outf = join(outdir, 'TRENDY_ensemble_mean_intersection_sensitivity.tif')
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outf)
+        T.mk_dir(temp_root, force=True)
 
 
+        for f in os.listdir(fdir_trend):
 
-    def statistic_partial_trends_dorminant(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY.df'
-        df = T.load_df(dff)
-        df = self.df_clean(df)
+            if not f.endswith('.tif'):
+                continue
 
+            if not 'color_map' in f:
+                continue
+            fpath = fdir_trend + f
 
-
-        for col in df.columns:
-            print(col)
-
-        model_list = self.model_list
-        model_list=['composite_LAI_median']
-
-        result_dic = {}
-
-        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-        for ii in [1, 2, 3, 4, 5, 6, ]:
-            percentage_list = []
-            for model in model_list:
-                col = f'{model}_dominant_color_map_with_trend'
-                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
-                df_ii = df_mask[df_mask[col] == ii]
-                percent_ii = len(df_ii) / len(df_mask) * 100.0
-                percentage_list.append(percent_ii)
-            result_dic[ii] = percentage_list
-        pprint(result_dic)
-
-        # === 按变量分组 (+, -) ===
-        group_pairs = {
-            'γ': [1, 2],
-            'CV_inter': [3, 4],
-            'CV_intra': [5, 6],
-        }
-
-        # === 可视化 ===
-        plt.figure(figsize=(3, 3))
-        x_labels = list(group_pairs.keys())
-        x = np.arange(len(x_labels))
+            # plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=3, is_discrete=True, colormap_n=4, )
 
 
-        # 颜色设定：负号 = 蓝色，正号 = 红色
-        color_minus = '#4A90E2'  # 蓝
-        color_plus = '#E94E77'  # 红
-
-        for i, model in enumerate(model_list):
-            bar_bottom = np.zeros(len(group_pairs))
-            for j, (group_name, pair) in enumerate(group_pairs.items()):
-                val_minus = result_dic[pair[0]][i]
-                val_plus = result_dic[pair[1]][i]
-                # 绘制堆叠
-                plt.bar(x[j] + i * 0.15, val_minus, width=0.7, color=color_minus)
-                plt.bar(x[j] + i * 0.15, val_plus, bottom=val_minus, width=0.7, color=color_plus)
-
-        # === 外观设置 ===
-        plt.xticks(x + (len(model_list) - 1) * 0.15 / 2, x_labels, rotation=0)
-        plt.ylabel('Area (%)')
-
-        plt.legend(['negative trend', 'positive trend'], loc='upper right')
-        plt.tight_layout()
-        plt.show()
+            # plt.show()
+            outf = outdir +'TRENDY_ensemble_median2.pdf'
+            # outf = outdir +'composite_LAI_median.pdf'
+            plt.savefig(outf)
+            plt.close()
+        T.open_path_and_file(outdir)
 
     def statistic_contribution_area_barplot(self):
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
         # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
+
 
         for col in df.columns:
                 print(col)
@@ -2622,8 +2518,8 @@ class partial_correlation_TRENDY_obs_comparision():
 
             plt.show()
 
-            #
-            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+
+            # plt.savefig(result_root + rf'\FIGURE\Figure4\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
             # plt.close()
 
     def df_clean(self, df):
@@ -2640,14 +2536,206 @@ class partial_correlation_TRENDY_obs_comparision():
 
         return df
 
+class Plot_Robinson:
+    def __init__(self):
+        # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+
+    def robinson_template(self):
+        '''
+                :param fpath: tif file
+                :param is_reproj: if True, reproject file from 4326 to Robinson
+                :param res: resolution, meter
+                '''
+
+        # Blue represents high values, and red represents low values.
+        plt.figure(figsize=(self.map_width, self.map_height))
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
+
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=20,
+                                           c='k', marker='x',
+                                           zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 10000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        # lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        # lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # arr_reproj, originX_reproj, originY_reproj, pixelWidth_reproj, pixelHeight_reproj = ToRaster().raster2array(fpath_resample_ortho)
+        # lon_list_reproj = np.arange(originX_reproj, originX_reproj + pixelWidth_reproj * arr_reproj.shape[1], pixelWidth_reproj)
+        # lat_list_reproj = np.arange(originY_reproj, originY_reproj + pixelHeight_reproj * arr_reproj.shape[0], pixelHeight_reproj)
+        # arr = m.transform_scalar(arr, lon_list, lat_list[::-1], len(lon_list_reproj), len(lat_list_reproj))
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        # plt.figure()
+        # plt.imshow(arr,interpolation='nearest',cmap='jet')
+        # plt.show()
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+        # keys = spatial_dict.keys()
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # print(lon_list)
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+
+    def plot_Robinson(self, fpath, ax=None, cmap=None, vmin=None, vmax=None, is_plot_colorbar=True, is_reproj=True,
+                      res=25000, is_discrete=False, colormap_n=11):
+        '''
+        :param fpath: tif file
+        :param is_reproj: if True, reproject file from 4326 to Robinson
+        :param res: resolution, meter
+        ## trend color list
+        '''
+        # import pyproj
+        # proj_info = pyproj.CRS.from_wkt(self.Robinson_wkt())
+        # pprint(proj_info)
+        # exit()
+        color_list = [
+            '#f599a1', '#fcd590',
+            '#e73618', '#dae67a',
+            '#9fd7e9', '#a577ad',
+        ]
+
+        color_list = [
+            '#a577ad',
+            # '#e73618',
+
+            '#dae67a', '#f599a1',
+        ]
+
+        # Blue represents high values, and red represents low values.
+        if ax == None:
+            # plt.figure(figsize=(10, 10))
+            ax = plt.subplot(1, 1, 1)
+        if cmap is None:
+            cmap = Tools().cmap_blend(color_list)
+        elif type(cmap) == str:
+            cmap = plt.get_cmap(cmap)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr_m = ma.masked_where(np.isnan(arr), arr)
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
+        lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+        ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,latlon=True )
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # plt.show()
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='whitesmoke', lake_color='#EFEFEF', zorder=90)
+        # plt.show()
+        if is_plot_colorbar:
+            if is_discrete:
+                bounds = np.linspace(vmin, vmax, colormap_n)
+                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+                cax, kw = mpl.colorbar.make_axes(ax, location='bottom', pad=0.05, shrink=0.5)
+                cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, boundaries=bounds, ticks=bounds,
+                                                 orientation='horizontal')
+            else:
+                cbar = plt.colorbar(ret, ax=ax, shrink=0.5, location='bottom', pad=0.05)
+        return m, ret
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+
+
 
 def main():
     # multiregression_intrasensitivity().run()
     # multiregression_intersensitivity().run()
     # multiregression_intersensitivity_TRENDY().run()
-    # partial_correlation_obs().run()
+    partial_correlation_obs().run()
     # partial_correlation_TRENDY().run()
-    partial_correlation_TRENDY_obs_comparision().run()
+    # partial_correlation_TRENDY_obs_comparision().run()
 
     pass
 

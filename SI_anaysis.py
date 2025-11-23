@@ -94,11 +94,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.plot_CV_LAI()
+        self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
-        self.plot_rainfallmax_min()
+        # self.plot_rainfallmax_min()
         # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
         # self.TRENDY_LAImin_LAImax()
@@ -289,7 +289,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df')
+            result_root + rf'\Dataframe\\CVLAI\\CVLAI.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -307,18 +307,15 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
 
 
-        # variable_list = ['LAI4g', 'AVHRR_solely_relative_change','GEODES_AVHRR_LAI_relative_change',]
-        # variable_list = ['NDVI', 'NDVI4g', 'GIMMS_plus_NDVI', ]
-        #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
-        variable_list=['composite_LAI_CV',
-                       'LAI4g_detrend_CV','detrended_SNU_LAI_CV',
-            'GLOBMAP_LAI_detrend_CV',]
-        dic_label={'composite_LAI_CV':'Composite',
-                   'LAI4g_detrend_CV':'GIMMS4g',
+        variable_list=['composite_LAI_median',
+                       'LAI4g','SNU_LAI',
+            'GLOBMAP_LAI',]
+        dic_label={'composite_LAI_median':'Composite LAI',
+                   'LAI4g':'GIMMS4g',
 
-                   'GLOBMAP_LAI_detrend_CV':'GLOBMAP',
-                   'detrended_SNU_LAI_CV':'SNU',}
+                   'GLOBMAP_LAI':'GLOBMAP',
+                   'SNU_LAI':'SNU',}
         year_list=range(0,24)
 
 
@@ -335,9 +332,9 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             std_dic_data={}
 
             for year in year_list:
-                df_i = df[df['year'] == year]
+                df_i = df[df['window'] == year]
 
-                vals = df_i[f'{var}'].tolist()
+                vals = df_i[f'{var}_detrend_CV'].tolist()
                 SEM=stats.sem(vals)
                 CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
                 std=np.nanstd(vals)
@@ -360,7 +357,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-            if var == 'composite_LAI_CV':
+            if var == 'composite_LAI_median':
                 ## plot CI bar
                 plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
                          )
@@ -396,7 +393,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         window_size = 15
 
         # set xticks with 1982-1997, 1998-2013,.. 2014-2020
-        year_range = range(1983, 2021)
+        year_range = range(1982, 2021)
         year_range_str = []
         for year in year_range:
 
@@ -411,14 +408,17 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
 
 
-        plt.ylabel(f'CVLAI (%/yr)')
 
-        plt.grid(which='major', alpha=0.5)
+        plt.ylabel(f'CVLAI (%/yr)')
+        plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
+
+
+
         plt.legend(loc='upper left')
 
         # plt.show()
         # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\3mm\FIGURE\figure2CV\\'
+        out_pdf_fdir = result_root + rf'\FIGURE\Figure1b\\'
         T.mk_dir(out_pdf_fdir, force=True)
         plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
         plt.close()
@@ -538,7 +538,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def plot_relative_change_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\3mm\product_consistency\dataframe\\relative_change.df')
+            result_root + rf'\Dataframe\relative_change\\relative_change.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -561,13 +561,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
         variable_list = [
-                         'composite_LAI_relative_change_mean','LAI4g', 'SNU_LAI_relative_change',
-            'GLOBMAP_LAI_relative_change',
+                         'composite_LAI_median','LAI4g', 'SNU_LAI',
+            'GLOBMAP_LAI',
                          ]
-        dic_label={'LAI4g':'LAI4g','SNU_LAI_relative_change':'SNU_LAI',
-                   'GLOBMAP_LAI_relative_change':'GLOBMAP_LAI',
-                   'composite_LAI_relative_change_mean':'Composite LAI'}
-        year_list=range(1983,2021)
+        dic_label={'LAI4g':'LAI4g','SNU_LAI':'SNU_LAI',
+                   'GLOBMAP_LAI':'GLOBMAP_LAI',
+                   'composite_LAI_median':'Composite LAI'}
+        year_list=range(1982,2021)
 
 
         result_dic = {}
@@ -579,7 +579,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             for year in year_list:
                 df_i = df[df['year'] == year]
 
-                vals = df_i[f'{var}'].tolist()
+                vals = df_i[f'{var}_relative_change'].tolist()
                 data_dic[year] = np.nanmean(vals)
             result_dic[var] = data_dic
         ##dic to df
@@ -594,14 +594,14 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
             print(var, f'{slope:.2f}', f'{p_value:.2f}')
         plt.ylabel('Relative change LAI (%)')
-        plt.grid(True)
 
+        plt.grid(True, axis='x')   # 只画竖线（随 x 刻度）
 
-        plt.legend()
-        plt.show()
-        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        # plt.legend()
+        # plt.show()
+        out_pdf_fdir = result_root + rf'\Figure\\Figure1a\\'
+        plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
     def statistic_trend_CV_bar(self):
@@ -2196,8 +2196,6 @@ class Plot_Robinson_TRENDY:
         return wkt
 
 
-
-
 class Colormap():
     def __init__(self):
         pass
@@ -2207,7 +2205,7 @@ class Colormap():
         pass
 
     def colormap(self):
-        outdir = result_root + rf'\3mm\FIGURE\\Colormap\\'
+        outdir = result_root + rf'\FIGURE\\Colormap\\'
         T.mk_dir(outdir, True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
@@ -2220,12 +2218,12 @@ class Colormap():
                       'ORCHIDEE_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        # model_list = [
-        #     'composite_LAI_median',
-        #     'SNU_LAI', 'GLOBMAP_LAI',
-        #     'LAI4g',
-        #     'composite_LAI',
-        #     ]
+        model_list = [
+
+            'SNU_LAI', 'GLOBMAP_LAI',
+            'LAI4g',
+
+            ]
 
         dic_name = {'SNU_LAI': 'SNU',
                     'GLOBMAP_LAI': 'GLOBMAP',
@@ -2250,30 +2248,28 @@ class Colormap():
                     'LPX-Bern_S2_lai': 'LPX-Bern',
                     }
 
-        # fdir_all = result_root + rf'\\3mm\\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\'
-        fdir_all = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\\'
+
+        fdir_all = result_root + rf'\partial_correlation\Obs\result\\'
         for model in model_list:
             fdir = fdir_all + rf'{model}\\'
             temp_fdir = temp_root + rf'{model}\\'
             T.mk_dir(temp_fdir, True)
 
-            color_list = [
-                '#f599a1', '#fcd590',
-                '#e73618', '#dae67a',
-                '#9fd7e9', '#a577ad',
 
-            ]
+            color_list= ['#a577ad',
+
+            '#dae67a', '#f599a1',]
 
             my_cmap2 = T.cmap_blend(color_list, n_colors=6)
 
 
             fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
-            fpath = fdir + f'color_map.tif'
+            fpath = fdir + f'dominant_color_map_without_sign.tif'
 
 
             # 画 Robinson 投影 + 栅格
-            m, mappable = Plot().plot_Robinson(
-                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=6,
+            m, mappable = Plot_Robinson_TRENDY().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=3, colormap_n=4,is_discrete=True
             )
 
 
@@ -2325,11 +2321,11 @@ class Colormap():
 
 
     def statistic_contribution_area_individual_model(self):
-        dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\statistics\\statistics.df'
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
-        model_list = ['TRENDY_ensemble_median',
+        model_list = ['TRENDY_ensemble_median_2',
             'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
             'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
             'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -2338,15 +2334,22 @@ class Colormap():
 
             'YIBs_S2_Monthly_lai']
 
+        # model_list = [
+        #     'composite_LAI_median',
+        #
+        #     'SNU_LAI', 'GLOBMAP_LAI',
+        #     'LAI4g',
+        #
+        # ]
+
         for model in model_list:
             percentage_list = []
             sum = 0
-            df = df.dropna(subset=[f'{model}_color_map'])
+            df = df.dropna(subset=[f'{model}_dominant_color_map_without_sign'])
 
 
-            for ii in [1, 2, 3, 4, 5, 6]:
-                df_ii = df[df[f'{model}_color_map'] == ii]
-                # df = df.dropna(subset=['composite_LAI_median_color_map'])
+            for ii in [1, 2, 3,]:
+                df_ii = df[df[f'{model}_dominant_color_map_without_sign'] == ii]
                 # df_ii = df[df['composite_LAI_median_color_map'] == ii]
 
                 percent = len(df_ii) / len(df) * 100
@@ -2358,28 +2361,158 @@ class Colormap():
             # print(sum);
 
 
-            # exit()
+            color_list = ['#a577ad',
 
-            ## plot
+                          '#dae67a', '#f599a1', ]
 
-            color_list = [
-
-                '#f599a1', '#fcd590',
-                '#e73618', '#dae67a',
-                '#9fd7e9', '#a577ad',
-
-            ]
-
-            plt.figure(figsize=(1.7323,1.3108))
-            plt.bar([1, 2, 3, 4, 5, 6], percentage_list, color=color_list)
+            plt.figure(figsize=(1.2,1.2))
+            plt.bar([1, 2, 3, ], percentage_list, color=color_list)
             plt.ylim(0, 50)
             plt.xticks([])
 
             plt.ylabel('Area(%)')
             # plt.show()
-            outdir = result_root + rf'\3mm\FIGURE\Colormap\\'
-            # plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, bbox_inches='tight')
-            # plt.close()
+            outdir = result_root + rf'\FIGURE\Colormap\\'
+            plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, bbox_inches='tight')
+            plt.close()
+
+
+class LAImax_LAImin():
+    def __init__(self):
+        pass
+    def run(self):
+        self.LAImax_LAImin_all()
+
+        pass
+
+    def LAImax_LAImin_all(self):
+        outdir = result_root + rf'\FIGURE\\Colormap\\'
+        T.mk_dir(outdir, True)
+        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+
+        model_list = [
+
+                      'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                      'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                      'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                      'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                      'ORCHIDEE_S2_lai',
+                      'YIBs_S2_Monthly_lai']
+
+        model_list = [
+
+            'SNU_LAI', 'GLOBMAP_LAI',
+            'LAI4g',
+
+            ]
+
+        dic_name = {'SNU_LAI': 'SNU',
+                    'GLOBMAP_LAI': 'GLOBMAP',
+                    'composite_LAI_median': 'Composite',
+                    'composite_LAI': 'Composite',
+
+                    'LAI4g': 'GIMMS4g',
+                    'TRENDY_ensemble_median': 'TRENDY_ensemble',
+                    'CABLE-POP_S2_lai': 'CABLE-POP',
+                    'CLASSIC_S2_lai': 'CLASSIC',
+                    'CLM5': 'CLM5',
+                    'DLEM_S2_lai': 'DLEM',
+                    'IBIS_S2_lai': 'IBIS',
+                    'ISAM_S2_lai': 'ISAM',
+                    'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
+                    'JSBACH_S2_lai': 'JSBACH',
+                    'JULES_S2_lai': 'JULES',
+                    'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
+                    'ORCHIDEE_S2_lai': 'ORCHIDEE',
+                    'SDGVM_S2_lai': 'SDGVM',
+                    'YIBs_S2_Monthly_lai': 'YIBs',
+                    'LPX-Bern_S2_lai': 'LPX-Bern',
+                    }
+
+
+        fdir_all = result_root + rf'\partial_correlation\Obs\result\\'
+        for model in model_list:
+            fdir = fdir_all + rf'{model}\\'
+            temp_fdir = temp_root + rf'{model}\\'
+            T.mk_dir(temp_fdir, True)
+
+
+            color_list= ['#a577ad',
+
+            '#dae67a', '#f599a1',]
+
+            my_cmap2 = T.cmap_blend(color_list, n_colors=6)
+
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+            fpath = fdir + f'dominant_color_map_without_sign.tif'
+
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot_Robinson_TRENDY().plot_Robinson(
+                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=3, colormap_n=4,is_discrete=True
+            )
+
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+            ax.set_title(dic_name.get(model, model), fontsize=8, font='Arial')
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+
+            # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Trend (% per year)', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + '\\' + model + '.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
+    pass
+
+    def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
+
+        fdir_trend = result_root + rf'\bivariate\\rainfall\\'
+        temp_root = result_root + rf'\bivariate\\rainfall\\'
+        outdir = result_root + rf'\\bivariate\\ROBINSON\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+            outf=outdir + fname + '.tif'
+            srcSRS=self.wkt_84()
+            dstSRS=self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath,outf, 5000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
+
+
 
 
 class Partial_correlation():
@@ -2740,10 +2873,10 @@ class Trends_obs_and_model():
             p_value_f = fdir_trend + fname_p_value+'.tif'
             print(p_value_f)
             # exit()
-            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
+            plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
+            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
 
-            Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
+            Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
             # plt.show()
             outf = outdir + f+'.pdf'
@@ -3758,11 +3891,12 @@ def main():
 
 
     # Trends_obs_and_model().run()  ## Figure 1
-    Trends_CV_obs_and_model().run()  ## Figure 2
+    # Trends_CV_obs_and_model().run()  ## Figure 2
+    # PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
-    # Colormap().run()
+    Colormap().run()
     # Partial_correlation().run()
     # LAImax_LAImin_models().run()
     # PLOT_Climate_factors().run()

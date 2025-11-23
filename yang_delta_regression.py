@@ -46,6 +46,8 @@ class Delta_regression:
 
         # self.do_multi_regression()
 
+        ##### step 1
+
         for model in self.model_list:
             x_list=self.xvar+[model+'_sensitivity_zscore']
             # self.do_multi_regression_control_experiment(model,x_list) ## use this but the result is the same
@@ -53,10 +55,10 @@ class Delta_regression:
 
             # self.calculate_trend_contribution(model,x_list)
 
-
+        ## step 2
         self.statistic_contribution_no_residual()  ## use this
-        # self.statistic_contribution_area()  ## use this
-        # self.Figure2_robinson()
+
+
 
 
         ###########################################3
@@ -66,15 +68,15 @@ class Delta_regression:
         # self.dominant_region_trends() not use
 
 
-        # self.sensitivity_vs_climate_factors()
-        # self.sensitivity_vs_climate_factors()
-        # self.sensitivity_vs_climate_factors_2()
+        # self.sensitivity_vs_climate_factors()  ## not used
+        # self.sensitivity_vs_climate_factors()  ## not used
+        # self.sensitivity_vs_climate_factors_2()  ## not used
 
 
-        # self.normalized_partial_corr()
+        # self.normalized_partial_corr()  ## not used
 
-        # self.heatmap2()
-        # self.calculate_mean()
+        # self.heatmap2() ## not used
+        # self.calculate_mean()  ## not used
 
         pass
 
@@ -761,32 +763,7 @@ class Delta_regression:
             # plt.imshow(arr, interpolation='nearest')
             # plt.colorbar()
             # plt.show()
-    def Figure2_robinson(self):
 
-        fdir_trend = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\composite_LAI_median\\'
-        temp_root = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg\\'
-        outdir = result_root + rf'\3mm\FIGURE\Robinson\\'
-        T.mk_dir(outdir, force=True)
-        T.mk_dir(temp_root, force=True)
-
-
-        for f in os.listdir(fdir_trend):
-
-            if not f.endswith('.tif'):
-                continue
-
-            if not 'color_map' in f:
-                continue
-            fpath = fdir_trend + f
-
-            plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=6, is_discrete=True, colormap_n=7, )
-
-
-            # plt.show()
-            outf = outdir + f + 'composite_LAI_median.pdf'
-            plt.savefig(outf)
-            # plt.close()
 
     def statistic_contribution_no_residual(self):
         import matplotlib.pyplot as plt
