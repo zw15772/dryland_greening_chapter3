@@ -1766,10 +1766,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\partial_correlation\Dataframe\\')
+                result_root +  rf'\bivariate\Dataframe\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Obs.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1780,7 +1780,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1796,7 +1796,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
@@ -1805,16 +1805,16 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # # # # #
-        df=self.add_lat_lon_to_df(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # # # # # # # #
+        # df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -1824,7 +1824,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        # df=self.rename_columns(df)
+        df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
@@ -2869,9 +2869,12 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'composite_LAI_detrend_CV_median_trend': 'composite_LAI_median_detrend_CV_trend',
+        df = df.rename(columns={'composite_LAImax_median_p_value': 'composite_LAI_median_max_p_value',
+                                'composite_LAImin_median_p_value': 'composite_LAI_median_min_p_value',
 
-                              'composite_LAI_detrend_CV_mean_trend': 'composite_LAI_mean_detrend_CV_trend',
+
+
+
 
 
                                }
@@ -3854,7 +3857,7 @@ class greening_analysis():
         # self.trend_analysis_TS()
         # self.heatmap()
         # self.heatmap()
-        # self.plot_robinson()
+        self.plot_robinson()
         # self.statistic_trend_bar()
         # self.plot_significant_percentage_area()
         # self.plot_significant_percentage_area_two_period()
@@ -4509,13 +4512,17 @@ class greening_analysis():
     def plot_robinson(self):
 
         # fdir_trend = result_root+rf'3mm\moving_window_multi_regression\moving_window\multi_regression_result\npy_time_series\trend\\'
-        fdir_trend = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\'
+        fdir_trend = result_root+rf'Composite_LAI\relative_change\trend\\'
         temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
-        outdir = result_root+rf'FIGURE\\Figure1\\'
+        outdir = result_root+rf'FIGURE\\Figure1a\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
+            if not 'composite' in f:
+                continue
+            if 'p_value' in f:
+                continue
 
             if not f.endswith('.tif'):
                 continue
@@ -4529,11 +4536,11 @@ class greening_analysis():
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=9,)
 
             Plot_Robinson().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
-            plt.show()
+            # plt.show()
             outf = outdir + f+'.pdf'
             plt.savefig(outf)
             plt.close()
@@ -7895,7 +7902,7 @@ class TRENDY_CV:
         # self.moving_window_mean_anaysis()
         # self.moving_window_max_min_anaysis()
         # self.trend_analysis()
-        self.TRENDY_ensemble()
+        # self.TRENDY_ensemble()
         # self.TRENDY_ensemble_npy()
         # self.plot_robinson()
         # self.plt_basemap()
@@ -8885,7 +8892,7 @@ class TRENDY_CV:
         mark_size_list = [200] * 1+[50] * 3 +[200] * 1+ [50] * 13
         # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
 
-        dff = result_root + rf'\Dataframe\\Trends_CV.df'
+        dff = result_root + rf'\Dataframe\\Trends_CV\\Trends_CV.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         T.print_head_n(df)
@@ -8971,10 +8978,10 @@ class TRENDY_CV:
         ## save imagine
         plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
         plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
-        # plt.savefig(result_root + rf'3mm\FIGURE\\Figure4\\LAI4g_detrend_CV_trend_legend.pdf',  bbox_inches='tight')
+        plt.savefig(result_root + rf'\FIGURE\\Figure3\\obs_TRENDY_CV_trends_median.pdf',  bbox_inches='tight')
 
         #
-        plt.show()
+        # plt.show()
 
 
 

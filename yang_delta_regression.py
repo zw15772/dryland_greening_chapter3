@@ -781,6 +781,8 @@ class Delta_regression:
 
 
         for model in self.model_list:
+            if not 'median' in model:
+                continue
             # === 变量名 ===
             fixed_order = [
                 f'{model}_sensitivity_zscore_contrib',
@@ -815,10 +817,13 @@ class Delta_regression:
                     continue
 
                 mean_val = np.nanmean(vals)
+                # print(np.std(vals));exit()
                 sem_val = np.nanstd(vals) / np.sqrt(len(vals))  # 标准误差
                 means.append(mean_val)
                 sems.append(sem_val)
                 labels.append(label_map[var])
+            print(sems)
+            print(means);exit()
             print(f'{model}:', means)
 
             # === 绘图 ===

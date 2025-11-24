@@ -962,22 +962,22 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         import xymap
 
 
-        fdir =result_root + rf'\bivariate\rainfall_max_min\trend\\\\'
+        fdir =result_root + rf'\bivariate\LAImin_LAImax\trend_anaysis\\\\'
 
-        outdir =result_root + (rf'bivariate\\rainfall\\')
+        outdir =result_root + (rf'bivariate\\LAImin_LAImax\\')
 
         T.mkdir(outdir)
 
         # outtif = join(outdir,'CV_trend2.tif')
-        outtif = join(outdir, 'Precip_bivariate.tif')
+        outtif = join(outdir, 'LAImax_min_mean.tif')
 
-        fpath1 = join(fdir,'Precip_sum_relative_change_detrend_max_trend.tif')
+        fpath1 = join(fdir,'composite_LAImax_mean_trend.tif')
 
-        fpath2 = join(fdir,'Precip_sum_relative_change_detrend_min_trend.tif')
+        fpath2 = join(fdir,'composite_LAImin_mean_trend.tif')
 
 
         #1
-        tif1_label, tif2_label = 'precip_max','precip_min'
+        tif1_label, tif2_label = 'LAImax_trend','LAImin_trend'
         #2
         # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
 
@@ -1322,11 +1322,17 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
 
         dff = result_root + rf'\bivariate\Dataframe\\Dataframe.df'
         df = T.load_df(dff)
+        # print(df.columns);exit()
         df = self.df_clean(df)
         df_unique = df.groupby(['pix', ], as_index=False).mean(numeric_only=True)
 
-        s_min = df_unique['Precip_sum_relative_change_detrend_min_trend']
-        s_max = df_unique['Precip_sum_relative_change_detrend_max_trend']
+        # s_min = df_unique['Precip_sum_relative_change_detrend_min_trend']
+        # s_max = df_unique['Precip_sum_relative_change_detrend_max_trend']
+        # s_min = df_unique['composite_LAI_median_min_trend']
+        # s_max = df_unique['composite_LAI_median_max_trend']
+
+        s_min = df_unique['composite_LAImin_mean_trend']
+        s_max = df_unique['composite_LAImax_mean_trend']
 
         s_min = s_min.where(s_min.between(-99, 99))
         s_max = s_max.where(s_max.between(-99, 99))
@@ -1375,7 +1381,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         outdir=result_root + rf'\FIGURE\Figure2\\'
         T.mk_dir(outdir, force=True)
 
-        plt.savefig(outdir + 'barplot_insert_rainfall.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(outdir + 'barplot_insert_LAI_median.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
         plt.show()

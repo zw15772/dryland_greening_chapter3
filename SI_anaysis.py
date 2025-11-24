@@ -94,14 +94,14 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        self.plot_CV_LAI()
+        # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
         # self.plot_rainfallmax_min()
         # self.statistic_trend_CV_bar()
         # self.statistic_trend_bar()
-        # self.TRENDY_LAImin_LAImax()
+        self.TRENDY_LAImin_LAImax_barplot() ## Figure3
 
 
         pass
@@ -124,13 +124,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         df = self.df_clean(df)
         print(len(df))
 
-        variable_list = ['composite_LAImax_median', 'composite_LAImin_median']
-        dic_label = {'composite_LAImax_median': 'LAImax',
-                     'composite_LAImin_median': 'LAImin'}
-        color_dic = {'composite_LAImax_median': 'purple',
-                     'composite_LAImin_median': 'teal'}
+        variable_list = ['composite_LAImax_mean', 'composite_LAImin_mean']
+        dic_label = {'composite_LAImax_mean': 'LAImax',
+                     'composite_LAImin_mean': 'LAImin'}
+        color_dic = {'composite_LAImax_mean': 'purple',
+                     'composite_LAImin_mean': 'teal'}
 
-        year_list = range(0, 24)
+        year_list = range(0, 25)
         result_dic = {}
         std_dic = {}
 
@@ -175,12 +175,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             print(var, slope, p_value)
             x_pos = max(years) * 0.85
             y_pos = y.mean()
-            plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
-            plt.text(x_pos, y_pos - 12, f'p={p_value:.3f}', fontsize=10, color=color)
+            # plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            # plt.text(x_pos, y_pos - 12, f'p={p_value:.3f}', fontsize=10, color=color)
 
         # === X轴标签（15年滑窗） ===
         window_size = 15
-        year_range = range(1983, 2021)
+        year_range = range(1982, 2021)
         year_range_str = []
         for year in year_range:
             start_year = year
@@ -198,7 +198,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
         T.mk_dir(out_pdf_fdir)
-        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
         pass
@@ -214,7 +214,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         color_dic = {'Precip_sum_relative_change_detrend_max': 'purple',
                      'Precip_sum_relative_change_detrend_min': 'teal'}
 
-        year_list = range(0, 24)
+        year_list = range(0, 25)
         result_dic = {}
         std_dic = {}
 
@@ -259,12 +259,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             print(var, slope, p_value)
             x_pos = max(years) * 0.85
             y_pos = y.mean()
-            plt.text(x_pos, y_pos + 10, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
-            plt.text(x_pos, y_pos - 10, f'p={p_value:.3f}', fontsize=10, color=color)
+            # plt.text(x_pos, y_pos + 10, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
+            # plt.text(x_pos, y_pos - 10, f'p={p_value:.3f}', fontsize=10, color=color)
 
         # === X轴标签（15年滑窗） ===
         window_size = 15
-        year_range = range(1983, 2021)
+        year_range = range(1982, 2021)
         year_range_str = []
         for year in year_range:
             start_year = year
@@ -308,15 +308,15 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
 
 
-        variable_list=['composite_LAI_median',
+        variable_list=['composite_LAI_mean',
                        'LAI4g','SNU_LAI',
             'GLOBMAP_LAI',]
-        dic_label={'composite_LAI_median':'Composite LAI',
+        dic_label={'composite_LAI_mean':'Composite LAI',
                    'LAI4g':'GIMMS4g',
 
                    'GLOBMAP_LAI':'GLOBMAP',
                    'SNU_LAI':'SNU',}
-        year_list=range(0,24)
+        year_list=range(0,25)
 
 
         result_dic = {}
@@ -357,7 +357,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-            if var == 'composite_LAI_median':
+            if var == 'composite_LAI_mean':
                 ## plot CI bar
                 plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
                          )
@@ -420,7 +420,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # plt.tight_layout()
         out_pdf_fdir = result_root + rf'\FIGURE\Figure1b\\'
         T.mk_dir(out_pdf_fdir, force=True)
-        plt.savefig(out_pdf_fdir + 'time_series_CV.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
 
@@ -561,12 +561,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         #'detrended_SNU_LAI_CV','SNU_LAI_predict_detrend_CV','
 
         variable_list = [
-                         'composite_LAI_median','LAI4g', 'SNU_LAI',
+                         'composite_LAI_mean','LAI4g', 'SNU_LAI',
             'GLOBMAP_LAI',
                          ]
         dic_label={'LAI4g':'LAI4g','SNU_LAI':'SNU_LAI',
                    'GLOBMAP_LAI':'GLOBMAP_LAI',
-                   'composite_LAI_median':'Composite LAI'}
+                   'composite_LAI_mean':'Composite LAI'}
         year_list=range(1982,2021)
 
 
@@ -600,13 +600,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # plt.legend()
         # plt.show()
         out_pdf_fdir = result_root + rf'\Figure\\Figure1a\\'
-        plt.savefig(out_pdf_fdir + 'time_series_relative_change.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir + 'time_series_relative_change_mean.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
 
     def statistic_trend_CV_bar(self):
-        fdir = result_root + rf'3mm\product_consistency\\CV\\'
-        variable_list=['composite_LAI_CV','GlOBMAP_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
+        fdir = result_root + rf'\Composite_LAI\CV\trend\\'
+        variable_list=['composite_LAI_detrend_CV_mean','composite_LAI_detrend_CV_median','GlOBMAP_LAI_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
         for variable in variable_list:
             f_trend_path=fdir+f'{variable}_trend.tif'
             f_pvalue_path=fdir+f'{variable}_p_value.tif'
@@ -678,19 +678,19 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                 # plt.title(variable)
 
             plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            plt.tight_layout()
-            # plt.show())
+            # plt.tight_layout()
+            # plt.show()
         ## save pdf
-            plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_CV_bar.pdf')
+            plt.savefig(result_root + rf'Figure\Figure1b\{variable}_CV_bar.pdf')
 
 
     def statistic_trend_bar(self):
-        fdir = result_root + rf'3mm\product_consistency\relative_change\Trend\\'
-        variable_list=['GLOBMAP_LAI_relative_change','LAI4g','composite_LAI_relative_change_mean','SNU_LAI_relative_change']
+        fdir = result_root + rf'\Composite_LAI\relative_change\trend\\'
+        variable_list=['GLOBMAP_LAI_relative_change','LAI4g_relative_change','composite_LAI_mean_relative_change','composite_LAI_median_relative_change','SNU_LAI_relative_change']
         for variable in variable_list:
             f_trend_path=fdir+f'{variable}_trend.tif'
             f_pvalue_path=fdir+f'{variable}_p_value.tif'
-            result_dic={}
+
 
             arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
             arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
@@ -757,6 +757,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
             width = 0.4
             alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
 
             # 逐个画 bar
             for i, (key, val) in enumerate(result_dic.items()):
@@ -766,10 +767,119 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                 plt.title(variable)
 
             plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            plt.show()
-            # plt.savefig(result_root + rf'3mm\product_consistency\pdf\{variable}_trend_bar.pdf')
-            # plt.close()
-    def TRENDY_LAImin_LAImax(self):
+            # plt.show()
+            plt.savefig(result_root + rf'Figure\Figure1a\{variable}_trend_bar.pdf')
+            plt.close()
+
+    def plot_CV_trend_among_models2(self):  ##here not calculating mean in program
+
+        color_list = ['black', 'black', 'black', '#a1a9d0',
+                      '#f0988c', '#b883d3', '#ffff33', '#c4a5de',
+                      '#E7483D', '#984ea3', '#e41a1c',
+                      '#9e9e9e', '#cfeaf1', '#f6cae5',
+                      '#98cccb', '#5867AF', 'black', '#e66d50', ]
+        ## I want use set 3 color
+
+        mark_size_list = [200] * 1+[50] * 3 +[200] * 1+ [50] * 13
+        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
+
+        dff = result_root + rf'\Dataframe\\Trends_CV\\Trends_CV.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        T.print_head_n(df)
+        print(df.columns.tolist())
+        ## print column names
+        # print(df.columns)
+        # exit()
+        marker_list = ['^', 's', 'P', 'X', 'D'] * 4
+
+        variables_list = ['composite_LAI_median','LAI4g', 'GLOBMAP_LAI',
+                          'SNU_LAI',
+                          'TRENDY_ensemble_median',
+                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                          'ORCHIDEE_S2_lai',
+
+                          'YIBs_S2_Monthly_lai']
+        vals_trend_list = []
+        vals_CV_list = []
+        err_trend_list = []
+        err_CV_list = []
+
+        for variable in variables_list:
+
+            vals_trend = df[f'{variable}_relative_change_trend'].values
+            vals_CV = df[f'{variable}_detrend_CV_trend'].values
+            vals_trend[vals_trend > 999] = np.nan
+            # vals_trend[vals_CV_p_value > 0.05] = np.nan
+            vals_CV[vals_CV > 999] = np.nan
+            vals_trend[vals_trend < -999] = np.nan
+            vals_trend[vals_trend < -10] = np.nan
+            vals_trend[vals_trend > 99] = np.nan
+            vals_CV[vals_CV < -999] = np.nan
+            # vals_CV[vals_CV_p_value > 0.05] = np.nan
+            vals_trend = vals_trend[~np.isnan(vals_trend)]
+            # print(variable,np.nanmean(vals_trend))
+            # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
+            # plt.title(variable)
+            # plt.show()
+            vals_CV = vals_CV[~np.isnan(vals_CV)]
+            vals_trend_list.append(np.nanmean(vals_trend))
+            vals_CV_list.append(np.nanmean(vals_CV))
+
+
+        # exit()
+
+
+        # 把 ensemble 加入列表末尾
+        variables_plot = variables_list
+        vals_trend_plot = vals_trend_list
+        vals_CV_plot = vals_CV_list
+
+        # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
+        # plt.show()
+        ##plot error bar
+        # plt.figure(figsize=(self.map_width, self.map_height))
+
+        plt.figure(figsize=(13 * centimeter_factor, 10 * centimeter_factor))
+
+        # self.map_width = 13 * centimeter_factor
+        # self.map_height = 8.2 * centimeter_factor
+
+        err_trend_list = np.array(err_trend_list)
+        err_CV_list = np.array(err_CV_list)
+        for i, (x, y, marker, color, var, mark_size) in enumerate(
+                zip(vals_trend_plot, vals_CV_plot, marker_list, color_list, variables_plot, mark_size_list)):
+            plt.scatter(y, x, marker=marker, color=color_list[i], label=var, s=mark_size, edgecolors='black', )
+            # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
+
+            ##markerborderwidth=1
+
+            plt.ylabel('Trends in LAI (%/yr)', fontsize=12)
+            plt.xlabel('Trends in CVLAI (%/yr)', fontsize=12)
+            plt.ylim(-0.3, .9)
+            plt.xlim(-0.2, 0.5)
+            plt.xticks(fontsize=12)
+            ## xticks gap 0.05
+            plt.yticks(np.arange(-0.2, .9, 0.2), fontsize=12)
+            plt.yticks(fontsize=12)
+            # plt.legend()
+        ## save imagine
+        plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
+        plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
+        plt.savefig(result_root + rf'\FIGURE\\Figure3\\obs_TRENDY_CV_trends_median.pdf',  bbox_inches='tight')
+
+        #
+        # plt.show()
+
+
+
+
+        pass
+
+    def TRENDY_LAImin_LAImax_barplot(self):
         dff=result_root+rf'\bivariate\Dataframe\\Dataframe.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
@@ -777,7 +887,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             print(column)
         # exit()
 
-        variables_list = ['composite_LAI_median', 'LAI4g',   'GLOBMAP','SNU_LAI',
+        variables_list = ['composite_LAI_mean', 'LAI4g',   'GLOBMAP','SNU_LAI',
                            'TRENDY_ensemble_median',
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -790,7 +900,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         values_min_list=[]
 
         for variable in variables_list:
-            if variable in ['composite_LAI_median','LAI4g',  'GLOBMAP','SNU_LAI','TRENDY_ensemble_median']:
+            if variable in ['composite_LAI_mean','LAI4g',  'GLOBMAP','SNU_LAI','TRENDY_ensemble_median']:
 
                 values_min = df[f'{variable}_min_trend'].values
                 values_max = df[f'{variable}_max_trend'].values
@@ -852,7 +962,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         print(variables_list)
         outdir=result_root+rf'\FIGURE\\Figure3\\'
         T.mk_dir(outdir,force=True)
-        outf=outdir+rf'barplot.pdf'
+        outf=outdir+rf'barplot_mean.pdf'
         plt.savefig(outf,dpi=300,bbox_inches='tight')
         plt.savefig(outf, dpi=300, )
 
@@ -1733,13 +1843,7 @@ class Plot_Robinson_remote_sensing:
                 :param is_reproj: if True, reproject file from 4326 to Robinson
                 :param res: resolution, meter
                 '''
-        color_list = [
-             '#844000',
-            '#fc9831',
-            '#fffbd4',
-            '#86b9d2',
-            '#064c6c',
-        ]
+
         # Blue represents high values, and red represents low values.
         plt.figure(figsize=(self.map_width, self.map_height))
         m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
@@ -1822,22 +1926,22 @@ class Plot_Robinson_remote_sensing:
         :param res: resolution, meter
         ## trend color list
         '''
-        # color_list = [
-        #     '#844000',
-        #     '#fc9831',
-        #     '#fffbd4',
-        #     '#86b9d2',
-        #     '#064c6c',
-        # ]
+        color_list = [
+            '#844000',
+            '#fc9831',
+            '#fffbd4',
+            '#86b9d2',
+            '#064c6c',
+        ]
         ### CV list
 
-        color_list = [
-            '#008837',
-            '#a6dba0',
-            '#f7f7f7',
-            '#c2a5cf',
-            '#7b3294',
-        ]
+        # color_list = [
+        #     '#008837',
+        #     '#a6dba0',
+        #     '#f7f7f7',
+        #     '#c2a5cf',
+        #     '#7b3294',
+        # ]
         # std_list=[ '#e66101',
         #            '#fdb863',
         #            '#f7f7f7',
@@ -2845,8 +2949,8 @@ class Fire():
 
 class Trends_obs_and_model():
     def run(self):
-        # self.plot_remote_sensing()
-        self.plot_TRENDY()
+        self.plot_remote_sensing()
+        # self.plot_TRENDY()
 
     def plot_remote_sensing(self): ## put main ms. so pdf
 
@@ -2874,7 +2978,7 @@ class Trends_obs_and_model():
             print(p_value_f)
             # exit()
             plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
-            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
+            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(fpath, vmin=-1, vmax=1, is_discrete=True, colormap_n=9,)
 
             Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,p_value_f,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
@@ -2882,8 +2986,8 @@ class Trends_obs_and_model():
             outf = outdir + f+'.pdf'
             plt.savefig(outf)
             plt.close()
-            T.open_path_and_file(outdir)
-            exit()
+            # T.open_path_and_file(outdir)
+            # exit()
 
 
     def plot_TRENDY(self):
@@ -3214,20 +3318,20 @@ class Trends_CV_obs_and_model():
     def __init__(self):
         pass
     def run(self):
-        # self.plot_remote_sensing()
-        self.plot_TRENDY()
+        self.plot_remote_sensing()
+        # self.plot_TRENDY()
 
     def plot_remote_sensing(self): ## put main ms. so pdf
 
 
         fdir_trend = result_root+rf'\Composite_LAI\CV\trend\\'
         temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
-        outdir = result_root+rf'FIGURE\\Figure2\\'
+        outdir = result_root+rf'FIGURE\\Figure1b\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
-            if not 'mean' in f:
+            if not 'median' in f:
                 continue
 
             if not f.endswith('.tif'):
@@ -3236,24 +3340,25 @@ class Trends_CV_obs_and_model():
                 continue
 
 
-            f_trend=fdir_trend+'composite_LAI_detrend_CV_mean_trend.tif'
-            f_p_value = fdir_trend + 'composite_LAI_detrend_CV_mean_p_value.tif'
+            f_trend=fdir_trend+'composite_LAI_detrend_CV_median_trend.tif'
+            f_p_value = fdir_trend + 'composite_LAI_detrend_CV_median_p_value.tif'
             print(f_p_value)
 
 
 
             # exit()
             plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
-            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(f_trend, vmin=-1, vmax=1, is_discrete=True, colormap_n=7,)
+            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(f_trend, vmin=-1, vmax=1, is_discrete=True, colormap_n=9,)
 
             Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,f_p_value,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
             # plt.show()
+
             outf = outdir + f+'.pdf'
             plt.savefig(outf)
             plt.close()
-            T.open_path_and_file(outdir)
-            exit()
+            # T.open_path_and_file(outdir)
+            # exit()
 
     def plot_TRENDY(self):
         outdir = result_root + rf'\FIGURE\Figure2\\'
@@ -3892,11 +3997,11 @@ def main():
 
     # Trends_obs_and_model().run()  ## Figure 1
     # Trends_CV_obs_and_model().run()  ## Figure 2
-    # PLOT_dataframe().run()
+    PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
-    Colormap().run()
+    # Colormap().run()
     # Partial_correlation().run()
     # LAImax_LAImin_models().run()
     # PLOT_Climate_factors().run()
