@@ -781,7 +781,7 @@ class Delta_regression:
 
 
         for model in self.model_list:
-            if not 'median' in model:
+            if not 'mean' in model:
                 continue
             # === 变量名 ===
             fixed_order = [
@@ -823,8 +823,8 @@ class Delta_regression:
                 sems.append(sem_val)
                 labels.append(label_map[var])
             print(sems)
-            print(means);exit()
-            print(f'{model}:', means)
+            # print(means);exit()
+            # print(f'{model}:', means)
 
             # === 绘图 ===
             fig, ax = plt.subplots(figsize=(4, 3))
@@ -861,11 +861,11 @@ class Delta_regression:
             # === 输出保存 ===
             outdir =result_root + rf'\FIGURE\\Figure4\\'
             print(outdir)
-
+            #
             Tools().mk_dir(outdir, force=True)
-            outf = os.path.join(outdir, f'{model}_relative_contribution.pdf')
+            outf = os.path.join(outdir, f'{model}_relative_contribution_mean.pdf')
             plt.savefig(outf, bbox_inches='tight', dpi=300)
-            # plt.show()
+            plt.show()
             # plt.close()
 
     def statistic_contribution(self):

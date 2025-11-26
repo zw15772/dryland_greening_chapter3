@@ -961,7 +961,7 @@ class partial_correlation_obs:
 
 
         # self.statistic_corr_boxplot()
-        self.statistic_percentage()
+        # self.statistic_percentage()
         #
 
         pass
@@ -2251,9 +2251,11 @@ class partial_correlation_TRENDY_obs_comparision():
     def run(self):
         # self.statistic_barplot_partial_correlation()
         # self.max_correlation_without_sign()
+        # self.max_correlation_with_sign()
 
         # self.Plot_robinson()
         self.statistic_contribution_area_barplot()
+        # self.statistic_contribution_area_barplot_withsign()
         pass
 
     def statistic_barplot_partial_correlation(self): ## not used
@@ -2399,6 +2401,89 @@ class partial_correlation_TRENDY_obs_comparision():
             out_tif = join(outdir, 'dominant_color_map_without_sign.tif')
             DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
 
+    def max_correlation_with_sign(self):
+
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
+
+        model_list = self.model_list
+
+        var_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        for model in tqdm(model_list):
+            # if not 'TRENDY_ensemble_mean2' in model:
+            #     continue
+
+            outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
+            T.mk_dir(outdir, force=True)
+
+            # === 拼接变量名称 ===
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            color_list = []
+            trend_val_list = []
+            max_var_sign_list = []
+
+            for _, row in df.iterrows():
+
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    max_var_sign_list.append(np.nan)
+                    color_list.append(np.nan)
+                    continue
+
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_val = vals_sens[idx_max]
+                max_var = var_list_sens[idx_max]
+
+                # === 符号 ===
+                max_var_sign = '+' if max_val > 0 else '-'
+
+                # === 颜色编码 ===
+                if 'sensitivity' in max_var:
+                    color = 6 if max_val > 0 else 1
+                elif 'Precip_sum_detrend_CV' in max_var:
+                    color = 5 if max_val > 0 else 2
+                elif 'CV_daily_rainfall_average' in max_var:
+                    color = 4 if max_val > 0 else 3
+
+                else:
+                    color = np.nan
+
+                max_var_list.append(max_var)
+                max_var_sign_list.append(max_var_sign)
+                color_list.append(color)
+
+            # === 写回结果 ===
+            df['max_var'] = max_var_list
+            df['max_var_sign'] = max_var_sign_list
+            df['color'] = color_list
+
+            # === 输出空间结果 ===
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            outtif = join(outdir, 'color_map_six_category.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, outtif)
+
+            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+            # plt.imshow(arr, interpolation='nearest')
+            # plt.title(f'Max partial correlation variable ({model})')
+            # plt.colorbar(label='color code')
+            # plt.show()
+
+
+
 
 
     def Plot_robinson(self):
@@ -2430,6 +2515,104 @@ class partial_correlation_TRENDY_obs_comparision():
             plt.savefig(outf)
             plt.close()
         T.open_path_and_file(outdir)
+
+    def statistic_contribution_area_barplot_withsign(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
+
+
+        for col in df.columns:
+                print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        pix_sets = []
+        for model in model_list:
+            col = f'{model}_color_map_six_category'
+            pix_valid = set(df[~df[col].isna()]['pix'])
+            pix_sets.append(pix_valid)
+
+        pix_common = set.intersection(*pix_sets)
+        df_common = df[df['pix'].isin(pix_common)]
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 2, 3, 4, 5, 6]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_color_map_six_category'
+
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'gamma-',
+                             2: 'CV_inter-',
+                             3:'CV_intra-',
+                             4:'CV_intra+',
+                             5:'CV_inter+',
+                             6:'gamma+'
+
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 2, 3, 4, 5, 6]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 70)
+            plt.grid(axis='y', alpha=0.25)
+
+
+            plt.show()
+            outdir=result_root + rf'\FIGURE\Figure4\\Figure4_six_category\\'
+            T.mk_dir(outdir)
+            outf=outdir+f'barplot_{ii}_six_category.pdf'
+            # plt.savefig(outf,dpi=300, bbox_inches='tight')
+            # plt.close()
+
+
+
 
     def statistic_contribution_area_barplot(self):
         dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
@@ -2644,7 +2827,7 @@ class Plot_Robinson:
 
         color_list = [
             '#a577ad',
-            # '#e73618',
+
 
             '#dae67a', '#f599a1',
         ]
@@ -2733,9 +2916,9 @@ def main():
     # multiregression_intrasensitivity().run()
     # multiregression_intersensitivity().run()
     # multiregression_intersensitivity_TRENDY().run()
-    partial_correlation_obs().run()
+    # partial_correlation_obs().run()
     # partial_correlation_TRENDY().run()
-    # partial_correlation_TRENDY_obs_comparision().run()
+    partial_correlation_TRENDY_obs_comparision().run()
 
     pass
 

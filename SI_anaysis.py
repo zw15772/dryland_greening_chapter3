@@ -99,9 +99,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # self.plot_std()
         # self.plot_LAImax_LAImin()
         # self.plot_rainfallmax_min()
-        # self.statistic_trend_CV_bar()
+        self.statistic_CV_trend_bar()
         # self.statistic_trend_bar()
-        self.TRENDY_LAImin_LAImax_barplot() ## Figure3
+
+        # self.plot_CV_trend_among_models2()
+        # self.TRENDY_LAImin_LAImax_barplot() ## Figure3
 
 
         pass
@@ -194,12 +196,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.grid(alpha=0.4)
         plt.legend(loc='upper left')
         # plt.tight_layout()
-        # plt.show()
+        plt.show()
 
-        out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
-        T.mk_dir(out_pdf_fdir)
-        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
+        # T.mk_dir(out_pdf_fdir)
+        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
         pass
 
@@ -416,12 +418,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         plt.legend(loc='upper left')
 
-        # plt.show()
+        plt.show()
         # plt.tight_layout()
         out_pdf_fdir = result_root + rf'\FIGURE\Figure1b\\'
         T.mk_dir(out_pdf_fdir, force=True)
-        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
         #
@@ -597,14 +599,172 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         plt.grid(True, axis='x')   # 只画竖线（随 x 刻度）
 
-        # plt.legend()
-        # plt.show()
-        out_pdf_fdir = result_root + rf'\Figure\\Figure1a\\'
-        plt.savefig(out_pdf_fdir + 'time_series_relative_change_mean.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.legend()
+        plt.show()
+        # out_pdf_fdir = result_root + rf'\Figure\\Figure1a\\'
+        # plt.savefig(out_pdf_fdir + 'time_series_relative_change_mean.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
-    def statistic_trend_CV_bar(self):
+    def statistic_CV_trend_bar(self):
+        dff=result_root+rf'\Dataframe\Trends_CV\\Trends_CV.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
+        variable_list=['composite_LAI_mean_detrend_CV',
+                       'composite_LAI_median_detrend_CV',
+                       'GLOBMAP_LAI_detrend_CV',
+                       'LAI4g_detrend_CV',
+                       'SNU_LAI_detrend_CV',]
+
+
+
+        for variable in variable_list:
+            df_var = df[[f'{variable}_trend', f'{variable}_p_value']].dropna()
+            total_n = len(df_var)
+            if total_n == 0:
+                continue
+
+            df_sig = df_var[df_var[f'{variable}_p_value'] < 0.05]
+            sig_pos = len(df_sig[df_sig[f'{variable}_trend'] > 0])
+            sig_neg = len(df_sig[df_sig[f'{variable}_trend'] < 0])
+            pct_sig_pos = sig_pos / total_n * 100
+            pct_sig_neg = sig_neg / total_n * 100
+
+            # === Non-significant 部分 ===
+            df_nonsig = df_var[df_var[f'{variable}_p_value'] >= 0.05]
+            nonsig_pos = len(df_nonsig[df_nonsig[f'{variable}_trend'] > 0])
+            nonsig_neg = len(df_nonsig[df_nonsig[f'{variable}_trend'] < 0])
+
+
+            total_nonsig = len(df_nonsig)
+            pct_nonsig_pos = nonsig_pos / total_nonsig * 100 if total_nonsig > 0 else np.nan
+            pct_nonsig_neg = nonsig_neg / total_nonsig * 100 if total_nonsig > 0 else np.nan
+
+            # === 结果 ===
+            result_dic = {
+                'Sig. negative': pct_sig_neg,
+                'Non-sig. negative': pct_nonsig_neg,
+                'Non-sig. positive': pct_nonsig_pos,
+                'Sig. positive': pct_sig_pos,
+
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                'lightgrey',
+
+                'lightgrey',
+                '#7b3294',
+            ]
+
+
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i, val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            # plt.show()
+            plt.savefig(result_root + rf'Figure\Figure1b\{variable}_trend_bar.pdf')
+            plt.close()
+
+    def statistic_trend_bar(self):
+        dff = result_root + rf'\Dataframe\Trends_CV\\Trends_CV.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        T.print_head_n(df)
+        variable_list = ['composite_LAI_mean_relative_change',
+                         'composite_LAI_median_relative_change',
+                         'GLOBMAP_LAI_relative_change',
+                         'LAI4g_relative_change',
+                         'SNU_LAI_relative_change']
+
+        for variable in variable_list:
+            df_var = df[[f'{variable}_trend', f'{variable}_p_value']].dropna()
+            total_n = len(df_var)
+            if total_n == 0:
+                continue
+
+            df_sig = df_var[df_var[f'{variable}_p_value'] < 0.05]
+            sig_pos = len(df_sig[df_sig[f'{variable}_trend'] > 0])
+            sig_neg = len(df_sig[df_sig[f'{variable}_trend'] < 0])
+            pct_sig_pos = sig_pos / total_n * 100
+            pct_sig_neg = sig_neg / total_n * 100
+
+            # === Non-significant 部分 ===
+            df_nonsig = df_var[df_var[f'{variable}_p_value'] >= 0.05]
+            nonsig_pos = len(df_nonsig[df_nonsig[f'{variable}_trend'] > 0])
+            nonsig_neg = len(df_nonsig[df_nonsig[f'{variable}_trend'] < 0])
+
+            total_nonsig = len(df_nonsig)
+            pct_nonsig_pos = nonsig_pos / total_nonsig * 100 if total_nonsig > 0 else np.nan
+            pct_nonsig_neg = nonsig_neg / total_nonsig * 100 if total_nonsig > 0 else np.nan
+
+            # === 结果 ===
+            result_dic = {
+                'Sig. negative': pct_sig_neg,
+                'Non-sig. negative': pct_nonsig_neg,
+                'Non-sig. positive': pct_nonsig_pos,
+                'Sig. positive': pct_sig_pos,
+
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#844000',
+                'lightgray',
+
+                'lightgray',
+                '#064c6c',
+            ]
+
+            # color_list = [
+            #     '#844000',
+            #     '#fc9831',
+            #     '#fffbd4',
+            #     '#86b9d2',
+            #     '#064c6c',
+            # ]
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i, val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            # plt.show()
+            plt.savefig(result_root + rf'Figure\Figure1a\{variable}_trend_bar.pdf')
+            plt.close()
+
+    pass
+
+    def statistic_trend_CV_bar_1(self):
         fdir = result_root + rf'\Composite_LAI\CV\trend\\'
         variable_list=['composite_LAI_detrend_CV_mean','composite_LAI_detrend_CV_median','GlOBMAP_LAI_detrend_CV','LAI4g_detrend_CV','SNU_LAI_detrend_CV']
         for variable in variable_list:
@@ -684,104 +844,19 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             plt.savefig(result_root + rf'Figure\Figure1b\{variable}_CV_bar.pdf')
 
 
-    def statistic_trend_bar(self):
-        fdir = result_root + rf'\Composite_LAI\relative_change\trend\\'
-        variable_list=['GLOBMAP_LAI_relative_change','LAI4g_relative_change','composite_LAI_mean_relative_change','composite_LAI_median_relative_change','SNU_LAI_relative_change']
-        for variable in variable_list:
-            f_trend_path=fdir+f'{variable}_trend.tif'
-            f_pvalue_path=fdir+f'{variable}_p_value.tif'
 
-
-            arr_corr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_trend_path)
-            arr_pvalue, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f_pvalue_path)
-            arr_corr[arr_corr<-99]=np.nan
-            arr_corr[arr_corr>99]=np.nan
-            arr_corr=arr_corr[~np.isnan(arr_corr)]
-
-            arr_pvalue[arr_pvalue<-99]=np.nan
-            arr_pvalue[arr_pvalue>99]=np.nan
-            arr_pvalue=arr_pvalue[~np.isnan(arr_pvalue)]
-            ## corr negative and positive
-            arr_corr = arr_corr.flatten()
-            arr_pvalue = arr_pvalue.flatten()
-            arr_pos=len(arr_corr[arr_corr>0])/len(arr_corr)*100
-            arr_neg=len(arr_corr[arr_corr<0])/len(arr_corr)*100
-
-
-            ## significant positive and negative
-            ## 1 is significant and 2 positive or negative
-
-            mask_pos = (arr_corr > 0) & (arr_pvalue < 0.05)
-            mask_neg = (arr_corr < 0) & (arr_pvalue < 0.05)
-
-
-            # 满足条件的像元数
-            count_positive_sig = np.sum(mask_pos)
-            count_negative_sig = np.sum(mask_neg)
-
-            # 百分比
-            significant_positive = (count_positive_sig / len(arr_corr)) * 100
-            significant_negative = (count_negative_sig / len(arr_corr)) * 100
-            result_dic = {
-
-                'sig neg': significant_negative,
-                'non sig neg': arr_neg,
-                'non sig pos': arr_pos,
-                'sig pos': significant_positive
-
-
-
-            }
-            # df_new=pd.DataFrame(result_dic,index=[variable])
-            # ## plot
-            # df_new=df_new.T
-            # df_new=df_new.reset_index()
-            # df_new.columns=['Variable','Percentage']
-            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
-            # plt.show()
-            color_list = [
-                 '#844000',
-            'lightgray',
-
-            'lightgray',
-            '#064c6c',
-            ]
-
-            # color_list = [
-            #     '#844000',
-            #     '#fc9831',
-            #     '#fffbd4',
-            #     '#86b9d2',
-            #     '#064c6c',
-            # ]
-
-            width = 0.4
-            alpha_list = [1, 0.5, 0.5, 1]
-            plt.figure(figsize=(3, 3))
-
-            # 逐个画 bar
-            for i, (key, val) in enumerate(result_dic.items()):
-                plt.bar(i , val, color=color_list[i], alpha=alpha_list[i], width=width)
-                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
-                plt.ylabel('Percentage')
-                plt.title(variable)
-
-            plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            # plt.show()
-            plt.savefig(result_root + rf'Figure\Figure1a\{variable}_trend_bar.pdf')
-            plt.close()
 
     def plot_CV_trend_among_models2(self):  ##here not calculating mean in program
 
-        color_list = ['black', 'black', 'black', '#a1a9d0',
+        color_list = ['black', 'black', 'black', 'black', '#E7483D', '#a1a9d0',
                       '#f0988c', '#b883d3', '#ffff33', '#c4a5de',
-                      '#E7483D', '#984ea3', '#e41a1c',
+                      '#984ea3', 'yellow',
                       '#9e9e9e', '#cfeaf1', '#f6cae5',
-                      '#98cccb', '#5867AF', 'black', '#e66d50', ]
+                      '#98cccb', '#5867AF', '#e66d50', ]
         ## I want use set 3 color
 
         mark_size_list = [200] * 1+[50] * 3 +[200] * 1+ [50] * 13
-        # alpha_list=[1]+[0.7]*3+[1]+[0.7]*12
+
 
         dff = result_root + rf'\Dataframe\\Trends_CV\\Trends_CV.df'
         df = T.load_df(dff)
@@ -793,7 +868,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # exit()
         marker_list = ['^', 's', 'P', 'X', 'D'] * 4
 
-        variables_list = ['composite_LAI_median','LAI4g', 'GLOBMAP_LAI',
+        variables_list = ['composite_LAI_mean','LAI4g', 'GLOBMAP_LAI',
                           'SNU_LAI',
                           'TRENDY_ensemble_median',
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -808,35 +883,40 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         err_trend_list = []
         err_CV_list = []
 
+
+
         for variable in variables_list:
 
             vals_trend = df[f'{variable}_relative_change_trend'].values
             vals_CV = df[f'{variable}_detrend_CV_trend'].values
             vals_trend[vals_trend > 999] = np.nan
-            # vals_trend[vals_CV_p_value > 0.05] = np.nan
+
             vals_CV[vals_CV > 999] = np.nan
-            vals_trend[vals_trend < -999] = np.nan
-            vals_trend[vals_trend < -10] = np.nan
-            vals_trend[vals_trend > 99] = np.nan
             vals_CV[vals_CV < -999] = np.nan
+            vals_trend[vals_trend < -999] = np.nan
+            vals_trend[vals_trend > 999] = np.nan
+
             # vals_CV[vals_CV_p_value > 0.05] = np.nan
             vals_trend = vals_trend[~np.isnan(vals_trend)]
-            # print(variable,np.nanmean(vals_trend))
+            print(variable,np.nanmean(vals_trend))
             # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
             # plt.title(variable)
             # plt.show()
             vals_CV = vals_CV[~np.isnan(vals_CV)]
             vals_trend_list.append(np.nanmean(vals_trend))
             vals_CV_list.append(np.nanmean(vals_CV))
+        # print(vals_trend_list)
+
+        print(vals_CV_list);exit()
+
 
 
         # exit()
 
-
-        # 把 ensemble 加入列表末尾
-        variables_plot = variables_list
-        vals_trend_plot = vals_trend_list
-        vals_CV_plot = vals_CV_list
+        n = len(variables_list)
+        mark_size_list = mark_size_list[:n]
+        color_list = color_list[:n]
+        marker_list = marker_list[:n]
 
         # plt.scatter(vals_CV_list,vals_trend_list,marker=marker_list,color=color_list[0],s=100)
         # plt.show()
@@ -851,7 +931,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         err_trend_list = np.array(err_trend_list)
         err_CV_list = np.array(err_CV_list)
         for i, (x, y, marker, color, var, mark_size) in enumerate(
-                zip(vals_trend_plot, vals_CV_plot, marker_list, color_list, variables_plot, mark_size_list)):
+                zip(vals_trend_list, vals_CV_list, marker_list, color_list, variables_list, mark_size_list)):
             plt.scatter(y, x, marker=marker, color=color_list[i], label=var, s=mark_size, edgecolors='black', )
             # plt.errorbar(y, x, xerr=err_trend_list[i], yerr=err_CV_list[i], fmt='none', color='grey', capsize=2, capthick=0.3,alpha=1)
 
@@ -869,10 +949,10 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         ## save imagine
         plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
         plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
-        plt.savefig(result_root + rf'\FIGURE\\Figure3\\obs_TRENDY_CV_trends_median.pdf',  bbox_inches='tight')
+        # plt.savefig(result_root + rf'\FIGURE\\Figure3\\obs_TRENDY_CV_trends_mean.pdf',  bbox_inches='tight')
 
         #
-        # plt.show()
+        plt.show()
 
 
 
@@ -956,15 +1036,15 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         ax.set_xticks(range(len(variables_list)))
         # ax.set_xticklabels(labels, rotation=90, fontsize=10, font='Arial')
         # plt.tight_layout()
-        # plt.show()
+        plt.show()
         print(values_max_list_mean)
         print(values_min_list_mean)
         print(variables_list)
         outdir=result_root+rf'\FIGURE\\Figure3\\'
         T.mk_dir(outdir,force=True)
         outf=outdir+rf'barplot_mean.pdf'
-        plt.savefig(outf,dpi=300,bbox_inches='tight')
-        plt.savefig(outf, dpi=300, )
+        # plt.savefig(outf,dpi=300,bbox_inches='tight')
+        # plt.savefig(outf, dpi=300, )
 
 
 class greening_analysis(): ##not used

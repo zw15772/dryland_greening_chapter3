@@ -1766,10 +1766,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\bivariate\Dataframe\\')
+                result_root +  rf'\Dataframe\Trends_CV\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Trends_CV.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1797,7 +1797,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
@@ -1824,7 +1824,7 @@ class build_dataframe():
         # df=self.add_area_to_df(df)
 
 
-        df=self.rename_columns(df)
+        # df=self.rename_columns(df)
         # df = self.drop_field_df(df)
         # df=self.remove_duplicate_columns(df)
         df=self.show_field(df)
@@ -2586,23 +2586,22 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'partial_correlation\Obs\result\\'
+        fdir_all = result_root + rf'partial_correlation\TRENDY\result\\'
         for fdir in os.listdir(fdir_all):
 
 
+            for f in os.listdir(join(fdir_all,fdir)):
+                if not 'color_map_six_category' in f:
+                    continue
 
-            # for f in os.listdir(join(fdir_all,fdir)):
-            #     if not 'color' in f:
-            #         continue
-            #
-            #     if not f.endswith('.tif'):
-            #         continue
-            #
+                if not f.endswith('.tif'):
+                    continue
+
             # #
-            fdir_sig=fdir_all+fdir+'\\sig\\'
+            # fdir_sig=fdir_all+fdir+'\\sig\\'
             # print(fdir_sig);exit()
 
-            for f in os.listdir(fdir_sig):
+            # for f in os.listdir(fdir_sig):
 
 
                 if not f.endswith('.tif'):
@@ -2615,8 +2614,8 @@ class build_dataframe():
                     fname=f'{fdir}_{variable}'
                 print(fname)
 
-                # fpath=join(fdir_all,fdir,f)
-                fpath=join(fdir_sig,f)
+                fpath=join(fdir_all,fdir,f)
+                # fpath=join(fdir_sig,f)
                 print(fpath)
 
 
@@ -2650,7 +2649,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'Multiregression_contribution\Obs\input\Y\zscore\trend\\'
+        fdir = result_root + rf'\Composite_LAI\CV\trend_analysis\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2662,8 +2661,6 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-            # if not 'ensemble' in f:
-            #     continue
 
 
 
@@ -2869,8 +2866,8 @@ class build_dataframe():
 
 
     def rename_columns(self, df):
-        df = df.rename(columns={'composite_LAImax_median_p_value': 'composite_LAI_median_max_p_value',
-                                'composite_LAImin_median_p_value': 'composite_LAI_median_min_p_value',
+        df = df.rename(columns={'composite_LAI_detrend_CV_median_p_value': 'composite_LAI_median_detrend_CV_p_value',
+
 
 
 

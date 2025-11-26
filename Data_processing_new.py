@@ -2362,8 +2362,8 @@ class processing_composite_LAI():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir = result_root+rf'\Composite_LAI\LAImin_LAImax\\'
-        outdir = result_root+rf'\Composite_LAI\LAImin_LAImax\\trend_analysis\\'
+        fdir = result_root+rf'\Composite_LAI\CV\\'
+        outdir = result_root+rf'\Composite_LAI\CV\\\\trend_analysis\\'
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3820,9 +3820,9 @@ def main():
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
     # moving_window().run()
-    # processing_composite_LAI().run()
+    processing_composite_LAI().run()
 
-    processing_TRENDY().run()
+    # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
     # check_data()

@@ -951,7 +951,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         # self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
 
-        self.barplot_area_percentage()
+        # self.barplot_area_percentage()
 
         # self.statistic_pdf()
 
@@ -1331,8 +1331,8 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         # s_min = df_unique['composite_LAI_median_min_trend']
         # s_max = df_unique['composite_LAI_median_max_trend']
 
-        s_min = df_unique['composite_LAImin_mean_trend']
-        s_max = df_unique['composite_LAImax_mean_trend']
+        s_min = df_unique['composite_LAI_mean_min_trend']
+        s_max = df_unique['composite_LAI_mean_max_trend']
 
         s_min = s_min.where(s_min.between(-99, 99))
         s_max = s_max.where(s_max.between(-99, 99))
