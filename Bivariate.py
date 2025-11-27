@@ -951,7 +951,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
         # self.Figure_robinson_reprojection()
         # self.heatmap_LAImin_max_CV_Figure1d()
 
-        # self.barplot_area_percentage()
+        self.barplot_area_percentage()
 
         # self.statistic_pdf()
 

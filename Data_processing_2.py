@@ -1245,16 +1245,16 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\Dataframe\\')
+                    result_root + rf'\bivariate\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'CVLAI.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
         # df=self.add_trend_to_df(df)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
@@ -1410,24 +1410,15 @@ class build_moving_window_dataframe():
         df['composite_LAI_mean_detrend_CV'] = change_rate_list
         return df
     def add_window_to_df(self, df):
-        threshold = self.threshold
-
-        fdir=result_root+rf'\Composite_LAI\CV\\'
 
 
+        fdir=result_root+rf'\TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction_max_min\\'
 
 
         for f in os.listdir(fdir):
 
 
-
-
-
             variable= f.split('.')[0]
-
-
-
-
 
             print(variable)
 
@@ -9391,8 +9382,8 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
