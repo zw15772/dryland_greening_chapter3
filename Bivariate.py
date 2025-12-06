@@ -2697,12 +2697,12 @@ class Figure_std_mean_bivariate():  ##
 
     def run(self):
         ## step 1
-        # self.bivariate_map()
+        self.bivariate_map()
         ## step 2
         # self.Figure_robinson_reprojection()  # convert figure to robinson and no need to plot robinson again
 
        ## step 3
-        self.statistic_pdf()
+        # self.statistic_pdf()
 
 
         pass
@@ -2710,19 +2710,18 @@ class Figure_std_mean_bivariate():  ##
         import xymap
 
 
-        fdir =result_root + rf'\3mm\extract_composite_phenology_year\trend\\'
+        fdir =result_root + rf'\Composite_LAI\std_mean\trend\\'
 
-        outdir =result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
+        outdir =result_root + rf'Composite_LAI\std_mean\trend\bivariate\\'
 
         T.mkdir(outdir)
 
         outtif = join(outdir,'std_mean.tif')
 
 
-        fpath1 = join(fdir,'composite_LAI_std_trend.tif')
+        fpath1 = join(fdir,'composite_LAI_relative_change_detrend_mean_std_trend.tif')
 
-        fpath2 = join(fdir,'composite_LAI_mean_trend.tif')
-
+        fpath2 = join(fdir,'composite_LAI_relative_change_detrend_mean_mean_trend.tif')
 
 
         tif1_label, tif2_label = 'std_trend','mean_trend'
@@ -2732,8 +2731,8 @@ class Figure_std_mean_bivariate():  ##
         # min2, max2 = -1, 1
 
         #2
-        min1, max1 = -.005, .005
-        min2, max2 = -.005, .005
+        min1, max1 = -1, 1
+        min2, max2 = -1, 1
 
         arr1 = ToRaster().raster2array(fpath1)[0]
         arr2 = ToRaster().raster2array(fpath2)[0]
@@ -9765,10 +9764,10 @@ def main():
     # CCI_landcover_preprocess().run()
 
 
-    Figure2_LAImin_LAImax().run()
+    # Figure2_LAImin_LAImax().run()
 
     # Figure_beta().run()
-    # Figure_std_mean_bivariate().run()
+    Figure_std_mean_bivariate().run()
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()

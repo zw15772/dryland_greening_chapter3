@@ -96,9 +96,9 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def run (self):
         # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
-        # self.plot_std()
+        self.plot_std()
         # self.plot_LAImax_LAImin()
-        self.plot_LAImax_LAImin_models()
+        # self.plot_LAImax_LAImin_models()
         # self.plot_rainfallmax_min()
        # self.statistic_trend_CV_bar3()
        #  self.statistic_CV_trend_bar()
@@ -535,17 +535,17 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         from scipy import stats
 
         # === 读数据 ===
-        df = T.load_df(result_root + rf'\3mm\product_consistency\dataframe\moving_window.df')
+        df = T.load_df(result_root + rf'Dataframe\CVLAI\CVLAI.df')
         df = self.df_clean(df)
 
         # 用实际存在的 year 索引，避免和 x 轴标签长度不一致
-        year_list = sorted(df['year'].astype(int).unique())
+        year_list = sorted(df['window'].astype(int).unique())
         n = len(year_list)
         x = np.arange(n)
 
         # 两条变量：左轴 std，右轴 mean
-        std_var = 'composite_LAI_relative_change_detrend_std'
-        mean_var = 'composite_LAI_relative_change_detrend_mean'
+        std_var = 'composite_LAI_relative_change_detrend_mean_std'
+        mean_var = 'composite_LAI_relative_change_detrend_mean_mean'
 
         dic_label = {
             mean_var: 'Composite LAI mean',
@@ -556,7 +556,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         def agg_mean(var):
             vals = []
             for y in year_list:
-                v = df.loc[df['year'] == y, var].to_numpy(dtype=float)
+                v = df.loc[df['window'] == y, var].to_numpy(dtype=float)
                 v = v[~np.isnan(v)]
                 vals.append(np.nan if len(v) == 0 else np.nanmean(v))
             return np.array(vals, dtype=float)
@@ -595,7 +595,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         # x 轴标签：按移动窗口生成（与长度 n 对齐）
         window_size=15
-        year_range = range(1983, 2021)
+        year_range = range(1982, 2021)
         year_range_str = []
         for year in year_range:
 
@@ -605,13 +605,13 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                 break
             year_range_str.append(f'{start_year}-{end_year}')
 
-        ax1.set_xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right')
+        ax1.set_xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right', fontsize=12)
 
         # 轴标签与颜色
-        ax1.set_ylabel('Composite LAI std (%/year)', color=color_std)
-        ax2.set_ylabel('Composite LAI mean (%/year)', color=color_mean)
-        ax1.tick_params(axis='y', colors=color_std)
-        ax2.tick_params(axis='y', colors=color_mean)
+        ax1.set_ylabel('Composite LAI std (%/year)', color=color_std,fontsize=12)
+        ax2.set_ylabel('Composite LAI mean (%/year)', color=color_mean,fontsize=12)
+        ax1.tick_params(axis='y', colors=color_std, labelsize=12)
+        ax2.tick_params(axis='y', colors=color_mean, labelsize=12)
         ax1.spines['left'].set_color(color_std)
         ax2.spines['right'].set_color(color_mean)
 
@@ -626,14 +626,15 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         # plt.show()
         # # plt.tight_layout()
-        # out_pdf_fdir = result_root + rf'\3mm\product_consistency\pdf\\'
-        # plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'\FIGURE\\SI\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
         #
         # plt.legend()
-        plt.show()
+        # plt.show()
 
     def plot_relative_change_LAI(self):  ##### plot for 4 clusters
 
@@ -1066,868 +1067,6 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # plt.savefig(outf, dpi=300, )
 
 
-class greening_analysis(): ##not used
-
-    def __init__(self):
-        self.map_width = 15.3 * centimeter_factor
-        self.map_height = 8.2 * centimeter_factor
-
-        pass
-    def run(self):
-
-
-        self.greening_products_basemap_whole_time()
-        # self.greening_products_basemap_whole_time_CV()
-        # self.greening_products_basemap_whole_time_consistency()
-        # self.greening_products_basemap_two_time_periods()
-
-        # self.plot_spatial_histgram_period()
-        pass
-    def greening_products_basemap_whole_time(self):
-        ## three products 3 time periods comparison
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.basemap import Basemap
-        import numpy as np
-
-        vmin_vmax = {
-            'NDVI4g': (-0.1, 0.1),
-
-            # 'GOSIF': (-1, 1)
-            'GIMMS_plus_NDVI': (-0.1, 0.1),
-            'NDVI': (-0.5, 0.5),
-            'Landsat': (-0.3, 0.3),
-        }
-
-        # Create synthetic data (replace with actual data as needed)
-        fdir=result_root+rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\'
-        temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\temp_root\\'
-        T.mk_dir(temp_root)
-        # T.open_path_and_file(fdir);exit()
-
-        products = [ 'NDVI4g', 'GIMMS_plus_NDVI','NDVI',]
-
-
-        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
-
-        fig, axes = plt.subplots(3, 1, figsize=(12, 14))
-        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
-
-        # Loop through products and periods to create subplots
-
-        for i, product in enumerate(products):  # Use 'i' to index the subplot
-            ax = axes[i]
-
-            f_trend = fdir + rf'\{product}_trend.tif'
-
-            f_p_value = fdir + rf'\{product}_p_value.tif'
-
-            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
-            array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
-            array_trend[array_trend<-999]=np.nan
-            array_p_value[array_p_value<-999]=np.nan
-
-
-            # m = Basemap(projection='cyl', resolution='l', ax=ax)
-            # ##不显示经纬度
-            # m.drawcoastlines()
-            # m.drawcountries()
-            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
-            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
-
-            # Plot the data using pcolormesh
-            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
-
-            # arr_trend = array_trend[:60]
-
-            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            ## create the basemap instance
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
-
-            m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
-            # Plot the data using pcolormesh
-            vmin, vmax = vmin_vmax[product]
-            color_list = [
-                '#844000',
-                '#fc9831',
-                '#fffbd4',
-                '#86b9d2',
-                '#064c6c',
-            ]
-
-            # m, ret = Plot_Robinson().plot_Robinson(f_trend, ax, cmap='RdBu', vmin=vmin, vmax=vmax, is_plot_colorbar=False)
-            #
-
-            cmap='RdBu'
-
-            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=cmap, vmin=vmin, vmax=vmax)
-            m = self.plot_sig_scatter(
-                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
-                s=3,
-                c='k', marker='x',
-                zorder=100, res=4
-            )
-            # plt.show()
-            # Add p_value markers
-            # significance_threshold = 0.05  # Define significance threshold
-            # significant = array_p_value < significance_threshold  # Mask for significant values
-            # lon_significant = lon_list[significant]
-            # lat_significant = lat_list[significant]
-            #
-            # # Scatter plot for significant p-values
-            # m.scatter(lon_significant, lat_significant, s=0.005, c='k', marker='.', alpha=0.8, zorder=2)
-
-            # Add a colorbar for this subplot
-            ## colorbar ticks .2f
-
-
-
-            cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
-                                location='left')
-            # cbar.set_label(f'{product} Trend Value',y=1)
-            cbar.set_label(f'{product} trend (%)',labelpad=-68)
-
-            tick_labels = np.round(np.linspace(vmin, vmax, 5), 2)
-            cbar.set_ticks(tick_labels)
-            cbar.set_ticklabels([f"{tick:.2f}" for tick in tick_labels])
-            # ax.set_title(product)
-            # plt.show()
-            outf = result_root + rf'\3mm\relative_change_growing_season\TRENDY\\trend_analysis\\greening_products_basemap_{product}.png'
-            plt.savefig(outf, dpi=600)
-            plt.close()
-            # T.open_path_and_file(outf)
-
-    def greening_products_basemap_whole_time_CV(self):
-        ## three products 3 time periods comparison
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.basemap import Basemap
-        import numpy as np
-
-        vmin_vmax = {
-            'detrended_NDVI4g_CV': (-0.5, 0.5),
-
-            # 'GOSIF': (-1, 1)
-            'detrended_GIMMS_plus_NDVI_CV': (-0.5, 0.5),
-            'NDVI_detrend_CV': (-0.5, 0.5),
-            'detrended_Landsat_CV_2020': (-0.5, 0.5),
-        }
-
-        # Create synthetic data (replace with actual data as needed)
-        fdir=result_root+rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\'
-        temp_root = result_root + rf'3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\temp_root\\'
-        T.mk_dir(temp_root)
-
-        products = [ 'detrended_NDVI4g_CV', 'detrended_GIMMS_plus_NDVI_CV','NDVI_detrend_CV','detrended_Landsat_CV_2020']
-
-
-
-        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
-
-        fig, axes = plt.subplots(4, 1, figsize=(12, 14))
-        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
-
-        # Loop through products and periods to create subplots
-
-        for i, product in enumerate(products):  # Use 'i' to index the subplot
-            ax = axes[i]
-
-            f_trend = fdir + rf'\{product}_trend.tif'
-
-            f_p_value = fdir + rf'\{product}_p_value.tif'
-
-            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
-            array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
-            array_trend[array_trend<-999]=np.nan
-            array_p_value[array_p_value<-999]=np.nan
-
-
-            # m = Basemap(projection='cyl', resolution='l', ax=ax)
-            # ##不显示经纬度
-            # m.drawcoastlines()
-            # m.drawcountries()
-            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
-            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
-
-            # Plot the data using pcolormesh
-            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
-
-            # arr_trend = array_trend[:60]
-
-            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            ## create the basemap instance
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
-
-            m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
-            # Plot the data using pcolormesh
-            vmin, vmax = vmin_vmax[product]
-            color_list = [
-                '#844000',
-                '#fc9831',
-                '#fffbd4',
-                '#86b9d2',
-                '#064c6c',
-            ]
-
-            # m, ret = Plot_Robinson().plot_Robinson(f_trend, ax, cmap='RdBu', vmin=vmin, vmax=vmax, is_plot_colorbar=False)
-            #
-
-            cmap='RdBu'
-
-            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=cmap, vmin=vmin, vmax=vmax)
-            m = self.plot_sig_scatter(
-                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
-                s=3,
-                c='k', marker='x',
-                zorder=100, res=4
-            )
-            # plt.show()
-            # Add p_value markers
-            # significance_threshold = 0.05  # Define significance threshold
-            # significant = array_p_value < significance_threshold  # Mask for significant values
-            # lon_significant = lon_list[significant]
-            # lat_significant = lat_list[significant]
-            #
-            # # Scatter plot for significant p-values
-            # m.scatter(lon_significant, lat_significant, s=0.005, c='k', marker='.', alpha=0.8, zorder=2)
-
-            # Add a colorbar for this subplot
-            cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
-                                location='left')
-            # cbar.set_label(f'{product} Trend Value',y=1)
-            cbar.set_label(f'{product} trend (%)',labelpad=-58)
-            # ax.set_title(product)
-            # plt.show()
-        outf = result_root + rf'\3mm\extract_LAI4g_phenology_year\dryland\moving_window_average_anaysis\trend_analysis\\greening_products_basemap_whole_time_CV.png'
-        plt.savefig(outf, dpi=600)
-        plt.close()
-
-    def greening_products_basemap_whole_time_consistency(self):
-        ## three products 3 time periods comparison
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.basemap import Basemap
-        import numpy as np
-
-
-        # Create synthetic data (replace with actual data as needed)
-        fdir=result_root+rf'\3mm\bivariate_analysis\CV_products_comparison_bivariate\\'
-        temp_root = result_root + rf'3mm\bivariate_analysis\CV_products_comparison_bivariate\\temp_root\\'
-
-        T.mk_dir(temp_root)
-
-        products = [ 'LAI4g_NDVI4g','LAI4g_GIMMS_NDVI', 'LAI4g_NDVI',]
-
-        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
-
-        fig, axes = plt.subplots(3, 1, figsize=(12, 14))
-        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
-
-        # Loop through products and periods to create subplots
-
-        for i, product in enumerate(products):  # Use 'i' to index the subplot
-            ax = axes[i]
-
-            f_trend = fdir + rf'\{product}.tif'
-
-
-            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
-
-            array_trend[array_trend<-999]=np.nan
-
-
-
-            # m = Basemap(projection='cyl', resolution='l', ax=ax)
-            # ##不显示经纬度
-            # m.drawcoastlines()
-            # m.drawcountries()
-            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
-            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
-
-            # Plot the data using pcolormesh
-            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
-
-            # arr_trend = array_trend[:60]
-
-            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            ## create the basemap instance
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
-
-            m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
-            # Plot the data using pcolormesh
-
-            color_list = [
-                 '#a86ee1',
-                '#d6cb38',
-                '#4defef',
-                '#de6e13',
-            ]
-
-            my_cmap2 = T.cmap_blend(color_list, n_colors=5)
-
-            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=my_cmap2,)
-            # cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
-            #                     location='left')
-            # # cbar.set_label(f'{product} Trend Value',y=1)
-            # cbar.set_label(f'{product}', labelpad=-58)
-
-
-        outf = result_root + rf'3mm\bivariate_analysis\CV_products_comparison_bivariate\whole_time_consistency.png'
-        plt.savefig(outf, dpi=600)
-        plt.close()
-
-
-
-
-
-    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
-                                               s=20,
-                                               c='k', marker='x',
-                                               zorder=100, res=2):
-
-        fpath_clip = fpath_p + 'clip.tif'
-        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
-        D_clip = DIC_and_TIF(tif_template=fpath_p)
-        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
-        fpath_clip_spatial_dict_clipped = {}
-        for pix in fpath_spatial_dict:
-            lon, lat = D_clip_lon_lat_pix_dict[pix]
-            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
-        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
-        fpath_resample = fpath_clip + 'resample.tif'
-        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
-        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
-        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
-
-        # arr[arr > sig_level] = np.nan
-        D_resample = DIC_and_TIF(tif_template=fpath_resample)
-        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
-        arr = Tools().mask_999999_arr(arr, warning=False)
-        #
-        os.remove(fpath_clip)
-        # os.remove(fpath_resample_ortho)
-        os.remove(fpath_resample)
-        # exit()
-
-        spatial_dict = D_resample.spatial_arr_to_dic(arr)
-        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
-
-        lon_list = []
-        lat_list = []
-        for pix in spatial_dict:
-            val = spatial_dict[pix]
-            if np.isnan(val):
-                continue
-            lon, lat = lon_lat_pix_dict[pix]
-            lon_list.append(lon)
-            lat_list.append(lat)
-        lon_list = np.array(lon_list) + res/2
-        lat_list = np.array(lat_list) - res/2
-        # lon_list = lon_list - originX
-        # lat_list = lat_list + originY
-        # lon_list = lon_list + pixelWidth / 2
-        # lat_list = lat_list + pixelHeight / 2
-        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
-        # print(lat_list);exit()
-        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
-                  linewidths=linewidths)
-        # ax.scatter(lon_list,lat_list)
-        # plt.show()
-
-        return m
-
-
-    def greening_products_basemap_two_time_periods(self):
-        ## three products 3 time periods comparison
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.basemap import Basemap
-        import numpy as np
-
-        # Create synthetic data (replace with actual data as needed)
-        fdir=result_root+rf'\3mm\relative_change_growing_season\trend_analysis\\'
-
-        products = ['LAI4g', 'NDVI', 'NIRv']
-        period_list = ['1983_2001', '2002_2020' ,'all']
-
-        fig, axes = plt.subplots(3, 3, figsize=(12, 9))
-        fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.92, bottom=0.08, left=0.05, right=0.95)
-
-        # Loop through products and periods to create subplots
-
-        for i, period in enumerate(period_list):
-            for product in products:
-                ax=axes[i][products.index(product)]
-                if period == 'all':
-                    f_trend = fdir + rf'\{product}_trend.tif'
-                    f_p_value = fdir + rf'\{product}_p_value.tif'
-                else:
-                    f_trend=fdir+rf'\{product}_{period}_trend.tif'
-                    f_p_value=fdir+rf'\{product}_{period}_p_value.tif'
-                array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
-                array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
-                array_trend[array_trend<-999]=np.nan
-
-
-
-
-                m = Basemap(projection='cyl', resolution='l', ax=ax)
-                ##不显示经纬度
-                m.drawcoastlines()
-                # m.drawcountries()
-                # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
-                # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
-
-                # Plot the data using pcolormesh
-                arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
-
-                # arr_trend = array_trend[:60]
-
-                lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
-                lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
-                lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-                ## create the basemap instance
-
-                m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                            resolution='i', ax=ax)
-                m.drawcoastlines(linewidth=0.1,color='grey',zorder=0)
-                # m.drawcountries()
-                # Plot the data using pcolormesh
-                ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap='RdBu', vmin=-0.3, vmax=0.3)
-                # plt.show()
-
-                # Set title
-                # ax.set_title(f'{product} - {period}')
-        cbar = fig.colorbar(ret, ax=axes, orientation='horizontal', fraction=0.05, pad=0.08)
-        cbar.set_label('Trend Value')
-
-        plt.show()
-
-
-    def plot_spatial_histgram_period(self):
-        from scipy.stats import gaussian_kde
-        dff=result_root+rf'3mm\Dataframe\Trend\\Trend.df'
-        df=T.load_df(dff)
-        df = self.df_clean(df)
-        period_list=['1983_2001','2002_2020']
-        # period_list = ['1983_2020', ]
-        print(df.columns)
-        ##plt histogram of LAI
-        df=df[df['LAI4g_1983_2020_trend']<30]
-        df=df[df['LAI4g_1983_2020_trend']>-30]
-        product_list=['LAI4g','NDVI','NIRv']
-        result_dict={}
-
-        for period in period_list:
-            product_dict={}
-
-            for product in product_list:
-                value=df[f'{product}_{period}_trend'].values
-                value=np.array(value)
-                value[value<-99]=np.nan
-                value[value > 99] = np.nan
-                value = value[~np.isnan(value)]
-
-                product_dict[product]=value
-            result_dict[period]=product_dict
-
-        fig, axes = plt.subplots(1, 3, figsize=(9, 3))
-        for ax, product in zip(axes, product_list):
-            color_list = [  'red', 'green',]
-            flag = 0
-            for period in period_list:
-
-                value = result_dict[period][product]
-                value = np.array(value)
-                value = value[~np.isnan(value)]
-                sns.kdeplot(data=value, shade=True, color=color_list[flag], label=period,ax=ax,legend=True)
-                ax.set_xlim(-2,2)
-                ax.set_ylabel('')
-                ax.set_yticks([])
-                ax.set_title(product)
-                ##add line for zero
-                ax.axvline(x=0, color='grey', linestyle='--')
-                flag+=1
-
-
-        plt.legend()
-
-
-        plt.show()  #
-
-    def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-
-        df = df[df['landcover_classfication'] != 'Cropland']
-
-        return df
-
-
-class climate_variables:
-    def __init__(self):
-        pass
-    def run(self):
-        # self.trend_analysis_simply_linear()
-        # self.plot_climate_variable_trends()
-        self.average_analysis()
-
-    def trend_analysis_simply_linear(self):
-        from scipy.stats import theilslopes
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        fdir = result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        outdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\ecosystem_year\relative_trend\\'
-        Tools().mk_dir(outdir, force=True)
-
-        for f in os.listdir(fdir):
-            if not 'detrend' in f:
-                continue
-
-
-
-            if not f.endswith('.npy'):
-                continue
-
-            outf=outdir+f.split('.')[0]
-            if os.path.isfile(outf+'_trend.tif'):
-                continue
-            print(outf)
-
-            if not f.endswith('.npy'):
-                continue
-            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
-
-            trend_dic = {}
-            p_value_dic = {}
-            for pix in tqdm(dic):
-                r,c=pix
-                if r<60:
-                    continue
-                landcover_value=crop_mask[pix]
-                if landcover_value==16 or landcover_value==17 or landcover_value==18:
-                    continue
-                if dic_modis_mask[pix]==12:
-                    continue
-
-                time_series=dic[pix]
-                # print(time_series)
-
-
-                if len(time_series) == 0:
-                    continue
-                # print(time_series)
-                ### if all valus are the same, then skip
-                if len(set(time_series))==1:
-                    continue
-                # print(time_series)
-
-
-                if np.nanstd(time_series) == 0:
-                    continue
-                average_value=np.nanmean(time_series)
-                try:
-
-                        # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
-                        slope,b,r,p_value=T.nan_line_fit(np.arange(len(time_series)), time_series)
-                        trend_dic[pix] = slope/average_value*100
-                        p_value_dic[pix] = p_value
-
-
-                except:
-                    continue
-
-
-
-            arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
-            arr_trend_dryland = arr_trend * array_mask
-
-            p_value_arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(p_value_dic)
-            p_value_arr_dryland = p_value_arr * array_mask
-
-
-            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
-            #
-            # plt.colorbar()
-            # plt.title(f)
-            # plt.show()
-            # exit()
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(p_value_arr_dryland, outf + '_p_value.tif')
-
-            np.save(outf + '_trend', arr_trend_dryland)
-            np.save(outf + '_p_value', p_value_arr_dryland)
-
-    def average_analysis(self):
-        from scipy.stats import theilslopes
-        NDVI_mask_f = data_root + rf'/Base_data/aridity_index_05/dryland_mask.tif'
-        array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
-        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
-        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
-        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
-        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
-        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
-
-        fdir = result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\\'
-        outdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\extraction_rainfall_characteristic\ecosystem_year\average\\'
-        Tools().mk_dir(outdir, force=True)
-
-        for f in os.listdir(fdir):
-            if  'detrend' in f:
-                continue
-
-            if not f.endswith('.npy'):
-                continue
-
-            outf=outdir+f.split('.')[0]
-            if os.path.isfile(outf+'_trend.tif'):
-                continue
-            print(outf)
-
-            if not f.endswith('.npy'):
-                continue
-            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
-
-            trend_dic = {}
-            p_value_dic = {}
-            for pix in tqdm(dic):
-                r,c=pix
-                if r<60:
-                    continue
-                landcover_value=crop_mask[pix]
-                if landcover_value==16 or landcover_value==17 or landcover_value==18:
-                    continue
-                if dic_modis_mask[pix]==12:
-                    continue
-
-                time_series=dic[pix]['ecosystem_year']
-                # print(time_series)
-
-
-                if len(time_series) == 0:
-                    continue
-                # print(time_series)
-                ### if all valus are the same, then skip
-                if len(set(time_series))==1:
-                    continue
-                # print(time_series)
-
-
-                if np.nanstd(time_series) == 0:
-                    continue
-                average_value=np.nanmean(time_series)
-                try:
-
-                        trend_dic[pix] = np.nanmean(time_series)
-
-                except:
-                    continue
-
-            arr_trend = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(trend_dic)
-            arr_trend_dryland = arr_trend * array_mask
-
-            # plt.imshow(arr_trend_dryland, cmap='jet', vmin=-0.01, vmax=0.01)
-            #
-            # plt.colorbar()
-            # plt.title(f)
-            # plt.show()
-            # exit()
-
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_trend_dryland, outf + '_trend.tif')
-
-            np.save(outf + '_trend', arr_trend_dryland)
-
-
-    def plot_climate_variable_trends(self):
-        ## three products 3 time periods comparison
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.basemap import Basemap
-        import numpy as np
-
-        vmin_vmax = {
-            'NDVI4g': (-0.1, 0.1),
-
-            # 'GOSIF': (-1, 1)
-            'rainfall_seasonality_all_year': (-0.2, 0.2),
-            'rainfall_intensity': (-0.2, 0.2),
-            'heat_event_frenquency': (-1, 1),
-            'rainfall_frenquency': (-0.5, 0.5),
-            'detrended_sum_rainfall_CV': (-1, 1),
-
-        }
-
-        # Create synthetic data (replace with actual data as needed)
-        fdir=result_root+rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\relative_trend\\'
-        temp_root = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\relative_trend\\temp_root\\'
-        T.mk_dir(temp_root)
-        # T.open_path_and_file(fdir);exit()
-
-        products = [ 'rainfall_intensity', 'rainfall_frenquency','detrended_sum_rainfall_CV',]
-        products = ['heat_event_frenquency', 'rainfall_seasonality_all_year', ]
-
-        # fig, axes = plt.subplots(1, 3, figsize=(self.map_width*2, self.map_height))
-
-        fig, axes = plt.subplots(3, 1, figsize=(12, 14))
-        # fig.subplots_adjust(hspace=0.01, wspace=0.01, top=0.95, bottom=0.08, left=0.05, right=0.95)
-
-        # Loop through products and periods to create subplots
-
-        for i, product in enumerate(products):  # Use 'i' to index the subplot
-            # ax = axes[i // 2, i % 2]
-            ax=axes[i]
-
-
-            f_trend = fdir + rf'\{product}_trend.tif'
-
-            f_p_value = fdir + rf'\{product}_p_value.tif'
-
-            array_trend, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_trend)
-            array_p_value, originX, originY, pixelWidth, pixelHeight=ToRaster().raster2array(f_p_value)
-            array_trend[array_trend<-999]=np.nan
-            array_p_value[array_p_value<-999]=np.nan
-
-
-            # m = Basemap(projection='cyl', resolution='l', ax=ax)
-            # ##不显示经纬度
-            # m.drawcoastlines()
-            # m.drawcountries()
-            # m.drawparallels(np.arange(-90., 91., 30.), labels=[0, 0, 0, 0])  # 不显示纬度标签
-            # m.drawmeridians(np.arange(-180., 181., 60.), labels=[0, 0, 0, 0])  # 不显示经度标签
-
-            # Plot the data using pcolormesh
-            arr_trend = Tools().mask_999999_arr(array_trend, warning=False)
-
-
-
-            # arr_trend = array_trend[:60]
-
-            lon_list = np.arange(originX, originX + pixelWidth * arr_trend.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr_trend.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            ## create the basemap instance
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l', ax=ax)
-
-            # m.drawcoastlines(linewidth=0.2,color='k',zorder=11)
-            # Plot the data using pcolormesh
-            vmin, vmax = vmin_vmax[product]
-
-
-            cmap='RdBu'
-
-            ret = m.pcolormesh(lon_list, lat_list, array_trend, cmap=cmap, vmin=vmin, vmax=vmax)
-            m = self.plot_sig_scatter(
-                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
-                s=3,
-                c='k', marker='x',
-                zorder=100, res=4
-            )
-            # plt.show()
-            # Add p_value markers
-            # significance_threshold = 0.05  # Define significance threshold
-            # significant = array_p_value < significance_threshold  # Mask for significant values
-            # lon_significant = lon_list[significant]
-            # lat_significant = lat_list[significant]
-            #
-            # # Scatter plot for significant p-values
-            # m.scatter(lon_significant, lat_significant, s=0.005, c='k', marker='.', alpha=0.8, zorder=2)
-
-            # Add a colorbar for this subplot
-            ## colorbar ticks .2f
-
-
-
-            cbar = fig.colorbar(ret, ax=ax, orientation='vertical', fraction=0.06, pad=0.05,
-                                location='left')
-            # cbar.set_label(f'{product} Trend Value',y=1)
-            cbar.set_label(f'{product} trend (%/yr)',labelpad=-68)
-
-            tick_labels = np.round(np.linspace(vmin, vmax, 5), 2)
-            cbar.set_ticks(tick_labels)
-            cbar.set_ticklabels([f"{tick:.2f}" for tick in tick_labels])
-            # ax.set_title(product)
-            # plt.show()
-        outf = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\\climate_variable_trends.png'
-        plt.savefig(outf, dpi=600)
-        plt.close()
-        T.open_path_and_file(outf)
-
-    def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
-                                               s=20,
-                                               c='k', marker='x',
-                                               zorder=100, res=2):
-
-        fpath_clip = fpath_p + 'clip.tif'
-        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
-        D_clip = DIC_and_TIF(tif_template=fpath_p)
-        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
-        fpath_clip_spatial_dict_clipped = {}
-        for pix in fpath_spatial_dict:
-            lon, lat = D_clip_lon_lat_pix_dict[pix]
-            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
-        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
-        fpath_resample = fpath_clip + 'resample.tif'
-        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
-        # fpath_resample_ortho = fpath_resample + 'Robinson.tif'
-        # Plot().Robinson_reproj(fpath_resample, fpath_resample, res=res * 100000)
-
-        # arr[arr > sig_level] = np.nan
-        D_resample = DIC_and_TIF(tif_template=fpath_resample)
-        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
-        arr = Tools().mask_999999_arr(arr, warning=False)
-        #
-        os.remove(fpath_clip)
-        # os.remove(fpath_resample_ortho)
-        os.remove(fpath_resample)
-        # exit()
-
-        spatial_dict = D_resample.spatial_arr_to_dic(arr)
-        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
-
-        lon_list = []
-        lat_list = []
-        for pix in spatial_dict:
-            val = spatial_dict[pix]
-            if np.isnan(val):
-                continue
-            lon, lat = lon_lat_pix_dict[pix]
-            lon_list.append(lon)
-            lat_list.append(lat)
-        lon_list = np.array(lon_list) + res/2
-        lat_list = np.array(lat_list) - res/2
-        # lon_list = lon_list - originX
-        # lat_list = lat_list + originY
-        # lon_list = lon_list + pixelWidth / 2
-        # lat_list = lat_list + pixelHeight / 2
-        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
-        # print(lat_list);exit()
-        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
-                  linewidths=linewidths)
-        # ax.scatter(lon_list,lat_list)
-        # plt.show()
-
-        return m
 
 class Plot_Robinson_remote_sensing:
     def __init__(self):
@@ -2025,22 +1164,22 @@ class Plot_Robinson_remote_sensing:
         :param res: resolution, meter
         ## trend color list
         '''
-        color_list = [
-            '#844000',
-            '#fc9831',
-            '#fffbd4',
-            '#86b9d2',
-            '#064c6c',
-        ]
-        ### CV list
-
         # color_list = [
-        #     '#008837',
-        #     '#a6dba0',
-        #     '#f7f7f7',
-        #     '#c2a5cf',
-        #     '#7b3294',
+        #     '#844000',
+        #     '#fc9831',
+        #     '#fffbd4',
+        #     '#86b9d2',
+        #     '#064c6c',
         # ]
+        ## CV list
+
+        color_list = [
+            '#008837',
+            '#a6dba0',
+            '#f7f7f7',
+            '#c2a5cf',
+            '#7b3294',
+        ]
         # std_list=[ '#e66101',
         #            '#fdb863',
         #            '#f7f7f7',
@@ -2099,7 +1238,7 @@ class Plot_Robinson_remote_sensing:
         # plt.imshow(arr_m,interpolation='nearest')
         # plt.show()
 
-        # ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+        ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
         ret = m.imshow(arr_m[::-1], cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,interpolation='nearest')
         # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
         # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
@@ -2110,6 +1249,241 @@ class Plot_Robinson_remote_sensing:
         #     line = meridict[obj][0][0]
         # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
         # polys = m.fillcontinents(color='whitesmoke', lake_color='#EFEFEF', zorder=90)
+        # plt.show()
+        if is_plot_colorbar:
+            if is_discrete:
+                bounds = np.linspace(vmin, vmax, colormap_n)
+                # norm = mpl.colors.BoundaryNorm(bounds, cmap.N, extend='both')
+                norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+                cax, kw = mpl.colorbar.make_axes(ax, location='bottom', pad=0.05, shrink=0.5)
+                cbar = mpl.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm, boundaries=bounds, ticks=bounds,
+                                                 orientation='horizontal')
+            else:
+                cbar = plt.colorbar(ret, ax=ax, shrink=0.5, location='bottom', pad=0.05)
+        return m, ret
+
+    def Robinson_reproj(self, fpath, outf, res=50000):
+        wkt = self.Robinson_wkt()
+        srs = DIC_and_TIF().gen_srs_from_wkt(wkt)
+        ToRaster().resample_reproj(fpath, outf, res, dstSRS=srs)
+        return outf
+
+    def Robinson_wkt(self):
+        wkt = '''
+        PROJCRS["Sphere_Robinson",
+    BASEGEOGCRS["Unknown datum based upon the Authalic Sphere",
+        DATUM["Not specified (based on Authalic Sphere)",
+            ELLIPSOID["Sphere",6371000,0,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["Sphere_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",53030]]'''
+        return wkt
+
+
+class Plot_Robinson_png:
+    def __init__(self):
+        # plt.figure(figsize=(15.3 * centimeter_factor, 8.2 * centimeter_factor))
+        self.map_width = 15.3 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+
+    def robinson_template(self):
+        '''
+                :param fpath: tif file
+                :param is_reproj: if True, reproject file from 4326 to Robinson
+                :param res: resolution, meter
+                '''
+
+        # Blue represents high values, and red represents low values.
+        plt.figure(figsize=(self.map_width, self.map_height))
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., resolution='c')
+
+        # m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        # m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        # meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        # for obj in meridict:
+        #     line = meridict[obj][0][0]
+        # coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        # polys = m.fillcontinents(color='#FFFFFF', lake_color='#EFEFEF', zorder=90)
+    def plot_Robinson_significance_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5, s=20,
+                                           c='k', marker='x',
+                                           zorder=100, res=2):
+
+        fpath_clip = fpath_p + 'clip.tif'
+        fpath_spatial_dict = DIC_and_TIF(tif_template=fpath_p).spatial_tif_to_dic(fpath_p)
+        D_clip = DIC_and_TIF(tif_template=fpath_p)
+        D_clip_lon_lat_pix_dict = D_clip.spatial_tif_to_lon_lat_dic(temp_root)
+        fpath_clip_spatial_dict_clipped = {}
+        for pix in fpath_spatial_dict:
+            lon, lat = D_clip_lon_lat_pix_dict[pix]
+            fpath_clip_spatial_dict_clipped[pix] = fpath_spatial_dict[pix]
+        DIC_and_TIF(tif_template=fpath_p).pix_dic_to_tif(fpath_clip_spatial_dict_clipped, fpath_clip)
+        fpath_resample = fpath_clip + 'resample.tif'
+        ToRaster().resample_reproj(fpath_clip, fpath_resample, res=res)
+        fpath_resample_ortho = fpath_resample + 'Robinson.tif'
+        self.Robinson_reproj(fpath_resample, fpath_resample_ortho, res=res * 10000)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_resample)
+        # lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        # lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # arr_reproj, originX_reproj, originY_reproj, pixelWidth_reproj, pixelHeight_reproj = ToRaster().raster2array(fpath_resample_ortho)
+        # lon_list_reproj = np.arange(originX_reproj, originX_reproj + pixelWidth_reproj * arr_reproj.shape[1], pixelWidth_reproj)
+        # lat_list_reproj = np.arange(originY_reproj, originY_reproj + pixelHeight_reproj * arr_reproj.shape[0], pixelHeight_reproj)
+        # arr = m.transform_scalar(arr, lon_list, lat_list[::-1], len(lon_list_reproj), len(lat_list_reproj))
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr > sig_level] = np.nan
+        # plt.figure()
+        # plt.imshow(arr,interpolation='nearest',cmap='jet')
+        # plt.show()
+        D_resample = DIC_and_TIF(tif_template=fpath_resample)
+        #
+        os.remove(fpath_clip)
+        os.remove(fpath_resample_ortho)
+        os.remove(fpath_resample)
+
+        spatial_dict = D_resample.spatial_arr_to_dic(arr)
+        lon_lat_pix_dict = D_resample.spatial_tif_to_lon_lat_dic(temp_root)
+        # keys = spatial_dict.keys()
+
+        lon_list = []
+        lat_list = []
+        for pix in spatial_dict:
+            val = spatial_dict[pix]
+            if np.isnan(val):
+                continue
+            lon, lat = lon_lat_pix_dict[pix]
+            lon_list.append(lon)
+            lat_list.append(lat)
+        lon_list = np.array(lon_list)
+        lat_list = np.array(lat_list)
+        # lon_list = lon_list - originX
+        # lat_list = lat_list + originY
+        lon_list = lon_list + pixelWidth / 2
+        lat_list = lat_list + pixelHeight / 2
+        # print(lon_list)
+        # m,ret = Plot().plot_ortho(fpath,vmin=-0.5,vmax=0.5)
+        m.scatter(lon_list, lat_list, latlon=True, s=s, c=c, zorder=zorder, marker=marker, ax=ax,
+                  linewidths=linewidths)
+
+        return m
+
+
+    def plot_Robinson(self, fpath, ax=None, cmap=None, vmin=None, vmax=None, is_plot_colorbar=True, is_reproj=True,
+                      res=25000, is_discrete=False, colormap_n=11):
+        '''
+        :param fpath: tif file
+        :param is_reproj: if True, reproject file from 4326 to Robinson
+        :param res: resolution, meter
+        ## trend color list
+        '''
+        # color_list = [
+        #     '#844000',
+        #     '#fc9831',
+        #     '#fffbd4',
+        #     '#86b9d2',
+        #     '#064c6c',
+        # ]
+        ## CV list
+
+        color_list = [
+            '#008837',
+            '#a6dba0',
+            '#f7f7f7',
+            '#c2a5cf',
+            '#7b3294',
+        ]
+        # std_list=[ '#e66101',
+        #            '#fdb863',
+        #            '#f7f7f7',
+        #            '#b2abd2',
+        #            '#5e3c99',
+        #
+        # ]
+        # Blue represents high values, and red represents low values.
+        if ax == None:
+            # plt.figure(figsize=(10, 10))
+            ax = plt.subplot(1, 1, 1)
+        if cmap is None:
+            cmap = Tools().cmap_blend(color_list)
+        elif type(cmap) == str:
+            cmap = plt.get_cmap(cmap)
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+        lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+        lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        # print(np.shape(arr))
+        # plt.imshow(arr)
+        # plt.show()
+        if not is_reproj:
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+        else:
+            fpath_robinson = self.Robinson_reproj(fpath, fpath + '_robinson-reproj.tif', res=res)
+            arr_reproj, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath_robinson)
+            lon_list_reproj = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
+            lat_list_reproj = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
+            # print(originX, originY, pixelWidth, pixelHeight)
+            arr_reproj[arr_reproj<-9999] = np.nan
+            # plt.imshow(arr_reproj,interpolation='nearest')
+            # plt.show()
+            os.remove(fpath_robinson)
+            # print(fpath_robinson)
+            # exit()
+        # originY1 = copy.copy(originY)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr_m = ma.masked_where(np.isnan(arr), arr)
+        # originX = 0
+        # originY = originY * 2
+        # originY = 0
+
+        # lon_list, lat_list = np.meshgrid(lon_list, lat_list)
+        # print(lon_list.shape)
+        # plt.imshow(arr_m)
+        # plt.show()
+        # exit()
+        m = Basemap(projection='robin', lon_0=0, lat_0=90., ax=ax, resolution='c')
+        # print(lon_list)
+        # print(lat_list)
+        # m = Basemap(projection='robin', lon_0=0,ax=ax, resolution='c')
+        arr_m = m.transform_scalar(arr_m,lon_list,lat_list[::-1],len(lon_list_reproj)*1,len(lat_list_reproj)*1,order=0)
+        # m.transform_vector()
+        # plt.imshow(arr_m,interpolation='nearest')
+        # plt.show()
+
+        ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap=cmap, zorder=99, vmin=vmin, vmax=vmax, )
+        ret = m.imshow(arr_m[::-1], cmap=cmap, zorder=99, vmin=vmin, vmax=vmax,interpolation='nearest')
+        m.drawparallels(np.arange(-60., 90., 30.), zorder=99, dashes=[8, 8], linewidth=.5)
+        m.drawparallels((-90., 90.), zorder=99, dashes=[1, 0], linewidth=2)
+        # plt.show()
+        meridict = m.drawmeridians(np.arange(0., 420., 60.), zorder=100, latmax=90, dashes=[8, 8], linewidth=.5)
+        meridict = m.drawmeridians((-180,180), zorder=100, latmax=90, dashes=[1, 0], linewidth=2)
+        for obj in meridict:
+            line = meridict[obj][0][0]
+        coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
+        polys = m.fillcontinents(color='whitesmoke', lake_color='#EFEFEF', zorder=90)
         # plt.show()
         if is_plot_colorbar:
             if is_discrete:
@@ -2592,12 +1966,12 @@ class Partial_correlation():
         pass
 
     def partial_correlation(self):
-        outdir = result_root + rf'\3mm\FIGURE\\patial_corr\\Sensitivity\\'
+        outdir = result_root + rf'\FIGURE\SI\\partial_correlation\\'
         T.mk_dir(outdir, True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
         model_list = [
-                      'TRENDY_ensemble_median',
+                      'TRENDY_ensemble_median2',
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
                       'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -2606,19 +1980,18 @@ class Partial_correlation():
                       'YIBs_S2_Monthly_lai']
 
         # model_list = [
-        #     'composite_LAI_median',
-        #     'SNU_LAI', 'GLOBMAP_LAI',
-        #     'LAI4g',
-        #     'composite_LAI',
+        #     'composite_LAI_mean',
+        #
+        #
         #     ]
 
         dic_name = {'SNU_LAI': 'SNU',
                     'GLOBMAP_LAI': 'GLOBMAP',
-                    'composite_LAI_median': 'Composite',
+                    'composite_LAI_mean': 'Composite',
                     'composite_LAI': 'Composite',
 
                     'LAI4g': 'GIMMS4g',
-                    'TRENDY_ensemble_median': 'TRENDY_ensemble',
+                    'TRENDY_ensemble_median2': 'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
                     'CLM5': 'CLM5',
@@ -2635,10 +2008,10 @@ class Partial_correlation():
                     'LPX-Bern_S2_lai': 'LPX-Bern',
                     }
 
-        fdir_all = result_root + rf'\3mm\Multiregression\partial_correlation\Obs\result\\partial_corr2\\'
-        fdir_all = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\partial_corr2\\'
+        fdir_all = result_root + rf'\partial_correlation\TRENDY\result\\\\'
+        # fdir_all = result_root + rf'\3mm\Multiregression\partial_correlation\TRENDY\\partial_corr2\\'
         for model in model_list:
-            fdir = fdir_all + rf'{model}\\sig\\'
+            fdir = fdir_all + rf'{model}\\sig_nomask\\'
             temp_fdir = temp_root + rf'{model}\\'
             T.mk_dir(temp_fdir, True)
 
@@ -2647,14 +2020,16 @@ class Partial_correlation():
 
 
             fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
-            # fpath = fdir + f'CV_intraannual_rainfall_ecosystem_year_zscore.tif'
-            # fpath = fdir + f'detrended_sum_rainfall_ecosystem_year_CV_zscore.tif'
-            fpath = fdir + f'{model}_sensitivity_zscore.tif'
+            fpath = fdir + f'CV_daily_rainfall_average.tif'
+            # fpath = fdir + f'detrended_sum_rainfall_ecosystem_year_CV.tif'
+            # fpath = fdir + f'{model}_sensitivity.tif'
 
             # 画 Robinson 投影 + 栅格
-            m, mappable = Plot().plot_Robinson(
-                fpath, ax=ax, cmap=my_cmap2, vmin=-1, vmax=1
-            )
+            m, mappable = Plot_Robinson_png().plot_Robinson(
+
+
+                fpath, ax=ax, cmap=my_cmap2, vmin=-1, vmax=1)
+
             # 叠加显著性
             # if not model == 'TRENDY_ensemble_mean':
             #     Plot().plot_Robinson_significance_scatter(
@@ -2687,15 +2062,15 @@ class Partial_correlation():
             #     orientation='horizontal', fraction=0.035, pad=0.04
             # )
             # plot colorbar
-            cbar = fig.colorbar(
-                mappable, ax=ax,
-                orientation='horizontal', fraction=0.035, pad=0.04
-            )
-            cbar.set_label('Partial correlation', fontsize=11)
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Partial correlation', fontsize=11)
 
             # 紧凑布局与间距
             # plt.subplots_adjust(hspace=0.08, wspace=0.02)
-            outf = outdir + '\\' + model +'colorbar.pdf'
+            outf = outdir + '\\' + model +'_CV_daily_rainfall_average.png'
             # plt.show()
             plt.savefig(outf, dpi=600, bbox_inches='tight')
             plt.close()
@@ -3289,15 +2664,13 @@ class Trends_CV_obs_and_model():
     def plot_remote_sensing(self): ## put main ms. so pdf
 
 
-        fdir_trend = result_root+rf'\Composite_LAI\CV\trend\\'
+        fdir_trend = result_root+rf'\LAI4g\15_year\moving_window_extraction_CV\trend\\'
         temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
         outdir = result_root+rf'FIGURE\\Figure1b\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
-            if not 'median' in f:
-                continue
 
             if not f.endswith('.tif'):
                 continue
@@ -3305,8 +2678,8 @@ class Trends_CV_obs_and_model():
                 continue
 
 
-            f_trend=fdir_trend+'composite_LAI_detrend_CV_median_trend.tif'
-            f_p_value = fdir_trend + 'composite_LAI_detrend_CV_median_p_value.tif'
+            f_trend=fdir_trend+'LAI4g_detrend_CV_trend.tif'
+            f_p_value = fdir_trend + 'LAI4g_detrend_CV_p_value.tif'
             print(f_p_value)
 
 
@@ -3501,8 +2874,9 @@ class Trends_CV_obs_and_model():
 
 class LAImax_LAImin_models():
     def run(self):
-        self.bivariate_map()
+        # self.bivariate_map()
         # self.Figure_robinson_reprojection()
+        self.barplot_area_percentage()
 
         pass
 
@@ -3533,7 +2907,6 @@ class LAImax_LAImin_models():
             fpath1 = join(fdir_max,f'{model}_relative_change_detrend_max_trend.tif')
 
             fpath2 = join(fdir_min,f'{model}_relative_change_detrend_min_trend.tif')
-
 
 
             #1
@@ -3602,9 +2975,9 @@ class LAImax_LAImin_models():
             T.open_path_and_file(outdir)
     def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
 
-        fdir_trend = result_root + rf'\3mm\FIGURE\bivariate\\'
-        temp_root = result_root + rf'\3mm\FIGURE\bivariate\bivariate\\temp_root\\'
-        outdir = result_root + rf'\3mm\FIGURE\bivariate\\ROBINSON\\'
+        fdir_trend = result_root + rf'\bivariate\TRENDY_LAImax_LAImin\bivariate\\'
+        temp_root = result_root + rf'\bivariate\TRENDY_LAImax_LAImin\bivariate\\temp_root\\'
+        outdir = result_root + rf'\bivariate\TRENDY_LAImax_LAImin\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -3648,65 +3021,86 @@ class LAImax_LAImin_models():
         df = self.df_clean(df)
         df_unique = df.groupby(['pix', ], as_index=False).mean(numeric_only=True)
 
-        # s_min = df_unique['Precip_sum_relative_change_detrend_min_trend']
-        # s_max = df_unique['Precip_sum_relative_change_detrend_max_trend']
-        # s_min = df_unique['composite_LAI_median_min_trend']
-        # s_max = df_unique['composite_LAI_median_max_trend']
+        model_list = [
 
-        s_min = df_unique['composite_LAI_mean_min_trend']
-        s_max = df_unique['composite_LAI_mean_max_trend']
+            'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+            'ORCHIDEE_S2_lai',
+            'YIBs_S2_Monthly_lai']
 
-        s_min = s_min.where(s_min.between(-99, 99))
-        s_max = s_max.where(s_max.between(-99, 99))
+        # model_list = [
+        #
+        #     'TRENDY_ensemble_median',
+        # 'TRENDY_ensemble_mean', ]
 
-        # 2) 构造四象限分类（++、+-、-+、--），其余为 NaN
-        conditions = [
-            (s_max > 0) & (s_min > 0),
-            (s_max > 0) & (s_min < 0),
-            (s_max < 0) & (s_min > 0),
-            (s_max < 0) & (s_min < 0),
-        ]
-        choices = ['both positive (++): LAImax↑, LAImin↑ ',
-                   'positive & negative (+-): LAImax↑, LAImin↓ ',
-                   'negative & positive (-+): LAImax↓, LAImin↑ ',
-                   'both negative (--): LAImin↓ LAImax↓']
+        for model in model_list:
 
 
+            # s_min = df_unique[f'{model}_min_trend']
+            # s_max = df_unique[f'{model}_max_trend']
+            s_min = df_unique[f'{model}_relative_change_detrend_min_trend']
+            s_max = df_unique[f'{model}_relative_change_detrend_max_trend']
 
-        df_unique['class'] = np.select(conditions, choices, default='NaN')
+            s_min = s_min.where(s_min.between(-99, 99))
+            s_max = s_max.where(s_max.between(-99, 99))
+
+            # 2) 构造四象限分类（++、+-、-+、--），其余为 NaN
+            conditions = [
+                (s_max > 0) & (s_min > 0),
+                (s_max > 0) & (s_min < 0),
+                (s_max < 0) & (s_min > 0),
+                (s_max < 0) & (s_min < 0),
+            ]
+            choices = ['both positive (++): LAImax↑, LAImin↑ ',
+                       'positive & negative (+-): LAImax↑, LAImin↓ ',
+                       'negative & positive (-+): LAImax↓, LAImin↑ ',
+                       'both negative (--): LAImin↓ LAImax↓']
 
 
 
-        # 3) 计算各类百分比（排除 NaN），并固定显示顺序
-        order = choices  # 固定顺序与上面一致
-        counts = pd.value_counts(pd.Categorical(df_unique['class'], categories=order), dropna=True)
-        total = counts.sum() if counts.sum() > 0 else 1
-        perc = (counts / total * 100).reindex(order).fillna(0)
-        print(perc)
+            df_unique['class'] = np.select(conditions, choices, default='NaN')
 
-        # 4) 画图
-        fig, ax = plt.subplots(figsize=(3, 3))
-        bars = ax.bar(range(len(order)), perc.values, color=['#6BC4BF', '#FFBB99', '#B3C7F7', '#F7A8C3'],
-                      edgecolor='black', linewidth=0.8, width=0.7)
 
-        # 百分比标注
-        # for i, b in enumerate(bars):
-        #     val = perc.values[i]
-        #     if val > 0:    #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
-        #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
 
-        # ax.set_xticks(range(len(order)))
-        # ax.set_xticklabels(order, rotation=20, ha='right', fontsize=10)
-        ax.set_ylabel('Area (%)')
-        ax.set_ylim(0, max(perc.max() * 1.25, 10))  # 留一点顶部空间
-        ax.axhline(0, color='grey', lw=1)
-        outdir=result_root + rf'\FIGURE\Figure2\\'
-        T.mk_dir(outdir, force=True)
+            # 3) 计算各类百分比（排除 NaN），并固定显示顺序
+            order = choices  # 固定顺序与上面一致
+            counts = pd.value_counts(pd.Categorical(df_unique['class'], categories=order), dropna=True)
+            total = counts.sum() if counts.sum() > 0 else 1
+            perc = (counts / total * 100).reindex(order).fillna(0)
+            print(model,perc)
 
-        plt.savefig(outdir + 'barplot_insert_LAI_median.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+            # 4) 画图
+            fig, ax = plt.subplots(figsize=(3, 3))
+            bars = ax.bar(range(len(order)), perc.values, color=['#70C4B5', '#C15C9C',  '#00006E', '#ED7D31',],
+                          edgecolor='black', linewidth=0.8, width=0.7)
 
-        plt.show()
+            # 百分比标注
+            # for i, b in enumerate(bars):
+            #     val = perc.values[i]
+            #     if val > 0:    #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
+            #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
+
+            # ax.set_xticks(range(len(order)))
+            # ax.set_xticklabels(order, rotation=20, ha='right', fontsize=10)
+            ax.set_ylabel('Area (%)',fontsize=12)
+            ax.set_ylim(0, 60)  # 设置 y 轴范围为 0 到 60
+            ax.set_yticks(range(0, 61, 10))  # 设置 y 轴刻度为每 10 一个刻度
+            for label in ax.get_yticklabels():
+                label.set_fontsize(12)
+            ax.set_xticks([])
+            ax.set_title(f'{model}', fontsize=12)
+
+           # 留一点顶部空间
+            ax.axhline(0, color='grey', lw=1)
+            outdir=result_root + rf'\FIGURE\Figure2\\'
+            T.mk_dir(outdir, force=True)
+
+            # plt.savefig(outdir + f'barplot_insert_LAI_{model}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
+
+            plt.show()
 
     def wkt_robinson(self):
         wkt='''PROJCRS["World_Robinson",
@@ -3775,109 +3169,49 @@ class LAImax_LAImin_models():
 
 
 
-class PLOT_Climate_factors():
+class PLOT_gamma():
     def run(self):
         self.trend_analysis_plot()
         pass
+
     def trend_analysis_plot(self):
-        outdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\Robinson\\'
+        outdir = result_root + rf'\FIGURE\SI\\'
 
         T.mk_dir(outdir,True)
-        temp_root = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\\temp_root\\'
 
-        model_list = [  'heavy_rainfall_days', 'rainfall_seasonality_all_year',
-                      'sum_rainfall', 'VPD',
-
-                   ]
-
-        dic_name = {'pi_average': 'SM-T coupling',
-                    'heavy_rainfall_days': 'Heavy rainfall days',
-                    'rainfall_seasonality_all_year': 'Rainfall seasonality',
-                    'sum_rainfall': 'Total rainfall',
-                    'VOD_detrend_min': 'VOD_min',
-                    'fire_ecosystem_year_average': 'Fire burn area',
-                    'VPD': 'VPD',
-                    'CV_intraannual_rainfall': 'CV_intraannual_rainfall_trend',
-
-                    'Non tree vegetation': 'Non tree vegetation',
-                    }
+        fdir_trend = result_root + rf'\Multiregression_intersensitivity\output_obs\trend\\'
+        temp_root=result_root + rf'\Multiregression_intersensitivity\output_obs\trend\\'
+        model='gamma'
 
 
-
-        fdir = result_root + rf'3mm\CRU_JRA\extract_rainfall_phenology_year\moving_window_average_anaysis_trend\ecosystem_year\trend\\'
-        count = 1
-        for model in model_list:
-
-
-            fpath= fdir+f'{model}_trend.tif'
-            f_p_value = fdir + f'{model}_p_value.tif'
+        fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+        fpath = fdir_trend + f'composite_LAI_relative_change_detrend_mean_sensitivity_trend.tif'
+        f_pvalue=fdir_trend + f'composite_LAI_relative_change_detrend_mean_sensitivity_pvalue.tif'
+        my_cmap2='RdBu'
 
 
-            # ax = plt.subplot(3, 2, count)
-            # print(count, f)
-            count = count + 1
-            # if not count == 9:
-            #     continue
-
-            arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-            arr = Tools().mask_999999_arr(arr, warning=False)
-            arr_m = ma.masked_where(np.isnan(arr), arr)
-            lon_list = np.arange(originX, originX + pixelWidth * arr.shape[1], pixelWidth)
-            lat_list = np.arange(originY, originY + pixelHeight * arr.shape[0], pixelHeight)
-            lon_list, lat_list = np.meshgrid(lon_list, lat_list)
-            plt.figure(figsize=(5, 3))
-
-            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180,
-                        resolution='l',)
-
-            m = self.plot_sig_scatter(
-                m, f_p_value, temp_root, sig_level=0.05, ax=None, linewidths=0.2,
-                s=1,
-                c='k', marker='x',
-                zorder=100, res=4
-            )
-            plt.title(f'{dic_name[model]}', fontsize=10,font='Arial')
-
-            m.drawcoastlines(linewidth=0.2, color='k', zorder=11)
-            dic_vmin={'pi_average': -0.1,
-                       'heavy_rainfall_days': -0.3,
-                       'rainfall_seasonality_all_year': -0.5,
-                       'sum_rainfall': -5,
-                      'VOD_detrend_min': -0.005,
-                      'fire_ecosystem_year_average': -1,
-                      'VPD': -0.01,
-                      'Non tree vegetation': -0.5,
-                      'CV_intraannual_rainfall': -0.1
-
-
-            }
-
-            dic_vmax={'pi_average': 0.1,
-                       'heavy_rainfall_days': .3,
-                       'rainfall_seasonality_all_year': .5,
-                       'sum_rainfall': 5,
-                      'VOD_detrend_min': 0.005,
-                      'fire_ecosystem_year_average': 1,
-                      'VPD': 0.01,
-                      'Non tree vegetation': 0.5,
-                      'CV_intraannual_rainfall': 0.1}
-
-            ret = m.pcolormesh(lon_list, lat_list, arr_m, cmap='PRGn', zorder=-1, vmin=dic_vmin[model], vmax=dic_vmax[model])
-
-
-            # plt.show()
-        # cax = plt.axes([0.5 - 0.15, 0.05, 0.3, 0.02])
-        # cb = plt.colorbar(ret, ax=ax, cax=cax, orientation='horizontal')
-        # # cb.set_label(f'{model}_CV_trend', labelpad=-40)
-            outf = outdir + rf'trend_analysis_plot_{model}.png'
-
-            plt.subplots_adjust(hspace=0.055, wspace=0.038)
-            #
-            plt.savefig(outf, dpi=600)
-            plt.close()
-        # plt.show()
-        T.open_path_and_file(outdir)
         # exit()
+        plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
+        m, ret = Plot_Robinson_remote_sensing().plot_Robinson(fpath, vmin=-1, vmax=1, cmap=my_cmap2, is_discrete=True, colormap_n=9, )
+
+        Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m, f_pvalue, temp_root, 0.05, s=0.5,
+                                                                          marker='.')
+        # plt.title(f'{fname}')
+        # plt.show()
+        outf = outdir + model + '.pdf'
+        plt.savefig(outf)
+        plt.close()
+        # T.open_path_and_file(outdir)
+        # exit()
+
+
+
+
+
+
+
+
+
     pass
 
     def plot_sig_scatter(self, m, fpath_p, temp_root, sig_level=0.05, ax=None, linewidths=0.5,
@@ -4053,9 +3387,9 @@ def main():
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
     # Colormap().run()
-    # Partial_correlation().run()
-    LAImax_LAImin_models().run()
-    # PLOT_Climate_factors().run()
+    Partial_correlation().run()
+    # LAImax_LAImin_models().run()
+    # PLOT_gamma().run()
     # calculate_longterm_CV().run()
     # SHAP_CV().run()
     # SHAP_rainfall_seasonality().run()

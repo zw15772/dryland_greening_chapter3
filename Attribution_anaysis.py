@@ -19,8 +19,6 @@ from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
 
 
-from SI_anaysis import climate_variables
-
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
 from matplotlib import pyplot as plt
@@ -572,8 +570,7 @@ class multiregression_intersensitivity():
         outdir=result_root+r'\Multiregression_intersensitivity\output_obs\\trend\\'
         T.mk_dir(outdir,force=True)
         for f in os.listdir(fdir):
-            if not 'composite_LAI_relative_change_detrend_median_sensitivity2' in f:
-                continue
+
             fname=f.split('.')[0]
 
 
@@ -583,12 +580,13 @@ class multiregression_intersensitivity():
             pvalue_result={}
             for pix in dic:
                 vals=dic[pix]['intersensitivity_precip_val']
+                vals=vals*100
 
                 slope, b, r, p_value = T.nan_line_fit(np.arange(len(vals)), vals)
                 result_dic[pix]=slope
                 pvalue_result[pix]=p_value
-            DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + f'{fname}_trend2.tif')
-            DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + f'{fname}_pvalue2.tif')
+            DIC_and_TIF().pix_dic_to_tif(result_dic, outdir + f'{fname}_trend.tif')
+            DIC_and_TIF().pix_dic_to_tif(pvalue_result, outdir + f'{fname}_pvalue.tif')
 
 
             pass
@@ -960,7 +958,7 @@ class partial_correlation_obs:
         # self.plot_spatial_map_sig()
 
 
-        # self.statistic_corr_boxplot()
+        self.statistic_corr_boxplot()
         # self.statistic_percentage()
         #
 
@@ -1551,7 +1549,7 @@ class partial_correlation_obs:
         # === 4. 数据提取 ===
 
         for model in self.model_list:
-            if not 'composite_LAI_median' in model:
+            if not 'composite_LAI_mean' in model:
                 continue
 
             result_dic = {}
@@ -1567,7 +1565,13 @@ class partial_correlation_obs:
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
 
-                vals_mean=np.mean(vals)
+                plt.hist(vals, bins=30)
+                plt.axvline(np.mean(vals), color='g', label='Mean')
+                plt.axvline(np.median(vals), color='r', label='Median')
+                plt.legend()
+                plt.show()
+
+                vals_mean=np.nanmean(vals)
                 print(vals_mean)
                 result_dic[new_variable] = vals
 
@@ -1592,7 +1596,9 @@ class partial_correlation_obs:
                 data_list,
                 patch_artist=True,
                 widths=0.4,
-                showfliers=False
+                showfliers=False,
+
+                showmeans=True,
 
             )
 

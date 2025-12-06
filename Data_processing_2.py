@@ -1245,9 +1245,9 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\bivariate\Dataframe\\')
+                    result_root + rf'\Dataframe\CVLAI\\\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'CVLAI.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1412,10 +1412,12 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
 
 
-        fdir=result_root+rf'\TRENDY\S2\relative_change\detrend_relative_change\moving_window_extraction_max_min\\'
+        fdir=result_root+rf'\Composite_LAI\std_mean\\'
 
 
         for f in os.listdir(fdir):
+            if 'median' in f:
+                continue
 
 
             variable= f.split('.')[0]

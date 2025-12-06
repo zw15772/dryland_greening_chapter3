@@ -1315,9 +1315,9 @@ class moving_window():
         # self.moving_window_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
-        self.robinson()
+
 
         pass
 
@@ -1607,8 +1607,8 @@ class moving_window():
         window_size = 15
 
 
-        fdir = result_root + rf'\extraction_rainfall_characteristic\moving_window_extraction\\'
-        outdir = result_root + rf'\extraction_rainfall_characteristic\moving_window_extraction_average\\'
+        fdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_extraction\\'
+        outdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -1638,8 +1638,7 @@ class moving_window():
 
 
                     ### if all values are identical, then continue
-                    if len(time_series_all)<24:
-                        continue
+
 
 
                     time_series = time_series_all[ss]
@@ -1783,17 +1782,16 @@ class moving_window():
 
 
     def moving_window_std_anaysis(self):
-        window_size=15
-        fdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\3mm\relative_change_growing_season\\\\moving_window_mean_std_anaysis\\'
+
+        fdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_extraction\\'
+        outdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'LAI4g_detrend' in f:
-                continue
+
 
             dic = T.load_npy(fdir + f)
-            slides = 38-window_size+1
-            outf = outdir + f.split('.')[0] + f'_mean.npy'
+
+            outf = outdir + f.split('.')[0] + f'_std.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -1808,8 +1806,8 @@ class moving_window():
 
 
                 time_series_all = dic[pix]
-                if len(time_series_all)<24:
-                    continue
+                slides=len(time_series_all)
+
                 time_series_all = np.array(time_series_all)
                 for ss in range(slides):
                     if np.isnan(np.nanmean(time_series_all)):
@@ -1824,20 +1822,20 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    # cv=np.nanstd(time_series)
-                    cv = np.nanmean(time_series)
+                    cv=np.nanstd(time_series)
+                    # cv = np.nanmean(time_series)
                     trend_list.append(cv)
+                # print(len(trend_list))
+                # plt.plot(trend_list)
+                # plt.show()
 
                 trend_dic[pix]=trend_list
+
 
             np.save(outf, trend_dic)
 
             ##tiff
-            # arr_trend = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(trend_dic)
-            #
-            # p_value_arr = DIC_and_TIF(pixelsize=0.25).pix_dic_to_spatial_arr(p_value_dic)
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(arr_trend, outf + '_trend.tif')
-            # DIC_and_TIF(pixelsize=0.25).arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
 
     def moving_window_trend_anaysis(self): ## each window calculating the trend
         window_size = 10
@@ -1901,8 +1899,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\Multiregression_contribution\Obs\input\Y\zscore\\'
-        outdir =result_root + (rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\')
+        fdir =result_root+ rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
+        outdir =result_root + (rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3819,8 +3817,8 @@ def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    # moving_window().run()
-    processing_composite_LAI().run()
+    moving_window().run()
+    # processing_composite_LAI().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
