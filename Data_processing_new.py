@@ -19,7 +19,7 @@ from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
 
 
-from SI_anaysis import climate_variables
+
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -1899,8 +1899,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
-        outdir =result_root + (rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\trend\\')
+        fdir =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\rainfallmin_rainfallmax\\'
+        outdir =result_root + (rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\rainfallmin_rainfallmax\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -3788,6 +3788,75 @@ class processing_daily_rainfall():
         np.save(outf, result_dic)
 
 
+class extract_rainfallmin_rainfallmax():
+    def __init__(self):
+        pass
+
+    def run(self):
+        self.moving_window_rainfallmin_max_based_on_LAImax_min_anaysis()
+
+        pass
+
+    def moving_window_rainfallmin_max_based_on_LAImax_min_anaysis(self):  ## each window calculating the average
+        window_size = 15
+
+        f_LAI = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_extraction\\composite_LAI_relative_change_detrend_mean.npy'
+        outdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\moving_window_extraction\rainfallmin_rainfallmax\\'
+        f_rainfall=result_root +  rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\moving_window_extraction\\Precip_sum_relative_change_detrend.npy'
+        T.mk_dir(outdir, force=True)
+
+        dic_LAI = T.load_npy(f_LAI)
+        dic_rainfall = T.load_npy(f_rainfall)
+
+        rainfall_min_trend_dic = {}  # 保存 rainfall_max 和 rainfall_min
+        rainfall_max_trend_dic = {}
+
+        for pix in tqdm(dic_LAI):
+
+            LAI_windows = dic_LAI[pix]  # list of windows
+            rain_windows = dic_rainfall[pix]  # list of windows (same length)
+
+            rainfall_max_list = []
+            rainfall_min_list = []
+
+
+            for LAI_win, rain_win in zip(LAI_windows, rain_windows):
+
+                LAI_win = np.array(LAI_win)
+                rain_win = np.array(rain_win)
+
+                # 如果窗口长度不足，跳过
+                if len(LAI_win) < 5 or np.isnan(np.nanmean(LAI_win)):
+                    continue
+
+                # === 找 LAImax ===
+                idx_max = np.nanargmax(LAI_win)
+                LAImax = LAI_win[idx_max]
+                rainfall_at_LAImax = rain_win[idx_max]
+
+                # === 找 LAImin ===
+                idx_min = np.nanargmin(LAI_win)
+                LAImin = LAI_win[idx_min]
+                rainfall_at_LAImin = rain_win[idx_min]
+
+                # 保存
+
+                rainfall_max_list.append(rainfall_at_LAImax)
+                rainfall_min_list.append(rainfall_at_LAImin)
+                # plt.plot(rainfall_max_list, color='r')
+                # plt.plot(rainfall_min_list, color='b')
+                # plt.show()
+
+
+            # 保存结果
+            rainfall_min_trend_dic[pix] =rainfall_min_list
+            rainfall_max_trend_dic[pix] =rainfall_max_list
+        outmaxf=outdir+'rainfallmax.npy'
+        outminf=outdir+'rainfallmin.npy'
+        np.save(outmaxf, rainfall_max_trend_dic)
+        np.save(outminf, rainfall_min_trend_dic)
+
+
 
 
 def check_data():
@@ -3823,6 +3892,7 @@ def main():
     # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
+    # extract_rainfallmin_rainfallmax().run()
     # check_data()
     pass
 

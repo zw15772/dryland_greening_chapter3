@@ -18,7 +18,7 @@ from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
 
 
-from SI_anaysis import climate_variables
+
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -1555,6 +1555,615 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
 
 
 
+class Figure2_rainfallmax_rainfallmin(): ## LAImin and LAImax
+    def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+    def run (self):
+        # self.bivariate_map()
+        #
+        # self.Figure_robinson_reprojection()
+        # self.heatmap_LAImin_max_CV_Figure1d()
+
+        self.barplot_area_percentage()
+
+        # self.statistic_pdf()
+
+
+
+
+    def bivariate_map(self):  ## figure 1  ## LAImin and LAImax bivariate
+        import xymap
+
+
+        fdir =result_root + rf'\bivariate\rainfallmin_rainfallmax\trend\\\\'
+
+        outdir =result_root + (rf'bivariate\\Rainfall\\')
+
+        T.mkdir(outdir)
+
+        # outtif = join(outdir,'CV_trend2.tif')
+        outtif = join(outdir, 'rainfallmax_min.tif')
+
+        fpath1 = join(fdir,'rainfallmax_trend.tif')
+
+        fpath2 = join(fdir,'rainfallmin_trend.tif')
+
+
+        #1
+        tif1_label, tif2_label = 'LAImax_trend','LAImin_trend'
+        #2
+        # tif1_label, tif2_label = 'LAI_CV_trend','LAI_relative_change_mean_trend'
+
+        #1
+        min1, max1 = -1, 1
+        min2, max2 = -1, 1
+
+        #2
+        # min1, max1 = -.3, .3
+        # min2, max2 = -.5, .5
+
+        arr1 = ToRaster().raster2array(fpath1)[0]
+        arr2 = ToRaster().raster2array(fpath2)[0]
+
+        arr1[arr1<-9999] = np.nan
+        arr2[arr2<-9999] = np.nan
+
+        arr1_flattened = arr1.flatten()
+        arr2_flattened = arr2.flatten()
+
+
+        # plt.hist(arr1_flattened,bins=100)
+        # plt.title('arr1')
+        # plt.figure()
+        # plt.hist(arr2_flattened,bins=100)
+        # plt.title('arr2')
+        # plt.show()
+
+        # choice 1
+        upper_left_color = (0, 0, 110)
+        upper_right_color =(112, 196, 181)
+        lower_left_color = (237, 125, 49)
+
+        lower_right_color = (193, 92, 156)
+        center_color = (240, 240, 240)
+
+        ## CV greening option
+        #
+        # upper_left_color = (194, 0, 120)
+        # upper_right_color = (0,170,237)
+        # lower_left_color = (233, 55, 43)
+        # # lower_right_color = (160, 108, 168)
+        # lower_right_color = (234, 233, 46)
+        # center_color = (240, 240, 240)
+
+
+        xymap.Bivariate_plot_1(res = 11,
+                         alpha = 255,
+                         upper_left_color = upper_left_color, #
+                         upper_right_color = upper_right_color, #
+                         lower_left_color = lower_left_color, #
+                         lower_right_color = lower_right_color, #
+                         center_color = center_color).plot_bivariate(
+                                                                    fpath1, fpath2,
+                                                                    tif1_label, tif2_label,
+                                                                    min1, max1,
+                                                                    min2, max2,
+                                                                    outtif,
+                                                                    n_x = 5, n_y =5
+                                                                    )
+
+        T.open_path_and_file(outdir)
+
+
+    def Figure_robinson_reprojection(self):  # convert figure to robinson and no need to plot robinson again
+
+        fdir_trend = result_root + rf'\bivariate\\Rainfall\\'
+        temp_root = result_root + rf'\bivariate\\Rainfall\\'
+        outdir = result_root + rf'\\bivariate\\ROBINSON\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+        for f in os.listdir(fdir_trend):
+
+
+            if not f.endswith('.tif'):
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir_trend + f
+            outf=outdir + fname + '.tif'
+            srcSRS=self.wkt_84()
+            dstSRS=self.wkt_robinson()
+
+            ToRaster().resample_reproj(fpath,outf, 5000, srcSRS=srcSRS, dstSRS=dstSRS)
+
+            T.open_path_and_file(outdir)
+
+
+
+    def RGBA_to_tif(self,blend_arr,outf,originX, originY, pixelWidth, pixelHeight):
+        import PIL.Image as Image
+        img = Image.fromarray(blend_arr.astype('uint8'), 'RGBA')
+        img.save(outf)
+        # define a projection and extent
+        raster = gdal.Open(outf)
+        geotransform = raster.GetGeoTransform()
+        raster.SetGeoTransform((originX, pixelWidth, 0, originY, 0, pixelHeight))
+        outRasterSRS = osr.SpatialReference()
+        projection = self.wkt_84()
+        # outRasterSRS.ImportFromEPSG(4326)
+        # outRasterSRS.ImportFromEPSG(projection)
+        # raster.SetProjection(outRasterSRS.ExportToWkt())
+        raster.SetProjection(projection)
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+    def wkt_robinson(self):
+        wkt='''PROJCRS["World_Robinson",
+    BASEGEOGCRS["WGS 84",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["Degree",0.0174532925199433]]],
+    CONVERSION["World_Robinson",
+        METHOD["Robinson"],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["Degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["(E)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["(N)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["ESRI",54030]]
+        '''
+        return wkt
+
+
+    def wkt_84(self):
+        wkt = '''GEOGCRS["WGS 84",
+    ENSEMBLE["World Geodetic System 1984 ensemble",
+        MEMBER["World Geodetic System 1984 (Transit)"],
+        MEMBER["World Geodetic System 1984 (G730)"],
+        MEMBER["World Geodetic System 1984 (G873)"],
+        MEMBER["World Geodetic System 1984 (G1150)"],
+        MEMBER["World Geodetic System 1984 (G1674)"],
+        MEMBER["World Geodetic System 1984 (G1762)"],
+        MEMBER["World Geodetic System 1984 (G2139)"],
+        ELLIPSOID["WGS 84",6378137,298.257223563,
+            LENGTHUNIT["metre",1]],
+        ENSEMBLEACCURACY[2.0]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    USAGE[
+        SCOPE["Horizontal component of 3D system."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["EPSG",4326]]'''
+        return wkt
+
+    def statistical_analysis(self):  # ## calculating percentage  not used
+
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+
+
+        T.print_head_n(df)
+        x_var = 'composite_LAI_detrend_relative_change_min_trend'
+        y_var = 'composite_LAI_detrend_relative_change_max_trend'
+        ## x_var >0 and y_var >0==1;  2 x_var>0 and y_var<0 3 x_var<0 and y_var<0 4 x_var<0 and y_var>0
+        result_list=[]
+        label_list=[]
+
+
+        df_pos_pos=df[(df[x_var]>0)&(df[y_var]>0)]
+
+        df_pos_neg=df[(df[x_var]>0)&(df[y_var]<0)]
+        df_neg_pos=df[(df[x_var]<0)&(df[y_var]>0)]
+        df_neg_neg=df[(df[x_var]<0)&(df[y_var]<0)]
+        percentage_pos_pos=len(df_pos_pos)/len(df)*100
+        result_list.append(percentage_pos_pos)
+        label_list.append('++')
+        percentage_pos_neg=len(df_pos_neg)/len(df)*100
+        result_list.append(percentage_pos_neg)
+        label_list.append('+-')
+        percentage_neg_pos=len(df_neg_pos)/len(df)*100
+        result_list.append(percentage_neg_pos)
+        label_list.append('-+')
+        percentage_neg_neg=len(df_neg_neg)/len(df)*100
+        result_list.append(percentage_neg_neg)
+        label_list.append('--')
+
+        # upper_left_color = (193,92,156)
+        # upper_right_color =(112, 196, 181)
+        # lower_left_color = (237, 125, 49)
+        # lower_right_color = (0, 0, 110)
+        # center_color = (240, 240, 240)
+        color_list=[   (112, 196, 181),
+            (0, 0, 110),
+
+            (193, 92, 156),
+
+                    (237, 125, 49)]
+        ## rgb_to_hex
+        print(result_list);exit()
+        color_list = ['#{:02x}{:02x}{:02x}'.format(r, g, b) for r, g, b in color_list]
+        fig = plt.figure(figsize=(3, 3))
+
+
+        for i in range(len(result_list)):
+            plt.bar(label_list[i],result_list[i],color=color_list[i],width=0.7,alpha=0.8)
+        plt.ylabel('Percentage (%)')
+        plt.tight_layout()
+        # plt.show()
+        ## save figure
+        plt.savefig(rf'D:\Project3\Result\3mm\extract_composite_phenology_year\bivariate\Figure1d.pdf',dpi=600,bbox_inches='tight')
+
+
+
+
+
+
+
+
+    def heatmap_LAImin_max_CV_Figure1d(self):  ## plot trend as function of Aridity and precipitation trend
+        ## plot trends as function of inter precipitaiton CV and intra precipitation CV
+        dff=rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        print(len(df))
+        # df = df[df['detrended_SNU_LAI_CV_p_value'] < 0.05]
+        # df = df[df['LAI4g_detrend_CV_p_value'] < 0.05]
+        # df = df[df['GlOBMAP_detrend_CV_p_value'] < 0.05]
+        df=df[df['composite_LAI_CV_p_value'] < 0.05]
+        # # print(len(df));exit()
+
+
+        # plt.show();exit()
+
+        T.print_head_n(df)
+        x_var = 'composite_LAI_detrend_relative_change_min_trend'
+        y_var = 'composite_LAI_detrend_relative_change_max_trend'
+        z_var = 'composite_LAI_CV_trend'
+
+        # x_var = 'GLOBMAP_LAI_relative_change_detrend_min_trend'
+        # y_var = 'GLOBMAP_LAI_relative_change_detrend_max_trend'
+        # z_var = 'GlOBMAP_detrend_CV_trend'
+        plt.hist(df[x_var])
+        plt.show()
+        plt.hist(df[y_var])
+        plt.show()
+
+        bin_x = np.linspace(-1.5, 1.5,11, )
+
+        bin_y = np.linspace(-1.5, 1.5, 11)
+        # percentile_list=np.linspace(0,100,7)
+        # bin_x=np.percentile(df[x_var],percentile_list)
+        # print(bin_x)
+        # bin_y=np.percentile(df[y_var],percentile_list)
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        matrix_dict,x_ticks_list,y_ticks_list = T.df_bin_2d(df,val_col_name=z_var,
+                    col_name_x=x_var,
+                    col_name_y=y_var,bin_x=bin_x,bin_y=bin_y,round_x=4,round_y=4)
+        # pprint(matrix_dict);exit()
+
+        my_cmap = T.cmap_blend(color_list = ['#000000','r', 'b'])
+        my_cmap = 'RdBu'
+        self.plot_df_bin_2d_matrix(matrix_dict,-1,1,x_ticks_list,y_ticks_list,cmap=my_cmap,
+                              is_only_return_matrix=False)
+        plt.colorbar()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        pprint(matrix_dict)
+        # plt.show()
+
+
+        matrix_dict_count, x_ticks_list, y_ticks_list = self.df_bin_2d_count(df, val_col_name=z_var,
+                                                              col_name_x=x_var,
+                                                              col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
+        pprint(matrix_dict_count)
+        scatter_size_dict = {
+            (1,20): 5,
+            (20,50): 20,
+            (50,100): 50,
+            (100,200): 75,
+            (200,400): 100,
+            (400,800): 200,
+            (800,np.inf): 250
+        }
+        matrix_dict_count_normalized = {}
+        # Normalize counts for circle size
+        for key in matrix_dict_count:
+            num = matrix_dict_count[key]
+            for key2 in scatter_size_dict:
+                if num >= key2[0] and num < key2[1]:
+                    matrix_dict_count_normalized[key] = scatter_size_dict[key2]
+                    break
+        pprint(matrix_dict_count_normalized)
+        reverse_x = list(range(len(bin_y)-1))[::-1]
+        reverse_x_dict = {}
+        for i in range(len(bin_y)-1):
+            reverse_x_dict[i] = reverse_x[i]
+        # print(reverse_x_dict);exit()
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='gray',edgecolors='none',alpha=.5)
+        for x,y in matrix_dict_count_normalized:
+            plt.scatter(y,reverse_x_dict[x],s=matrix_dict_count_normalized[(x,y)],c='none',edgecolors='gray',alpha=1)
+
+        plt.xlabel('Trend in LAImin (%)')
+        plt.ylabel('Trend in LAImax (%)')
+
+        plt.show()
+        # plt.savefig(outf)
+        # plt.close()
+
+    def barplot_area_percentage(self):
+        ## plot bivariate plot of LAImin and LAImax
+
+        dff = result_root + rf'\bivariate\Dataframe\\Dataframe.df'
+        df = T.load_df(dff)
+        # print(df.columns);exit()
+        df = self.df_clean(df)
+        df_unique = df.groupby(['pix', ], as_index=False).mean(numeric_only=True)
+
+        s_min = df_unique['rainfallmin_trend']
+        s_max = df_unique['rainfallmax_trend']
+        # s_min = df_unique['composite_LAI_median_min_trend']
+        # s_max = df_unique['composite_LAI_median_max_trend']
+
+        # s_min = df_unique['composite_LAI_mean_min_trend']
+        # s_max = df_unique['composite_LAI_mean_max_trend']
+
+        s_min = s_min.where(s_min.between(-99, 99))
+        s_max = s_max.where(s_max.between(-99, 99))
+
+        # 2) 构造四象限分类（++、+-、-+、--），其余为 NaN
+        conditions = [
+            (s_max > 0) & (s_min > 0),
+            (s_max > 0) & (s_min < 0),
+            (s_max < 0) & (s_min > 0),
+            (s_max < 0) & (s_min < 0),
+        ]
+        choices = ['both positive (++): LAImax↑, LAImin↑ ',
+                   'positive & negative (+-): LAImax↑, LAImin↓ ',
+                   'negative & positive (-+): LAImax↓, LAImin↑ ',
+                   'both negative (--): LAImin↓ LAImax↓']
+
+
+
+        df_unique['class'] = np.select(conditions, choices, default='NaN')
+
+
+
+        # 3) 计算各类百分比（排除 NaN），并固定显示顺序
+        order = choices  # 固定顺序与上面一致
+        counts = pd.value_counts(pd.Categorical(df_unique['class'], categories=order), dropna=True)
+        total = counts.sum() if counts.sum() > 0 else 1
+        perc = (counts / total * 100).reindex(order).fillna(0)
+        print(perc)
+
+        # 4) 画图
+        fig, ax = plt.subplots(figsize=(3, 3))
+        bars = ax.bar(range(len(order)), perc.values, color=['#6BC4BF', '#FFBB99', '#B3C7F7', '#F7A8C3'],
+                      edgecolor='black', linewidth=0.8, width=0.7)
+
+        # 百分比标注
+        # for i, b in enumerate(bars):
+        #     val = perc.values[i]
+        #     if val > 0:    #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
+        #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
+
+        # ax.set_xticks(range(len(order)))
+        # ax.set_xticklabels(order, rotation=20, ha='right', fontsize=10)
+        ax.set_ylabel('Area (%)')
+        ax.set_ylim(0, max(perc.max() * 1.25, 10))  # 留一点顶部空间
+        ax.axhline(0, color='grey', lw=1)
+        outdir=result_root + rf'\FIGURE\Figure2\\'
+        T.mk_dir(outdir, force=True)
+
+        plt.savefig(outdir + 'barplot_insert_rainfall.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
+
+        # plt.show()
+
+
+        pass
+
+    def statistic_pdf(self):
+        dff= result_root + rf'\3mm\product_consistency\dataframe\\moving_window.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        vals_min=df['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        vals_max=df['composite_LAI_detrend_relative_change_max_trend'].tolist()
+        vals_min=np.array(vals_min)
+        vals_max=np.array(vals_max)
+        vals_min[vals_min>99]=np.nan
+        vals_min[vals_min<-99]=np.nan
+        vals_max[vals_max>99]=np.nan
+        vals_max[vals_max<-99]=np.nan
+
+
+        figure, ax = plt.subplots(figsize=(3,2),  )
+        sns.kdeplot(vals_min, ax=ax, label=f'Min trend', fill=False,color='#f599a1',linewidth=2)
+        sns.kdeplot(vals_max, ax=ax, label=f'Max trend', fill=False,color='#a577ad',linewidth=2)
+
+        # === 添加均值线和标注 ===
+        mean_min = np.nanmean(vals_min)
+        mean_max = np.nanmean(vals_max)
+
+        ax.axvline(mean_min, color='#f599a1', linestyle='--', linewidth=1)
+        ax.axvline(mean_max, color='#a577ad', linestyle='--', linewidth=1)
+        # ax.legend()
+        plt.ylabel('')
+        plt.xlim(-5, 5)
+        # plt.show()
+        outf=result_root + rf'\3mm\product_consistency\pdf\\min_max_trend.pdf'
+        plt.savefig(outf,bbox_inches='tight',pad_inches=0,dpi=300)
+        plt.close()
+
+
+    def figure1f(self):
+
+        dff = rf'D:\Project3\Result\3mm\bivariate_analysis\Dataframe\\Trend_all.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        print(len(df))
+
+        df = df[df['composite_LAI_CV_p_value'] < 0.05]
+        # # print(len(df));exit()
+
+        # plt.show();exit()
+
+        T.print_head_n(df)
+
+
+        df_LAImax_pos=df[df['composite_LAI_detrend_relative_change_max_trend']>0]
+        df_LAImax_neg=df[df['composite_LAI_detrend_relative_change_max_trend']<0]
+        values_pos_LAImin=df_LAImax_pos['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        values_neg_LAImin=df_LAImax_neg['composite_LAI_detrend_relative_change_min_trend'].tolist()
+        values_pos_LAImin_array=np.array(values_pos_LAImin)
+        values_neg_LAImin_array=np.array(values_neg_LAImin)
+
+        sns.kdeplot(values_pos_LAImin_array, fill=True,color='#785187',label='LAImax>0')
+        sns.kdeplot(values_neg_LAImin_array, fill=True,color='#e66d50',label='LAImax<0')
+        plt.axvline(np.nanmean(values_pos_LAImin_array), color='purple', linestyle='--', linewidth=1)
+        plt.axvline(np.nanmean(values_neg_LAImin_array), color='orange', linestyle='--', linewidth=1)
+        plt.xlabel('Trends in LAImin')
+        plt.xlim(-2.5,2.5)
+        plt.legend()
+
+
+        plt.show()
+
+        pass
+
+    def df_bin_2d_count(self,df,val_col_name,col_name_x,col_name_y,bin_x,bin_y,round_x=2,round_y=2):
+        df_group_y, _ = self.df_bin(df, col_name_y, bin_y)
+        matrix_dict = {}
+        y_ticks_list = []
+        x_ticks_dict = {}
+        flag1 = 0
+        for name_y, df_group_y_i in df_group_y:
+            matrix_i = []
+            y_ticks = (name_y[0].left + name_y[0].right) / 2
+            y_ticks = np.round(y_ticks, round_y)
+            y_ticks_list.append(y_ticks)
+            df_group_x, _ = self.df_bin(df_group_y_i, col_name_x, bin_x)
+            flag2 = 0
+            for name_x, df_group_x_i in df_group_x:
+                vals = df_group_x_i[val_col_name].tolist()
+                rt_mean = len(vals)
+                matrix_i.append(rt_mean)
+                x_ticks = (name_x[0].left + name_x[0].right) / 2
+                x_ticks = np.round(x_ticks, round_x)
+                x_ticks_dict[x_ticks] = 0
+                key = (flag1, flag2)
+                matrix_dict[key] = rt_mean
+                flag2 += 1
+            flag1 += 1
+        x_ticks_list = list(x_ticks_dict.keys())
+        x_ticks_list.sort()
+        return matrix_dict,x_ticks_list,y_ticks_list
+
+    def df_bin(self, df, col, bins):
+        df_copy = df.copy()
+        df_copy[f'{col}_bins'] = pd.cut(df[col], bins=bins)
+        df_group = df_copy.groupby([f'{col}_bins'],observed=True)
+        bins_name = df_group.groups.keys()
+        bins_name_list = list(bins_name)
+        bins_list_str = [str(i) for i in bins_name_list]
+        # for name,df_group_i in df_group:
+        #     vals = df_group_i[col].tolist()
+        #     mean = np.nanmean(vals)
+        #     err,_,_ = self.uncertainty_err(SM)
+        #     # x_list.append(name)
+        #     y_list.append(mean)
+        #     err_list.append(err)
+        return df_group, bins_list_str
+    def plot_df_bin_2d_matrix(self,matrix_dict,vmin,vmax,x_ticks_list,y_ticks_list,cmap='RdBu',
+                              is_only_return_matrix=False):
+        print(x_ticks_list)
+        keys = list(matrix_dict.keys())
+        r_list = []
+        c_list = []
+        for r, c in keys:
+            r_list.append(r)
+            c_list.append(c)
+        r_list = set(r_list)
+        c_list = set(c_list)
+
+        row = len(r_list)
+        col = len(c_list)
+        spatial = []
+        for r in range(row):
+            temp = []
+            for c in range(col):
+                key = (r, c)
+                if key in matrix_dict:
+                    val_pix = matrix_dict[key]
+                    temp.append(val_pix)
+                else:
+                    temp.append(np.nan)
+            spatial.append(temp)
+
+        matrix = np.array(spatial, dtype=float)
+        matrix = matrix[::-1]
+        if is_only_return_matrix:
+            return matrix
+        plt.imshow(matrix,cmap=cmap,vmin=vmin,vmax=vmax)
+        plt.xticks(range(len(c_list)), x_ticks_list)
+        plt.yticks(range(len(r_list)), y_ticks_list[::-1])
+        # plt.colorbar()
+        # plt.show()
+        #
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
 
 
 class Figure_beta():
@@ -2697,9 +3306,9 @@ class Figure_std_mean_bivariate():  ##
 
     def run(self):
         ## step 1
-        self.bivariate_map()
+        # self.bivariate_map()
         ## step 2
-        # self.Figure_robinson_reprojection()  # convert figure to robinson and no need to plot robinson again
+        self.Figure_robinson_reprojection()  # convert figure to robinson and no need to plot robinson again
 
        ## step 3
         # self.statistic_pdf()
@@ -2789,9 +3398,9 @@ class Figure_std_mean_bivariate():  ##
 
     def Figure_robinson_reprojection(self):  # convert figure to robinson
 
-        fdir_trend = result_root + rf'3mm\extract_composite_phenology_year\bivariate\\'
-        temp_root = result_root + rf'\3mm\extract_composite_phenology_year\bivariate\\'
-        outdir = result_root + rf'\3mm\extract_composite_phenology_year\\bivariate\\ROBINSON\\'
+        fdir_trend = result_root +  rf'\bivariate\std_mean\\'
+        temp_root = result_root + rf'\bivariate\std_mean\\\\\\'
+        outdir = result_root + rf'\bivariate\std_mean\\\\\\ROBINSON\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
@@ -9765,9 +10374,10 @@ def main():
 
 
     # Figure2_LAImin_LAImax().run()
+    Figure2_rainfallmax_rainfallmin().run()
 
     # Figure_beta().run()
-    Figure_std_mean_bivariate().run()
+    # Figure_std_mean_bivariate().run()
     # Figure4().run()
     # build_dataframe().run()
     # greening_CV_relationship().run()

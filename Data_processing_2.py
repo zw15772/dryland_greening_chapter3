@@ -1245,17 +1245,17 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\Dataframe\CVLAI\\\\')
+                    result_root +  rf'\bivariate\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'CVLAI.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        df=self.add_window_to_df(df)
+        # df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
@@ -1412,12 +1412,11 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
 
 
-        fdir=result_root+rf'\Composite_LAI\std_mean\\'
+        fdir=result_root+rf'\bivariate\rainfallmin_rainfallmax\\'
 
 
         for f in os.listdir(fdir):
-            if 'median' in f:
-                continue
+
 
 
             variable= f.split('.')[0]
@@ -1725,7 +1724,7 @@ class build_moving_window_dataframe():
 
 
     def add_trend_to_df(self, df):
-        fdir=result_root+rf'\bivariate\rainfall_max_min\trend\\'
+        fdir=result_root+rf'\bivariate\rainfallmin_rainfallmax\trend\\'
         for f in os.listdir(fdir):
 
             if not f.endswith('.tif'):

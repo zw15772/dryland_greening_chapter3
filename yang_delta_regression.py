@@ -813,12 +813,14 @@ class Delta_regression:
                 vals = np.array(df[var].values, dtype=float)
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
+                # print(vals);exit()
                 if len(vals) == 0:
                     continue
 
                 mean_val = np.nanmean(vals)
                 # print(np.std(vals));exit()
                 sem_val = np.nanstd(vals) / np.sqrt(len(vals))  # 标准误差
+
                 means.append(mean_val)
                 sems.append(sem_val)
                 labels.append(label_map[var])
@@ -863,8 +865,8 @@ class Delta_regression:
             print(outdir)
             #
             Tools().mk_dir(outdir, force=True)
-            outf = os.path.join(outdir, f'{model}_relative_contribution_mean.pdf')
-            plt.savefig(outf, bbox_inches='tight', dpi=300)
+            # outf = os.path.join(outdir, f'{model}_relative_contribution_mean.pdf')
+            # plt.savefig(outf, bbox_inches='tight', dpi=300)
             plt.show()
             # plt.close()
 

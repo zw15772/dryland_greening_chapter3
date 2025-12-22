@@ -96,10 +96,10 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def run (self):
         # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
-        self.plot_std()
+        # self.plot_std()
         # self.plot_LAImax_LAImin()
         # self.plot_LAImax_LAImin_models()
-        # self.plot_rainfallmax_min()
+        self.plot_rainfallmax_min()
        # self.statistic_trend_CV_bar3()
        #  self.statistic_CV_trend_bar()
        #  self.statistic_trend_bar()
@@ -308,11 +308,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         df = self.df_clean(df)
         print(len(df))
 
-        variable_list = ['Precip_sum_relative_change_detrend_max', 'Precip_sum_relative_change_detrend_min']
-        dic_label = {'Precip_sum_relative_change_detrend_max': 'IAV Precip max',
-                     'Precip_sum_relative_change_detrend_min': 'IAV Precip min'}
-        color_dic = {'Precip_sum_relative_change_detrend_max': 'purple',
-                     'Precip_sum_relative_change_detrend_min': 'teal'}
+        variable_list = ['rainfallmax', 'rainfallmin']
+        dic_label = {'rainfallmax': 'Rainfallmax',
+                     'rainfallmin': 'Rainfallmin'}
+        color_dic = {'rainfallmax': 'purple',
+                     'rainfallmin': 'teal'}
 
         year_list = range(0, 25)
         result_dic = {}
@@ -384,6 +384,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         T.mk_dir(out_pdf_fdir)
         plt.savefig(out_pdf_fdir + 'time_series_precipmax_precipmin.pdf', dpi=300, bbox_inches='tight')
         plt.close()
+        T.open_path_and_file(out_pdf_fdir)
 
 
     def plot_CV_LAI(self):  ##### plot for 4 clusters
@@ -624,12 +625,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
 
 
-        # plt.show()
+        plt.show()
         # # plt.tight_layout()
         out_pdf_fdir = result_root + rf'\FIGURE\\SI\\'
         T.mk_dir(out_pdf_fdir)
-        plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        # plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
 
         #
@@ -1657,6 +1658,11 @@ class Plot_Robinson_TRENDY:
         #            '#5e3c99',
         #
         # ]
+        color_list = [
+            '#9EBD3A',
+            '#a577ad',
+            '#fc945d',
+        ]
         # Blue represents high values, and red represents low values.
         if ax == None:
             # plt.figure(figsize=(10, 10))
@@ -1718,7 +1724,7 @@ class Plot_Robinson_TRENDY:
         for obj in meridict:
             line = meridict[obj][0][0]
         coastlines = m.drawcoastlines(zorder=100, linewidth=0.2)
-        polys = m.fillcontinents(color='#eeeeee', lake_color='#EFEFEF', zorder=90)
+        polys = m.fillcontinents(color='ghostwhite', lake_color='#EFEFEF', zorder=90)
         # plt.show()
         if is_plot_colorbar:
             if is_discrete:
@@ -1777,8 +1783,8 @@ class Colormap():
     def __init__(self):
         pass
     def run(self):
-        # self.colormap()
-        self.statistic_contribution_area_individual_model()
+        self.colormap()
+        # self.statistic_contribution_area_individual_model()
         pass
 
     def colormap(self):
@@ -1786,7 +1792,7 @@ class Colormap():
         T.mk_dir(outdir, True)
         temp_root = result_root + rf'\3mm\relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
-        model_list = [
+        model_list = ['TRENDY_ensemble_median2',
 
                       'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                       'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -1795,12 +1801,12 @@ class Colormap():
                       'ORCHIDEE_S2_lai',
                       'YIBs_S2_Monthly_lai']
 
-        model_list = [
-
-            'SNU_LAI', 'GLOBMAP_LAI',
-            'LAI4g',
-
-            ]
+        # model_list = [
+        #
+        #     'SNU_LAI', 'GLOBMAP_LAI',
+        #     'LAI4g',
+        #
+        #     ]
 
         dic_name = {'SNU_LAI': 'SNU',
                     'GLOBMAP_LAI': 'GLOBMAP',
@@ -1808,7 +1814,7 @@ class Colormap():
                     'composite_LAI': 'Composite',
 
                     'LAI4g': 'GIMMS4g',
-                    'TRENDY_ensemble_median': 'TRENDY_ensemble',
+                    'TRENDY_ensemble_median2': 'TRENDY_ensemble',
                     'CABLE-POP_S2_lai': 'CABLE-POP',
                     'CLASSIC_S2_lai': 'CLASSIC',
                     'CLM5': 'CLM5',
@@ -1826,16 +1832,18 @@ class Colormap():
                     }
 
 
-        fdir_all = result_root + rf'\partial_correlation\Obs\result\\'
+        fdir_all = result_root + rf'\partial_correlation\TRENDY\result\\'
         for model in model_list:
             fdir = fdir_all + rf'{model}\\'
             temp_fdir = temp_root + rf'{model}\\'
             T.mk_dir(temp_fdir, True)
 
-
-            color_list= ['#a577ad',
-
-            '#dae67a', '#f599a1',]
+            color_list = [
+                # '#9EBD3A',
+                'lightseagreen',
+                '#a577ad',
+                '#fc945d',
+            ]
 
             my_cmap2 = T.cmap_blend(color_list, n_colors=6)
 
@@ -1942,15 +1950,16 @@ class Colormap():
 
                           '#dae67a', '#f599a1', ]
 
-            plt.figure(figsize=(1.2,1.2))
+            plt.figure(figsize=(3,3))
             plt.bar([1, 2, 3, ], percentage_list, color=color_list)
             plt.ylim(0, 50)
             plt.xticks([])
+            plt.title(model)
 
-            plt.ylabel('Area(%)')
+            plt.ylabel('Area(%)',fontsize=12)
             # plt.show()
-            outdir = result_root + rf'\FIGURE\Colormap\\'
-            plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, bbox_inches='tight')
+            outdir = result_root + rf'\FIGURE\SI\\Colormap\\'
+            plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, )
             plt.close()
 
 
@@ -3382,12 +3391,12 @@ def main():
 
     # Trends_obs_and_model().run()  ## Figure 1
     # Trends_CV_obs_and_model().run()  ## Figure 2
-    # PLOT_dataframe().run()
+    PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
     # Colormap().run()
-    Partial_correlation().run()
+    # Partial_correlation().run()
     # LAImax_LAImin_models().run()
     # PLOT_gamma().run()
     # calculate_longterm_CV().run()

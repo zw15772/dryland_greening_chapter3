@@ -2259,8 +2259,8 @@ class partial_correlation_TRENDY_obs_comparision():
         # self.max_correlation_without_sign()
         # self.max_correlation_with_sign()
 
-        # self.Plot_robinson()
-        self.statistic_contribution_area_barplot()
+        self.Plot_robinson()
+        # self.statistic_contribution_area_barplot()
         # self.statistic_contribution_area_barplot_withsign()
         pass
 
@@ -2832,10 +2832,10 @@ class Plot_Robinson:
         ]
 
         color_list = [
+           # '#9EBD3A',
+            'lightseagreen',
             '#a577ad',
-
-
-            '#dae67a', '#f599a1',
+            '#fc945d',
         ]
 
         # Blue represents high values, and red represents low values.
