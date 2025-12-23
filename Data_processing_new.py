@@ -2502,7 +2502,154 @@ class processing_composite_LAI():
 
             np.save(outf, detrend_zscore_dic)
 
+class area_weighted_average():
+    def __init__(self):
+        pass
+    def run(self):
+        # self.weighted_average_LAI_relative_change()
+        self.weighted_average_LAICV()
 
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+
+    def weighted_average_LAI_relative_change(self):  ###add weighted average LAI in dataframe
+        df =result_root+rf'\Dataframe\relative_change\\relative_change.df'
+        df = T.load_df(df)
+        df_clean = self.df_clean(df)
+        # print(len(df_clean))
+        vars_to_weight = [
+            'SNU_LAI_relative_change',
+            'LAI4g_relative_change',
+            'composite_LAI_mean_relative_change',
+            'GLOBMAP_LAI_relative_change',
+
+        ]
+
+        df['area_weight'] = np.cos(np.deg2rad(df['lat']))
+
+        df_aw_year = (
+            df
+            .groupby('year')
+            .apply(
+                lambda x: pd.Series({
+                    f'{v}_area_weighted':
+                        (x[v] * x['area_weight']).sum() / x['area_weight'].sum()
+                    for v in vars_to_weight
+                })
+            )
+            .reset_index()
+        )
+
+
+        df = df.merge(df_aw_year, on='year', how='left')
+
+
+
+        # plt.figure(figsize=(6, 4))
+        #
+        # plt.plot(
+        #     df_aw_year['year'],
+        #     df_aw_year['SNU_LAI_relative_change_area_weighted'],
+        #     color='black',
+        #     lw=2
+        # )
+        #
+        # plt.xlabel('Year')
+        # plt.ylabel('Area-weighted LAI change')
+        # plt.title('Dryland vegetation change (area-weighted)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # df[df['year'] == 1982][
+        #     ['SNU_LAI_relative_change_area_weighted',
+        #      'LAI4g_relative_change_area_weighted',
+        #      'composite_LAI_mean_relative_change_area_weighted',
+        #      'GLOBMAP_LAI_relative_change_area_weighted',
+        #
+        #      ]
+        # ].head()
+        # T.print_head_n(df)
+
+
+        outf=result_root+rf'\Dataframe\relative_change\\relative_change_area_weighted.df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+
+        pass
+
+    def weighted_average_LAICV(self):  ###add weighted average LAI in dataframe
+        df =result_root+rf'\Dataframe\CVLAI\\CVLAI.df'
+        df = T.load_df(df)
+        df_clean = self.df_clean(df)
+        # print(len(df_clean))
+        vars_to_weight = [
+            'SNU_LAI_detrend_CV',
+            'LAI4g_detrend_CV',
+            'composite_LAI_mean_detrend_CV',
+            'GLOBMAP_LAI_detrend_CV',
+
+        ]
+
+        df['area_weight'] = np.cos(np.deg2rad(df['lat']))
+
+        df_aw_year = (
+            df
+            .groupby('window')
+            .apply(
+                lambda x: pd.Series({
+                    f'{v}_area_weighted':
+                        (x[v] * x['area_weight']).sum() / x['area_weight'].sum()
+                    for v in vars_to_weight
+                })
+            )
+            .reset_index()
+        )
+
+
+        df = df.merge(df_aw_year, on='window', how='left')
+
+
+
+        # plt.figure(figsize=(6, 4))
+        #
+        # plt.plot(
+        #     df_aw_year['year'],
+        #     df_aw_year['SNU_LAI_relative_change_area_weighted'],
+        #     color='black',
+        #     lw=2
+        # )
+        #
+        # plt.xlabel('Year')
+        # plt.ylabel('Area-weighted LAI change')
+        # plt.title('Dryland vegetation change (area-weighted)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # df[df['year'] == 1982][
+        #     ['SNU_LAI_relative_change_area_weighted',
+        #      'LAI4g_relative_change_area_weighted',
+        #      'composite_LAI_mean_relative_change_area_weighted',
+        #      'GLOBMAP_LAI_relative_change_area_weighted',
+        #
+        #      ]
+        # ].head()
+        # T.print_head_n(df)
+
+
+        outf=result_root+rf'\Dataframe\CVLAI\\CVLAI_area_weighted.df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
 class processing_TRENDY():
     def __init__(self):
         pass
@@ -3787,7 +3934,83 @@ class processing_daily_rainfall():
 
         np.save(outf, result_dic)
 
+class extract_LAI_percentile():
+    def __init__(self):
+        pass
+    def run(self):
 
+
+    def moving_window_percentile_anaysis(self): ## each window calculating the average
+
+        fdir = result_root + rf'\SNU_LAI\relative_change\moving_window_extraction\\'
+        outdir = result_root + rf'SNU_LAI\relative_change\moving_window_extraction\\moving_window_extraction_max_min\\'
+        T.mk_dir(outdir, force=True)
+        percentiles = [1, 5, 10, 90, 95, 99]
+
+        # =====================
+        # loop over input files
+        # =====================
+        for f in os.listdir(fdir):
+
+            # only process detrended files
+            if 'detrend' not in f:
+                continue
+
+            print(f'Processing: {f}')
+            dic = T.load_npy(os.path.join(fdir, f))
+
+            # initialize one dict per percentile
+            trend_dic_all = {p: {} for p in percentiles}
+
+            # =====================
+            # loop over pixels
+            # =====================
+            for pix in tqdm(dic, desc='Pixels'):
+
+                time_series_all = np.array(dic[pix])
+
+                # skip invalid pixels
+                if np.isnan(np.nanmean(time_series_all)):
+                    continue
+
+                # require sufficient window length
+                if len(time_series_all) < 24:
+                    continue
+
+                # initialize lists for this pixel
+                for p in percentiles:
+                    trend_dic_all[p][pix] = []
+
+                # =====================
+                # loop over windows
+                # =====================
+                for ss in range(len(time_series_all)):
+
+                    ts = time_series_all[ss]
+
+                    # require minimum valid samples in window
+                    if np.sum(np.isfinite(ts)) < 5:
+                        continue
+
+                    # compute percentiles
+                    for p in percentiles:
+                        val = np.nanpercentile(ts, p)
+                        trend_dic_all[p][pix].append(val)
+
+            # =====================
+            # save each percentile separately
+            # =====================
+            base_name = f.split('.')[0]
+
+            for p in percentiles:
+                outf = os.path.join(outdir, f'{base_name}_p{p}.npy')
+                np.save(outf, trend_dic_all[p])
+                print(f'Saved: {outf}')
+
+
+
+
+    pass
 class extract_rainfallmin_rainfallmax():
     def __init__(self):
         pass
@@ -3886,8 +4109,9 @@ def main():
     # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    moving_window().run()
+    # moving_window().run()
     # processing_composite_LAI().run()
+    area_weighted_average().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()

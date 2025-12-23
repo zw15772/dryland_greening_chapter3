@@ -94,12 +94,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        # self.plot_CV_LAI()
+        self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
         # self.plot_LAImax_LAImin_models()
-        self.plot_rainfallmax_min()
+        # self.plot_rainfallmax_min()
        # self.statistic_trend_CV_bar3()
        #  self.statistic_CV_trend_bar()
        #  self.statistic_trend_bar()
@@ -387,10 +387,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         T.open_path_and_file(out_pdf_fdir)
 
 
+
     def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\Dataframe\\CVLAI\\CVLAI.df')
+            result_root + rf'\Dataframe\\CVLAI\\CVLAI_area_weighted.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -400,96 +401,68 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         # create color list with one green and another 14 are grey
 
-
-
-        color_list = ['black','green', 'blue',  'magenta', 'black','purple',  'purple', 'black', 'yellow', 'purple', 'pink', 'grey',
+        color_list = ['black', 'green', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
+                      'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
-        linewidth_list = [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        linewidth_list = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
+        variable_list = ['composite_LAI_mean',
+                         'LAI4g', 'SNU_LAI',
+                         'GLOBMAP_LAI', ]
+        dic_label = {'composite_LAI_mean': 'Composite LAI',
+                     'LAI4g': 'GIMMS4g',
 
-
-
-        variable_list=['composite_LAI_mean',
-                       'LAI4g','SNU_LAI',
-            'GLOBMAP_LAI',]
-        dic_label={'composite_LAI_mean':'Composite LAI',
-                   'LAI4g':'GIMMS4g',
-
-                   'GLOBMAP_LAI':'GLOBMAP',
-                   'SNU_LAI':'SNU',}
-        year_list=range(0,25)
-
+                     'GLOBMAP_LAI': 'GLOBMAP',
+                     'SNU_LAI': 'SNU', }
+        year_list = range(0, 25)
 
         result_dic = {}
-        CI_dic={}
-        std_dic={}
 
         for var in variable_list:
-
-            result_dic[var] = {}
-            CI_dic[var] = {}
-            data_dic = {}
-            CI_dic_data={}
-            std_dic_data={}
-
+            mean_dic={}
             for year in year_list:
                 df_i = df[df['window'] == year]
+                ## scheme1
+                vals = np.array(df_i[f'{var}_detrend_CV'].tolist(), dtype=float)
+                weight=np.array(df_i['area_weight'].tolist(),dtype=float)
+                weighted_mean_values = (
+                        np.nansum(vals * weight)
+                        / np.nansum(weight * np.isfinite(vals))
+                )
+                print(year,weighted_mean_values)
+                ## scheme2
+                # vals = np.array(df_i[f'{var}_detrend_CV_area_weighted'].tolist(), dtype=float)
+                # weighted_mean_values = np.nanmean(vals)
 
-                vals = df_i[f'{var}_detrend_CV'].tolist()
-                SEM=stats.sem(vals)
-                CI=stats.t.interval(0.95, len(vals)-1, loc=np.nanmean(vals), scale=SEM)
-                std=np.nanstd(vals)
-                CI_dic_data[year]=CI
-                std_dic_data[year]=std
+                mean_dic[year] = weighted_mean_values
 
-                data_dic[year] = np.nanmean(vals)
+            result_dic[var] = mean_dic
 
 
-
-
-            result_dic[var] = data_dic
-            CI_dic[var]=CI_dic_data
-            std_dic[var]=std_dic_data
-        ##dic to df
-
-        df_new = pd.DataFrame(result_dic)
+        # 转成 DataFrame
+        df_new = pd.DataFrame(result_dic).reset_index()
+        # T.print_head_n(df_new);exit()
 
         flag = 0
+
         plt.figure(figsize=(self.map_width, self.map_height))
 
         for var in variable_list:
-            if var == 'composite_LAI_mean':
-                ## plot CI bar
-                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag],
-                         )
-                ## fill std
-                # std = [std_dic[var][y] for y in year_list]
-                # plt.fill_between(year_list, df_new[var]-std, df_new[var]+std, alpha=0.3, color=color_list[flag])
+            plt.plot(
+                year_list,
+                df_new[var],
+                label=dic_label[var],
+                linewidth=linewidth_list[flag],
+                color=color_list[flag]
+            )
 
-                ## fill CI
-                # ci_low = [CI_dic[var][y][0] for y in year_list]
-                # ci_high = [CI_dic[var][y][1] for y in year_list]
-                # plt.fill_between(year_list, ci_low, ci_high, color=color_list[flag], alpha=0.3, label='95% CI')
-                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(var, f'{slope:.2f}', f'{p_value:.2f}')
 
-                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
-
-
-                ## std
-
-
-
-            else:
-                plt.plot(year_list, df_new[var], label=dic_label[var], linewidth=linewidth_list[flag], color=color_list[flag])
-
-                # std = [std_dic[var][y] for y in year_list]
-                # plt.fill_between(year_list, df_new[var] - std, df_new[var] + std, alpha=0.3, color=color_list[flag])
-                slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
-                print(var, f'{slope:.2f}',  f'{p_value:.2f}')
+            ## std
 
             flag = flag + 1
         ## if var == 'composite_LAI_CV': plot CI bar
-
 
         window_size = 15
 
@@ -507,23 +480,17 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
         plt.yticks(np.arange(5, 25, 5))
 
-
-
-
         plt.ylabel(f'CVLAI (%/yr)')
         plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
 
-
-
         plt.legend(loc='upper left')
 
-        plt.show()
+        # plt.show()
         # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\FIGURE\Figure1b\\'
+        out_pdf_fdir = result_root + rf'\FIGURE\weighted_area\\'
         T.mk_dir(out_pdf_fdir, force=True)
-        # plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
-
+        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         #
         # plt.legend()
@@ -640,7 +607,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def plot_relative_change_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\Dataframe\relative_change\\relative_change.df')
+            result_root + rf'\Dataframe\relative_change\\relative_change_area_weighted.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -671,22 +638,38 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                    'composite_LAI_mean':'Composite LAI'}
         year_list=range(1982,2021)
 
-
         result_dic = {}
+
         for var in variable_list:
-
-            result_dic[var] = {}
-            data_dic = {}
-
+            mean_dic = {}
             for year in year_list:
                 df_i = df[df['year'] == year]
+                ## scheme1
+                vals = np.array(df_i[f'{var}_relative_change'].tolist(), dtype=float)
+                weight = np.array(df_i['area_weight'].tolist(), dtype=float)
+                weighted_mean_values = (
+                        np.nansum(vals * weight)
+                        / np.nansum(weight * np.isfinite(vals))
+                )
 
-                vals = df_i[f'{var}_relative_change'].tolist()
-                data_dic[year] = np.nanmean(vals)
-            result_dic[var] = data_dic
-        ##dic to df
+                # print(var, year, weighted_mean_values)
+                ## scheme2
+                # vals = np.array(df_i[f'{var}_relative_change'].tolist(), dtype=float)
+                # weighted_mean_values = np.nanmean(vals)
 
-        df_new = pd.DataFrame(result_dic)
+                mean_dic[year] = weighted_mean_values
+
+            result_dic[var] = mean_dic
+
+
+        # 转成 DataFrame
+        df_new = pd.DataFrame(result_dic).reset_index()
+
+
+
+        # T.print_head_n(df_new);exit()
+
+
         flag=0
         plt.figure(figsize=(self.map_width, self.map_height))
 
@@ -700,10 +683,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.grid(True, axis='x')   # 只画竖线（随 x 刻度）
 
         plt.legend()
-        plt.show()
-        # out_pdf_fdir = result_root + rf'\Figure\\Figure1a\\'
-        # plt.savefig(out_pdf_fdir + 'time_series_relative_change_mean.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        # plt.show()
+        out_pdf_fdir = result_root + rf'\Figure\\weighted_area\\Figure1a\\'
+        T.mk_dir(out_pdf_fdir, force=True)
+        plt.savefig(out_pdf_fdir + 'time_series_relative_change_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
     def statistic_CV_trend_bar(self):
