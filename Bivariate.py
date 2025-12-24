@@ -1320,7 +1320,7 @@ class Figure2_LAImin_LAImax(): ## LAImin and LAImax
     def barplot_area_percentage(self):
         ## plot bivariate plot of LAImin and LAImax
 
-        dff = result_root + rf'\bivariate\Dataframe\\Dataframe.df'
+        dff = result_root + rf'\bivariate\Dataframe\\Dataframe_area_weighted.df'
         df = T.load_df(dff)
         # print(df.columns);exit()
         df = self.df_clean(df)

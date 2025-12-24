@@ -1253,9 +1253,9 @@ class build_moving_window_dataframe():
         # df=self.build_df(df)
         # self.append_value(df)
         # df=self.append_attributes(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.foo1(df)
-        # df=self.add_window_to_df(df)
+        df=self.add_window_to_df(df)
         # df=self.add_interaction_to_df(df)
         # self.rescale_to_df(df)
         # self.add_fire(df)
@@ -1412,10 +1412,14 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
 
 
-        fdir=result_root+rf'\bivariate\rainfallmin_rainfallmax\\'
+        fdir=result_root+rf'\Composite_LAI\LAImin_LAImax\\'
 
 
         for f in os.listdir(fdir):
+            if 'max' in f:
+                continue
+            if 'min' in f:
+                continue
 
 
 

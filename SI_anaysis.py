@@ -94,10 +94,11 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         self.map_height = 8.2 * centimeter_factor
         pass
     def run (self):
-        self.plot_CV_LAI()
+        # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
         # self.plot_LAImax_LAImin()
+        # self.plot_LAIpercentile()
         # self.plot_LAImax_LAImin_models()
         # self.plot_rainfallmax_min()
        # self.statistic_trend_CV_bar3()
@@ -105,7 +106,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
        #  self.statistic_trend_bar()
 
         # self.plot_CV_trend_among_models2()
-        # self.TRENDY_LAImin_LAImax_barplot() ## Figure3
+        self.TRENDY_LAImin_LAImax_barplot() ## Figure3
 
 
         pass
@@ -124,7 +125,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         return df
 
     def plot_LAImax_LAImin(self):
-        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe_area_weighted.df')
         df = self.df_clean(df)
         print(len(df))
 
@@ -143,9 +144,23 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             mean_dic, std_dic_i = {}, {}
             for year in year_list:
                 df_i = df[df['window'] == year]
-                vals = np.array(df_i[var].tolist(), dtype=float)
-                mean_dic[year] = np.nanmean(vals)
-                std_dic_i[year] = np.nanstd(vals)
+                ## scheme1
+                vals = np.array(df_i[f'{var}'].tolist(), dtype=float)
+                weight = np.array(df_i['area_weight'].tolist(), dtype=float)
+                weighted_mean_values = (
+                        np.nansum(vals * weight)
+                        / np.nansum(weight * np.isfinite(vals))
+                )
+                weighted_std_values = np.nanstd(vals*weight)
+                # print(year, weighted_mean_values)
+                ## scheme2
+                # vals = np.array(df_i[f'{var}'].tolist(), dtype=float)
+                # weighted_mean_values = np.nanmean(vals)
+
+                mean_dic[year] = weighted_mean_values
+
+
+                std_dic_i[year] =weighted_std_values
             result_dic[var] = mean_dic
             std_dic[var] = std_dic_i
 
@@ -198,30 +213,47 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.grid(alpha=0.4)
         plt.legend(loc='upper left')
         # plt.tight_layout()
-        plt.show()
+        # plt.show()
 
-        # out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
-        # T.mk_dir(out_pdf_fdir)
-        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'FIGURE\\weighted_area\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         pass
 
-    def plot_LAImax_LAImin_models(self):
-        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
+    def plot_LAIpercentile(self):
+        df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe_area_weighted.df')
         df = self.df_clean(df)
         print(len(df))
 
         variable_list = [
-                          'TRENDY_ensemble_median',
-                          'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                          'ORCHIDEE_S2_lai',
-                          'YIBs_S2_Monthly_lai']
+                         'composite_LAIp99_mean',
+            'composite_LAIp95_mean',
+            'composite_LAIp90_mean',
 
+                         'composite_LAIp10_mean',
+                         'composite_LAIp5_mean',
+            'composite_LAIp1_mean',
+                         ]
 
+        dic_label = {
+                     'composite_LAIp99_mean': 'LAIp99',
+                     'composite_LAIp1_mean': 'LAIp1',
+                     'composite_LAIp10_mean': 'LAIp10',
+                     'composite_LAIp90_mean': 'LAIp90',
+                     'composite_LAIp5_mean': 'LAIp5',
+                     'composite_LAIp95_mean': 'LAIp95',
+                     }
+
+        color_dic = {
+                     'composite_LAIp99_mean': 'green',
+                     'composite_LAIp1_mean': 'red',
+                     'composite_LAIp10_mean': 'orange',
+                     'composite_LAIp90_mean': 'blue',
+                     'composite_LAIp5_mean': 'yellow',
+                     'composite_LAIp95_mean': 'purple',
+                     }
 
         year_list = range(0, 25)
         result_dic = {}
@@ -229,46 +261,60 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
         # === 计算每个窗口的均值和标准差 ===
         for var in variable_list:
-            var_min=var+'relative_change_detrend_min'
-            var_max=var+'relative_change_detrend_max'
             mean_dic, std_dic_i = {}, {}
             for year in year_list:
                 df_i = df[df['window'] == year]
-                vals = np.array(df_i[var].tolist(), dtype=float)
-                mean_dic[year] = np.nanmean(vals)
-                std_dic_i[year] = np.nanstd(vals)
+                ## scheme1
+                vals = np.array(df_i[f'{var}'].tolist(), dtype=float)
+                weight = np.array(df_i['area_weight'].tolist(), dtype=float)
+                weighted_mean_values = (
+                        np.nansum(vals * weight)
+                        / np.nansum(weight * np.isfinite(vals))
+                )
+
+                # print(year, weighted_mean_values)
+                ## scheme2
+                # vals = np.array(df_i[f'{var}'].tolist(), dtype=float)
+                # weighted_mean_values = np.nanmean(vals)
+
+                mean_dic[year] = weighted_mean_values
+
+
             result_dic[var] = mean_dic
             std_dic[var] = std_dic_i
 
         df_mean = pd.DataFrame(result_dic)
-        df_std = pd.DataFrame(std_dic)
+
 
         # === 绘图 ===
         plt.figure(figsize=(self.map_width, self.map_height))
+        legendmap = {
+            'LAIp99': '99th',
+            'LAIp95': '95th',
+            'LAIp90': '90th',
+            'LAIp10': '10th',
+            'LAIp5': '5th',
+            'LAIp1': '1st',
+        }
 
         for var in variable_list:
-            if 'max' in var:
-
-                color = 'purple'
-            else:
-                color = 'teal'
-
+            color = color_dic[var]
 
             # 计算线和阴影区
             y = df_mean[var]
-            yerr = df_std[var]
+            # yerr = df_std[var]
             years = list(year_list)
 
             # 背景阴影 (mean ± std)
-            plt.fill_between(years,
-                             y - yerr,
-                             y + yerr,
-                             color=color,
-                             alpha=0.1)
+            # plt.fill_between(years,
+            #                  y - yerr,
+            #                  y + yerr,
+            #                  color=color,
+            #                  alpha=0.1)
 
             # 主趋势线
             plt.plot(years, y, color=color, linewidth=2.5,
-                     marker='o')
+                     label=legendmap[dic_label[var]], marker='o')
 
             # 拟合趋势线 + 注释
             slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
@@ -289,19 +335,26 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                 break
             year_range_str.append(f'{start_year}-{end_year}')
 
-        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.yticks(fontsize=12)
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right',fontsize=12)
+
+
+
         plt.ylabel('Relative change(%)', fontsize=12)
         plt.grid(alpha=0.4)
-        plt.legend(loc='upper left')
+        plt.legend(fontsize=10, loc='lower right')
         # plt.tight_layout()
-        plt.show()
+        # plt.show()
 
-        # out_pdf_fdir = result_root + rf'FIGURE\\Figure2\\'
-        # T.mk_dir(out_pdf_fdir)
-        # plt.savefig(out_pdf_fdir + 'time_series_LAImin_LAImax_mean.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'FIGURE\\weighted_area\\'
+        T.mk_dir(out_pdf_fdir)
+        plt.savefig(out_pdf_fdir + 'time_series_LAIpercentile_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         pass
+
+
+
 
     def plot_rainfallmax_min(self):
         df = T.load_df(result_root + rf'\bivariate\Dataframe\\Dataframe.df')
@@ -863,7 +916,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         mark_size_list = [200] * 1+[50] * 3 +[200] * 1+ [50] * 13
 
 
-        dff = result_root + rf'\Dataframe\\Trends_CV\\Trends_CV.df'
+        dff = result_root + rf'\Dataframe\\Trends_CV\\Trends_CV_area_weighted.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         T.print_head_n(df)
@@ -894,25 +947,42 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
             vals_trend = df[f'{variable}_relative_change_trend'].values
             vals_CV = df[f'{variable}_detrend_CV_trend'].values
-            vals_trend[vals_trend > 999] = np.nan
+            valid = (
+                    np.isfinite(vals_CV) &
+                    (vals_CV > -999) & (vals_CV < 999)
+            )
+            weight=np.array(df['area_weight'].tolist(),dtype=float)
+            weighted_mean_values_CV = (
+                    np.sum(vals_CV[valid] * weight[valid])
+                    / np.sum(weight[valid])
+            )
+            valid_trend = (
+                    np.isfinite(vals_trend) &
+                    (vals_trend > -999) & (vals_trend < 999)
+            )
 
-            vals_CV[vals_CV > 999] = np.nan
-            vals_CV[vals_CV < -999] = np.nan
-            vals_trend[vals_trend < -999] = np.nan
-            vals_trend[vals_trend > 999] = np.nan
+            weighted_mean_values_trend = (
+                    np.sum(vals_trend[valid_trend] * weight[valid_trend])
+                    / np.sum(weight[valid_trend])
+            )
 
-            # vals_CV[vals_CV_p_value > 0.05] = np.nan
-            vals_trend = vals_trend[~np.isnan(vals_trend)]
-            print(variable,np.nanmean(vals_trend))
-            # plt.hist(vals_trend,bins=100,color=color_list[0],alpha=0.5,edgecolor='k')
-            # plt.title(variable)
-            # plt.show()
-            vals_CV = vals_CV[~np.isnan(vals_CV)]
-            vals_trend_list.append(np.nanmean(vals_trend))
-            vals_CV_list.append(np.nanmean(vals_CV))
+
+            vals_trend_list.append(weighted_mean_values_trend)
+            vals_CV_list.append(weighted_mean_values_CV)
         # print(vals_trend_list)
+        # print(vals_CV_list);exit()
+        ### ranking vals_trend_list
+        vals_trend_list = np.array(vals_trend_list)
+        vals_trend_list_sort=np.sort(vals_trend_list)
 
-        print(vals_CV_list);exit()
+        print(vals_trend_list_sort)
+
+        vals_CV_list = np.array(vals_CV_list)
+        vals_CV_list_sort = np.sort(vals_CV_list)
+
+
+        print(vals_CV_list_sort)
+
 
 
 
@@ -954,10 +1024,10 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         ## save imagine
         plt.axhline(y=0.0, color='k', linestyle='--', linewidth=1)
         plt.axvline(x=0.0, color='k', linestyle='--', linewidth=1)
-        # plt.savefig(result_root + rf'\FIGURE\\Figure3\\obs_TRENDY_CV_trends_mean.pdf',  bbox_inches='tight')
+        plt.savefig(result_root + rf'\FIGURE\\weighted_area\\obs_TRENDY_CV_trends_mean.pdf',  bbox_inches='tight')
 
         #
-        plt.show()
+        # plt.show()
 
 
 
@@ -965,7 +1035,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         pass
 
     def TRENDY_LAImin_LAImax_barplot(self):
-        dff=result_root+rf'\bivariate\Dataframe\\Dataframe.df'
+        dff=result_root+rf'\bivariate\Dataframe\\Dataframe_area_weighted.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
         for column in df.columns:
@@ -983,6 +1053,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                           'YIBs_S2_Monthly_lai']
         values_max_list=[]
         values_min_list=[]
+        weight = np.array(df['area_weight'].tolist(), dtype=float)
 
         for variable in variables_list:
             if variable in ['composite_LAI_mean','LAI4g',  'GLOBMAP','SNU_LAI','TRENDY_ensemble_median']:
@@ -992,12 +1063,27 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
             else:
                 values_min=df[f'{variable}_relative_change_detrend_min_trend'].values
                 values_max=df[f'{variable}_relative_change_detrend_max_trend'].values
-            values_max_list.append(values_max)
-            values_min_list.append(values_min)
-        values_min_list=np.array(values_min_list)
-        values_max_list=np.array(values_max_list)
-        values_max_list_mean=np.nanmean(values_max_list,axis=1)
-        values_min_list_mean=np.nanmean(values_min_list,axis=1)
+
+            valid_trend_min = (
+                    np.isfinite(values_min) &
+                    (values_min > -999) & (values_min < 999)
+            )
+
+            weighted_min_values_trend = (
+                    np.sum(values_min[valid_trend_min] * weight[valid_trend_min])
+                    / np.sum(weight[valid_trend_min])
+            )
+
+            valid_trend_max = (
+                    np.isfinite(values_max) &
+                    (values_max > -999) & (values_max < 999)
+            )
+            weighted_max_values_trend = (
+                    np.sum(values_max[valid_trend_max] * weight[valid_trend_max])
+                    / np.sum(weight[valid_trend_max])
+            )
+            values_max_list.append(weighted_max_values_trend)
+            values_min_list.append(weighted_min_values_trend)
         ## add legend
 
         fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
@@ -1027,8 +1113,8 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
                           }
 
 
-        plt.bar(variables_list,values_max_list_mean,color='#96cccb',width=0.7,edgecolor='black',label='Trend in LAImax',)
-        plt.bar(variables_list,values_min_list_mean,color='#f6cae5',width=0.7,edgecolor='black',label='Trend in LAImin',)
+        plt.bar(variables_list,values_max_list,color='#96cccb',width=0.7,edgecolor='black',label='Trend in LAImax',)
+        plt.bar(variables_list,values_min_list,color='#f6cae5',width=0.7,edgecolor='black',label='Trend in LAImin',)
         plt.legend()
 
         # plt.xticks(np.arange(len(variables_list)),variables_list,rotation=45)
@@ -1041,15 +1127,15 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         ax.set_xticks(range(len(variables_list)))
         # ax.set_xticklabels(labels, rotation=90, fontsize=10, font='Arial')
         # plt.tight_layout()
-        plt.show()
-        print(values_max_list_mean)
-        print(values_min_list_mean)
+        # plt.show()
+        print(values_max_list)
+        print(values_min_list)
         print(variables_list)
-        outdir=result_root+rf'\FIGURE\\Figure3\\'
+        outdir=result_root+rf'\FIGURE\\weighted_area\\'
         T.mk_dir(outdir,force=True)
         outf=outdir+rf'barplot_mean.pdf'
-        # plt.savefig(outf,dpi=300,bbox_inches='tight')
-        # plt.savefig(outf, dpi=300, )
+        plt.savefig(outf,dpi=300,bbox_inches='tight')
+        plt.savefig(outf, dpi=300, )
 
 
 

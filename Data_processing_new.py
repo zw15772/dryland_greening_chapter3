@@ -2507,7 +2507,9 @@ class area_weighted_average():
         pass
     def run(self):
         # self.weighted_average_LAI_relative_change()
-        self.weighted_average_LAICV()
+        # self.weighted_average_LAICV()
+        # self.weighted_average_LAI_percentile()
+        self.weighted_average_LAICV_relative_change()
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -2650,6 +2652,87 @@ class area_weighted_average():
         outf=result_root+rf'\Dataframe\CVLAI\\CVLAI_area_weighted.df'
         T.save_df(df, outf)
         T.df_to_excel(df, outf)
+
+
+    def weighted_average_LAI_percentile(self):  ###add weighted average LAI in dataframe
+        df =result_root+rf'\bivariate\Dataframe\\Dataframe.df'
+        df = T.load_df(df)
+        df_clean = self.df_clean(df)
+        # print(len(df_clean))
+
+        df['area_weight'] = np.cos(np.deg2rad(df['lat']))
+
+
+        # plt.figure(figsize=(6, 4))
+        #
+        # plt.plot(
+        #     df_aw_year['year'],
+        #     df_aw_year['SNU_LAI_relative_change_area_weighted'],
+        #     color='black',
+        #     lw=2
+        # )
+        #
+        # plt.xlabel('Year')
+        # plt.ylabel('Area-weighted LAI change')
+        # plt.title('Dryland vegetation change (area-weighted)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # df[df['year'] == 1982][
+        #     ['SNU_LAI_relative_change_area_weighted',
+        #      'LAI4g_relative_change_area_weighted',
+        #      'composite_LAI_mean_relative_change_area_weighted',
+        #      'GLOBMAP_LAI_relative_change_area_weighted',
+        #
+        #      ]
+        # ].head()
+        # T.print_head_n(df)
+
+
+        outf=result_root+rf'\bivariate\Dataframe\\Dataframe_area_weighted.df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+
+
+    def weighted_average_LAICV_relative_change(self):  ###add weighted average LAI in dataframe
+        df =result_root+rf'\Dataframe\Trends_CV\\Trends_CV.df'
+        df = T.load_df(df)
+        df_clean = self.df_clean(df)
+        # print(len(df_clean))
+
+        df['area_weight'] = np.cos(np.deg2rad(df['lat']))
+
+        # plt.figure(figsize=(6, 4))
+        #
+        # plt.plot(
+        #     df_aw_year['year'],
+        #     df_aw_year['SNU_LAI_relative_change_area_weighted'],
+        #     color='black',
+        #     lw=2
+        # )
+        #
+        # plt.xlabel('Year')
+        # plt.ylabel('Area-weighted LAI change')
+        # plt.title('Dryland vegetation change (area-weighted)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # df[df['year'] == 1982][
+        #     ['SNU_LAI_relative_change_area_weighted',
+        #      'LAI4g_relative_change_area_weighted',
+        #      'composite_LAI_mean_relative_change_area_weighted',
+        #      'GLOBMAP_LAI_relative_change_area_weighted',
+        #
+        #      ]
+        # ].head()
+        # T.print_head_n(df)
+
+
+        outf=result_root+rf'Dataframe\Trends_CV\\Trends_CV_area_weighted.df'
+        T.save_df(df, outf)
+        T.df_to_excel(df, outf)
+
+
 class processing_TRENDY():
     def __init__(self):
         pass
@@ -3938,12 +4021,14 @@ class extract_LAI_percentile():
     def __init__(self):
         pass
     def run(self):
+        # self.moving_window_percentile_anaysis()
+        self.average_LAIpercentile()
 
 
     def moving_window_percentile_anaysis(self): ## each window calculating the average
 
-        fdir = result_root + rf'\SNU_LAI\relative_change\moving_window_extraction\\'
-        outdir = result_root + rf'SNU_LAI\relative_change\moving_window_extraction\\moving_window_extraction_max_min\\'
+        fdir = result_root + rf'\GLOBMAP\relative_change\moving_window_extraction\\'
+        outdir = result_root + rf'GLOBMAP\relative_change\\moving_window_extraction_max_min\\'
         T.mk_dir(outdir, force=True)
         percentiles = [1, 5, 10, 90, 95, 99]
 
@@ -4006,6 +4091,78 @@ class extract_LAI_percentile():
                 outf = os.path.join(outdir, f'{base_name}_p{p}.npy')
                 np.save(outf, trend_dic_all[p])
                 print(f'Saved: {outf}')
+
+    def average_LAIpercentile(self):
+
+
+        fdir_1 = result_root + rf'\LAI4g\relative_change\moving_window_extraction_max_min\\'
+        fdir_2 = result_root + rf'GLOBMAP\relative_change\moving_window_extraction_max_min\\'
+        fdir_3 = result_root + rf'SNU_LAI\relative_change\moving_window_extraction_max_min\\'
+        percentiles = [1, 5, 10, 90, 95, 99]
+        for p in percentiles:
+            print(f'Processing percentile p{p}')
+
+            f_1 =fdir_1+f'LAI4g_relative_change_detrend_p{p}.npy'
+            f_2 = fdir_2 + f'GLOBMAP_LAI_relative_change_detrend_p{p}.npy'
+            f_3 = fdir_3 + f'SNU_LAI_relative_change_detrend_p{p}.npy'
+
+            dic1 = np.load(f_1, allow_pickle=True).item()
+            dic2 = np.load(f_2, allow_pickle=True).item()
+            dic3 = np.load(f_3, allow_pickle=True).item()
+
+            average_dic = {}
+
+            for pix in tqdm(dic1):
+
+                if pix not in dic2 or pix not in dic3:
+                    continue
+
+                v1 = np.array(dic1[pix])
+                v2 = np.array(dic2[pix])
+                v3 = np.array(dic3[pix])
+
+                if len(v1) < 24 or len(v2) < 24 or len(v3) < 24:
+                    continue
+
+                if not (len(v1) == len(v2) == len(v3)):
+                    continue
+
+                average_val = np.nanmean([v1, v2, v3], axis=0)
+
+                if np.nanmean(average_val) > 999 or np.nanmean(average_val) < -999:
+                    continue
+
+                average_dic[pix] = average_val
+
+                # plt.plot(v1,color='blue')
+                # plt.plot(v2,color='green')
+                # plt.plot(v3,color='orange')
+                # plt.plot(average_val,color='red')
+                # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+                # print(len(average_val))
+                # plt.show()
+
+
+            out_f = result_root + rf'\Composite_LAI\LAImin_LAImax\\composite_LAIp{p}_mean.npy'
+            T.mk_dir(os.path.dirname(out_f), force=True)
+            np.save(out_f, average_dic)
+
+
+        # average_dic[pix] = len(average_val)
+            #
+            # plt.plot(value1,color='blue')
+            # plt.plot(value2,color='green')
+            # plt.plot(value3,color='orange')
+            # plt.plot(average_val,color='red')
+            # plt.legend(['GlOBMAP','SNU','LAI4g','average'])
+            # plt.show()
+        # array=DIC_and_TIF().pix_dic_to_spatial_arr(average_dic,)
+        # plt.imshow(array,vmin=24,vmax=25)
+        # plt.colorbar()
+        # plt.show()
+
+
+
 
 
 
@@ -4079,7 +4236,7 @@ class extract_rainfallmin_rainfallmax():
         np.save(outmaxf, rainfall_max_trend_dic)
         np.save(outminf, rainfall_min_trend_dic)
 
-
+        pass
 
 
 def check_data():
@@ -4116,6 +4273,7 @@ def main():
     # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
+    # extract_LAI_percentile().run()
     # extract_rainfallmin_rainfallmax().run()
     # check_data()
     pass
