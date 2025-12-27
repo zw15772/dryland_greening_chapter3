@@ -534,6 +534,7 @@ class Data_processing:
 
         # self.tif_to_dic()
         # self.extract_phenology_monthly_variables()
+        self.extract_annual_growing_season_fire_mean()
         # self.extract_phenology_fire_mean()
         # self.weighted_fire()
         # self.interpolation()
@@ -889,139 +890,30 @@ class Data_processing:
                     temp_dic = {}
             np.save(outdir + '\\per_pix_dic_%03d' % 0, temp_dic)
 
-    def extract_phenology_year_fpar(self):
-        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\dic\\'
-
-        outdir= rf'D:\Project3\Data\glass_fvc_avhrr\\\phenology_year_extraction_dryland\\'
-
-        Tools().mk_dir(outdir, force=True)
-        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
-        phenology_dic = T.load_npy(f_phenology)
-        for f in T.listdir(fdir):
-
-            outf = outdir + f
-            #
-            # if os.path.isfile(outf):
-            #     continue
-            # print(outf)
-            spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
-            dic_DOY={15: 0,
-                     30: 1,
-                     45: 2,
-                     60: 3,
-                     75: 4,
-                     90: 5,
-                     105: 6,
-                     120: 7,
-                     135: 8,
-                     150: 9,
-                     165:10,
-                     180:11,
-                     195:12,
-                     210:13,
-                     225:14,
-                     240:15,
-                     255:16,
-                     270:17,
-                     285:18,
-                     300:19,
-                     315:20,
-                     330:21,
-                     345:22,
-                     360:23,}
-
-
-            result_dic = {}
-            for pix in tqdm(spatial_dict):
-                if not pix in phenology_dic:
-                    continue
-
-                r, c = pix
-
-                SeasType=phenology_dic[pix]['SeasType']
-                if SeasType==2:
-
-                    SOS=phenology_dic[pix]['Onsets']
-                    try:
-                        SOS=float(SOS)
-
-                    except:
-                        continue
-
-                    SOS=int(SOS)
-                    SOS_biweekly=dic_DOY[SOS]
-
-                    EOS=phenology_dic[pix]['Offsets']
-                    EOS=int(EOS)
-                    EOS_biweekly=dic_DOY[EOS]
-
-
-                    time_series = spatial_dict[pix]
-
-                    time_series = np.array(time_series)
-                    time_series_flatten = time_series.flatten()
-                    time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(24 - EOS_biweekly - 1)]
-                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 24)
-                    non_growing_season_list = []
-                    growing_season_list = []
-                    for vals in time_series_flatten_extraction_reshape:
-                        if T.is_all_nan(vals):
-                            continue
-                        ## non-growing season +growing season is 365
-
-                        non_growing_season = vals[0:SOS_biweekly]
-                        growing_season = vals[SOS_biweekly:]
-                        # print(growing_season)
-                        non_growing_season_list.append(non_growing_season)
-                        growing_season_list.append(growing_season)
-                    # print(len(growing_season_list))
-                    non_growing_season_list = np.array(non_growing_season_list)
-                    growing_season_list = np.array(growing_season_list)
-
-
-                elif SeasType==3:
-                    # SeasClass=phenology_dic[pix]['SeasClss']
-                    # ## whole year is growing season
-                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
-                    # print(lat,lon)
-                    # print(SeasType)
-                    # print(SeasClass)
-                    time_series = spatial_dict[pix]
-                    time_series = np.array(time_series)
-                    time_series_flatten = time_series.flatten()
-                    time_series_flatten_extraction = time_series_flatten[24:]
-                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 24)
-                    non_growing_season_list = []
-                    growing_season_list = time_series_flatten_extraction_reshape
-
-                else:
-                    SeasClss=phenology_dic[pix]['SeasClss']
-                    print(SeasType,SeasClss)
-                    continue
-
-                result_dic[pix]={'SeasType':SeasType,
-                    'non_growing_season':non_growing_season_list,
-                              'growing_season':growing_season_list,
-                              'ecosystem_year':time_series_flatten_extraction_reshape}
-
-            np.save(outf, result_dic)
-
     def extract_phenology_monthly_variables(self):
-        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\dic\\'
+        fdir = rf'D:\Project3\Data\Fire\dic\\'
 
-        outdir = rf'D:\Project3\Data\glass_fvc_avhrr\\\phenology_year_extraction_dryland\\'
+        outdir = rf'D:\Project3\Data\Fire\\extract_phenology_monthly\\'
 
         Tools().mk_dir(outdir, force=True)
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         new_spatial_dic={}
         # for pix in phenology_dic:
+        #     # print(phenology_dic[pix]);exit()
         #     val=phenology_dic[pix]['SeasType']
+        #     try:
+        #         val=float(val)
+        #     except:
+        #         continue
+        #
         #     new_spatial_dic[pix]=val
         # spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
         # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
         # plt.show()
         # exit()
+        spatial_dict_gs_count = {}
+
         for f in T.listdir(fdir):
 
             outf = outdir + f
@@ -1030,36 +922,39 @@ class Data_processing:
             #     continue
             # print(outf)
             spatial_dict = dict(np.load(fdir + f, allow_pickle=True, encoding='latin1').item())
-            dic_DOY={15: 0,
-                     30: 0,
-                     45: 1,
-                     60: 1,
-                     75: 2,
-                     90: 2,
-                     105: 3,
-                     120: 3,
-                     135: 4,
-                     150: 4,
-                     165: 5,
-                     180: 5,
-                     195: 6,
-                     210: 6,
-                     225: 7,
-                     240: 7,
-                     255: 8,
-                     270: 8,
-                     285: 9,
-                     300: 9,
-                     315: 10,
-                     330: 10,
-                     345: 11,
-                     360: 11,}
+            dic_DOY={15: 1,
+                     30: 1,
+                     45: 2,
+                     60: 2,
+                     75: 3,
+                     90: 3,
+                     105: 4,
+                     120: 4,
+                     135: 5,
+                     150: 5,
+                     165: 6,
+                     180: 6,
+                     195: 7,
+                     210: 7,
+                     225: 8,
+                     240: 8,
+                     255: 9,
+                     270: 9,
+                     285: 10,
+                     300: 10,
+                     315: 11,
+                     330: 11,
+                     345: 12,
+                     360: 12,
+                   }
 
 
             result_dic = {}
+
             for pix in tqdm(spatial_dict):
                 if not pix in phenology_dic:
                     continue
+                # print(pix)
 
                 r, c = pix
 
@@ -1074,71 +969,67 @@ class Data_processing:
                         continue
 
                     SOS=int(SOS)
-                    SOS_biweekly=dic_DOY[SOS]
+                    SOS_monthly=dic_DOY[SOS]
 
                     EOS=phenology_dic[pix]['Offsets']
                     EOS=int(EOS)
-                    EOS_biweekly=dic_DOY[EOS]
-
+                    EOS_monthly=dic_DOY[EOS]
+                    # print(SOS_monthly,EOS_monthly)
+                    # print(SOS,EOS)
 
                     time_series = spatial_dict[pix]
 
-
                     time_series = np.array(time_series)
-                    time_series_flatten = time_series.flatten()
-                    time_series_flatten_extraction = time_series_flatten[(EOS_biweekly + 1):-(12 - EOS_biweekly - 1)]
-                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
-                    non_growing_season_list = []
-                    growing_season_list = []
-                    for vals in time_series_flatten_extraction_reshape:
-                        if T.is_all_nan(vals):
-                            continue
-                        ## non-growing season +growing season is 365
+                    if SOS_monthly>EOS_monthly:  ## south hemisphere
+                        time_series_flatten=time_series.flatten()
+                        time_series_reshape=time_series_flatten.reshape(-1,12)
+                        time_series_dict={}
+                        for y in range(len(time_series_reshape)):
+                            if y+1==len(time_series_reshape):
+                                break
 
-                        non_growing_season = vals[0:SOS_biweekly]
-                        growing_season = vals[SOS_biweekly:]
-                        # print(growing_season)
-                        non_growing_season_list.append(non_growing_season)
-                        growing_season_list.append(growing_season)
-                    # print(len(growing_season_list))
-                    non_growing_season_list = np.array(non_growing_season_list)
-                    growing_season_list = np.array(growing_season_list)
+                            time_series_dict[y]=np.concatenate((time_series_reshape[y][SOS_monthly-1:],time_series_reshape[y+1][:EOS_monthly]))
 
+                    else:
+                        time_series_flatten = time_series.flatten()
+                        time_series_reshape = time_series_flatten.reshape(-1, 12)
+                        time_series_dict = {}
+                        for y in range(len(time_series_reshape)):
+                            time_series_dict[y] = time_series_reshape[y][SOS_monthly - 1:EOS_monthly]
+                    time_series_gs = []
+                    for y in range(len(time_series_dict)):
+                        time_series_gs.append(time_series_dict[y])
+                    time_series_gs = np.array(time_series_gs)
 
                 elif SeasType==3:
-                    # SeasClass=phenology_dic[pix]['SeasClss']
-                    # ## whole year is growing season
-                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
-                    # print(lat,lon)
-                    # print(SeasType)
-                    # print(SeasClass)
                     time_series = spatial_dict[pix]
                     time_series = np.array(time_series)
-                    time_series_flatten = time_series.flatten()
-                    time_series_flatten_extraction = time_series_flatten[12:]
-                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 12)
-                    non_growing_season_list = []
-                    growing_season_list = time_series_flatten_extraction_reshape
+                    time_series_gs = np.reshape(time_series, (-1, 12))
 
                 else:
                     SeasClss=phenology_dic[pix]['SeasClss']
                     print(SeasType,SeasClss)
                     continue
-
-                result_dic[pix]={'SeasType':SeasType,
-                    'non_growing_season':non_growing_season_list,
-                              'growing_season':growing_season_list,
-                              'ecosystem_year':time_series_flatten_extraction_reshape}
-
+                spatial_dict_gs_count[pix] = time_series_gs.shape[1]
+                result_dic[pix] = time_series_gs
+        # print(spatial_dict_gs_count)
+        # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dict_gs_count)
+        # # arr[arr<6] = np.nan
+        # plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=12)
+        # plt.colorbar()
+        # plt.show()
             np.save(outf, result_dic)
 
 
 
 
-    def extract_phenology_fire_mean(self):  ## extract LAI average
-        fdir = rf'D:\Project3\Data\glass_fvc_avhrr\phenology_year_extraction_dryland\\'
 
-        outdir_CV = result_root+rf'\3mm\extract_fpar_ecosystem_year\\'
+    def extract_annual_growing_season_fire_mean(self):  ## extract LAI average
+        fdir =rf'D:\Project3\Data\Fire\extract_phenology_monthly\\'
+
+        outdir_CV = result_root +rf'\Fire\\extract_annual_growing_season_LAI_mean\\'
+
+        # print(outdir_CV);exit()
 
         T.mk_dir(outdir_CV, force=True)
 
@@ -1151,44 +1042,38 @@ class Data_processing:
 
             ### annual year
 
-            vals = spatial_dic[pix]['ecosystem_year']
-            vals_growing_season = spatial_dic[pix]['growing_season']
-            vals_non_growing_season = spatial_dic[pix]['non_growing_season']
+            vals_growing_season = spatial_dic[pix]
+            print(vals_growing_season.shape[1])
+            # plt.imshow(vals_growing_season)
+            # plt.colorbar()
+            # plt.show()
+            growing_season_mean_list=[]
 
-            ecosystem_mean_list = []
-            growing_season_mean_list = []
-            non_growing_season_mean_list = []
 
-            for val in vals:
-                if T.is_all_nan(val):
-                    continue
-                val = np.array(val)
-                sum_annaul = np.nanmean(val)
-                ecosystem_mean_list.append(sum_annaul)
 
             for val in vals_growing_season:
                 if T.is_all_nan(val):
                     continue
                 val = np.array(val)
 
-                sum_growing_season = np.nanmean(val)
+                # sum_growing_season = np.nanmean(val)
+                sum_growing_season = np.nansum(val)
+
                 growing_season_mean_list.append(sum_growing_season)
 
-            for val in vals_non_growing_season:
-                if T.is_all_nan(val):
-                    continue
-                val = np.array(val)
 
-                sum_non_growing_season = np.nanmean(val)
-                non_growing_season_mean_list.append(sum_non_growing_season)
 
-            result_dic[pix] = {'ecosystem_year': ecosystem_mean_list,
-                               'growing_season': growing_season_mean_list,
-                               'non_growing_season': non_growing_season_mean_list}
+            result_dic[pix] = {
+                             'growing_season':growing_season_mean_list,
+                             }
 
-        outf = outdir_CV + 'FVC.npy'
+        outf = outdir_CV + 'extract_annual_growing_season_fire_sum.npy'
 
         np.save(outf, result_dic)
+
+
+
+
 
     def weighted_fire(self):
         ## fire should be weighted because each pixel has different area
@@ -1774,11 +1659,12 @@ class Fire_percentage():
     def __init__(self):
         pass
     def run(self):
-        self.calculating_percentage()
+        # self.calculating_percentage()
+        self.statistics()
         pass
     def calculating_percentage(self):
 
-        dff=result_root+rf'3mm\Multiregression\Multiregression_result_residual\OBS_fire_zscore\Dataframe\\Dataframe.df'
+        dff=result_root+rf'Nov\Dataframe\Fire\\Fire.df'
         df=T.load_df(dff)
         df=self.df_clean(df)
         for col in df.columns:
@@ -1794,7 +1680,7 @@ class Fire_percentage():
             # 计算该像素的实际面积（单位：km²）
             area_km2 =area_dict[pix]/1000000
             # print(area_km2);exit()
-            fire_area = row['Burn_area_mean']
+            fire_area = row['extract_annual_growing_season_fire_mean']
 
             ratio = fire_area / area_km2 if area_km2 > 0 else np.nan
             ratio_dict[pix] = ratio*100
@@ -1802,7 +1688,7 @@ class Fire_percentage():
         plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=0,vmax=30)
         # plt.colorbar()
         # plt.show()
-        DIC_and_TIF().arr_to_tif(arr, result_root+rf'3mm\Fire\moving_window_extraction\\Fire_percentage_annual_sum.tif')
+        DIC_and_TIF().arr_to_tif(arr, result_root+rf'Nov\Fire\\Fire_percentage_annual_mean.tif')
 
 
 
@@ -1810,20 +1696,70 @@ class Fire_percentage():
 
         pass
 
+    def statistics(self):
+        dff = result_root + rf'Nov\Dataframe\Fire\\Fire.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df.dropna(subset=['Fire_percentage_annual_sum_percent'],inplace=True)
+        ## calculate extract_annual_growing_season_fire_mean
+        vals = df['Fire_percentage_annual_sum_percent'].dropna().values
+
+        # 定义 bins（有物理意义）
+        bins = np.linspace(0, 100, 51)  # 每 2%
+
+        counts, bin_edges = np.histogram(vals, bins=bins)
+
+        # 转成百分比
+        percentages = counts / counts.sum() * 100
+
+        plt.figure(figsize=(6, 4))
+
+        plt.bar(
+            bin_edges[:-1],
+            percentages,
+            width=np.diff(bin_edges),
+            align='edge',
+            color='#4C72B0',
+            edgecolor='black',
+            linewidth=0.6
+        )
+
+        plt.xlabel('Annual burned area fraction per pixel (%)', fontsize=12)
+        plt.ylabel('Percentage of pixels', fontsize=12)
+        plt.xlim(0, 20)
+
+
+
+        plt.tight_layout()
+        # plt.show()
+        plt.savefig(result_root + rf'Nov\Fire\\Fire_percentage_annual_sum_percent.pdf')
+        plt.close()
+
+
+
+        df_extract_annual_growing_season_fire_mean = (
+            df[df['Fire_percentage_annual_sum_percent'] <=1]
+        )
+
+        percentage=len(df_extract_annual_growing_season_fire_mean)/len(df)*100
+        print(percentage)
+
+
+
     def df_clean(self, df):
-        T.print_head_n(df)
-        # df = df.dropna(subset=[self.y_variable])
-        # T.print_head_n(df)
-        # exit()
-        df = df[df['row'] > 60]
-        df = df[df['Aridity'] < 0.65]
-        df = df[df['LC_max'] < 10]
-        df = df[df['MODIS_LUCC'] != 12]
-        df = df[df['composite_LAI_detrend_CV_zscore_trend'] > 0]
+            T.print_head_n(df)
+            # df = df.dropna(subset=[self.y_variable])
+            # T.print_head_n(df)
+            # exit()
+            df = df[df['row'] > 60]
+            df = df[df['Aridity'] < 0.65]
+            df = df[df['LC_max'] < 10]
+            df = df[df['MODIS_LUCC'] != 12]
+            # df = df[df['composite_LAI_detrend_CV_zscore_trend'] > 0]
 
-        df = df[df['landcover_classfication'] != 'Cropland']
+            df = df[df['landcover_classfication'] != 'Cropland']
 
-        return df
+            return df
 
 
 

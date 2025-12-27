@@ -105,8 +105,8 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
        #  self.statistic_CV_trend_bar()
        #  self.statistic_trend_bar()
 
-        # self.plot_CV_trend_among_models2()
-        self.TRENDY_LAImin_LAImax_barplot() ## Figure3
+        self.plot_CV_trend_among_models2()
+        # self.TRENDY_LAImin_LAImax_barplot() ## Figure3
 
 
         pass
@@ -981,8 +981,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         vals_CV_list_sort = np.sort(vals_CV_list)
 
 
-        print(vals_CV_list_sort)
-
+        print(vals_CV_list_sort);exit()
 
 
 
@@ -1479,12 +1478,18 @@ class Plot_Robinson_png:
         # ]
         ## CV list
 
-        color_list = [
+        # color_list = [
+        #     '#008837',
+        #     '#a6dba0',
+        #     '#f7f7f7',
+        #     '#c2a5cf',
+        #     '#7b3294',
+        # ]
+
+        seasonal_type_list = [
             '#008837',
             '#a6dba0',
-            '#f7f7f7',
-            '#c2a5cf',
-            '#7b3294',
+
         ]
         # std_list=[ '#e66101',
         #            '#fdb863',
@@ -1498,7 +1503,7 @@ class Plot_Robinson_png:
             # plt.figure(figsize=(10, 10))
             ax = plt.subplot(1, 1, 1)
         if cmap is None:
-            cmap = Tools().cmap_blend(color_list)
+            cmap = Tools().cmap_blend(seasonal_type_list)
         elif type(cmap) == str:
             cmap = plt.get_cmap(cmap)
         arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
@@ -3181,6 +3186,92 @@ class LAImax_LAImin_models():
 
             plt.show()
 
+    def barplot_area_percentage_percentile(self):
+        ## plot bivariate plot of LAImin and LAImax
+
+        dff = result_root + rf'\bivariate\Dataframe\\Dataframe.df'
+        df = T.load_df(dff)
+        # print(df.columns);exit()
+        df = self.df_clean(df)
+        df_unique = df.groupby(['pix', ], as_index=False).mean(numeric_only=True)
+
+        model_list = [
+
+
+            'composite_LAIp99_mean',
+            'composite_LAIp95_mean',
+            'composite_LAIp90_mean',
+
+            'composite_LAIp10_mean',
+            'composite_LAIp5_mean',
+            'composite_LAIp1_mean',
+
+         ]
+
+
+
+        for model in model_list:
+
+            # s_min = df_unique[f'{model}_min_trend']
+            # s_max = df_unique[f'{model}_max_trend']
+            s_min = df_unique[f'{model}_relative_change_detrend_min_trend']
+            s_max = df_unique[f'{model}_relative_change_detrend_max_trend']
+
+            s_min = s_min.where(s_min.between(-99, 99))
+            s_max = s_max.where(s_max.between(-99, 99))
+
+            # 2) 构造四象限分类（++、+-、-+、--），其余为 NaN
+            conditions = [
+                (s_max > 0) & (s_min > 0),
+                (s_max > 0) & (s_min < 0),
+                (s_max < 0) & (s_min > 0),
+                (s_max < 0) & (s_min < 0),
+            ]
+            choices = ['both positive (++): LAImax↑, LAImin↑ ',
+                       'positive & negative (+-): LAImax↑, LAImin↓ ',
+                       'negative & positive (-+): LAImax↓, LAImin↑ ',
+                       'both negative (--): LAImin↓ LAImax↓']
+
+            df_unique['class'] = np.select(conditions, choices, default='NaN')
+
+            # 3) 计算各类百分比（排除 NaN），并固定显示顺序
+            order = choices  # 固定顺序与上面一致
+            counts = pd.value_counts(pd.Categorical(df_unique['class'], categories=order), dropna=True)
+            total = counts.sum() if counts.sum() > 0 else 1
+            perc = (counts / total * 100).reindex(order).fillna(0)
+            print(model, perc)
+
+            # 4) 画图
+            fig, ax = plt.subplots(figsize=(3, 3))
+            bars = ax.bar(range(len(order)), perc.values, color=['#70C4B5', '#C15C9C', '#00006E', '#ED7D31', ],
+                          edgecolor='black', linewidth=0.8, width=0.7)
+
+            # 百分比标注
+            # for i, b in enumerate(bars):
+            #     val = perc.values[i]
+            #     if val > 0:    #         ax.text(b.get_x() + b.get_width() / 2, b.get_height() * 1.01,
+            #                 f'{val:.1f}%', ha='center', va='bottom', fontsize=10)
+
+            # ax.set_xticks(range(len(order)))
+            # ax.set_xticklabels(order, rotation=20, ha='right', fontsize=10)
+            ax.set_ylabel('Area (%)', fontsize=12)
+            ax.set_ylim(0, 60)  # 设置 y 轴范围为 0 到 60
+            ax.set_yticks(range(0, 61, 10))  # 设置 y 轴刻度为每 10 一个刻度
+            for label in ax.get_yticklabels():
+                label.set_fontsize(12)
+            ax.set_xticks([])
+            ax.set_title(f'{model}', fontsize=12)
+
+            # 留一点顶部空间
+            ax.axhline(0, color='grey', lw=1)
+            outdir = result_root + rf'\FIGURE\Figure2\\'
+            T.mk_dir(outdir, force=True)
+
+            # plt.savefig(outdir + f'barplot_insert_LAI_{model}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
+
+            plt.show()
+
     def wkt_robinson(self):
         wkt='''PROJCRS["World_Robinson",
     BASEGEOGCRS["WGS 84",
@@ -3351,6 +3442,139 @@ class PLOT_gamma():
 
 
 
+class PLOT_seasonal_type():
+
+    def run(self):
+        self.seasonal_type()
+        pass
+
+    def seasonal_type(self):
+        outdir = result_root + rf'\FIGURE\SI\\seasonal_type\\'
+        T.mk_dir(outdir, True)
+        temp_root = result_root + rf'relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+
+
+        fdir_all = result_root + rf'\Seasonal_type\\'
+        for f in os.listdir(fdir_all):
+            if not f.endswith('.tif'):
+                continue
+            fpath=fdir_all+f
+
+
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot_Robinson_png().plot_Robinson(
+
+
+                fpath, ax=ax,  vmin=2, vmax=3,is_discrete=True, colormap_n=3)
+
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+            #
+            # # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # plot colorbar
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Partial correlation', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + f.split('.')[0] + '.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
+class PLOT_Fire():
+
+    def run(self):
+        self.fire()
+        pass
+
+    def fire(self):
+        outdir = result_root + rf'\FIGURE\SI\\Fire\\'
+        T.mk_dir(outdir, True)
+        temp_root = result_root + rf'relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
+
+
+        fdir_all = result_root + rf'\Fire\\'
+        for f in os.listdir(fdir_all):
+            if not f.endswith('.tif'):
+                continue
+            fpath=fdir_all+f
+            my_cmap2 = 'Spectral_r'
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot_Robinson_png().plot_Robinson(
+
+
+                fpath, ax=ax, cmap=my_cmap2, vmin=0, vmax=10,is_discrete=False, colormap_n=7)
+
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+            #
+            # # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # plot colorbar
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Partial correlation', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + f.split('.')[0] + '.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
+
+
+
+
 
 
 
@@ -3461,7 +3685,7 @@ def main():
 
     # Trends_obs_and_model().run()  ## Figure 1
     # Trends_CV_obs_and_model().run()  ## Figure 2
-    PLOT_dataframe().run()
+    # PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
@@ -3475,6 +3699,8 @@ def main():
     # SHAP_CO2_interaction().run()
     # Bivariate_analysis().run()
     # Trend_CV().run()
+    # PLOT_seasonal_type().run()
+    PLOT_Fire().run()
 
 
     pass

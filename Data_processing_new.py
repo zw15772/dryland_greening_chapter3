@@ -92,11 +92,11 @@ class processing_GLOBMAP():
         pass
     def run (self):
         # self.extract_dryland()
-        # self.extract_phenology_monthly_variables()
+        self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
         # self.trend_analysis()
-        self.detrend()
+        # self.detrend()
         # self.deseanalized_detrend()
         pass
 
@@ -111,7 +111,8 @@ class processing_GLOBMAP():
         phenology_dic = T.load_npy(f_phenology)
         new_spatial_dic={}
         for pix in phenology_dic:
-            val=phenology_dic[pix]['Offsets']
+            # print(phenology_dic[pix]);exit()
+            val=phenology_dic[pix]['SeasType']
             try:
                 val=float(val)
             except:
@@ -119,9 +120,9 @@ class processing_GLOBMAP():
 
             new_spatial_dic[pix]=val
         spatial_array=DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
-        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
-        # plt.show()
-        # exit()
+        plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        plt.show()
+        exit()
         spatial_dict_gs_count = {}
 
         for f in T.listdir(fdir):
@@ -4260,6 +4261,53 @@ def check_data():
 
     pass
 
+class statistic_seasonal_type():
+    def __init__(self):
+        pass
+
+    def run(self):
+        self.seasonal_type()
+        pass
+
+    def seasonal_type(self):
+        f = result_root + rf'Dataframe\seasonal_type\seasonal_type.df'
+        df = T.load_df(f)
+        df = self.df_clean(df)
+        df.dropna(subset=['SeasType'])
+
+        spatial_dic=T.df_to_spatial_dic(df,'SeasType')
+        spatial_array = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+        DIC_and_TIF().arr_to_tif(spatial_array, result_root + rf'\Dataframe\seasonal_type\seasonal_type.tif')
+
+        plt.imshow(spatial_array, interpolation='nearest', cmap='jet')
+        plt.show()
+        exit()
+
+        count = df['SeasType'].value_counts()
+        percentage = count / count.sum() * 100
+
+        stat_df = pd.DataFrame({
+            'count': count,
+            'percentage (%)': percentage
+        })
+
+        print(stat_df)
+
+        pass
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
 
 
 def main():
@@ -4268,13 +4316,14 @@ def main():
     # processing_SNU_LAI().run()
     # moving_window().run()
     # processing_composite_LAI().run()
-    area_weighted_average().run()
+    # area_weighted_average().run()
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
     # processing_daily_rainfall().run()
     # extract_LAI_percentile().run()
     # extract_rainfallmin_rainfallmax().run()
+    statistic_seasonal_type().run()
     # check_data()
     pass
 

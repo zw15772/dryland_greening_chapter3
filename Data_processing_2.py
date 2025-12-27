@@ -1762,10 +1762,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Dataframe\Trends_CV\\')
+                result_root +  rf'\Dataframe\Fire\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Trends_CV.df'
+        self.dff = self.this_class_arr + rf'Fire.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1794,6 +1794,7 @@ class build_dataframe():
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
+        # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
 
         # df=self.add_soil_to_df(df)
@@ -1810,7 +1811,7 @@ class build_dataframe():
         # df=self.add_maxmium_LC_change(df)
         # df=self.add_row(df)
         # # # # # # # # # # # #
-        # df=self.add_lat_lon_to_df(df)
+        df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -2644,8 +2645,40 @@ class build_dataframe():
 
         return df
 
+    def add_seasonality_to_df(self, df):
+        f = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+
+
+        val_dic = T.load_npy(f)
+
+
+
+        f_name ='SeasType'
+        print(f_name)
+
+        val_list = []
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            pix = row['pix']
+            if not pix in val_dic:
+                val_list.append(np.nan)
+                continue
+            val = val_dic[pix]['SeasType']
+            if val < -9999:
+                val_list.append(np.nan)
+                continue
+            if val > 9999:
+                val_list.append(np.nan)
+                continue
+            val_list.append(val)
+
+
+        df[f'{f_name}'] = val_list
+
+
+        return df
+
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\Composite_LAI\CV\trend_analysis\\'
+        fdir = result_root + rf'\Fire\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2702,39 +2735,45 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}'] = val_list
+            df[f'{f_name}_percent'] = val_list
 
 
         return df
 
     def add_fire(self, df):
-        fdir = data_root+rf'Fire\phenology_year_extraction_dryland\\'
-
-        val_dic = T.load_npy_dir(fdir)
-
-        val_list = []
-        for i, row in tqdm(df.iterrows(), total=len(df)):
-
-            # window = row.window
-            # pix = row.pix
-            pix = row['pix']
-            r, c = pix
-
-            if not pix in val_dic:
-                val_list.append(np.nan)
+        fdir = result_root+rf'\Fire\extract_annual_growing_season_LAI_mean\\'
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
                 continue
 
-            vals = val_dic[pix]['ecosystem_year']
-            vals = np.array(vals)
-            ## 10^6
-            mean_burn_area = np.nansum(vals) / 1000000
-            if mean_burn_area < -99:
-                val_list.append(np.nan)
-                continue
+            fname=f.split('.')[0]
 
-            val_list.append(mean_burn_area)
+            val_dic = T.load_npy(fdir+f)
 
-        df['Burn_area_sum'] = val_list
+            val_list = []
+            for i, row in tqdm(df.iterrows(), total=len(df)):
+
+                # window = row.window
+                # pix = row.pix
+                pix = row['pix']
+                r, c = pix
+
+                if not pix in val_dic:
+                    val_list.append(np.nan)
+                    continue
+
+                vals = val_dic[pix]['growing_season']
+                vals = np.array(vals)
+                ## 10^6
+                # mean_burn_area = np.nansum(vals) / 1000000
+                mean_burn_area = np.nanmean(vals) / 1000000
+                if mean_burn_area < -99:
+                    val_list.append(np.nan)
+                    continue
+
+                val_list.append(mean_burn_area)
+
+            df[f'{fname}'] = val_list
         return df
 
         pass
@@ -9387,8 +9426,8 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
