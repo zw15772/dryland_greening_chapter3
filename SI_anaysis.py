@@ -3445,31 +3445,28 @@ class PLOT_gamma():
 class PLOT_seasonal_type():
 
     def run(self):
-        self.seasonal_type()
+        self.SOS_EOS()
+        # self.seasonal_type()
         pass
 
     def seasonal_type(self):
         outdir = result_root + rf'\FIGURE\SI\\seasonal_type\\'
         T.mk_dir(outdir, True)
-        temp_root = result_root + rf'relative_change_growing_season\TRENDY\trend_analysis\\temp_root\\'
 
 
         fdir_all = result_root + rf'\Seasonal_type\\'
         for f in os.listdir(fdir_all):
+
             if not f.endswith('.tif'):
                 continue
             fpath=fdir_all+f
-
-
 
             fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
 
             # 画 Robinson 投影 + 栅格
             m, mappable = Plot_Robinson_png().plot_Robinson(
 
-
                 fpath, ax=ax,  vmin=2, vmax=3,is_discrete=True, colormap_n=3)
-
 
             # 裁剪显示范围
             lat_min, lat_max = -60, 60
@@ -3506,6 +3503,63 @@ class PLOT_seasonal_type():
             # plt.show()
             plt.savefig(outf, dpi=600, bbox_inches='tight')
             plt.close()
+
+    def SOS_EOS(self):
+        outdir = result_root + rf'\FIGURE\SI\\seasonal_type\\'
+        T.mk_dir(outdir, True)
+
+        fdir_all = result_root + rf'\Seasonal_type\\'
+        for f in os.listdir(fdir_all):
+            if not 'SOS' in f:
+                continue
+
+            if not f.endswith('.tif'):
+                continue
+            fpath = fdir_all + f
+
+            fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+            mycolormap='Spectral'
+
+            # 画 Robinson 投影 + 栅格
+            m, mappable = Plot_Robinson_png().plot_Robinson(
+
+                fpath, ax=ax, vmin=14, vmax=360,cmap=mycolormap, is_discrete=False, colormap_n=15,)
+
+            # 裁剪显示范围
+            lat_min, lat_max = -60, 60
+            lon_min, lon_max = -125, 155
+            x_min, _ = m(lon_min, 0)
+            x_max, _ = m(lon_max, 0)
+            _, y_min = m(0, lat_min)
+            _, y_max = m(0, lat_max)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            # if mappable_for_cbar is None:
+            #     mappable_for_cbar = mappable  # 只取第一个用于共享色标
+            #
+            # # 共享色标（水平放在底部）
+            # cbar = fig.colorbar(
+            #     mappable_for_cbar, ax=[ax for ax in axes if ax.has_data()],
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # plot colorbar
+            # cbar = fig.colorbar(
+            #     mappable, ax=ax,
+            #     orientation='horizontal', fraction=0.035, pad=0.04
+            # )
+            # cbar.set_label('Partial correlation', fontsize=11)
+
+            # 紧凑布局与间距
+            # plt.subplots_adjust(hspace=0.08, wspace=0.02)
+            outf = outdir + f.split('.')[0] + '.png'
+            # plt.show()
+            plt.savefig(outf, dpi=600, bbox_inches='tight')
+            plt.close()
+
 
 class PLOT_Fire():
 
@@ -3699,8 +3753,8 @@ def main():
     # SHAP_CO2_interaction().run()
     # Bivariate_analysis().run()
     # Trend_CV().run()
-    # PLOT_seasonal_type().run()
-    PLOT_Fire().run()
+    PLOT_seasonal_type().run()
+    # PLOT_Fire().run()
 
 
     pass

@@ -3674,11 +3674,11 @@ class processing_daily_rainfall():
     def __init__(self):
         pass
     def run(self):
-        # self.extract_rainfall_CV_daily()
+        self.extract_rainfall_CV_daily()
         # self.extract_rainfall_CV_monthly()
-        self.extract_rainfall_sum()
+        # self.extract_rainfall_sum()
         # self.relative_change()
-        self.detrend()
+        # self.detrend()
 
         pass
 
@@ -3973,14 +3973,14 @@ class processing_daily_rainfall():
                     continue
 
                 val = np.array(val)
-                val=val[val>1]
+                val=val[val>5]
 
                 CV = np.std(val) / np.mean(val) * 100
                 # print(CV)
                 CV_list.append(CV)
             result_dic[pix] = CV_list
 
-        outf = outdir_CV + 'CV_daily_rainfall.npy'
+        outf = outdir_CV + 'CV_daily_rainfall_5mm.npy'
 
         np.save(outf, result_dic)
 
@@ -4266,7 +4266,31 @@ class statistic_seasonal_type():
         pass
 
     def run(self):
-        self.seasonal_type()
+        self.export_SOS_EOS()
+        # self.seasonal_type()
+        pass
+
+    def export_SOS_EOS(self):
+
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        new_spatial_dic = {}
+        for pix in phenology_dic:
+            val = phenology_dic[pix]['Offsets']
+            # val = phenology_dic[pix]['Onsets']
+            try:
+                val = float(val)
+            except:
+                continue
+
+            new_spatial_dic[pix] = val
+        spatial_array = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        outdir=rf'D:\Project3\Result\Nov\Seasonal_type\\'
+        outf=outdir+'EOS.tif'
+        DIC_and_TIF().arr_to_tif(spatial_array, outf)
+        # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
+        # plt.show()
+        # exit()
         pass
 
     def seasonal_type(self):
@@ -4320,10 +4344,10 @@ def main():
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
-    # processing_daily_rainfall().run()
+    processing_daily_rainfall().run()
     # extract_LAI_percentile().run()
     # extract_rainfallmin_rainfallmax().run()
-    statistic_seasonal_type().run()
+    # statistic_seasonal_type().run()
     # check_data()
     pass
 
