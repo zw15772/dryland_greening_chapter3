@@ -2221,8 +2221,8 @@ class Fire():
     def __init__(self):
         pass
     def run(self):
-        # self.plot_spatial()
-        self.histogram()
+        self.plot_spatial()
+        # self.histogram()
         # self.plot_spatial_SV()
 
         pass
@@ -2259,15 +2259,45 @@ class Fire():
         plt.savefig(result_root + rf'\3mm\FIGURE\\FIRE_SV\\Histogram.png', dpi=600, bbox_inches='tight')
         plt.close()
 
+    def histogram_10_percentage(self):
+        tiff = result_root + rf'\3mm\Fire\moving_window_extraction\\Fire_percentage_annual_mean.tif'
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr == 999999] = np.nan
+        arr = arr[~np.isnan(arr)]
+        # arr_stastis=arr[arr>2]
+        # print(len(arr_stastis)/len(arr));exit()
+
+        fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+        ## y is percentage of pixels
+
+        n, bins = np.histogram(arr, bins=100)
+
+        # 转换为百分比
+        total = n.sum()
+        n_percent = (n / total) * 100
+
+        # 重新绘制百分比直方图
+        bin_width = np.diff(bins)
+        ax.bar(bins[:-1], n_percent, width=bin_width * 0.9,  # 0.9 = 10% gap
+               align="edge", alpha=0.75, color='grey')
+
+        ax.set_xlabel('Fraction of pixel area burned (%)', fontsize=10)
+        ax.set_ylabel('Area (%)', fontsize=10)
+        ax.set_xlim(0, 1)
+
+        # plt.show()
+        plt.savefig(result_root + rf'\3mm\FIGURE\\FIRE_SV\\Histogram.png', dpi=600, bbox_inches='tight')
+        plt.close()
 
     def plot_spatial(self):
-        outdir = result_root + rf'\3mm\FIGURE\\FIRE\\'
+        outdir = result_root + rf'\Fire\\'
         T.mk_dir(outdir,True)
-        temp_root = result_root + rf'3mm\Fire\moving_window_extraction\\temp_root\\'
+        temp_root = result_root + rf'\Fire\moving_window_extraction\\temp_root\\'
 
 
 
-        fdir = result_root + rf'\3mm\Fire\moving_window_extraction\\'
+        fdir = result_root + rf'\Fire\\'
 
 
 
@@ -3510,7 +3540,7 @@ class PLOT_seasonal_type():
 
         fdir_all = result_root + rf'\Seasonal_type\\'
         for f in os.listdir(fdir_all):
-            if not 'SOS' in f:
+            if not 'EOS' in f:
                 continue
 
             if not f.endswith('.tif'):
@@ -3523,7 +3553,7 @@ class PLOT_seasonal_type():
             # 画 Robinson 投影 + 栅格
             m, mappable = Plot_Robinson_png().plot_Robinson(
 
-                fpath, ax=ax, vmin=14, vmax=360,cmap=mycolormap, is_discrete=False, colormap_n=15,)
+                fpath, ax=ax, vmin=15, vmax=360,cmap=mycolormap, is_discrete=False, colormap_n=15,)
 
             # 裁剪显示范围
             lat_min, lat_max = -60, 60
@@ -3564,7 +3594,9 @@ class PLOT_seasonal_type():
 class PLOT_Fire():
 
     def run(self):
-        self.fire()
+        # self.fire()
+        self.histogram_percentage()
+
         pass
 
     def fire(self):
@@ -3575,10 +3607,12 @@ class PLOT_Fire():
 
         fdir_all = result_root + rf'\Fire\\'
         for f in os.listdir(fdir_all):
+            if not 'mean' in f:
+                continue
             if not f.endswith('.tif'):
                 continue
             fpath=fdir_all+f
-            my_cmap2 = 'Spectral_r'
+            my_cmap2 ='rocket_r'
 
             fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
 
@@ -3586,7 +3620,7 @@ class PLOT_Fire():
             m, mappable = Plot_Robinson_png().plot_Robinson(
 
 
-                fpath, ax=ax, cmap=my_cmap2, vmin=0, vmax=10,is_discrete=False, colormap_n=7)
+                fpath, ax=ax, cmap=my_cmap2, vmin=0, vmax=1,is_discrete=False, colormap_n=7)
 
 
             # 裁剪显示范围
@@ -3625,9 +3659,40 @@ class PLOT_Fire():
             plt.savefig(outf, dpi=600, bbox_inches='tight')
             plt.close()
 
+    def histogram_percentage(self):
+        tiff = result_root + rf'\Fire\\Fire_percentage_annual_sum.tif'
+        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(tiff)
+        arr = Tools().mask_999999_arr(arr, warning=False)
+        arr[arr == 999999] = np.nan
 
+        arr = arr[~np.isnan(arr)]
 
+        # arr_stastis=arr[arr>2]
+        # print(len(arr_stastis)/len(arr));exit()
+        # frac_lt_1pct = np.sum(arr <=1) / len(arr) * 100
+        # print(frac_lt_1pct);exit()
 
+        fig, ax = plt.subplots(1, 1, figsize=(3.35, 2.19))
+        ## y is percentage of pixels
+
+        n, bins = np.histogram(arr, bins=50)
+
+        # 转换为百分比
+        total = n.sum()
+        n_percent = (n / total) * 100
+
+        # 重新绘制百分比直方图
+        bin_width = np.diff(bins)
+        ax.bar(bins[:-1], n_percent, width=bin_width * 0.9,  # 0.9 = 10% gap
+               align="edge", alpha=0.75, color='grey')
+
+        ax.set_xlabel('Fraction of pixel area burned (%)', fontsize=10)
+        ax.set_ylabel('Area (%)', fontsize=10)
+        ax.set_xlim(0, 15)
+
+        # plt.show()
+        plt.savefig(result_root + rf'\FIGURE\\SI\\Fire\\Histogram_all.pdf', dpi=600, bbox_inches='tight')
+        plt.close()
 
 
 
@@ -3753,8 +3818,8 @@ def main():
     # SHAP_CO2_interaction().run()
     # Bivariate_analysis().run()
     # Trend_CV().run()
-    PLOT_seasonal_type().run()
-    # PLOT_Fire().run()
+    # PLOT_seasonal_type().run()
+    PLOT_Fire().run()
 
 
     pass

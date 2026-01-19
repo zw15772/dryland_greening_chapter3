@@ -1325,11 +1325,13 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\'
-        outdir = result_root + rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\\\\\\moving_window_extraction\\'
+        fdir_all =result_root+ rf'\CRU-JRA\extraction_rainfall_characteristic\\'
+        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
+            if not '5mm' in f:
+                continue
 
             if not f.endswith('.npy'):
                 continue
@@ -1605,13 +1607,15 @@ class moving_window():
 
 
     def moving_window_average_anaysis(self): ## each window calculating the average
-        window_size = 15
 
 
-        fdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_extraction\\'
-        outdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
+
+        fdir = result_root + rf'CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\'
+        outdir = result_root + rf'CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_average\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not '5mm' in f:
+                continue
 
 
             dic = T.load_npy(fdir + f)
@@ -1653,9 +1657,9 @@ class moving_window():
                     # print(average)
 
                     trend_list.append(average)
-                plt.plot(trend_list)
-
-                plt.show()
+                # plt.plot(trend_list)
+                #
+                # plt.show()
 
                 trend_dic[pix] = trend_list
 
@@ -1900,11 +1904,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\rainfallmin_rainfallmax\\'
-        outdir =result_root + (rf'\CRU_monthly\extract_annual_growing_season_mean\relative_change\detrend\rainfallmin_rainfallmax\\trend\\')
+        fdir =result_root+ rf'\Multiregression_contribution\Obs\input\X\zscore\\'
+        outdir =result_root + (rf'\Multiregression_contribution\Obs\input\X\zscore\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not '5mm' in f:
+                continue
 
 
 
@@ -4271,13 +4277,26 @@ class statistic_seasonal_type():
         pass
 
     def export_SOS_EOS(self):
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
         f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST.npy'
         phenology_dic = T.load_npy(f_phenology)
         new_spatial_dic = {}
         for pix in phenology_dic:
-            val = phenology_dic[pix]['Offsets']
-            # val = phenology_dic[pix]['Onsets']
+            r, c = pix
+            if r < 60:
+                continue
+            landcover_value = crop_mask[pix]
+            if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                continue
+            if dic_modis_mask[pix] == 12:
+                continue
+            # val = phenology_dic[pix]['Offsets']
+            val = phenology_dic[pix]['Onsets']
             try:
                 val = float(val)
             except:
@@ -4286,7 +4305,7 @@ class statistic_seasonal_type():
             new_spatial_dic[pix] = val
         spatial_array = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
         outdir=rf'D:\Project3\Result\Nov\Seasonal_type\\'
-        outf=outdir+'EOS.tif'
+        outf=outdir+'SOS.tif'
         DIC_and_TIF().arr_to_tif(spatial_array, outf)
         # plt.imshow(spatial_array,interpolation='nearest',cmap='jet')
         # plt.show()
@@ -4344,10 +4363,10 @@ def main():
 
     # processing_TRENDY().run()
     # processing_climate_variable().run()
-    processing_daily_rainfall().run()
+    # processing_daily_rainfall().run()
     # extract_LAI_percentile().run()
     # extract_rainfallmin_rainfallmax().run()
-    # statistic_seasonal_type().run()
+    statistic_seasonal_type().run()
     # check_data()
     pass
 

@@ -1762,10 +1762,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Dataframe\Fire\\')
+                result_root +  rf'\partial_correlation\Dataframe\1mm_new\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Fire.df'
+        self.dff = self.this_class_arr + rf'Obs.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1776,7 +1776,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1792,7 +1792,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
@@ -1802,15 +1802,15 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        # df=self.add_aridity_to_df(df)
-        # df=self.add_dryland_nondryland_to_df(df)
-        # df=self.add_MODIS_LUCC_to_df(df)
-        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        # df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # # # # df=self.dummies(df)
-        # df=self.add_maxmium_LC_change(df)
-        # df=self.add_row(df)
-        # # # # # # # # # # # #
+        df=self.add_aridity_to_df(df)
+        df=self.add_dryland_nondryland_to_df(df)
+        df=self.add_MODIS_LUCC_to_df(df)
+        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # # # df=self.dummies(df)
+        df=self.add_maxmium_LC_change(df)
+        df=self.add_row(df)
+        # # # # # # # # # # # # #
         df=self.add_lat_lon_to_df(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
@@ -2583,22 +2583,21 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'partial_correlation\TRENDY\result\\'
+        fdir_all = result_root + rf'\partial_correlation\Obs\result\1mm_new\\'
         for fdir in os.listdir(fdir_all):
 
 
-            for f in os.listdir(join(fdir_all,fdir)):
-                if not 'color_map_six_category' in f:
-                    continue
-
-                if not f.endswith('.tif'):
-                    continue
+            # for f in os.listdir(join(fdir_all,fdir)):
+            #
+            #
+            #     if not f.endswith('.tif'):
+            #         continue
 
             # #
-            # fdir_sig=fdir_all+fdir+'\\sig\\'
+            fdir_sig=fdir_all+fdir+'\\sig\\'
             # print(fdir_sig);exit()
 
-            # for f in os.listdir(fdir_sig):
+            for f in os.listdir(fdir_sig):
 
 
                 if not f.endswith('.tif'):
@@ -2611,8 +2610,8 @@ class build_dataframe():
                     fname=f'{fdir}_{variable}'
                 print(fname)
 
-                fpath=join(fdir_all,fdir,f)
-                # fpath=join(fdir_sig,f)
+                # fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
+                fpath=join(fdir_sig,f)
                 print(fpath)
 
 
@@ -2678,7 +2677,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\Fire\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\trend\\'
 
         variables_list = [
                           'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -2735,7 +2734,7 @@ class build_dataframe():
                 val_list.append(val)
 
 
-            df[f'{f_name}_percent'] = val_list
+            df[f'{f_name}'] = val_list
 
 
         return df
@@ -2765,7 +2764,7 @@ class build_dataframe():
                 vals = val_dic[pix]['growing_season']
                 vals = np.array(vals)
                 ## 10^6
-                # mean_burn_area = np.nansum(vals) / 1000000
+                # mean_burn_area = np.nansum(vals) / 1000000 ## no use this
                 mean_burn_area = np.nanmean(vals) / 1000000
                 if mean_burn_area < -99:
                     val_list.append(np.nan)
@@ -2921,9 +2920,23 @@ class build_dataframe():
         for col in df.columns:
             print(col)
         # exit()
-        df = df.drop(columns=['composite_LAI_median_LAI_residual_contrib',
-                              'composite_median_LAI_residual_contrib',
-                              'composite_LAI_median_residual_contrib',
+        df = df.drop(columns=['SNU_LAI_detrend_CV_zscore_trend_percent',
+                              'SNU_LAI_detrend_CV_zscore_p_value_percent',
+                              'LAI4g_detrend_CV_zscore_trend_percent',
+                              'LAI4g_detrend_CV_zscore_p_value_percent',
+                              'GLOBMAP_LAI_detrend_CV_zscore_trend_percent',
+                              'GLOBMAP_LAI_detrend_CV_zscore_p_value_percent',
+                              'composite_LAI_median_detrend_CV_zscore_trend_percent',
+                              'composite_LAI_median_detrend_CV_zscore_p_value_percent',
+                              'composite_LAI_mean_detrend_CV_zscore_trend_percent',
+                              'composite_LAI_mean_detrend_CV_zscore_p_value_percent',
+
+
+
+
+
+
+
 
 
 
