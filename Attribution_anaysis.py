@@ -579,7 +579,7 @@ class partial_correlation_obs:
         self.xvar_list = [
 
             'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_5mm_average']
+            'CV_daily_rainfall_3mm_average']
         self.model_list = ['SNU_LAI', 'GLOBMAP_LAI',
                            'LAI4g','composite_LAI_mean',
                           'composite_LAI_median' ]
@@ -1174,7 +1174,7 @@ class partial_correlation_obs:
         """
 
         # === 1. 读取数据 ===
-        dff = result_root + rf'\partial_correlation\Dataframe\\1mm\\Obs.df'
+        dff = result_root + rf'\partial_correlation\Dataframe\\3mm\\Obs.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         print(len(df))
@@ -1186,13 +1186,13 @@ class partial_correlation_obs:
         variable_list = [
             'sensitivity',
             'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_average',
+            'CV_daily_rainfall_3mm_average',
         ]
 
         label_dic = {
             'sensitivity': r'$\gamma$',
             'Precip_sum_detrend_CV': r'$CV_{inter}$',
-            'CV_daily_rainfall_average': r'$CV_{intra}$',
+            'CV_daily_rainfall_3mm_average': r'$CV_{intra}$',
         }
 
 
@@ -1208,7 +1208,7 @@ class partial_correlation_obs:
 
             # print(len(df));exit()
             for variable in variable_list:
-                new_variable = f'{model}_{variable}'
+                new_variable = f'{model}_{variable}_sig'
                 if new_variable not in df.columns:
                     continue
 
@@ -1231,7 +1231,7 @@ class partial_correlation_obs:
             x_labels = []
 
             for var in variable_list:
-                key = f'{model}_{var}'
+                key = f'{model}_{var}_sig'
                 if key in result_dic:
                     data_list.append(result_dic[key])
                     x_labels.append(label_dic[var])
@@ -1293,7 +1293,7 @@ class partial_correlation_obs:
             outdir=result_root + rf'\FIGURE\SI\\'
             Tools().mk_dir(outdir, force=True)
 
-            outf=join(outdir,f'{model}_partial_correlation_boxplot_1mm.pdf')
+            outf=join(outdir,f'{model}_partial_correlation_boxplot_3mm.pdf')
             plt.savefig(outf,bbox_inches='tight',dpi=300
 
             )

@@ -97,7 +97,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
         # self.plot_std()
-        # self.plot_LAImax_LAImin()
+        self.plot_LAImax_LAImin()
         # self.plot_LAIpercentile()
         # self.plot_LAImax_LAImin_models()
         # self.plot_rainfallmax_min()
@@ -105,7 +105,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
        #  self.statistic_CV_trend_bar()
        #  self.statistic_trend_bar()
 
-        self.plot_CV_trend_among_models2()
+        # self.plot_CV_trend_among_models2()
         # self.TRENDY_LAImin_LAImax_barplot() ## Figure3
 
 
@@ -191,7 +191,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
             # 拟合趋势线 + 注释
             slope, intercept, r_value, p_value, std_err = stats.linregress(years, y)
-            print(var, slope, p_value)
+            print(var, slope, p_value, std_err);exit
             x_pos = max(years) * 0.85
             y_pos = y.mean()
             # plt.text(x_pos, y_pos + 1.5, f'{dic_label[var]} slope={slope:.3f}', fontsize=10, color=color)
@@ -3553,7 +3553,7 @@ class PLOT_seasonal_type():
             # 画 Robinson 投影 + 栅格
             m, mappable = Plot_Robinson_png().plot_Robinson(
 
-                fpath, ax=ax, vmin=15, vmax=360,cmap=mycolormap, is_discrete=False, colormap_n=15,)
+                fpath, ax=ax, vmin=0, vmax=360,cmap=mycolormap, is_discrete=False, colormap_n=15,)
 
             # 裁剪显示范围
             lat_min, lat_max = -60, 60
@@ -3804,7 +3804,7 @@ def main():
 
     # Trends_obs_and_model().run()  ## Figure 1
     # Trends_CV_obs_and_model().run()  ## Figure 2
-    # PLOT_dataframe().run()
+    PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
@@ -3819,8 +3819,8 @@ def main():
     # Bivariate_analysis().run()
     # Trend_CV().run()
     # PLOT_seasonal_type().run()
-    PLOT_Fire().run()
-
+    # PLOT_Fire().run()
+    # print('done')
 
     pass
 
