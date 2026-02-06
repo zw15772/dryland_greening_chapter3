@@ -4200,7 +4200,29 @@ class statistic_seasonal_type():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+class Phenology():
+    def run(self):
+        self.display()
 
+    def display(self):
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
+        new_spatial_dic = {}
+        phenology_dic = T.load_npy(f_phenology)
+        for pix in phenology_dic:
+            # print(phenology_dic[pix]);exit()
+            val = phenology_dic[pix]['Onsets']
+            # val=phenology_dic[pix]['Offsets']
+            try:
+                val = float(val)
+            except:
+                continue
+
+            new_spatial_dic[pix] = val
+        spatial_array = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(new_spatial_dic)
+        plt.imshow(spatial_array, interpolation='nearest', cmap='jet')
+        plt.show()
+        exit()
+        pass
 
 def main():
     # processing_GLOBMAP().run()
@@ -4215,8 +4237,9 @@ def main():
     # processing_daily_rainfall().run()
     # extract_LAI_percentile().run()
     # extract_rainfallmin_rainfallmax().run()
-    statistic_seasonal_type().run()
+    # statistic_seasonal_type().run()
     # check_data()
+    Phenology().run()
     pass
 
 if __name__ == '__main__':

@@ -135,6 +135,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         color_dic = {'composite_LAImax_mean': 'purple',
                      'composite_LAImin_mean': 'teal'}
 
+
         year_list = range(0, 25)
         result_dic = {}
         std_dic = {}
@@ -3803,7 +3804,7 @@ def main():
 
 
     # Trends_obs_and_model().run()  ## Figure 1
-    # Trends_CV_obs_and_model().run()  ## Figure 2
+    Trends_CV_obs_and_model().run()  ## Figure 2
     PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()

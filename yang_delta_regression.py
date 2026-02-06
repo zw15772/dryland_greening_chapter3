@@ -52,7 +52,7 @@ class Delta_regression:
             x_list=self.xvar+[model+'_sensitivity_zscore']
             # self.do_multi_regression(model, x_list)
             ## not using below function
-            # self.do_multi_regression_control_experiment(model,x_list) ## use this but the result is the same
+            # self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
 
 
             # self.calculate_trend_contribution(model,x_list)
@@ -823,7 +823,7 @@ class Delta_regression:
             df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
             df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
             #
-            # print(len(df));exit()
+            print(len(df));exit()
 
             # === 计算平均值和标准误差 ===
             for var in fixed_order:
@@ -1560,7 +1560,7 @@ class Delta_regression_TRENDY:
         # for model in self.model_list:
         #     x_list=self.xvar+[model+'_sensitivity_zscore']
         #
-        #     self.do_multi_regression_control_experiment(model,x_list) ## use this but the result is the same
+        #     self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
         # # #
         # # # #
         #     self.calculate_trend_contribution(model,x_list)

@@ -1174,7 +1174,7 @@ class partial_correlation_obs:
         """
 
         # === 1. 读取数据 ===
-        dff = result_root + rf'\partial_correlation\Dataframe\\3mm\\Obs.df'
+        dff = result_root + rf'\partial_correlation\Dataframe\\1mm_new\\Obs.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         print(len(df))
@@ -1186,13 +1186,13 @@ class partial_correlation_obs:
         variable_list = [
             'sensitivity',
             'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_3mm_average',
+            'CV_daily_rainfall_average',
         ]
 
         label_dic = {
             'sensitivity': r'$\gamma$',
             'Precip_sum_detrend_CV': r'$CV_{inter}$',
-            'CV_daily_rainfall_3mm_average': r'$CV_{intra}$',
+            'CV_daily_rainfall_average': r'$CV_{intra}$',
         }
 
 
@@ -1212,9 +1212,11 @@ class partial_correlation_obs:
                 if new_variable not in df.columns:
                     continue
 
+
                 vals = np.array(df[new_variable].tolist(), dtype=float)
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
+                print(f'{variable}', len(vals))
 
             #     plt.hist(vals, bins=30)
             #     plt.axvline(np.mean(vals), color='g', label='Mean')
@@ -1293,11 +1295,11 @@ class partial_correlation_obs:
             outdir=result_root + rf'\FIGURE\SI\\'
             Tools().mk_dir(outdir, force=True)
 
-            outf=join(outdir,f'{model}_partial_correlation_boxplot_3mm.pdf')
-            plt.savefig(outf,bbox_inches='tight',dpi=300
-
-            )
-            plt.close()
+            # outf=join(outdir,f'{model}_partial_correlation_boxplot_3mm.pdf')
+            # plt.savefig(outf,bbox_inches='tight',dpi=300
+            #
+            # )
+            # plt.close()
 
 
 
