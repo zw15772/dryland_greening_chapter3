@@ -81,12 +81,12 @@ class Phenology:
 
         # self.monthly_compose()
         # self.per_pix()
-        # self.phenology_average_monthly()
+        self.phenology_average_monthly()
 
-        # self.GST()
+        self.GST()
         # self.plot_4GST_df()
         # self.read_4GST_df()
-        self.plot_4GST_npy()  ### plot SOS and EOS
+        # self.plot_4GST_npy()  ### plot SOS and EOS
 
 
         pass
@@ -223,6 +223,7 @@ class Phenology:
         if np.nanmean(LAI1) > 0:
             day = [15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300,
                    315, 330, 345, 360]
+
             LAI1dr = LAI1
             knan = 0
             # identify LAI maximum
