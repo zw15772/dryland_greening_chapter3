@@ -573,8 +573,8 @@ class Data_processing_2:
 
     def tif_to_dic(self):
 
-        fdir_all = rf'D:\Project3\Data\CRU_monthly\Precip\dryland_tiff\\'
-        outdir=rf'D:\Project3\Data\CRU_monthly\Precip\dic\\'
+        fdir_all = rf'D:\Project3\Data\LAI4g\tiff_dryland\\'
+        outdir=rf'D:\Project3\Data\LAI4g\\dic_biweekly\\'
         T.mk_dir(outdir, force=True)
 
         year_list = list(range(1982, 2021))
@@ -582,7 +582,7 @@ class Data_processing_2:
 
         all_array = []  #### so important  it should be go with T.mk_dic
 
-        for f in os.listdir(fdir_all):
+        for f in T.listdir(fdir_all):
             if not f.endswith('.tif'):
                 continue
             if int(f.split('.')[0][0:4]) not in year_list:
@@ -9359,6 +9359,18 @@ def rename():
         DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, outf)
 
 
+class averaging_variable:
+    def run(self):
+        self.averaging()
+    def averaging(self):
+        fdir=rf'D:\Project3\Data\LAI4g\dic_monthly\\'
+        dic=T.load_npy_dir(fdir)
+        spatial_dic={}
+        for pix in dic:
+            vals=dic[pix]
+            spatial_dic[pix]=np.nanmean(vals)
+        outf=rf'D:\Project3\Data\Base_data\LAI4g\\Long_term_average_LAI.tif'
+        DIC_and_TIF().pix_dic_to_tif(spatial_dic,outf)
 
 
 class check_data_distribution():
@@ -9439,7 +9451,7 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
+    # build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
@@ -9454,6 +9466,9 @@ def main():
     # Plot_Robinson().robinson_template()
     # rename()
     # check_data_distribution().run()
+    averaging_variable().run()
+
+
 
 
 

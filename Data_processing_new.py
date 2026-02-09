@@ -112,7 +112,8 @@ class processing_GLOBMAP():
         new_spatial_dic={}
         for pix in phenology_dic:
             # print(phenology_dic[pix]);exit()
-            val=phenology_dic[pix]['SeasType']
+            # val=phenology_dic[pix]['SeasType']
+            val=phenology_dic[pix]['Onsets']
             try:
                 val=float(val)
             except:
@@ -4225,7 +4226,7 @@ class Phenology():
         pass
 
 def main():
-    # processing_GLOBMAP().run()
+    processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
     # moving_window().run()
@@ -4239,7 +4240,7 @@ def main():
     # extract_rainfallmin_rainfallmax().run()
     # statistic_seasonal_type().run()
     # check_data()
-    Phenology().run()
+    # Phenology().run()
     pass
 
 if __name__ == '__main__':

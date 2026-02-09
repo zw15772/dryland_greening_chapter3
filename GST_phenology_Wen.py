@@ -81,12 +81,12 @@ class Phenology:
 
         # self.monthly_compose()
         # self.per_pix()
-        self.phenology_average_monthly()
+        # self.phenology_average_monthly()
 
-        self.GST()
-        # self.plot_4GST_df()
+        # self.GST()
+        #self.plot_4GST_df()
         # self.read_4GST_df()
-        # self.plot_4GST_npy()  ### plot SOS and EOS
+        self.plot_4GST_npy()  ### plot SOS and EOS
 
 
         pass
@@ -140,7 +140,7 @@ class Phenology:
         np.save(outdir+'phenology_average_global.npy', result_dic)
 
     def phenology_average_monthly(self):
-        fdir_all = rf'D:\Project3\Data\LAI4g\per_pix_monthly_global\\'
+        fdir_all = rf'D:\Project3\Data\LAI4g\dic_biweekly\\'
         spatial_dic=T.load_npy_dir(fdir_all)
         result_dic={}
 
@@ -151,8 +151,8 @@ class Phenology:
             if T.is_all_nan(val):
                 continue
 
-            vals_reshape=val.reshape(-1,12)
-            # print(vals_reshape.shape)
+            vals_reshape=val.reshape(-1,24)
+            print(vals_reshape.shape)
             # plt.imshow(vals_reshape, interpolation='nearest', cmap='jet')
             # plt.colorbar()
             # plt.show()
@@ -167,18 +167,18 @@ class Phenology:
             # plt.ylabel('LAI4g (m2/m2)')
             #
             # plt.show()
-        outdir=rf'D:\Project3\Data\LAI4g\\phenology_average_monthly\\'
+        outdir=rf'D:\Project3\Data\LAI4g\\phenology_average_biweekly\\'
 
         Tools().mk_dir(outdir, force=True)
 
-        np.save(outdir+'phenology_average_monthly_global.npy', result_dic)
+        np.save(outdir+'phenology_average_biweekly_global.npy', result_dic)
 
 #*****************************************
 # COMPUTE ONSET/OFFSET
 #*****************************************
 
     def GST(self):
-        fdir = rf'D:\Project3\Data\LAI4g\phenology_average_biweekly\\phenology_average_global.npy'
+        fdir = rf'D:\Project3\Data\LAI4g\phenology_average_biweekly\\phenology_average_biweekly_global.npy'
         outdir = rf'D:\Project3\Data\LAI4g\4GST_test\\'
         T.mk_dir(outdir, force=True)
         spatial_dic = T.load_npy(fdir)
@@ -449,6 +449,11 @@ class Phenology:
         Offsets = np.array([0.0, 0.0])
 
         # ******* compute the Onset and Offset in each gridpoint *****
+        # ===== 新增：Evergreen 情况 =====
+        if SeasType == 1:
+            # Evergreen：不定义 SOS / EOS
+            # 但保留 SeasType = 1
+            return SeasType, 0, 365
 
         Ab = LAI1d
         for t in range(len(Ab)):
@@ -933,7 +938,7 @@ class Phenology:
         vals_list = []
 
         for pix in spatial_dic:
-            val=spatial_dic[pix]['Onsets']
+            val=spatial_dic[pix]['SeasType']
             print(pix,val)
             try:
                 val=float(val)
@@ -948,7 +953,7 @@ class Phenology:
         print(vals_list)
 
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=365)
+        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=4)
         plt.colorbar()
         plt.title('leaf senescence')
         plt.show()
