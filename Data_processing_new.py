@@ -2517,7 +2517,7 @@ class area_weighted_average():
         # self.weighted_average_LAI_relative_change()
         # self.weighted_average_LAICV()
         # self.weighted_average_LAI_percentile()
-        self.weighted_average_LAICV_relative_change()
+        self.weighted_average_LAICV_figure3()
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -2702,7 +2702,7 @@ class area_weighted_average():
         T.df_to_excel(df, outf)
 
 
-    def weighted_average_LAICV_relative_change(self):  ###add weighted average LAI in dataframe
+    def weighted_average_LAICV_figure3(self):  ###add weighted average LAI in dataframe
         df =result_root+rf'\Dataframe\Trends_CV\\Trends_CV.df'
         df = T.load_df(df)
         df_clean = self.df_clean(df)
@@ -4225,6 +4225,8 @@ class Phenology():
         exit()
         pass
 
+
+
 def main():
     processing_GLOBMAP().run()
     # processing_LAI4g().run()
@@ -4241,6 +4243,7 @@ def main():
     # statistic_seasonal_type().run()
     # check_data()
     # Phenology().run()
+
     pass
 
 if __name__ == '__main__':
