@@ -94,9 +94,9 @@ class preprocessing_MODIS_validation():
     def run(self):
         # self.MVC()
         # self.extract_dryland_tiff()
-        # self.tif_to_dic()
-        # self.extract_growing_season_monthly()
-        # self.extract_growing_season_LAI_mean()
+        self.tif_to_dic()
+        self.extract_growing_season_monthly()
+        self.extract_growing_season_LAI_mean()
         # self.spatial_plot()
         # self.relative_change()
         self.detrend()
@@ -148,7 +148,7 @@ class preprocessing_MODIS_validation():
         outdir = data_root + '/dic//'
         T.mk_dir(outdir, force=True)
 
-        year_list = list(range(2002, 2025))
+        year_list = list(range(2001, 2025))
         # 作为筛选条件
 
         all_array = []  #### so important  it should be go with T.mk_dic
@@ -644,7 +644,7 @@ class moving_window():
     def run(self):
         # self.moving_window_extraction()
         #
-        self.moving_window_CV_extraction_anaysis_LAI()
+        # self.moving_window_CV_extraction_anaysis_LAI()
 
 
         # self.moving_window_max_anaysis()
@@ -661,7 +661,7 @@ class moving_window():
 
 
         fdir_all =result_root+ rf'detrend\\'
-        outdir = result_root + rf'\moving_window_extraction\\10year\\'
+        outdir = result_root + rf'\moving_window_extraction\\15year\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -683,7 +683,7 @@ class moving_window():
             #     continue
 
             dic = T.load_npy(fdir_all+f)
-            window = 10
+            window = 15
 
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
@@ -816,8 +816,8 @@ class moving_window():
     def moving_window_CV_extraction_anaysis_LAI(self):
 
 
-        fdir = result_root + rf'moving_window_extraction\\10year\\'
-        outdir = result_root + rf'\moving_window_extraction_CV\\10year\\'
+        fdir = result_root + rf'moving_window_extraction\\15year\\'
+        outdir = result_root + rf'\moving_window_extraction_CV\\15year\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -838,8 +838,8 @@ class moving_window():
             for pix in tqdm(dic):
                 trend_list = []
                 time_series_all = dic[pix]
-                print(len(time_series_all))
-                if len(time_series_all)<13:  ##
+                # print(len(time_series_all));exit()
+                if len(time_series_all)<9:  ##
                     continue
                 time_series_all = np.array(time_series_all)
                 slides=len(time_series_all)
@@ -1066,8 +1066,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\moving_window_extraction_CV\\10year\\'
-        outdir =result_root + (rf'\moving_window_extraction_CV\\trend\\10year\\')
+        fdir =result_root+ rf'\moving_window_extraction_CV\\5year\\'
+        outdir =result_root + (rf'\moving_window_extraction_CV\\trend\\5year\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1161,9 +1161,10 @@ class PLOT_result:
         pass
     def run(self):
 
-        # self.plot_histogram()
-        self.weighted_average_LAICV()
+        self.plot_histogram()
+        # self.weighted_average_LAICV()
         self.plot_CV_LAI()
+        # self.statistic_CV_trend_bar()
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -1179,18 +1180,55 @@ class PLOT_result:
         return df
 
     def plot_histogram(self):
-        f=result_root+rf'\moving_window_extraction_CV\trend\5year\\growing_season_LAI_mean_detrend_CV_trend.tif'
-        array,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(f)
-        array=array.astype(float)
-        array[array < -999] = np.nan
-        array[array > 999] = np.nan
-        plt.imshow(array,cmap='RdBu',vmin=-.8,vmax=.8)
-        plt.colorbar()
-        plt.show()
 
-        plt.hist(array.flatten(),bins=100)
-        plt.xlim(-2,2)
-        plt.show()
+        from scipy.stats import gaussian_kde
+
+        dff = result_root + r'\Dataframe\Dataframe.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        variable = 'growing_season_LAI_mean_detrend_CV_trend'
+
+        vals = np.array(df[variable], dtype=float)
+        vals = vals[~np.isnan(vals)]
+        ## calculate >0 and <0
+        percentage_positive = len(vals[vals > 0])/len(vals)*100
+        percentage_negative = len(vals[vals < 0])/len(vals)*100
+
+
+        plt.figure(figsize=(4,3))
+
+        # histogram PDF
+        plt.hist(vals, bins=100, density=True, alpha=0.4, edgecolor='#ff7f0e', color='#ff7f0e' )
+
+
+        # KDE smooth PDF
+        kde = gaussian_kde(vals)
+        x = np.linspace(np.nanmin(vals), np.nanmax(vals), 300)
+        plt.plot(x, kde(x), linewidth=2,color='#ff7f0e'  )
+        plt.axvline(0, color='k', linestyle='-',linewidth=1.5 )
+        plt.xlim(-2, 2)
+        plt.text(
+            0.98, 0.95,
+            f'Inc CV: {percentage_positive:.1f}%\n Dec CV: {percentage_negative:.1f}%',
+            transform=plt.gca().transAxes,
+            ha='right',
+            va='top',
+            fontsize=10
+        )
+
+
+        # plt.tight_layout()
+        # plt.show()
+        outdir=result_root+rf'Figure\5year\\'
+        T.mk_dir(outdir, force=True)
+
+        plt.savefig(outdir+f'histogram.pdf')
+        plt.close()
+
+
+
+        ## add x=0
 
 
         pass
@@ -1236,7 +1274,7 @@ class PLOT_result:
     def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\Dataframe\\Dataframe_area_weight.df')
+            result_root + rf'\Dataframe\\Dataframe.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -1319,12 +1357,12 @@ class PLOT_result:
             year_range_str.append(f'{start_year}-{end_year}')
 
         plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
-        plt.yticks(np.arange(9, 15, 5))
+        plt.yticks(np.arange(10, 15,2))
 
         plt.ylabel(f'CVLAI (%/yr)')
         plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
 
-        plt.legend(loc='upper left')
+
 
         plt.show()
         # plt.tight_layout()
@@ -1338,79 +1376,6 @@ class PLOT_result:
         # plt.show()
 
 
-    def statistic_CV_trend_bar(self):
-        dff=result_root+rf'\Dataframe\Trends_CV\\Trends_CV.df'
-        df=T.load_df(dff)
-        df=self.df_clean(df)
-        T.print_head_n(df)
-        variable_list=['composite_LAI_mean_detrend_CV',
-                       'composite_LAI_median_detrend_CV',
-                       'GLOBMAP_LAI_detrend_CV',
-                       'LAI4g_detrend_CV',
-                       'SNU_LAI_detrend_CV',]
-
-        for variable in variable_list:
-            df_var = df[[f'{variable}_trend', f'{variable}_p_value']].dropna()
-            ## non-sig
-            non_sig_pos=len(df_var[df_var[f'{variable}_trend']>0])
-            non_sig_neg=len(df_var[df_var[f'{variable}_trend']<0])
-            total_non_sig=len(df_var)
-            pct_nonsig_pos=non_sig_pos/total_non_sig*100 if total_non_sig>0 else np.nan
-            pct_nonsig_neg=non_sig_neg/total_non_sig*100 if total_non_sig>0 else np.nan
-            print(variable,pct_nonsig_pos,pct_nonsig_neg)
-
-            ## sig
-
-            df_sig=df_var[df_var[f'{variable}_p_value']<0.05]
-            sig_pos=len(df_sig[df_sig[f'{variable}_trend']>0])
-            sig_neg=len(df_sig[df_sig[f'{variable}_trend']<0])
-
-            pct_sig_pos=sig_pos/len(df_var)*100 if len(df_var)>0 else np.nan
-            pct_sig_neg=sig_neg/len(df_var)*100 if len(df_var)>0 else np.nan
-
-
-
-            ## sig
-
-
-            result_dic = {
-                'Sig. negative': pct_sig_neg,
-                'Non-sig. negative': pct_nonsig_neg,
-                'Non-sig. positive': pct_nonsig_pos,
-                'Sig. positive': pct_sig_pos,
-            }
-            # df_new=pd.DataFrame(result_dic,index=[variable])
-            # ## plot
-            # df_new=df_new.T
-            # df_new=df_new.reset_index()
-            # df_new.columns=['Variable','Percentage']
-            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
-            # plt.show()
-            color_list = [
-                '#008837',
-                'lightgrey',
-
-                'lightgrey',
-                '#7b3294',
-            ]
-
-
-
-            width = 0.4
-            alpha_list = [1, 0.5, 0.5, 1]
-            plt.figure(figsize=(3, 3))
-
-            # 逐个画 bar
-            for i, (key, val) in enumerate(result_dic.items()):
-                plt.bar(i, val, color=color_list[i], alpha=alpha_list[i], width=width)
-                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
-                plt.ylabel('Percentage')
-                plt.title(variable)
-
-            # plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
-            # plt.show()
-            plt.savefig(result_root + rf'Figure\Figure1b\{variable}_trend_bar.pdf')
-            plt.close()
 
 
     pass
