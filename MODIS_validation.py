@@ -1154,13 +1154,273 @@ class moving_window():
 
 
 
+class PLOT_result:
+    def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+    def run(self):
 
+        # self.plot_histogram()
+        self.weighted_average_LAICV()
+        self.plot_CV_LAI()
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def plot_histogram(self):
+        f=result_root+rf'\moving_window_extraction_CV\trend\5year\\growing_season_LAI_mean_detrend_CV_trend.tif'
+        array,originX,originY,pixelWidth,pixelHeight=ToRaster().raster2array(f)
+        array=array.astype(float)
+        array[array < -999] = np.nan
+        array[array > 999] = np.nan
+        plt.imshow(array,cmap='RdBu',vmin=-.8,vmax=.8)
+        plt.colorbar()
+        plt.show()
+
+        plt.hist(array.flatten(),bins=100)
+        plt.xlim(-2,2)
+        plt.show()
+
+
+        pass
+
+    def weighted_average_LAICV(self):  ###add weighted average LAI in dataframe
+        df = T.load_df(
+            result_root + rf'\Dataframe\\Dataframe.df')
+
+        df_clean = self.df_clean(df)
+        # print(len(df_clean))
+
+        df_clean['area_weight'] = np.cos(np.deg2rad(df['lat']))
+
+        # plt.figure(figsize=(6, 4))
+        #
+        # plt.plot(
+        #     df_aw_year['year'],
+        #     df_aw_year['SNU_LAI_relative_change_area_weighted'],
+        #     color='black',
+        #     lw=2
+        # )
+        #
+        # plt.xlabel('Year')
+        # plt.ylabel('Area-weighted LAI change')
+        # plt.title('Dryland vegetation change (area-weighted)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # df[df['year'] == 1982][
+        #     ['SNU_LAI_relative_change_area_weighted',
+        #      'LAI4g_relative_change_area_weighted',
+        #      'composite_LAI_mean_relative_change_area_weighted',
+        #      'GLOBMAP_LAI_relative_change_area_weighted',
+        #
+        #      ]
+        # ].head()
+        # T.print_head_n(df)
+
+
+        outf=result_root+rf'\Dataframe\\Dataframe_area_weight.df'
+        T.save_df(df_clean, outf)
+        T.df_to_excel(df_clean, outf)
+    def plot_CV_LAI(self):  ##### plot for 4 clusters
+
+        df = T.load_df(
+            result_root + rf'\Dataframe\\Dataframe_area_weight.df')
+        print(len(df))
+        df = self.df_clean(df)
+
+        print(len(df))
+        T.print_head_n(df)
+        # exit()
+
+        # create color list with one green and another 14 are grey
+
+        color_list = ['black', 'green', 'blue', 'magenta', 'black', 'purple', 'purple', 'black', 'yellow', 'purple',
+                      'pink', 'grey',
+                      'brown', 'lime', 'teal', 'magenta']
+        linewidth_list = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+        variable_list = ['growing_season_LAI_mean',
+                        ]
+        dic_label = {'growing_season_LAI_mean': 'MODIS LAI',
+                    }
+        year_list = range(0, 19)
+
+        result_dic = {}
+
+        for var in variable_list:
+            mean_dic={}
+            for year in year_list:
+                df_i = df[df['window'] == year]
+                ## scheme1
+                vals = np.array(df_i[f'{var}_detrend_CV'].tolist(), dtype=float)
+                weight=np.array(df_i['area_weight'].tolist(),dtype=float)
+                weighted_mean_values = (
+                        np.nansum(vals * weight)
+                        / np.nansum(weight * np.isfinite(vals))
+                )
+                print(year,weighted_mean_values)
+                ## scheme2
+                # vals = np.array(df_i[f'{var}_detrend_CV_area_weighted'].tolist(), dtype=float)
+                # weighted_mean_values = np.nanmean(vals)
+
+                mean_dic[year] = weighted_mean_values
+
+            result_dic[var] = mean_dic
+
+
+        # 转成 DataFrame
+        df_new = pd.DataFrame(result_dic).reset_index()
+        # T.print_head_n(df_new);exit()
+
+        flag = 0
+
+        plt.figure(figsize=(self.map_width, self.map_height))
+
+        for var in variable_list:
+            plt.plot(
+                year_list,
+                df_new[var],
+                label=dic_label[var],
+                linewidth=linewidth_list[flag],
+                color=color_list[flag]
+            )
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
+            print(var, f'{slope:.2f}', f'{p_value:.2f}')
+
+            ## std
+
+            flag = flag + 1
+        ## if var == 'composite_LAI_CV': plot CI bar
+
+        window_size = 5
+
+        # set xticks with 1982-1997, 1998-2013,.. 2014-2020
+        year_range = range(2001, 2025)
+        year_range_str = []
+        for year in year_range:
+
+            start_year = year
+            end_year = year + window_size - 1
+            if end_year > 2025:
+                break
+            year_range_str.append(f'{start_year}-{end_year}')
+
+        plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
+        plt.yticks(np.arange(9, 15, 5))
+
+        plt.ylabel(f'CVLAI (%/yr)')
+        plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
+
+        plt.legend(loc='upper left')
+
+        plt.show()
+        # plt.tight_layout()
+        # out_pdf_fdir = result_root + rf'\FIGURE\weighted_area\\'
+        # T.mk_dir(out_pdf_fdir, force=True)
+        # plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
+
+        #
+        # plt.legend()
+        # plt.show()
+
+
+    def statistic_CV_trend_bar(self):
+        dff=result_root+rf'\Dataframe\Trends_CV\\Trends_CV.df'
+        df=T.load_df(dff)
+        df=self.df_clean(df)
+        T.print_head_n(df)
+        variable_list=['composite_LAI_mean_detrend_CV',
+                       'composite_LAI_median_detrend_CV',
+                       'GLOBMAP_LAI_detrend_CV',
+                       'LAI4g_detrend_CV',
+                       'SNU_LAI_detrend_CV',]
+
+        for variable in variable_list:
+            df_var = df[[f'{variable}_trend', f'{variable}_p_value']].dropna()
+            ## non-sig
+            non_sig_pos=len(df_var[df_var[f'{variable}_trend']>0])
+            non_sig_neg=len(df_var[df_var[f'{variable}_trend']<0])
+            total_non_sig=len(df_var)
+            pct_nonsig_pos=non_sig_pos/total_non_sig*100 if total_non_sig>0 else np.nan
+            pct_nonsig_neg=non_sig_neg/total_non_sig*100 if total_non_sig>0 else np.nan
+            print(variable,pct_nonsig_pos,pct_nonsig_neg)
+
+            ## sig
+
+            df_sig=df_var[df_var[f'{variable}_p_value']<0.05]
+            sig_pos=len(df_sig[df_sig[f'{variable}_trend']>0])
+            sig_neg=len(df_sig[df_sig[f'{variable}_trend']<0])
+
+            pct_sig_pos=sig_pos/len(df_var)*100 if len(df_var)>0 else np.nan
+            pct_sig_neg=sig_neg/len(df_var)*100 if len(df_var)>0 else np.nan
+
+
+
+            ## sig
+
+
+            result_dic = {
+                'Sig. negative': pct_sig_neg,
+                'Non-sig. negative': pct_nonsig_neg,
+                'Non-sig. positive': pct_nonsig_pos,
+                'Sig. positive': pct_sig_pos,
+            }
+            # df_new=pd.DataFrame(result_dic,index=[variable])
+            # ## plot
+            # df_new=df_new.T
+            # df_new=df_new.reset_index()
+            # df_new.columns=['Variable','Percentage']
+            # df_new.plot.bar(x='Variable',y='Percentage',rot=45,color='green')
+            # plt.show()
+            color_list = [
+                '#008837',
+                'lightgrey',
+
+                'lightgrey',
+                '#7b3294',
+            ]
+
+
+
+            width = 0.4
+            alpha_list = [1, 0.5, 0.5, 1]
+            plt.figure(figsize=(3, 3))
+
+            # 逐个画 bar
+            for i, (key, val) in enumerate(result_dic.items()):
+                plt.bar(i, val, color=color_list[i], alpha=alpha_list[i], width=width)
+                plt.text(i, val, f'{val:.1f}', ha='center', va='bottom')
+                plt.ylabel('Percentage')
+                plt.title(variable)
+
+            # plt.xticks(range(len(result_dic)), list(result_dic.keys()), rotation=0)
+            # plt.show()
+            plt.savefig(result_root + rf'Figure\Figure1b\{variable}_trend_bar.pdf')
+            plt.close()
+
+
+    pass
 
 
 
 def main():
     # preprocessing_MODIS_validation().run()
-    moving_window().run()
+    # moving_window().run()
+    PLOT_result().run()
 
 
     pass

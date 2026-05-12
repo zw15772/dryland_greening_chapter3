@@ -1776,7 +1776,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1792,7 +1792,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
@@ -9451,7 +9451,7 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
+    build_dataframe().run()
     # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
@@ -9466,7 +9466,7 @@ def main():
     # Plot_Robinson().robinson_template()
     # rename()
     # check_data_distribution().run()
-    averaging_variable().run()
+    # averaging_variable().run()
 
 
 
