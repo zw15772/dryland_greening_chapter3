@@ -179,7 +179,7 @@ class Phenology:
 
     def GST(self):
         fdir = rf'D:\Project3\Data\LAI4g\phenology_average_biweekly\\phenology_average_biweekly_global.npy'
-        outdir = rf'D:\Project3\Data\LAI4g\4GST_test\\'
+        outdir = rf'D:\Project3\Data\LAI4g\4GST_update\\'
         T.mk_dir(outdir, force=True)
         spatial_dic = T.load_npy(fdir)
         spatial_dic_result = {}
@@ -454,6 +454,7 @@ class Phenology:
             # Evergreen：不定义 SOS / EOS
             # 但保留 SeasType = 1
             return SeasType, 0, 365
+
 
         Ab = LAI1d
         for t in range(len(Ab)):
@@ -932,13 +933,14 @@ class Phenology:
         T.print_head_n(df_3)
 
     def plot_4GST_npy(self):  ##
-        f= rf'D:\Project3\Data\LAI4g\4GST_test\4GST_global.npy'
+        f= rf'D:\Project3\Data\LAI4g\4GST_update\4GST_global.npy'
         spatial_dic = T.load_npy(f)
         result_dic = {}
         vals_list = []
 
         for pix in spatial_dic:
-            val=spatial_dic[pix]['SeasType']
+            val=spatial_dic[pix]['Offsets']
+
             print(pix,val)
             try:
                 val=float(val)
@@ -951,12 +953,17 @@ class Phenology:
         ## get unique values
         vals_list = np.unique(vals_list)
         print(vals_list)
+        outdir= rf'D:\Project3\Data\LAI4g\4GST_update\\tiff\\'
+        T.mk_dir(outdir,force=True)
+
 
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
-        plt.imshow(arr, interpolation='nearest', cmap='jet',vmin=0,vmax=4)
+        plt.imshow(arr, interpolation='nearest', cmap='jet', vmin=0, vmax=4)
         plt.colorbar()
         plt.title('leaf senescence')
         plt.show()
+        DIC_and_TIF().arr_to_tif(arr, join(outdir, 'Offsets.tif'))
+
 
 
         pass
