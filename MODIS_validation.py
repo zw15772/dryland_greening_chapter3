@@ -94,12 +94,12 @@ class preprocessing_MODIS_validation():
     def run(self):
         # self.MVC()
         # self.extract_dryland_tiff()
-        self.tif_to_dic()
-        self.extract_growing_season_monthly()
-        self.extract_growing_season_LAI_mean()
-        # self.spatial_plot()
+        # self.tif_to_dic()
+        # self.extract_growing_season_monthly()
+        # self.extract_growing_season_LAI_mean()
+        self.spatial_plot()
         # self.relative_change()
-        self.detrend()
+        # self.detrend()
         # self.trend_analysis()
 
     pass
@@ -413,13 +413,13 @@ class preprocessing_MODIS_validation():
 
 
     def spatial_plot(self):
-        f = data_root + r'\extract_growing_season_LAI_mean\\growing_season_LAI_mean.npy'
+        f = result_root + r'\moving_window_extraction_CV\5year\\growing_season_LAI_mean_detrend_CV.npy'
         dic = T.load_npy(f)
         spatial_dic = {}
         for pix in tqdm(dic):
             r, c = pix
             vals_growing_season = dic[pix]
-            spatial_dic[pix] = np.nanmean(vals_growing_season)
+            spatial_dic[pix] = len(vals_growing_season)
         arr = D.pix_dic_to_spatial_arr(spatial_dic)
         plt.imshow(arr)
         plt.show()
@@ -1163,7 +1163,7 @@ class PLOT_result:
 
         self.plot_histogram()
         # self.weighted_average_LAICV()
-        self.plot_CV_LAI()
+        # self.plot_CV_LAI()
         # self.statistic_CV_trend_bar()
 
     def df_clean(self, df):
@@ -1183,7 +1183,7 @@ class PLOT_result:
 
         from scipy.stats import gaussian_kde
 
-        dff = result_root + r'\Dataframe\Dataframe.df'
+        dff = result_root + r'\Dataframe\15year\\Dataframe.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
@@ -1220,7 +1220,7 @@ class PLOT_result:
 
         # plt.tight_layout()
         # plt.show()
-        outdir=result_root+rf'Figure\5year\\'
+        outdir=result_root+rf'Figure\15year\\'
         T.mk_dir(outdir, force=True)
 
         plt.savefig(outdir+f'histogram.pdf')
@@ -1274,7 +1274,7 @@ class PLOT_result:
     def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\Dataframe\\Dataframe.df')
+            result_root + rf'\Dataframe\\10year\\Dataframe.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -1293,7 +1293,7 @@ class PLOT_result:
                         ]
         dic_label = {'growing_season_LAI_mean': 'MODIS LAI',
                     }
-        year_list = range(0, 19)
+        year_list = range(0, 15)
 
         result_dic = {}
 
@@ -1337,13 +1337,33 @@ class PLOT_result:
 
             slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
             print(var, f'{slope:.2f}', f'{p_value:.2f}')
+            trend = slope * np.array(year_list) + intercept
+
+            plt.plot(
+                year_list,
+                trend,
+                linestyle='--',
+                linewidth=2,
+                color=color_list[flag],
+                alpha=0.8
+            )
+
+            plt.text(
+                0.92, 0.95,
+                # f'Slope: {slope:.2f}\n P: {p_value:.2f}',
+                f'Slope: {slope:.2f}***',
+                transform=plt.gca().transAxes,
+                ha='right',
+                va='top',
+                fontsize=10
+            )
 
             ## std
 
             flag = flag + 1
         ## if var == 'composite_LAI_CV': plot CI bar
 
-        window_size = 5
+        window_size = 10
 
         # set xticks with 1982-1997, 1998-2013,.. 2014-2020
         year_range = range(2001, 2025)
@@ -1352,24 +1372,24 @@ class PLOT_result:
 
             start_year = year
             end_year = year + window_size - 1
-            if end_year > 2025:
+            if end_year > 2024:
                 break
             year_range_str.append(f'{start_year}-{end_year}')
 
         plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
-        plt.yticks(np.arange(10, 15,2))
+        plt.yticks(np.arange(13, 15,.5))
 
         plt.ylabel(f'CVLAI (%/yr)')
-        plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
+        plt.grid(True, ) # 只画竖线（随 x 刻度）
 
 
 
-        plt.show()
+        # plt.show()
         # plt.tight_layout()
-        # out_pdf_fdir = result_root + rf'\FIGURE\weighted_area\\'
-        # T.mk_dir(out_pdf_fdir, force=True)
-        # plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        out_pdf_fdir = result_root + rf'\\Figure\10year\\'
+        T.mk_dir(out_pdf_fdir, force=True)
+        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
         #
         # plt.legend()
