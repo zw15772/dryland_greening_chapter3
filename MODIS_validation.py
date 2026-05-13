@@ -413,7 +413,7 @@ class preprocessing_MODIS_validation():
 
 
     def spatial_plot(self):
-        f = result_root + r'\moving_window_extraction_CV\5year\\growing_season_LAI_mean_detrend_CV.npy'
+        f =  r'D:\Project3\Result\Nov\MODIS_LAI_validation\Result\four_products_comparision\GLOBMAP_detrend.npy'
         dic = T.load_npy(f)
         spatial_dic = {}
         for pix in tqdm(dic):
@@ -421,7 +421,7 @@ class preprocessing_MODIS_validation():
             vals_growing_season = dic[pix]
             spatial_dic[pix] = len(vals_growing_season)
         arr = D.pix_dic_to_spatial_arr(spatial_dic)
-        plt.imshow(arr)
+        plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=19,vmax=20)
         plt.show()
 
         pass
@@ -1152,7 +1152,54 @@ class moving_window():
 
     pass
 
+class four_products_comparision:
+    def __init__(self):
+        self.map_width = 13 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
+    def run(self):
+        self.detrend()
+        pass
 
+    def detrend(self):
+        product_list=['MODIS','LAI4g','SNU_LAI','GLOBMAP',]
+        for product in product_list:
+            result_dic = {}
+            if product == 'MODIS':
+                f=data_root+rf'\extract_growing_season_LAI_mean\\growing_season_LAI_mean.npy'
+                dic = T.load_npy(f)
+
+                for pix in tqdm(dic):
+                    time_series = dic[pix]
+                    if len(time_series) == 24:
+                        time_series=time_series[0:20]
+                    elif len(time_series) == 23:
+                        time_series=time_series[0:19]
+                    print(len(time_series))
+                    detrend = T.detrend_vals(time_series)
+                    result_dic[pix] = detrend
+                    # plt.plot(time_series)
+                    # plt.plot(detrend)
+                    # plt.show()
+
+
+            else:
+                f =  rf'D:\Project3\Result\Nov\{product}\extract_annual_growing_season_LAI_mean\\extract_annual_growing_season_LAI_mean.npy'
+                dic = T.load_npy(f)
+                for pix in tqdm(dic):
+                    time_series = dic[pix]['growing_season'][19:]
+                    print(len(time_series))
+                    detrend=T.detrend_vals(time_series)
+                    result_dic[pix]=detrend
+
+
+            outdir=result_root+rf'four_products_comparision\\'
+            T.mk_dir(outdir,force=True)
+            outf=outdir+f'{product}_detrend.npy'
+            # print(outf);exit()
+            T.save_npy(result_dic, outf)
+
+        pass
 
 class PLOT_result:
     def __init__(self):
@@ -1405,7 +1452,8 @@ class PLOT_result:
 def main():
     # preprocessing_MODIS_validation().run()
     # moving_window().run()
-    PLOT_result().run()
+    four_products_comparision().run()
+    # PLOT_result().run()
 
 
     pass
