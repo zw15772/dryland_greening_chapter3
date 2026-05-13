@@ -643,7 +643,7 @@ class moving_window():
         pass
     def run(self):
         # self.moving_window_extraction()
-        #
+
         # self.moving_window_CV_extraction_anaysis_LAI()
 
 
@@ -660,8 +660,8 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'detrend\\'
-        outdir = result_root + rf'\moving_window_extraction\\15year\\'
+        fdir_all =result_root+ rf'four_products_comparision\detrend\\'
+        outdir = result_root + rf'\four_products_comparision\\moving_window_extraction\\10year\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
@@ -683,7 +683,7 @@ class moving_window():
             #     continue
 
             dic = T.load_npy(fdir_all+f)
-            window = 15
+            window = 10
 
             new_x_extraction_by_window = {}
             for pix in tqdm(dic):
@@ -816,8 +816,8 @@ class moving_window():
     def moving_window_CV_extraction_anaysis_LAI(self):
 
 
-        fdir = result_root + rf'moving_window_extraction\\15year\\'
-        outdir = result_root + rf'\moving_window_extraction_CV\\15year\\'
+        fdir = result_root + rf'four_products_comparision\\moving_window_extraction\\10year\\'
+        outdir = result_root + rf'four_products_comparision\moving_window_extraction_CV\\10year\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -839,7 +839,7 @@ class moving_window():
                 trend_list = []
                 time_series_all = dic[pix]
                 # print(len(time_series_all));exit()
-                if len(time_series_all)<9:  ##
+                if len(time_series_all)<10:  ##
                     continue
                 time_series_all = np.array(time_series_all)
                 slides=len(time_series_all)
@@ -1066,8 +1066,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\moving_window_extraction_CV\\5year\\'
-        outdir =result_root + (rf'\moving_window_extraction_CV\\trend\\5year\\')
+        fdir =result_root+ rf'four_products_comparision\moving_window_extraction_CV\\5year\\'
+        outdir =result_root + (rf'four_products_comparision\moving_window_extraction_CV\\trend\\5year\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1200,6 +1200,7 @@ class four_products_comparision:
             T.save_npy(result_dic, outf)
 
         pass
+
 
 class PLOT_result:
     def __init__(self):
@@ -1451,8 +1452,8 @@ class PLOT_result:
 
 def main():
     # preprocessing_MODIS_validation().run()
-    # moving_window().run()
-    four_products_comparision().run()
+    moving_window().run()
+    # four_products_comparision().run()
     # PLOT_result().run()
 
 
