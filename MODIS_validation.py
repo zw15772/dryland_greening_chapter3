@@ -1469,13 +1469,6 @@ class PLOT_result:
 
 
 
-    pass
-
-    def merge(self):
-        pass
-
-
-
 def main():
     # preprocessing_MODIS_validation().run()
     # moving_window().run()
