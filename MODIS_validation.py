@@ -1471,6 +1471,9 @@ class PLOT_result:
 
     pass
 
+    def merge(self):
+        pass
+
 
 
 def main():
