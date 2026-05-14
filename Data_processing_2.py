@@ -1762,7 +1762,7 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'MODIS_LAI_validation\Result\Dataframe\\15year\\')
+                result_root +  rf'MODIS_LAI_validation\Result\four_products_comparision\\Dataframe\\10year\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
         self.dff = self.this_class_arr + rf'Dataframe.df'
@@ -2008,7 +2008,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\Nov\MODIS_LAI_validation\Result\moving_window_extraction_CV\15year\\growing_season_LAI_mean_detrend_CV.npy'
+        f = rf'D:\Project3\Result\Nov\MODIS_LAI_validation\Result\four_products_comparision\moving_window_extraction_CV\10year\\GLOBMAP_detrend_CV.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2022,7 +2022,7 @@ class build_dataframe():
 
         for pix in tqdm(dic):
             time_series = dic[pix]
-            if len(time_series)==9:
+            if len(time_series)==10:
                 time_series=np.append(time_series,np.nan)
 
             y = 0
@@ -2134,7 +2134,7 @@ class build_dataframe():
 
     def add_detrend_zscore_to_df(self, df):
 
-        fdir=result_root+rf'\MODIS_LAI_validation\Result\moving_window_extraction_CV\15year\\'
+        fdir=result_root+rf'\MODIS_LAI_validation\Result\\four_products_comparision\\moving_window_extraction_CV\\10year\\'
 
 
         for f in os.listdir(fdir):
@@ -2176,7 +2176,7 @@ class build_dataframe():
                 #     nan_list=np.array([np.nan]*5)
                 #     vals=np.append(vals,nan_list)
 
-                if len(vals)==9:
+                if len(vals)==10:
                     vals = np.append(vals,np.nan)
 
 
@@ -2679,7 +2679,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\MODIS_LAI_validation\Result\moving_window_extraction_CV\trend\15year\\'
+        fdir = result_root + rf'\MODIS_LAI_validation\Result\four_products_comparision\\moving_window_extraction_CV\trend\10year\\'
 
 
         for f in os.listdir(fdir):

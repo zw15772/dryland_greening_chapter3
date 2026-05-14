@@ -642,16 +642,16 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/MODIS_LAI_validation/Result/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
-        # self.moving_window_CV_extraction_anaysis_LAI()
+        self.moving_window_CV_extraction_anaysis_LAI()
 
 
         # self.moving_window_max_anaysis()
         # self.moving_window_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
 
 
@@ -1066,8 +1066,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'four_products_comparision\moving_window_extraction_CV\\5year\\'
-        outdir =result_root + (rf'four_products_comparision\moving_window_extraction_CV\\trend\\5year\\')
+        fdir =result_root+ rf'four_products_comparision\moving_window_extraction_CV\\10year\\'
+        outdir =result_root + (rf'four_products_comparision\moving_window_extraction_CV\\trend\\10year\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1209,9 +1209,9 @@ class PLOT_result:
         pass
     def run(self):
 
-        self.plot_histogram()
+        # self.plot_histogram()
         # self.weighted_average_LAICV()
-        # self.plot_CV_LAI()
+        self.plot_CV_LAI()
         # self.statistic_CV_trend_bar()
 
     def df_clean(self, df):
@@ -1230,49 +1230,51 @@ class PLOT_result:
     def plot_histogram(self):
 
         from scipy.stats import gaussian_kde
+        year=10
 
-        dff = result_root + r'\Dataframe\15year\\Dataframe.df'
+        dff = result_root + rf'\four_products_comparision\Dataframe\{year}year\\Dataframe.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
-        variable = 'growing_season_LAI_mean_detrend_CV_trend'
+        variable_list = ['SNU_LAI','MODIS','LAI4g',"GLOBMAP"]
+        for variable in variable_list:
 
-        vals = np.array(df[variable], dtype=float)
-        vals = vals[~np.isnan(vals)]
-        ## calculate >0 and <0
-        percentage_positive = len(vals[vals > 0])/len(vals)*100
-        percentage_negative = len(vals[vals < 0])/len(vals)*100
-
-
-        plt.figure(figsize=(4,3))
-
-        # histogram PDF
-        plt.hist(vals, bins=100, density=True, alpha=0.4, edgecolor='#ff7f0e', color='#ff7f0e' )
+            vals = np.array(df[variable], dtype=float)
+            vals = vals[~np.isnan(vals)]
+            ## calculate >0 and <0
+            percentage_positive = len(vals[vals > 0])/len(vals)*100
+            percentage_negative = len(vals[vals < 0])/len(vals)*100
 
 
-        # KDE smooth PDF
-        kde = gaussian_kde(vals)
-        x = np.linspace(np.nanmin(vals), np.nanmax(vals), 300)
-        plt.plot(x, kde(x), linewidth=2,color='#ff7f0e'  )
-        plt.axvline(0, color='k', linestyle='-',linewidth=1.5 )
-        plt.xlim(-2, 2)
-        plt.text(
-            0.98, 0.95,
-            f'Inc CV: {percentage_positive:.1f}%\n Dec CV: {percentage_negative:.1f}%',
-            transform=plt.gca().transAxes,
-            ha='right',
-            va='top',
-            fontsize=10
-        )
+            plt.figure(figsize=(4,3))
+
+            # histogram PDF
+            plt.hist(vals, bins=100, density=True, alpha=0.4, edgecolor='#ff7f0e', color='#ff7f0e' )
 
 
-        # plt.tight_layout()
-        # plt.show()
-        outdir=result_root+rf'Figure\15year\\'
-        T.mk_dir(outdir, force=True)
+            # KDE smooth PDF
+            kde = gaussian_kde(vals)
+            x = np.linspace(np.nanmin(vals), np.nanmax(vals), 300)
+            plt.plot(x, kde(x), linewidth=2,color='#ff7f0e'  )
+            plt.axvline(0, color='k', linestyle='-',linewidth=1.5 )
+            plt.xlim(-2, 2)
+            plt.text(
+                0.98, 0.95,
+                f'Inc CV: {percentage_positive:.1f}%\n Dec CV: {percentage_negative:.1f}%',
+                transform=plt.gca().transAxes,
+                ha='right',
+                va='top',
+                fontsize=10
+            )
 
-        plt.savefig(outdir+f'histogram.pdf')
-        plt.close()
+
+            # plt.tight_layout()
+            # plt.show()
+            outdir=result_root+rf'Figure\{year}year\\'
+            T.mk_dir(outdir, force=True)
+
+            plt.savefig(outdir+rf'histogram_{variable}.pdf')
+            plt.close()
 
 
 
@@ -1319,10 +1321,12 @@ class PLOT_result:
         outf=result_root+rf'\Dataframe\\Dataframe_area_weight.df'
         T.save_df(df_clean, outf)
         T.df_to_excel(df_clean, outf)
+
     def plot_CV_LAI(self):  ##### plot for 4 clusters
+        scenario=5
 
         df = T.load_df(
-            result_root + rf'\Dataframe\\10year\\Dataframe.df')
+            result_root + rf'\\\Dataframe\\\{scenario}year\\Dataframe.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -1336,12 +1340,17 @@ class PLOT_result:
                       'pink', 'grey',
                       'brown', 'lime', 'teal', 'magenta']
         linewidth_list = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        variable_list = ['growing_season_LAI_mean', ]
 
-        variable_list = ['growing_season_LAI_mean',
-                        ]
-        dic_label = {'growing_season_LAI_mean': 'MODIS LAI',
-                    }
-        year_list = range(0, 15)
+        # variable_list = ['SNU_LAI','MODIS','LAI4g',"GLOBMAP"]
+        dic_label={'growing_season_LAI_mean': 'MODIS',}
+
+        # dic_label = {'SNU_LAI': 'SNU',
+        #              'MODIS': 'MODIS',
+        #              'LAI4g': 'GIMMS4g',
+        #              'GLOBMAP': 'GLOBMAP'
+        #             }
+        year_list = range(0, 20)
 
         result_dic = {}
 
@@ -1351,6 +1360,8 @@ class PLOT_result:
                 df_i = df[df['window'] == year]
                 ## scheme1
                 vals = np.array(df_i[f'{var}_detrend_CV'].tolist(), dtype=float)
+                vals[vals <-999] = np.nan
+
                 weight=np.array(df_i['area_weight'].tolist(),dtype=float)
                 weighted_mean_values = (
                         np.nansum(vals * weight)
@@ -1384,7 +1395,7 @@ class PLOT_result:
             )
 
             slope, intercept, r_value, p_value, std_err = stats.linregress(year_list, df_new[var])
-            print(var, f'{slope:.2f}', f'{p_value:.2f}')
+            print(var, f'{slope:.2f}', f'{p_value:.3f}')
             trend = slope * np.array(year_list) + intercept
 
             plt.plot(
@@ -1395,23 +1406,34 @@ class PLOT_result:
                 color=color_list[flag],
                 alpha=0.8
             )
+            if p_value < 0.001:
+                sig = '***'
+            elif p_value < 0.01:
+                sig = '**'
+            elif p_value < 0.05:
+                sig = '*'
+            else:
+                sig = ''
 
             plt.text(
-                0.92, 0.95,
-                # f'Slope: {slope:.2f}\n P: {p_value:.2f}',
-                f'Slope: {slope:.2f}***',
+                0.45,
+                0.7 - flag * 0.07,
+                f'{dic_label[var]}: slope={slope:.2f}{sig}',
                 transform=plt.gca().transAxes,
                 ha='right',
                 va='top',
-                fontsize=10
+                fontsize=10,
+                color=color_list[flag]
             )
+
+
 
             ## std
 
             flag = flag + 1
         ## if var == 'composite_LAI_CV': plot CI bar
 
-        window_size = 10
+        window_size =scenario
 
         # set xticks with 1982-1997, 1998-2013,.. 2014-2020
         year_range = range(2001, 2025)
@@ -1425,21 +1447,22 @@ class PLOT_result:
             year_range_str.append(f'{start_year}-{end_year}')
 
         plt.xticks(range(len(year_range_str))[::3], year_range_str[::3], rotation=45, ha='right')
-        plt.yticks(np.arange(13, 15,.5))
+        # plt.yticks(np.arange(5, 21,2))
 
         plt.ylabel(f'CVLAI (%/yr)')
-        plt.grid(True, ) # 只画竖线（随 x 刻度）
+        # plt.grid(True, ) # 只画竖线（随 x 刻度）
+        # plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=10)
 
 
 
         # plt.show()
         # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\\Figure\10year\\'
+        out_pdf_fdir = result_root + rf'\\Figure\\MODIS_2001_2024\\{scenario}year\\'
         T.mk_dir(out_pdf_fdir, force=True)
-        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        plt.savefig(out_pdf_fdir + f'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
         plt.close()
 
-        #
+
         # plt.legend()
         # plt.show()
 
@@ -1452,9 +1475,9 @@ class PLOT_result:
 
 def main():
     # preprocessing_MODIS_validation().run()
-    moving_window().run()
+    # moving_window().run()
     # four_products_comparision().run()
-    # PLOT_result().run()
+    PLOT_result().run()
 
 
     pass
