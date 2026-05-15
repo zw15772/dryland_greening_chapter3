@@ -82,8 +82,7 @@ class preprocessing_flux_validation():
     def run(self):
         # self.preprocessing()
         # self.plot_GPP_growing_season()
-        self.detrend_data()
-        self.moving_window()
+
         pass
     def preprocessing(self):
         fdir=rf'D:\Project3\Result\Nov\Flux_validation\monthly\\'
@@ -232,109 +231,10 @@ class preprocessing_flux_validation():
 
         return df_detrend
 
-    def moving_window(self):
-
-        dff=join(result_root,'GPP_growing_season_VUT_detrend.df')
-        df=T.load_df(dff)
-
-        window =10
-
-        df_moving_window = pd.DataFrame()
-        df_moving_window['year'] = df['year'][window - 1:].values
-
-        for col in df.columns:
-
-            if col == 'year':
-                continue
-
-            ts = np.array(df[col], dtype=float)
-
-            if len(ts) < window:
-                continue
-
-            if np.all(np.isnan(ts)):
-                continue
-
-            rolling_cv = []
-
-            for i in range(len(ts) - window + 1):
-
-                vals = ts[i:i + window]
-
-
-
-                mean_val = np.nanmean(vals)
-
-                if mean_val == 0:
-                    rolling_cv.append(np.nan)
-                    continue
-
-                cv = np.nanstd(vals) / np.abs(mean_val)
-
-                rolling_cv.append(cv)
-
-            df_moving_window[col] = rolling_cv
-
-        for col in df_moving_window.columns:
-
-            if col == 'year':
-                continue
-
-            plt.plot(
-                df_moving_window['year'],
-                df_moving_window[col],
-            )
-
-            plt.xlabel('Year')
-            plt.ylabel('Rolling CV')
-            plt.title(col)
-            plt.show()
 
 
 
 
-    def forward_window_extraction(self, x, window):
-        # 前窗滤波
-        # window = window-1
-        # 不改变数据长度
-
-        if window < 0:
-            raise IOError('window must be greater than 0')
-        elif window == 0:
-            return x
-        else:
-            pass
-
-        x = np.array(x)
-
-        # new_x = np.array([])
-        # plt.plot(x)
-        # plt.show()
-        new_x_extraction_by_window = []
-        for i in range(len(x) + 1):
-            if i + window >= len(x) + 1:
-                continue
-            else:
-                anomaly = []
-                relative_change_list = []
-                x_vals = []
-                for w in range(window):
-                    x_val = (x[i + w])
-                    x_vals.append(x_val)
-                if np.isnan(np.nanmean(x_vals)):
-                    continue
-
-                # x_mean=np.nanmean(x_vals)
-
-                # for i in range(len(x_vals)):
-                #     if x_vals[0]==None:
-                #         continue
-                # x_anomaly=(x_vals[i]-x_mean)
-                # relative_change = (x_vals[i] - x_mean) / x_mean
-
-                # relative_change_list.append(x_vals)
-                new_x_extraction_by_window.append(x_vals)
-        return new_x_extraction_by_window
     def extract_shp_from_tif(self):
 
         shp_f = this_root + '/zip/All_flux_points.shp'
@@ -343,11 +243,155 @@ class preprocessing_flux_validation():
         T.mk_dir(outdir, force=True)
 
         pass
+class preprocessing_flux_data:
+    def __init__(self):
+        pass
+
+    def run(self):
+        # self.unzip_data()
+        self.extract_meta_data()
+
+    def unzip_data(self):
+        fdir=data_root+rf'\shuttle\\'
+
+
+        outdir =data_root+rf'\shuttle_unzip\\'
+        T.mk_dir(outdir)
+
+        T.unzip(fdir, outdir)
+        pass
+
+    def extract_meta_data(self):
+        ##1 data start/ end and range
+        ## if all -9999 label probelm
+        meta_data_file=this_root+rf'meta\\dryland_flux_sites_attribution.csv'
+        fdir_all=data_root+rf'\shuttle_unzip\\'
+        variable = 'GPP_NT_VUT_REF'
+        df_meta=pd.read_csv(meta_data_file)
+
+
+        # save info
+        info_list = []
+
+        for fdir in T.listdir(fdir_all):
+
+            if 'FLUXNET' in fdir:
+
+                time_col = 'TIMESTAMP'
+                skiprows = 0
+                dataset_type = 'FLUXNET'
+
+            elif 'BASE' in fdir:
+
+                time_col = 'TIMESTAMP_START'
+                skiprows = 2
+                dataset_type = 'BASE'
+
+            else:
+                continue
+
+            for f in T.listdir(os.path.join(fdir_all, fdir)):
+
+                if not f.endswith('.csv'):
+                    continue
+
+                # ===== FLUXNET =====
+                if dataset_type == 'FLUXNET':
+
+                    if ('FLUXMET' not in f) or ('MM' not in f):
+                        continue
+
+                # ===== BASE =====
+                elif dataset_type == 'BASE':
+
+                    if 'BASE_HH' not in f:
+                        continue
+
+                print(f)
+
+                fpath = os.path.join(fdir_all, fdir, f)
+
+                try:
+
+                    df = pd.read_csv(
+                        fpath,
+                        skiprows=skiprows,
+
+                    )
+                    # print(df[time_col].head());exit()
+
+
+
+                    # ===== site name =====
+                    # example:
+                    # FLX_US-XXX_FLUXMET_MM_....
+                    site = f.split('_')[1]
+
+                    # ===== time column =====
+
+
+                    df[time_col] = df[time_col].astype(str)
+
+                    start_time = df[time_col].min()
+                    end_time = df[time_col].max()
+                    start_year = int(start_time[:4])
+                    end_year = int(end_time[:4])
+
+                    total_years = end_year - start_year + 1
+
+
+                    # ===== valid data =====
+
+
+
+                    # print(valid_len, len(vals));exit()
+
+                    # ===== append =====
+                    info_list.append({
+                        'site_id': site,
+                        'start_time': start_year,
+                        'end_time': end_year,
+                        'total_years': total_years,
+                    })
+
+                except Exception as e:
+
+                    print(f'ERROR: {f}')
+                    print(e)
+
+    # ===================================
+        # build dataframe
+        # ===================================
+        df_info = pd.DataFrame(info_list)
+
+        # ===================================
+        # merge
+        # ===================================
+        dff_new = df_meta.merge(
+            df_info,
+            on='site_id',
+            how='left'
+        )
+
+        # ===================================
+        # save
+        # ===================================
+        outf = this_root + rf'\meta\\dryland_flux_sites_attribution_new2.csv'
+
+        dff_new.to_csv(outf, index=False)
+
+        print(dff_new.head())
+
+
+        pass
+
+
 
 
 def main():
 
-    preprocessing_flux_validation().run()
+    # preprocessing_flux_validation().run()
+    preprocessing_flux_data().run()
 
 
 
