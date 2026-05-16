@@ -81,29 +81,174 @@ class preprocessing_flux_validation():
         pass
     def run(self):
         # self.preprocessing()
-        # self.plot_GPP_growing_season()
+        # self.preprocessing2()
+        self.plot_GPP_growing_season()
 
         pass
+    def preprocessing2(self):  ## no use multiple sites has no data
+        fdir_all = rf'D:\Project3\Result\Nov\Flux_validation\data\shuttle_unzip\\'
+        sites_list = [
+            'AU-Cow',
+            'AU-DaP',
+            'AU-DaS',
+            'AU-Dry',
+            'AU-Stp',
+
+            'CN-HaM',
+            'ML-AgG',
+
+            'US-AUD',
+            'US-CMW',
+
+            'US-Mpj',
+            'US-MtB',
+            'US-NR1',
+            'US-NR3',
+            'US-NR4',
+            'US-SRC',
+            'US-SRG',
+            'US-SRM',
+            'US-Vcm',
+            'US-Vcp',
+            'US-Whs',
+            'US-Wkg',
+            'US-Wjs',
+            'ZA-Kru'
+        ]
+       ## if AU growing season from 11 to 4 if US from may to oct
+        dic_growing_season = {}
+        for site in sites_list:
+
+            # Northern Hemisphere
+            if site.startswith(('US', 'CN', 'ML', )):
+                dic_growing_season[site] = [4, 5, 6, 7, 8, 9, 10]
+
+            # Southern Hemisphere (Australia)
+            elif site.startswith(('AU','ZA')):
+                dic_growing_season[site] = [11, 12, 1, 2, 3, 4]
+
+        variable = 'GPP_NT_VUT_REF'
+
+        all_result = []
+
+        for fdir in T.listdir(fdir_all):
+            print(fdir)
+
+            if 'FLUXNET' in fdir:
+
+
+                skiprows = 0
+
+
+            elif 'BASE' in fdir:
+
+
+                skiprows = 2
+
+
+            if fdir.split('_')[1] not in sites_list:
+                continue
+
+
+            for f in T.listdir(os.path.join(fdir_all, fdir)):
+                if not 'MM' in f:
+                    continue
+                if 'ERA' in f:
+                    continue
+                if 'BIFVARINFO' in f:
+                    continue
+
+                site = f.split('_')[1]
+                if not site in dic_growing_season:
+                    continue
+
+                if site not in dic_growing_season:
+                    print('skip:', site, f)
+                    continue
+                # print(f);exit()
+
+                df = pd.read_csv(
+                    os.path.join(fdir_all, fdir, f),
+                    skiprows=skiprows,
+
+                )
+                # print(df.head());exit()
+
+                df[variable] = df[variable].where(df[variable] > -999, np.nan)
+
+                df_new = pd.DataFrame({
+                    'date': pd.to_datetime(df['TIMESTAMP'].astype(str), format='%Y%m'),
+                    'GPP': df[variable]
+                })
+
+                # ===== 时间信息 =====
+                df_new['year'] = df_new['date'].dt.year
+
+                df_new['month'] = df_new['date'].dt.month
+                df_new['days'] = df_new['date'].dt.days_in_month
+
+                growing_months = dic_growing_season[site]
+
+                df_gs = df_new[df_new['month'].isin(growing_months)].copy()
+
+                # AU sites: Nov-Dec belong to next growing-season year
+                if 11 in growing_months and 12 in growing_months and 1 in growing_months:
+                    df_gs.loc[df_gs['month'].isin([11, 12]), 'year'] += 1
+                # df_gs = df_gs[df_gs['year'] < 2022]
+
+                # gC m-2 d-1 -> gC m-2 month-1
+                df_gs['GPP_monthly'] = df_gs['GPP'] * df_gs['days']
+
+                df_result = (
+                    df_gs.groupby('year')['GPP_monthly']
+                    .sum()
+                    .reset_index()
+                    .rename(columns={'GPP_monthly': f'GPP_growing_season'})
+                )
+
+                df_result['site'] = site
+
+                all_result.append(df_result)
+
+        # ===== 合并所有站点 =====
+        df_all = pd.concat(all_result, ignore_index=True)
+
+        # ===== 转成宽表 =====
+        df_wide = df_all.pivot(index='year', columns='site', values='GPP_growing_season')
+
+        df_wide = df_wide.reset_index()
+
+        T.save_df(df_wide, join(result_root, 'GPP_growing_season_VUT.df'))
+        T.df_to_excel(df_wide, join(result_root, 'GPP_growing_season_VUT.xlsx'))
+        pass
+
     def preprocessing(self):
-        fdir=rf'D:\Project3\Result\Nov\Flux_validation\monthly\\'
+        fdir_all=rf'D:\Project3\Result\Nov\Flux_validation\data\shuttle_unzip\\'
+        sites_list=['AU-DaS', 'US-CMW',
+                    'US-Mpj','US-Vcm','US-Vcp','US-Whs',
+                    'US-Wjs',
+                    'US-Wkg',
+                    'US-NR1', 'US-NR3', 'US-NR4', 'US-SRM',
+                    'US-SRG',
+
+
+]
         dic_growing_season = {
+            'AU-DaS': [11, 12, 1, 2, 3, 4],
+            'US-CMW': [4, 5, 6, 7, 8, 9],
+            'US-NR1': [4, 5, 6, 7, 8, 9],
+            'US-NR3': [4, 5, 6, 7, 8, 9],
+            'US-NR4': [4, 5, 6, 7, 8, 9],
+
             'US-SRG': [4, 5, 6, 7, 8, 9],
             'US-SRM': [4, 5, 6, 7, 8, 9],
             'US-Wkg': [4, 5, 6, 7, 8, 9],
             'US-Vcp':[4, 5, 6, 7, 8, 9],
             'US-Vcm':[4, 5, 6, 7, 8, 9],
-            'AU-ASM': [11, 12, 1, 2, 3, 4],
-            'US-Seg': [4, 5, 6, 7, 8, 9],
-            'US-Ses': [4, 5, 6, 7, 8, 9],
+
             'US-Mpj': [4, 5, 6, 7, 8, 9],
             'US-Wjs': [4, 5, 6, 7, 8, 9],
-            # 'CN-Aro':[4, 5, 6, 7, 8, 9],
-            #
-            # 'CN-Dsh':[4, 5, 6, 7, 8, 9],
-            # 'CN-Xi2':[4, 5, 6, 7, 8, 9],
 
-
-            'AU-Dry': [11, 12, 1, 2, 3, 4],
         }
 
 
@@ -112,54 +257,70 @@ class preprocessing_flux_validation():
 
         all_result = []
 
-        for f in T.listdir(fdir):
-
-            site = f.split('_')[1]
-            if not site in dic_growing_season:
+        for fdir in T.listdir(fdir_all):
+            print(fdir)
+            if fdir.split('_')[1] not in sites_list:
                 continue
 
-            if site not in dic_growing_season:
-                print('skip:', site, f)
-                continue
+            for f in T.listdir(os.path.join(fdir_all, fdir)):
+                if not 'MM' in f:
+                    continue
+                if 'ERA' in f:
+                    continue
+                if 'BIFVARINFO' in f:
+                    continue
 
-            df = pd.read_csv(join(fdir, f))
+                site = f.split('_')[1]
+                if not site in dic_growing_season:
+                    continue
 
-            df[variable] = df[variable].where(df[variable] > -999, np.nan)
+                if site not in dic_growing_season:
+                    print('skip:', site, f)
+                    continue
+                # print(f);exit()
 
-            df_new = pd.DataFrame({
-                'date': pd.to_datetime(df['TIMESTAMP'].astype(str), format='%Y%m'),
-                'GPP': df[variable]
-            })
+                df = pd.read_csv(
+                    os.path.join(fdir_all, fdir, f),
 
-            # ===== 时间信息 =====
-            df_new['year'] = df_new['date'].dt.year
+                )
+                # print(df.head());exit()
 
-            df_new['month'] = df_new['date'].dt.month
-            df_new['days'] = df_new['date'].dt.days_in_month
+                df[variable] = df[variable].where(df[variable] > -999, np.nan)
+
+                df_new = pd.DataFrame({
+                    'date': pd.to_datetime(df['TIMESTAMP'].astype(str), format='%Y%m'),
+                    'GPP': df[variable]
+                })
+
+                # ===== 时间信息 =====
+                df_new['year'] = df_new['date'].dt.year
+
+                df_new['month'] = df_new['date'].dt.month
+                df_new['days'] = df_new['date'].dt.days_in_month
 
 
-            growing_months = dic_growing_season[site]
+                growing_months = dic_growing_season[site]
 
-            df_gs = df_new[df_new['month'].isin(growing_months)].copy()
+                df_gs = df_new[df_new['month'].isin(growing_months)].copy()
 
-            # AU sites: Nov-Dec belong to next growing-season year
-            if 11 in growing_months and 12 in growing_months and 1 in growing_months:
-                df_gs.loc[df_gs['month'].isin([11, 12]), 'year'] += 1
-            # df_gs = df_gs[df_gs['year'] < 2022]
+                # AU sites: Nov-Dec belong to next growing-season year
+                if 11 in growing_months and 12 in growing_months and 1 in growing_months:
+                    df_gs.loc[df_gs['month'].isin([11, 12]), 'year'] += 1
+                # df_gs = df_gs[df_gs['year'] < 2022]
 
-            # gC m-2 d-1 -> gC m-2 month-1
-            df_gs['GPP_monthly'] = df_gs['GPP'] * df_gs['days']
+                # gC m-2 d-1 -> gC m-2 month-1
+                df_gs['GPP_monthly'] = df_gs['GPP'] * df_gs['days']
 
-            df_result = (
-                df_gs.groupby('year')['GPP_monthly']
-                .sum()
-                .reset_index()
-                .rename(columns={'GPP_monthly': f'GPP_growing_season'})
-            )
+                df_result = (
+                    df_gs.groupby('year')['GPP_monthly']
+                    .sum()
+                    .reset_index()
+                    .rename(columns={'GPP_monthly': f'GPP_growing_season'})
+                )
 
-            df_result['site'] = site
+                df_result['site'] = site
 
-            all_result.append(df_result)
+                all_result.append(df_result)
 
         # ===== 合并所有站点 =====
         df_all = pd.concat(all_result, ignore_index=True)
@@ -182,6 +343,7 @@ class preprocessing_flux_validation():
             if col == 'year':
                 continue
             df[col] = df[col].replace(0, np.nan)
+            print(df[col])
 
             plt.plot(df['year'], df[col], label=col)
 
@@ -249,7 +411,8 @@ class preprocessing_flux_data:
 
     def run(self):
         # self.unzip_data()
-        self.extract_meta_data()
+        # self.extract_meta_data()
+        self.statistics_data()
 
     def unzip_data(self):
         fdir=data_root+rf'\shuttle\\'
@@ -266,7 +429,7 @@ class preprocessing_flux_data:
         ## if all -9999 label probelm
         meta_data_file=this_root+rf'meta\\dryland_flux_sites_attribution.csv'
         fdir_all=data_root+rf'\shuttle_unzip\\'
-        variable = 'GPP_NT_VUT_REF'
+
         df_meta=pd.read_csv(meta_data_file)
 
 
@@ -385,6 +548,55 @@ class preprocessing_flux_data:
 
         pass
 
+    def statistics_data(self):
+        import pandas as pd
+        import matplotlib.pyplot as plt
+
+        dff = r'D:\Project3\Result\Nov\Flux_validation\meta\dryland_flux_sites_attribution_new2.csv'
+
+        df = pd.read_csv(dff)
+
+        # sort by start year
+        df = df.sort_values('start_time')
+
+        fig, ax = plt.subplots(figsize=(10, 20))
+
+        # plot
+        for i, row in enumerate(df.itertuples()):
+            ax.hlines(
+                y=i,
+                xmin=row.start_time,
+                xmax=row.end_time,
+                color='black',
+                linewidth=2
+            )
+
+        # y labels
+        # ax.set_yticks(range(len(df)))
+        # ax.set_yticklabels(df['site_id'])
+        ax.set_yticklabels('')
+
+        # x axis
+
+
+        # optional vertical line
+        ax.axvline(
+            2008,
+            color='red',
+            linestyle='--',
+            linewidth=1.5
+        )
+        ax.set_ylabel('Flux Sites', fontsize=14)
+
+        # style
+        ax.grid(True,  alpha=0.3)
+        # outdir=this_root + rf'Figures\\'
+        # T.mk_dir(outdir, force=True)
+        # plt.savefig(outdir+rf'\dryland_flux_sites_attribution_new2.png')
+
+        # plt.tight_layout()
+
+        plt.show()
 
 
 
