@@ -96,8 +96,8 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def run (self):
         # self.plot_CV_LAI()
         # self.plot_relative_change_LAI()
-        # self.plot_std()
-        self.plot_LAImax_LAImin()
+        self.plot_std()
+        # self.plot_LAImax_LAImin()
         # self.plot_LAIpercentile()
         # self.plot_LAImax_LAImin_models()
         # self.plot_rainfallmax_min()
@@ -445,7 +445,7 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
     def plot_CV_LAI(self):  ##### plot for 4 clusters
 
         df = T.load_df(
-            result_root + rf'\Dataframe\\CVLAI\\CVLAI_area_weighted.df')
+            result_root + rf'\Dataframe\\CVLAI\\CVLAI_new.df')
         print(len(df))
         df = self.df_clean(df)
 
@@ -538,13 +538,14 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         plt.grid(True, axis='x')  # 只画竖线（随 x 刻度）
 
         plt.legend(loc='upper left')
+        plt.tight_layout()
 
-        # plt.show()
-        # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\FIGURE\weighted_area\\'
-        T.mk_dir(out_pdf_fdir, force=True)
-        plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
-        plt.close()
+        plt.show()
+
+        # out_pdf_fdir = result_root + rf'\FIGURE\weighted_area\\'
+        # T.mk_dir(out_pdf_fdir, force=True)
+        # plt.savefig(out_pdf_fdir + 'time_series_CV_mean.pdf', dpi=300, bbox_inches='tight')
+        # plt.close()
 
         #
         # plt.legend()
@@ -557,34 +558,64 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         from scipy import stats
 
         # === 读数据 ===
-        df = T.load_df(result_root + rf'Dataframe\CVLAI\CVLAI.df')
+        df = T.load_df(result_root + rf'moving_window_extraction_raw\Dataframe\Dataframe.df')
         df = self.df_clean(df)
 
-        # 用实际存在的 year 索引，避免和 x 轴标签长度不一致
         year_list = sorted(df['window'].astype(int).unique())
-        n = len(year_list)
+        n = len(year_list)-1
         x = np.arange(n)
 
         # 两条变量：左轴 std，右轴 mean
-        std_var = 'composite_LAI_relative_change_detrend_mean_std'
-        mean_var = 'composite_LAI_relative_change_detrend_mean_mean'
+        std_var = 'composite_LAI_std'
+        mean_var = 'composite_LAI_mean'
 
         dic_label = {
             mean_var: 'Composite LAI mean',
             std_var: 'Composite LAI std',
         }
 
-        # 聚合到每个窗口（year）上的均值
+        # 去掉nan
         def agg_mean(var):
-            vals = []
-            for y in year_list:
-                v = df.loc[df['window'] == y, var].to_numpy(dtype=float)
-                v = v[~np.isnan(v)]
-                vals.append(np.nan if len(v) == 0 else np.nanmean(v))
-            return np.array(vals, dtype=float)
 
+            vals = []
+
+            for y in year_list:
+
+                v = df.loc[
+                    df['window'] == y,
+                    var
+                ].to_numpy(dtype=float)
+
+                weight = df.loc[
+                    df['window'] == y,
+                    'area_weight'
+                ].to_numpy(dtype=float)
+
+                # ===== valid mask =====
+                valid = np.isfinite(v) & (v > 0)
+
+                v = v[valid]
+                weight = weight[valid]
+
+                # ===== weighted mean =====
+                if len(v) == 0:
+
+                    vals.append(np.nan)
+
+                else:
+
+                    weighted_mean_values = (
+                            np.nansum(v * weight)
+                            / np.nansum(weight)
+                    )
+
+                    vals.append(weighted_mean_values)
+
+            return np.array(vals, dtype=float)
         y_std = agg_mean(std_var)
+        y_std=y_std[:-1]
         y_mean = agg_mean(mean_var)
+        y_mean=y_mean[:-1]
 
         # === 画图：双轴 ===
         fig, ax1 = plt.subplots(figsize=(self.map_width, self.map_height))
@@ -630,12 +661,14 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
         ax1.set_xticks(range(len(year_range_str))[::4], year_range_str[::4], rotation=45, ha='right', fontsize=12)
 
         # 轴标签与颜色
-        ax1.set_ylabel('Composite LAI std (%/year)', color=color_std,fontsize=12)
-        ax2.set_ylabel('Composite LAI mean (%/year)', color=color_mean,fontsize=12)
+        ax1.set_ylabel('Composite LAI std (%)', color=color_std,fontsize=12)
+        ax2.set_ylabel('Composite LAI mean (%)', color=color_mean,fontsize=12)
         ax1.tick_params(axis='y', colors=color_std, labelsize=12)
         ax2.tick_params(axis='y', colors=color_mean, labelsize=12)
         ax1.spines['left'].set_color(color_std)
         ax2.spines['right'].set_color(color_mean)
+        # ax2.set_ylim(0.9,1.1)1
+        # ax1.set_ylim(0.05,0.15)
 
         # 网格只用左轴
         ax1.grid(True, which='major', alpha=0.5)
@@ -646,12 +679,12 @@ class PLOT_dataframe():  ## plot all time series, trends bar figure 1, figure 2 
 
 
 
-        plt.show()
+        # plt.show()
         # # plt.tight_layout()
-        out_pdf_fdir = result_root + rf'\FIGURE\\SI\\'
+        out_pdf_fdir = result_root + rf'\moving_window_extraction_raw\Figure\\'
         T.mk_dir(out_pdf_fdir)
-        # plt.savefig(out_pdf_fdir + 'std_mean_time_series.pdf', dpi=300, bbox_inches='tight')
-        # plt.close()
+        plt.savefig(out_pdf_fdir + 'std_mean_time_series_raw.pdf', dpi=300, bbox_inches='tight')
+        plt.close()
 
 
         #
@@ -3804,7 +3837,7 @@ def main():
 
 
     # Trends_obs_and_model().run()  ## Figure 1
-    Trends_CV_obs_and_model().run()  ## Figure 2
+    # Trends_CV_obs_and_model().run()  ## Figure 2
     PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()

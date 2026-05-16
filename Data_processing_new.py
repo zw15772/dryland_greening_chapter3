@@ -92,12 +92,14 @@ class processing_GLOBMAP():
         pass
     def run (self):
         # self.extract_dryland()
-        self.extract_phenology_monthly_variables()
+        # self.extract_phenology_monthly_variables()
         # self.extract_annual_growing_season_LAI_mean()
         # self.relative_change()
         # self.trend_analysis()
         # self.detrend()
-        # self.deseanalized_detrend()
+        # self.plot_time_series()
+        self.moving_window()
+
         pass
 
 
@@ -441,8 +443,8 @@ class processing_GLOBMAP():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir=result_root + rf'\LAI4g\relative_change\\'
-        outdir=result_root + rf'\LAI4g\\relative_change\\'
+        fdir=result_root + rf'\GLOBMAP\extract_annual_growing_season_LAI_mean\\'
+        outdir=result_root + rf'\GLOBMAP\\detrend\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -471,7 +473,7 @@ class processing_GLOBMAP():
                     continue
                 r, c= pix
                 # print(len(dic[pix]))
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 print(len(time_series))
                 # print(time_series)
                 time_series=np.array(time_series,dtype=float)
@@ -501,6 +503,90 @@ class processing_GLOBMAP():
                 detrend_zscore_dic[pix] = detrend_delta_time_series
 
             np.save(outf, detrend_zscore_dic)
+
+    def plot_time_series(self):
+        fdir=result_root + rf'\GLOBMAP\\detrend\\'
+
+        dic=T.load_npy_dir(fdir)
+        val_list=[]
+        for pix in tqdm(dic):
+            if pix in dic:
+                vals=dic[pix]
+                if len(vals) == 38:
+                    vals = np.append(vals, np.nan)
+                    vals=np.array(vals)
+                    val_list.append(vals)
+
+        val_list=np.array(val_list)
+
+        val_list=np.nanmean(val_list,axis=0)
+        plt.plot(np.arange(len(val_list)),val_list)
+
+        plt.show()
+
+    def moving_window(self):
+
+        fdir = result_root + rf'\GLOBMAP\\detrend\\'
+
+        dic = T.load_npy_dir(fdir)
+
+
+        window = 15
+        result_dic={}
+
+        for pix in tqdm(dic):
+
+            vals = np.array(dic[pix], dtype=float)
+
+            # 跳过长度不足
+            if len(vals) < window:
+                continue
+
+            moving_window_list = []
+
+            # moving window
+            for i in range(len(vals) - window + 1):
+                window_vals = vals[i:i + window]
+
+                moving_mean = np.nanmean(window_vals)
+
+                moving_window_list.append(moving_mean)
+
+            moving_window_list = np.array(moving_window_list)
+            if len(moving_window_list) == 24:
+                moving_window_list = np.append(moving_window_list, np.nan)
+
+            result_dic[pix] = moving_window_list
+        profile=self.profile_template()
+        outdir=result_root + rf'\\moving_window_extraction_raw\\slices\\'
+        Tools().mk_dir(outdir,force=True)
+        outf=outdir+f'GLOBMAP_moving_window_extraction_raw.tif'
+
+
+        DIC_and_DF().spatial_dict_to_tif(result_dic,profile,outf,bands_description=None,nodata=np.nan)
+
+    def profile_template(self):
+        profile = {'blockxsize': 432,
+                   'blockysize': 224,
+                   'compress': 'packbits',
+                   'count': 1,
+                   'crs': CRS().from_wkt(
+                       'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
+                       'AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],'
+                       'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
+                       'AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'),
+                   'driver': 'GTiff',
+                   'dtype': np.float32,
+                   'height': 360,
+                   'interleave': 'pixel',
+                   'nodata': None,
+                   'tiled': True,
+                   'transform': Affine(0.5, 0.0, -180.0,
+                                       0.0, -0.5, 90.0),
+                   'width':720}
+
+        return profile
+
 
 
 
@@ -1308,16 +1394,16 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_anaysis()
         # self.moving_window_min_anaysis()
-        # self.moving_window_std_anaysis()
+        self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
 
 
@@ -1326,13 +1412,12 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\CRU-JRA\extraction_rainfall_characteristic\\'
-        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\\\moving_window_extraction\\'
+        fdir_all =result_root+ rf'\SNU_LAI\detrend\\'
+        outdir = result_root + rf'\\moving_window_extraction_raw\\\\moving_window_extraction\\SNU_LAI\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not '5mm' in f:
-                continue
+
 
             if not f.endswith('.npy'):
                 continue
@@ -1545,8 +1630,8 @@ class moving_window():
     def moving_window_CV_extraction_anaysis_LAI(self):
         window_size=15
 
-        fdir = result_root + rf'\SNU_LAI\15_year\moving_window_extraction\\'
-        outdir = result_root + rf'\SNU_LAI\15_year\moving_window_extraction_CV\\'
+        fdir = result_root + rf'moving_window_extraction_raw\moving_window_extraction\\'
+        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_extraction_CV\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1609,14 +1694,10 @@ class moving_window():
 
     def moving_window_average_anaysis(self): ## each window calculating the average
 
-
-
-        fdir = result_root + rf'CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\'
-        outdir = result_root + rf'CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_average\\'
+        fdir = result_root + rf'moving_window_extraction_raw\moving_window_extraction\\'
+        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_mean_mean\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not '5mm' in f:
-                continue
 
 
             dic = T.load_npy(fdir + f)
@@ -1789,15 +1870,15 @@ class moving_window():
 
     def moving_window_std_anaysis(self):
 
-        fdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_extraction\\'
-        outdir = result_root + rf'\Composite_LAI\relative_change_detrend\moving_window_std_mean\\'
+        fdir = result_root + rf'moving_window_extraction_raw\moving_window_extraction\\'
+        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_mean\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
 
             dic = T.load_npy(fdir + f)
 
-            outf = outdir + f.split('.')[0] + f'_std.npy'
+            outf = outdir + f.split('.')[0] + f'_mean.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -1828,12 +1909,12 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    cv=np.nanstd(time_series)
-                    # cv = np.nanmean(time_series)
+                    # cv=np.nanstd(time_series)
+                    cv = np.nanmean(time_series)
                     trend_list.append(cv)
                 # print(len(trend_list))
-                # plt.plot(trend_list)
-                # plt.show()
+                plt.plot(trend_list)
+                plt.show()
 
                 trend_dic[pix]=trend_list
 
@@ -1905,13 +1986,12 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\Multiregression_contribution\Obs\input\X\zscore\\'
-        outdir =result_root + (rf'\Multiregression_contribution\Obs\input\X\zscore\\trend\\')
+        fdir =result_root+ rf'\moving_window_extraction_raw\moving_window_std\\'
+        outdir =result_root + (rf'\moving_window_extraction_raw\moving_window_std\\\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not '5mm' in f:
-                continue
+
 
 
 
@@ -2098,9 +2178,9 @@ class processing_composite_LAI():
 
         # self.average_detrend_deseasonalized_composite_LAI()
         # self.average_LAI_detrend()
-        # self.average_LAI_detrend_CV()
+        self.average_LAI_detrend_CV()
         # self.average_LAImax_LAImin()
-        self.trend_analysis()
+        # self.trend_analysis()
         pass
 
 
@@ -2304,10 +2384,10 @@ class processing_composite_LAI():
 
     def average_LAI_detrend_CV(self):
 
-        infdir = result_root+'\partial_correlation\Obs\input\Y\\'
-        f_1 = infdir + rf'\\SNU_LAI_detrend_CV.npy'
-        f_2 = infdir + rf'\\GLOBMAP_LAI_detrend_CV.npy'
-        f_3 = infdir + rf'\\LAI4g_detrend_CV.npy'
+        infdir = result_root+'moving_window_extraction_raw\moving_window_std\\'
+        f_1 = infdir + rf'\\GLOBMAP_std.npy'
+        f_2 = infdir + rf'\\LAI4g_std.npy'
+        f_3 = infdir + rf'\\SNU_LAI_std.npy'
         dic1 = np.load(f_1, allow_pickle=True).item()
         dic2 = np.load(f_2, allow_pickle=True).item()
         dic3 = np.load(f_3, allow_pickle=True).item()
@@ -2355,10 +2435,10 @@ class processing_composite_LAI():
         # plt.colorbar()
         # plt.show()
 
-        outdir = result_root + rf'\Composite_LAI\\CV\\'
+        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_std\\'
         Tools().mk_dir(outdir, force=True)
 
-        np.save(outdir + 'composite_LAI_detrend_CV_mean.npy', average_dic)
+        np.save(outdir + 'composite_LAI_std.npy', average_dic)
 
     def trend_analysis(self):  ##each window average trend
 
@@ -4097,14 +4177,14 @@ class extract_rainfallmin_rainfallmax():
 
 
 def check_data():
-    fdir=rf'D:\Project3\Result\Nov\Multiregression_intersensitivity\output_TRENDY\\'
+    fdir=rf'D:\Project3\Result\Nov\GLOBMAP\extract_annual_growing_season_LAI_mean\\'
     for f in os.listdir(fdir):
 
         result_dic={}
 
         dic=np.load(fdir+f, allow_pickle=True, encoding='latin1').item()
         for pix in dic:
-            vals=dic[pix]['intersensitivity_precip_val']
+            vals=dic[pix]
             vals_len=len(vals)
             result_dic[pix]=vals_len
         arr=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)

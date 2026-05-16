@@ -1245,9 +1245,9 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root +  rf'\bivariate\Dataframe\\')
+                    result_root + rf'\Dataframe\CVLAI\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'CVLAI_new.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1391,6 +1391,8 @@ class build_moving_window_dataframe():
 
         for pix in tqdm(dic):
             time_series = dic[pix]
+            if len(time_series)==24:
+                time_series=np.append(time_series,np.nan)
             y = 0
 
             for val in time_series:
@@ -1407,19 +1409,16 @@ class build_moving_window_dataframe():
 
         df['window'] = year
 
-        df['composite_LAI_mean_detrend_CV'] = change_rate_list
+
+        df['GLOBMAP_average'] = change_rate_list
         return df
     def add_window_to_df(self, df):
 
 
-        fdir=result_root+rf'\Composite_LAI\LAImin_LAImax\\'
+        fdir=result_root+rf'\Composite_LAI\std_mean\\'
 
 
         for f in os.listdir(fdir):
-            if 'max' in f:
-                continue
-            if 'min' in f:
-                continue
 
 
 
@@ -1762,10 +1761,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'MODIS_LAI_validation\Result\four_products_comparision\\Dataframe\\10year\\')
+                result_root +  rf'\Dataframe\CVLAI\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'CVLAI_new.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1775,7 +1774,7 @@ class build_dataframe():
 
 
         df = self.__gen_df_init(self.dff)
-        df=self.foo1(df)
+        # df=self.foo1(df)
         # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
@@ -1785,7 +1784,7 @@ class build_dataframe():
         # df=self.append_value(df)   ## insert or append value
 
 
-        df = self.add_detrend_zscore_to_df(df)
+        # df = self.add_detrend_zscore_to_df(df)
         # df=self.add_GPCP_lagged(df)
         # df=self.add_rainfall_characteristic_to_df(df)
         # df=self.add_lc_composition_to_df(df)
@@ -1793,7 +1792,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
 
@@ -9481,8 +9480,8 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    build_dataframe().run()
-    # build_moving_window_dataframe().run()
+    # build_dataframe().run()
+    build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()
