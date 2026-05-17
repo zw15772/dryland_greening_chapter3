@@ -1775,7 +1775,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        # df=self.foo2(df)
+        df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1791,7 +1791,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
@@ -2040,7 +2040,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\Multiregression_contribution\Obs\review\composite_LAI_mean\composite_LAI_mean_sensitivity_zscore.tif'
+        f = result_root + rf'\Multiregression_contribution\Obs\review\output\\composite_LAI_mean\composite_LAI_mean_sensitivity_zscore.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2584,21 +2584,21 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'\partial_correlation\Obs\result\3mm\\'
+        fdir_all = result_root + rf'Multiregression_contribution\Obs\review\output\\'
         for fdir in os.listdir(fdir_all):
 
 
-            # for f in os.listdir(join(fdir_all,fdir)):
-            #
-            #
-            #     if not f.endswith('.tif'):
-            #         continue
+            for f in os.listdir(join(fdir_all,fdir)):
+
+
+                if not f.endswith('.tif'):
+                    continue
 
             # #
-            fdir_sig=fdir_all+fdir+'\\sig\\'
+            # fdir_sig=fdir_all+fdir+'\\sig\\'
             # print(fdir_sig);exit()
 
-            for f in os.listdir(fdir_sig):
+            # for f in os.listdir(fdir_sig):
 
 
                 if not f.endswith('.tif'):
@@ -2611,8 +2611,8 @@ class build_dataframe():
                     fname=f'{fdir}_{variable}'
                 print(fname)
 
-                # fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
-                fpath=join(fdir_sig,f)
+                fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
+                # fpath=join(fdir_sig,f)
                 print(fpath)
 
 
