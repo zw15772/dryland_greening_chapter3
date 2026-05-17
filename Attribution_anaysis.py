@@ -330,12 +330,7 @@ class multiregression_intersensitivity():
         return df
 class VIF:
     def __init__(self):
-        self.this_root = 'D:\Project3\\'
-        self.data_root = 'D:/Project3/Data/'
-        self.result_root = rf'D:/Project3/Result/Nov/partial_correlation/Obs/'
-
-        self.fdirX = self.result_root + rf'\input\\X\\'
-        self.fdirY = self.result_root + rf'\input\\Y\\'
+        pass
 
     def run(self):
         self.calculating_vif()
@@ -348,13 +343,36 @@ class VIF:
 
 
         variables = [
-            'precipitation',
-            'Tmax',
-            'VPD'
+            'Precip_sum',
+            'VPD',
+            'Tmax'
         ]
 
-        # select variables
-        X = df[variables].copy()
+
+        fdir=result_root+rf'Multiregression_intersensitivity\input_obs\\'
+        flat_dic = {}
+
+        for yvar in variables:
+
+            f = fdir + rf'{yvar}_anomaly_detrend.npy'
+
+            dic = T.load_npy(f)
+
+            vals_all = []
+
+            for pix in dic:
+                vals = np.array(dic[pix], dtype=float)
+
+                vals = vals[np.isfinite(vals)]
+
+                vals_all.extend(vals)
+
+            flat_dic[yvar] = vals_all
+
+        X = pd.DataFrame(flat_dic)
+
+
+
 
         # remove nan
         X = X.replace([np.inf, -np.inf], np.nan)
@@ -378,10 +396,6 @@ class VIF:
 
         print(vif_df)
         pass
-
-    def calculating_vif(self):
-        pass
-
 
 
 
@@ -2634,7 +2648,8 @@ def main():
 
     # multiregression_intersensitivity().run()
     # multiregression_intersensitivity_TRENDY().run()
-    partial_correlation_obs().run()
+    VIF().run()
+    # partial_correlation_obs().run()
     # partial_correlation_TRENDY().run()
     # partial_correlation_TRENDY_obs_comparision().run()
 

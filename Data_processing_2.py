@@ -1761,10 +1761,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Dataframe\CVLAI\\')
+                result_root +  rf'\Multiregression_contribution\Obs\review\Dataframe\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'CVLAI_new.df'
+        self.dff = self.this_class_arr + rf'Statistics.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1792,7 +1792,7 @@ class build_dataframe():
 
 
         # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
-        # df=self.add_trend_to_df(df)
+        df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
 
@@ -2007,7 +2007,7 @@ class build_dataframe():
 
     def foo1(self, df):
 
-        f = rf'D:\Project3\Result\Nov\MODIS_LAI_validation\Result\four_products_comparision\moving_window_extraction_CV\10year\\GLOBMAP_detrend_CV.npy'
+        f = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\composite_LAI_mean\\GLOBMAP_detrend_CV.npy'
         # array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         # array = np.array(array, dtype=float)
         # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2040,7 +2040,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'Multiregression_contribution\Obs\result_new\3mm\composite_LAI_mean\composite_LAI_mean_sensitivity_zscore.tif'
+        f = result_root + rf'\Multiregression_contribution\Obs\review\composite_LAI_mean\composite_LAI_mean_sensitivity_zscore.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2678,9 +2678,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\MODIS_LAI_validation\Result\four_products_comparision\\moving_window_extraction_CV\trend\10year\\'
-
-
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\Y\zscore\trend\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
@@ -9480,8 +9478,8 @@ class check_data_distribution():
 def main():
      # Data_processing_2().run()
     # # Phenology().run()
-    # build_dataframe().run()
-    build_moving_window_dataframe().run()
+    build_dataframe().run()
+    # build_moving_window_dataframe().run()
 
     # CO2_processing().run()
     # greening_analysis().run()

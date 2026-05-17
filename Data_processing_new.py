@@ -1394,16 +1394,16 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
         # self.moving_window_average_anaysis()
         # self.moving_window_max_anaysis()
         # self.moving_window_min_anaysis()
-        self.moving_window_std_anaysis()
+        # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
 
 
@@ -1694,8 +1694,8 @@ class moving_window():
 
     def moving_window_average_anaysis(self): ## each window calculating the average
 
-        fdir = result_root + rf'moving_window_extraction_raw\moving_window_extraction\\'
-        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_mean_mean\\'
+        fdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_average\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -1986,8 +1986,8 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'\moving_window_extraction_raw\moving_window_std\\'
-        outdir =result_root + (rf'\moving_window_extraction_raw\moving_window_std\\\\trend\\')
+        fdir =result_root+ rf'Multiregression_contribution\Obs\review\X_review\zscore\\'
+        outdir =result_root + (rf'Multiregression_contribution\Obs\review\X_review\\zscore\\trend\\')
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -4308,10 +4308,10 @@ class Phenology():
 
 
 def main():
-    processing_GLOBMAP().run()
+    # processing_GLOBMAP().run()
     # processing_LAI4g().run()
     # processing_SNU_LAI().run()
-    # moving_window().run()
+    moving_window().run()
     # processing_composite_LAI().run()
     # area_weighted_average().run()
 
