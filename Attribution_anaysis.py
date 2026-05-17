@@ -328,6 +328,65 @@ class multiregression_intersensitivity():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+class VIF:
+    def __init__(self):
+        self.this_root = 'D:\Project3\\'
+        self.data_root = 'D:/Project3/Data/'
+        self.result_root = rf'D:/Project3/Result/Nov/partial_correlation/Obs/'
+
+        self.fdirX = self.result_root + rf'\input\\X\\'
+        self.fdirY = self.result_root + rf'\input\\Y\\'
+
+    def run(self):
+        self.calculating_vif()
+
+    def calculating_vif(self):
+
+
+        from statsmodels.stats.outliers_influence import variance_inflation_factor
+        from statsmodels.tools.tools import add_constant
+
+
+        variables = [
+            'precipitation',
+            'Tmax',
+            'VPD'
+        ]
+
+        # select variables
+        X = df[variables].copy()
+
+        # remove nan
+        X = X.replace([np.inf, -np.inf], np.nan)
+        X = X.dropna()
+
+        # add intercept
+        X = add_constant(X)
+
+        # =====================================
+        # calculate VIF
+        # =====================================
+
+        vif_df = pd.DataFrame()
+
+        vif_df["Variable"] = X.columns
+
+        vif_df["VIF"] = [
+            variance_inflation_factor(X.values, i)
+            for i in range(X.shape[1])
+        ]
+
+        print(vif_df)
+        pass
+
+    def calculating_vif(self):
+        pass
+
+
+
+
+
+
 
 class multiregression_intersensitivity_TRENDY():
     def __init__(self):
