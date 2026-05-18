@@ -2831,7 +2831,7 @@ class processing_TRENDY():
         # self.relative_change()
         self.trend_analysis()
         # self.detrend()
-        # self.TRENDY_ensemble_npy()
+        self.TRENDY_ensemble_npy()
         pass
 
     def extract_phenology_monthly_variables(self):

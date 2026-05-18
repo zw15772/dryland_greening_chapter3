@@ -2812,36 +2812,42 @@ class Trends_CV_obs_and_model():
     def plot_remote_sensing(self): ## put main ms. so pdf
 
 
-        fdir_trend = result_root+rf'\LAI4g\15_year\moving_window_extraction_CV\trend\\'
+        fdir_trend = result_root+rf'\MODIS_LAI_validation\Result\four_products_comparision\moving_window_extraction_CV\trend\15year\\'
         temp_root = result_root+rf'\TRENDY\S2\relative_change\relative_change\trend_analysis_relative_change\\temp_plot\\'
-        outdir = result_root+rf'FIGURE\\Figure1b\\'
+        outdir = result_root+rf'\MODIS_LAI_validation\\Result\\Figure\four_products_comparision\\15year\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
 
         for f in os.listdir(fdir_trend):
 
+
             if not f.endswith('.tif'):
                 continue
             if 'p_value' in f:
                 continue
+            fname = f.split('.')[0]
+            fname_p_value = fname.replace('trend', 'p_value')
+            print(fname_p_value)
+            fpath = fdir_trend + f
+            # print(fpath);exit()
+            p_value_f = fdir_trend + fname_p_value + '.tif'
+            print(p_value_f)
 
 
-            f_trend=fdir_trend+'LAI4g_detrend_CV_trend.tif'
-            f_p_value = fdir_trend + 'LAI4g_detrend_CV_p_value.tif'
-            print(f_p_value)
 
 
 
             # exit()
             plt.figure(figsize=(Plot_Robinson_remote_sensing().map_width, Plot_Robinson_remote_sensing().map_height))
-            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(f_trend, vmin=-1, vmax=1, is_discrete=True, colormap_n=9,)
+            m, ret = Plot_Robinson_remote_sensing().plot_Robinson(fpath, vmin=-.5, vmax=.5, is_discrete=True, colormap_n=9,)
 
-            Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,f_p_value,temp_root,0.05, s=0.5, marker='.')
+            Plot_Robinson_remote_sensing().plot_Robinson_significance_scatter(m,fpath,temp_root,0.05, s=0.5, marker='.')
             # plt.title(f'{fname}')
             # plt.show()
 
             outf = outdir + f+'.pdf'
-            plt.savefig(outf)
+
+            plt.savefig(outf, dpi=600, )
             plt.close()
             # T.open_path_and_file(outdir)
             # exit()
@@ -3837,8 +3843,8 @@ def main():
 
 
     # Trends_obs_and_model().run()  ## Figure 1
-    # Trends_CV_obs_and_model().run()  ## Figure 2
-    PLOT_dataframe().run()
+    Trends_CV_obs_and_model().run()  ## Figure 2
+    # PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
