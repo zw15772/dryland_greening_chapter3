@@ -1761,10 +1761,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Multiregression_contribution\Obs\review\Dataframe\\')
+                result_root +  rf'\partial_correlation\review\Dataframe\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Statistics.df'
+        self.dff = self.this_class_arr + rf'Obs_TRENDY_comparison.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1775,7 +1775,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1791,7 +1791,7 @@ class build_dataframe():
         # df=self.add_new_field_to_df(df)
 
 
-        df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
+        # df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
@@ -1801,17 +1801,17 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # # # # # # #
-        df=self.add_lat_lon_to_df(df)
-        df=self.add_weighted_average_LAICV(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # # # # # # # # # #
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_weighted_average_LAICV(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -2584,21 +2584,21 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'Multiregression_contribution\Obs\review\output\\'
+        fdir_all = result_root + rf'\partial_correlation\review\TRENDY\result\\'
         for fdir in os.listdir(fdir_all):
 
 
-            for f in os.listdir(join(fdir_all,fdir)):
-
-
-                if not f.endswith('.tif'):
-                    continue
+            # for f in os.listdir(join(fdir_all,fdir)):
+            #
+            #
+            #     if not f.endswith('.tif'):
+            #         continue
 
             # #
-            # fdir_sig=fdir_all+fdir+'\\sig\\'
+            fdir_sig=fdir_all+fdir+'\\sig_nomask\\'
             # print(fdir_sig);exit()
 
-            # for f in os.listdir(fdir_sig):
+            for f in os.listdir(fdir_sig):
 
 
                 if not f.endswith('.tif'):
@@ -2611,8 +2611,8 @@ class build_dataframe():
                     fname=f'{fdir}_{variable}'
                 print(fname)
 
-                fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
-                # fpath=join(fdir_sig,f)
+                # fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
+                fpath=join(fdir_sig,f)
                 print(fpath)
 
 
@@ -2682,8 +2682,6 @@ class build_dataframe():
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue
-
-
 
             variable = (f.split('.')[0])
             print(variable)

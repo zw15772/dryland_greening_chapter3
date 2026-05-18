@@ -146,10 +146,10 @@ class partial_correlation_obs:
         # #
         #
         #
-        # self.plot_spatial_map_sig()
+        self.plot_spatial_map_sig()
 
 
-        self.statistic_corr_boxplot()
+        # self.statistic_corr_boxplot()
         # self.statistic_percentage()
         #
 
@@ -612,10 +612,10 @@ class partial_correlation_obs:
 
         for model in model_list:
             variable_list = self.xvar_list
-            fdir = self.result_root + rf'\result\\'+model+'\\'
+            fdir = self.result_root + rf'\\obs\\result\\{model}\\'
             print(fdir)
-            # outdir = self.result_root + rf'\result\\1mm_new\\{model}\\\sig_nomask\\'
-            outdir = self.result_root + rf'\result\\{model}\\\sig\\'
+            outdir = self.result_root + rf'\\obs\\result\\{model}\\\sig_nomask\\'
+            # outdir = self.result_root + rf'\result\\{model}\\\sig\\'
             T.mk_dir(outdir, True)
             new_variable_list = variable_list + [f'{model}_sensitivity']
 
@@ -629,8 +629,8 @@ class partial_correlation_obs:
                 fy_trend_p_value)
 
             ## mask
-            mask = np.ones_like(arr_y_trend)
-            mask[(arr_y_trend_p_value > 0.05) & (arr_y_trend <= 0)] = np.nan
+            # mask = np.ones_like(arr_y_trend)
+            # mask[(arr_y_trend_p_value > 0.05) & (arr_y_trend <= 0)] = np.nan
             # plt.imshow(arr_y_trend)
             # plt.colorbar()
             # plt.show()
@@ -652,7 +652,7 @@ class partial_correlation_obs:
                 arr_corr[arr_pvalue > 0.05] = np.nan
 
                 # === ★ 叠加 LAI 正趋势掩膜 ★
-                arr_corr[np.isnan(mask)] = np.nan
+                # arr_corr[np.isnan(mask)] = np.nan
 
 
                 #
@@ -1491,7 +1491,31 @@ class partial_correlation_TRENDY():
 
 
 
-        for variable in xvar_list:
+        arr_sensitivity = []
+
+        for model in model_list:
+            fdir_i=result_root+rf'\partial_correlation\review\TRENDY\result\{model}\sig_nomask\\'
+            for f in os.listdir(fdir_i):
+                if not f.endswith('.tif'):
+                    continue
+                if 'sensitivity' in f:
+                    arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_i, f))
+                    arr_sensitivity.append(arr)
+        arr_sensitivity = np.nanmedian(arr_sensitivity, axis=0)
+        arr_sensitivity[arr_sensitivity > 99] = np.nan
+        arr_sensitivity[arr_sensitivity < -99] = np.nan
+        plt.imshow(arr_sensitivity, cmap='RdYlGn')
+        plt.colorbar()
+        plt.show()
+        outdir = result_root + rf'\partial_correlation\review\TRENDY\result\TRENDY_esnemble_median\sig_nomask\\'
+        T.mk_dir(outdir, force=True)
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_sensitivity, outdir + f'TRENDY_ensemble_sensitivity.tif')
+        #
+
+
+
+
+        for variable in self.xvar_list:
             arr_list = []
             for model in model_list:
 
@@ -2151,1411 +2175,504 @@ class Delta_regression:
         # T.print_head_n(df)
         return df
 
-    class Delta_regression_TRENDY:
+class partial_correlation_TRENDY_obs_comparision():
+    def __init__(self):
+        self.map_width = 8.2 * centimeter_factor
+        self.map_height = 8.2 * centimeter_factor
+        pass
 
-        def __init__(self):
-            self.map_width = 8.2 * centimeter_factor
-            self.map_height = 8.2 * centimeter_factor
-            self.xvar = ['Precip_sum_detrend_CV_zscore',
-                         'CV_daily_rainfall_average_zscore',
-                         'VPD_detrend_average_zscore']
+        # self.model_list = [
+        #
+        #
+        # ]
+        self.model_list=[ 'composite_LAI_median',
+         'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+            'ORCHIDEE_S2_lai',
 
-            self.model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                               'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                               'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                               'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                               'ORCHIDEE_S2_lai',
+            'YIBs_S2_Monthly_lai',]
 
-                               'YIBs_S2_Monthly_lai',
+    def run(self):
+        self.statistic_barplot_partial_correlation()
+        # self.max_correlation_without_sign()
+        # self.max_correlation_with_sign()
 
-                               ]
-            #
-            # self.model_list = ['TRENDY_ensemble_median',
-            #
-            #                    ]
+        # self.Plot_robinson()
+        # self.statistic_contribution_area_barplot()
+        # self.statistic_contribution_area_barplot_withsign()
+        pass
 
-            # self.model_list = ['composite_LAI_median', 'LAI4g',
-            #                    'GLOBMAP_LAI', 'SNU_LAI',
-            #
-            #                    'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-            #                    'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-            #                    'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-            #                    'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-            #                    'ORCHIDEE_S2_lai',
-            #
-            #                    'YIBs_S2_Monthly_lai',
-            #
-            #                    ]
+    def statistic_barplot_partial_correlation(self): ## not used
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df=df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
 
-            self.outdir = rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\\'
-            T.mkdir(self.outdir, force=True)
 
-            pass
+        for col in df.columns:
+            print(col)
 
-        def run(self):
-            df = self.load_df()
-            # ##self.do_multi_regression()
+        model_list = self.model_list
+        xvar_list = [
+            'VPD_detrend_average_zscore',
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average']
 
-            # for model in self.model_list:
-            #     x_list=self.xvar+[model+'_sensitivity_zscore']
-            #
-            #     self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
-            # # #
-            # # # #
-            #     self.calculate_trend_contribution(model,x_list)
-            # self.statistic_contribution()
-            # self.ensemble_trend_contribution()
-            # self.normalized_contribution()
-            # self.Ternary_plot()
-            # self.plot_pdf()
+        # === 准备保存结果 ===
 
-            # self.max_correlation_with_sign()
-            # self.statistic_contribution_area_heatmap()
-            # self.statistic_contribution_area_barplot()
+        color_list=['lightgrey']*len(model_list)
+        dark_colors=['grey']*len(model_list)
 
-            # self.TRENDY_barplot()
-            # self.TRENDY_barplot2()
-
-            # self.maximum_contribution()
-            # self.dominant_region_trends()
-            # self.statistic_max_correlation()
-            # self.Figure2_robinson()
-            self.statistic_contribution_area()
-
-            # self.sensitivity_vs_climate_factors()
-            # self.statistic_contribution_area_barplot()
-
-            # self.percentage_pft()
-            # self.sensitivity_vs_climate_factors()
-            # self.sensitivity_vs_climate_factors_2()
-
-            # self.normalized_partial_corr()
-
-            # self.heatmap2()
-            # self.calculate_mean()
-
-            pass
-
-        def do_multi_regression(self):
-            self.outdir = self.outdir
-
-            import warnings
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            import statsmodels.api as sm
-            df = self.load_df()
-            T.print_head_n(df)
-
-            var_list = self.xvar + y_var
-            spatial_dict = {}
-            for i, row in tqdm(df.iterrows(), total=len(df)):
-                pix = row['pix']
-                df_i = pd.DataFrame()
-
-                # 构造时序 DataFrame
-                valid = True
-                for var in var_list:
-                    val = row[var]
-                    if not isinstance(val, (list, np.ndarray)) or len(val) == 0:
-                        valid = False
-                        break
-                    df_i[var] = val
-
-                if not valid:
-                    continue
-
-                X = df_i[self.xvar]
-                y = df_i[self.y_var[0]]
-
-                # 标准多元回归
-                X = sm.add_constant(X)
-                model = sm.OLS(y, X).fit()
-
-                # 提取 β 系数（剔除常数项）
-                beta_dict = {var: model.params[var] for var in self.xvar}
-                spatial_dict[pix] = beta_dict
-
-            df_beta = T.dic_to_df(spatial_dict, 'pix')
-
-            for x_var in self.xvar:
-                spatial_dict_i = T.df_to_spatial_dic(df_beta, x_var)
-                outf = join(self.outdir, f'{x_var}.tif')
-                DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
-            T.open_path_and_file(self.outdir)
-
-            pass
-
-        def do_multi_regression_control_experiment(self, mode_name, x_list):
-            outdir = self.outdir + f'{mode_name}\\'
-            T.mk_dir(outdir, force=True)
-
-            import warnings
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            import statsmodels.api as sm
-            df = self.load_df()
-            T.print_head_n(df)
-
-            var_list = x_list + [mode_name + '_detrend_CV_zscore']
-            spatial_dict = {}
-            for i, row in tqdm(df.iterrows(), total=len(df)):
-                pix = row['pix']
-                df_i = pd.DataFrame()
-                success = 0
-                for var_i in var_list:
-                    if type(row[var_i]) == float:
-                        success = 0
-                        break
-                    if len(row[var_i]) == 0:
-                        success = 0
-                        break
-                    else:
-                        success = 1
-                    if len(row[var_i]) != 24:
-                        success = 0
-                        break
-
-                    df_i[var_i] = row[var_i]
-                if not success:
-                    continue
-                X = df_i[x_list]
-                ### add interaction terms
-
-                y = df_i[mode_name + '_detrend_CV_zscore']
-
-                X = sm.add_constant(X)
-                model = sm.OLS(y, X).fit()
-                y_pred = model.predict(X)
-                # delta_y = y - y_pred
-
-                dict_i = {}
-
-                for x_var in x_list:
-                    X_constant = copy.copy(X)
-
-                    X_constant[x_var] = X_constant[x_var][0]
-                    y_pred_i = model.predict(X_constant)
-                    delta_y = y_pred - y_pred_i
-                    delta_i = X[x_var] - X[x_var][0]
-                    model_i = sm.OLS(delta_y, sm.add_constant(delta_i)).fit()
-                    beta = model_i.params[1]
-                    dict_i[x_var] = beta
-                spatial_dict[pix] = dict_i
-            df_beta = T.dic_to_df(spatial_dict, 'pix')
-
-            for x_var in x_list:
-                spatial_dict_i = T.df_to_spatial_dic(df_beta, x_var)
-                outf = join(outdir, f'{x_var}.tif')
-                DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
-            T.open_path_and_file(outdir)
-
-        def calculate_trend_contribution(self, y_variable, x_list):
-            ## here I would like to calculate the trend contribution of each variable
-            ## the trend contribution is defined as the slope of the linear regression between the variable and the target variable mutiplied by trends of the variable
-            ## load the trend of each variable
-            ## load the trend of the target variable
-            ## load multi regression result
-            ## calculate the trend contribution
-            trend_dir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Input\X_new\trend\\'
-
-            selected_vairables_list = x_list
-
-            trend_dict = {}
-            for variable in selected_vairables_list:
-                fpath = join(trend_dir, f'{variable}_trend.tif')
-                array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-                array[array < -9999] = np.nan
-                spatial_dict = D.spatial_arr_to_dic(array)
-                for pix in tqdm(spatial_dict, desc=variable):
-                    r, c = pix
-                    if r < 60:
-                        continue
-                    val = spatial_dict[pix]
-                    if np.isnan(val):
-                        continue
-                    if not pix in trend_dict:
-                        trend_dict[pix] = {}
-                    key = variable
-                    trend_dict[pix][key] = spatial_dict[pix]
-
-            outdir = self.outdir + f'\\{y_variable}\\'
-
-            fdir_slope = outdir
-
-            multiregression_dic = {}
-            for f in os.listdir(fdir_slope):
-                if not f.endswith('.tif'):
-                    continue
-                if 'contrib' in f:
-                    continue
-
-                arr_multiregression, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-                    join(fdir_slope, f))
-                dic_multiregression = DIC_and_TIF().spatial_arr_to_dic(arr_multiregression)
-                multiregression_dic[f.split('.')[0]] = dic_multiregression
-
-                # exit()
-            for var_i in x_list:
-                spatial_dic = {}
-                for pix in tqdm(dic_multiregression, desc=var_i):
-                    if not pix in trend_dict:
-                        continue
-
-                    vals = multiregression_dic[var_i][pix]
-                    if vals < -9999:
-                        continue
-
-                    val_multireg = vals
-                    if var_i not in trend_dict[pix]:
-                        continue
-
-                    val_trend = trend_dict[pix][var_i]
-                    val_contrib = val_multireg * val_trend
-                    spatial_dic[pix] = val_contrib
-                arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-                plt.imshow(arr_contrib, cmap='RdBu', interpolation='nearest')
-                plt.colorbar()
-                # plt.title(var_i)
-                # plt.show()
-
-                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, join(outdir, f'{var_i}_contrib.tif'))
-
-        def ensemble_trend_contribution(self):
-
-            model_list = self.model_list
-
-            fdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\X\\'
-            arr_list = []
-
-            arr_sensitivity = []
+        # === 开始绘图 ===
+        for var in xvar_list:
+            means = []
+            sems = []
+            valid_models = []
 
             for model in model_list:
-                fdir_i = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\X\\' + model + '\\'
-                for f in os.listdir(fdir_i):
-                    if not f.endswith('.tif'):
-                        continue
-                    if 'sensitivity_zscore' in f:
-                        arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_i, f))
-                        arr_sensitivity.append(arr)
-            arr_sensitivity = np.nanmedian(arr_sensitivity, axis=0)
-            arr_sensitivity[arr_sensitivity > 99] = np.nan
-            arr_sensitivity[arr_sensitivity < -99] = np.nan
-            plt.imshow(arr_sensitivity, cmap='RdYlGn')
-            plt.colorbar()
-            plt.show()
-            outdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_2\\TRENDY_ensemble_median\\'
-            T.mk_dir(outdir, force=True)
-            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_sensitivity, outdir + f'TRENDY_ensemble_sensitivity_zscore.tif')
-            #
-
-            for variable in self.xvar:
-                for model in model_list:
-                    fpath = join(fdir, model, f'{variable}.tif')
-                    arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
-                    arr[arr > 99] = np.nan
-                    arr[arr < -99] = np.nan
-
-                    arr_list.append(arr)
-
-                arr_ensemble = np.nanmedian(arr_list, axis=0)
-                arr_ensemble[arr_ensemble > 99] = np.nan
-                arr_ensemble[arr_ensemble < -99] = np.nan
-                plt.imshow(arr_ensemble, cmap='RdYlGn')
-                plt.colorbar()
-                plt.show()
-                outdir = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_2\\TRENDY_ensemble_median\\'
-                T.mk_dir(outdir, force=True)
-
-                DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble,
-                                                      outdir + f'TRENDY_ensemble_{variable}.tif')
-
-        def normalized_contribution(self):
-
-            fdir_all = self.outdir
-
-            for model in self.model_list:
-
-                spatial_dicts = {}
-                variables_list = []
-
-                outdir = join(fdir_all, model)
-
-                for f in os.listdir(join(fdir_all, model)):
-                    if not f.endswith('.tif'):
-                        continue
-                    if 'contrib' in f:
-                        continue
-                    if 'norm' in f:
-                        continue
-
-                    if 'Ternary_plot' in f:
-                        continue
-
-                    print(f)
-                    fpath = join(fdir_all, model, f)
-                    fname = f.split('.')[0]
-                    spatial_dict_i = DIC_and_TIF().spatial_tif_to_dic(fpath)
-                    spatial_dicts[fname] = spatial_dict_i
-                    variables_list.append(fname)
-
-                df = T.spatial_dics_to_df(spatial_dicts)
-                df = df.dropna(subset=variables_list, how='any')
-                # T.print_head_n(df);exit()
-                df_abs = pd.DataFrame()
-                df_abs['pix'] = df['pix'].tolist()
-                for var_i in variables_list:
-                    abs_vals = np.array(df[var_i].tolist())
-                    abs_vals = np.abs(abs_vals)
-                    df_abs[var_i] = abs_vals
-                # T.print_head_n(df_abs);exit()
-
-                norm_dict = {}
-                # T.add_dic_to_df()
-
-                for i, row in tqdm(df_abs.iterrows(), total=len(df_abs)):
-                    # print(row[variables_list])
-                    sum_vals = row[variables_list].sum()
-                    # print(sum_vals)
-                    # if sum_vals == 0:
-                    #     sum_vals = np.nan
-                    pix = row['pix']
-                    norm_dict_i = {}
-                    for var_i in variables_list:
-                        var_i_norm = row[var_i] / sum_vals
-                        norm_dict_i[f'{var_i}_norm'] = var_i_norm
-                    norm_dict[pix] = norm_dict_i
-
-                df_abs = T.add_dic_to_df(df_abs, norm_dict, 'pix')
-
-                for var_i in variables_list:
-                    dic_norm = T.df_to_spatial_dic(df_abs, f'{var_i}_norm', )
-                    DIC_and_TIF().pix_dic_to_tif(dic_norm, join(outdir, f'{var_i}_norm.tif'))
-                ######T.save_df(df_abs,join(fdir,'df_normalized.df'));exit()
-
-                ## df to dic
-
-                # T.print_head_n(df_abs);exit()
-
-                rgb_arr = np.zeros((360, 720, 4))
-                # Ter = xymap.Ternary_plot()
-                Ter = xymap.Ternary_plot(
-                    top_color=(67, 198, 219),
-                    left_color=(255, 165, 00),
-                    # left_color=(119,0,188),
-                    right_color=(230, 0, 230),
-                    # center_color=(85,85,85),
-                    center_color=(230, 230, 230),
-                    # center_color=(255,255,255),
-                )
-
-                for i, row in df_abs.iterrows():
-                    pix = row['pix']
-                    r, c = pix
-                    CV_IAV_norm = row[f'detrended_sum_rainfall_growing_season_zscore_norm']
-                    rainfall_frequency_norm = row[f'rainfall_frenquency_zscore_norm']
-                    composite_LAI_beta_mean_norm = row[f'{model}_sensitivity_zscore_norm']
-                    x, y, z = CV_IAV_norm, rainfall_frequency_norm, composite_LAI_beta_mean_norm
-                    color = Ter.get_color(x, y, z)
-                    color = color * 255
-                    color = np.array(color, dtype=np.uint8)
-                    alpha = 255
-                    color = np.append(color, alpha)
-                    # print(color);exit()
-
-                    rgb_arr[r][c] = color
-                # xymap.GDAL_func().ar
-                rgb_arr = np.array(rgb_arr, dtype=np.uint8)
-                ### - 蓝绿色（上）： 主导
-                # - 橙黄色（左下）： 主导
-                # - 粉紫色（右下）：LAI_sensitivity（植被敏感性）主导
-                outtif = join(outdir, 'Ternary_plot.tif')
-                # tif_template = join(fdir_all, model, f'rainfall_frenquency_zscore.tif')
-                tif_template = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg\CABLE-POP_S2_lai\\rainfall_frenquency_zscore.tif'
-                print(rgb_arr)
-
-                xymap.GDAL_func().RGBA_to_tif(rgb_arr, outtif, tif_template)
-                grid_triangle_legend = Ter.grid_triangle_legend()
-                plt.imshow(grid_triangle_legend)
-                plt.show()
-                # # T.open_path_and_file(fdir)
-                # exit()
-
-        def max_correlation_with_sign(self):
-
-            dff = result_root + rf'3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\statistics\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            model_list = self.model_list
-            # for col in df.columns:
-            #     print(col)
-            # exit()
-
-            var_list = ['detrended_sum_rainfall_ecosystem_year_CV_zscore',
-                        'CV_intraannual_rainfall_ecosystem_year_zscore',
-                        'sensitivity_zscore', ]
-
-            for model in tqdm(model_list):
-
-                outdir = self.outdir + model + '\\'
-                T.mk_dir(outdir, force=True)
-                var_list_contrib = [f'{model}_' + i + '_contrib' for i in var_list]
-
-                var_list_sens = [f'{model}_' + i for i in var_list]
-
-                max_var_list = []
-                max_var_sign_list = []
-                color_list = []
-                df_continent = df
-                for i, row in df_continent.iterrows():
-                    vals_contrib = row[var_list_contrib].tolist()
-                    vals_contrib = np.array(vals_contrib)
-                    vals_contrib[vals_contrib < -10] = np.nan
-                    vals_contrib[vals_contrib > 10] = np.nan
-
-                    vals_sens = row[var_list_sens].tolist()
-                    vals_sens = np.array(vals_sens)
-                    vals_sens[vals_sens < -10] = np.nan
-                    vals_sens[vals_sens > 10] = np.nan
-
-                    if True in np.isnan(vals_contrib):
-                        max_var_list.append(np.nan)
-                        max_var_sign_list.append(np.nan)
-                        color_list.append(np.nan)
-                        continue
-                    vals_contri_abs = np.abs(vals_contrib)
-                    vals_contrib_dict = T.dict_zip(var_list_contrib, vals_contri_abs)
-                    vals_sens_dic = T.dict_zip(var_list_sens, vals_sens)
-
-                    max_var = T.get_max_key_from_dict(vals_contrib_dict)
-                    max_var_new_dict = {f'{model}_detrended_sum_rainfall_ecosystem_year_CV_zscore_contrib':
-                                            f'{model}_detrended_sum_rainfall_ecosystem_year_CV_zscore',
-                                        f'{model}_CV_intraannual_rainfall_ecosystem_year_zscore_contrib':
-                                            f'{model}_CV_intraannual_rainfall_ecosystem_year_zscore',
-                                        f'{model}_sensitivity_zscore_contrib':
-                                            f'{model}_sensitivity_zscore',
-                                        }
-
-                    max_val = vals_sens_dic[max_var_new_dict[max_var]]
-
-                    if max_val > 0:
-                        max_var_sign = '+'
-                    else:
-                        max_var_sign = '-'
-
-                    if 'sensitivity' in max_var:
-                        if max_var_sign == '-':
-                            color = 1
-                        else:
-                            color = 6
-                    elif 'CV_intraannual_rainfall_ecosystem_year_zscore' in max_var:
-                        if max_var_sign == '-':
-                            color = 2
-                        else:
-                            color = 5
-                    elif 'detrended_sum_rainfall_ecosystem_year_CV_zscore' in max_var:
-                        if max_var_sign == '-':
-                            color = 3
-                        else:
-                            color = 4
-                    else:
-
-                        continue
-                    max_var_list.append(max_var)
-                    max_var_sign_list.append(max_var_sign)
-                    color_list.append(color)
-
-                df_continent['max_var'] = max_var_list
-
-                df_continent['max_var_sign'] = max_var_sign_list
-                df_continent['color'] = color_list
-
-                ## to tiff
-                spatial_dic = T.df_to_spatial_dic(df, 'color')
-                outtif = join(outdir, 'color_map.tif')
-                array = DIC_and_TIF().pix_dic_to_tif(spatial_dic, outtif)
-                arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
-                # plt.imshow(arr, interpolation='nearest')
-                # plt.colorbar()
-                # plt.show()
-
-        def statistic_contribution_area_heatmap(self):
-            dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_4\\Dataframe\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            for col in df.columns:
-                print(col)
-            # df = df.dropna(subset=['composite_LAI_color_map'])
-            model_list = self.model_list
-
-            heatmap_cols = ['TRENDY_ensemble'] + model_list
-
-            row_order = [1, 6, 2, 5, 3, 4]
-            heatmap_data = pd.DataFrame(index=[f'Group {i}' for i in row_order], columns=heatmap_cols)
-
-            for ii in [1, 6, 2, 5, 3, 4]:
-                percentage_list = []
-
-                for model in model_list:
-                    sum = 0
-
-                    df_mask = df.dropna(subset=['composite_LAI_color_map'])
-                    # df_mask=df_mask.dropna(subset=[f'{model}_color_map'])
-
-                    df_mask1 = df.dropna(subset=[f'{model}_color_map'])
-
-                    # tmp = df_mask[[f'{model}_color_map', 'composite_LAI_color_map']]
-                    # ### filter data
-
-                    df_ii = df_mask1[df_mask1[f'{model}_color_map'] == ii]
-                    df_obs = df_mask[df_mask['composite_LAI_color_map'] == ii]
-
-                    percent_ii = len(df_ii) / len(df_mask1) * 100
-                    percent_obs = len(df_obs) / len(df_mask) * 100
-                    percent_diff = percent_ii - percent_obs
-
-                    percentage_list.append(percent_diff)
-
-                ensemble_mean = float(np.nanmean(percentage_list)) if len(percentage_list) else np.nan
-                heatmap_data.loc[f'Group {ii}'] = [ensemble_mean] + percentage_list
-
-            ## plot
-
-            heatmap_data = heatmap_data.astype(float)
-
-            # 设置颜色顺序（可选）
-
-            plt.figure(figsize=(9, 4))
-
-            sns.heatmap(heatmap_data, annot=True, fmt=".1f", cmap="RdBu",
-                        cbar_kws={'label': 'Models-obs difference (%)'},
-                        linewidths=0.3, vmin=-15, vmax=15)
-
-            dic_label_name = {
-
-                'TRENDY_ensemble': 'TRENDY ensemble',
-                'CABLE-POP_S2_lai': 'CABLE-POP',
-                'CLASSIC_S2_lai': 'CLASSIC',
-                'CLM5': 'CLM5',
-                'DLEM_S2_lai': 'DLEM',
-                'IBIS_S2_lai': 'IBIS',
-                'ISAM_S2_lai': 'ISAM',
-                'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
-                'JSBACH_S2_lai': 'JSBACH',
-                'JULES_S2_lai': 'JULES',
-                'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
-                'LPX-Bern_S2_lai': 'LPX-Bern',
-                'ORCHIDEE_S2_lai': 'ORCHIDEE',
-
-                'YIBs_S2_Monthly_lai': 'YIBs',
-
-            }
-            dic_variable_name = {1: '$\gamma$-',
-                                 6: '$\gamma$+',
-                                 2: 'Fq of rainfall-',
-                                 5: 'Fq of rainfall+',
-
-                                 3: 'CV Interannual rainfall-',
-
-                                 4: 'CV Interannual rainfall+',
-
-                                 }
-
-            ax = plt.gca()
-            ax.set_xticklabels([dic_label_name.get(k, k) for k in heatmap_data.columns],
-                               rotation=90, fontsize=10, font='Arial')
-            ax.set_yticklabels([dic_variable_name[i] for i in row_order],
-                               rotation=0, fontsize=10, font='Arial')
-            # plt.tight_layout()
-            plt.show()
-            # plt.savefig(result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\\heatmap_contribution_area.pdf')
-
-        def statistic_contribution_area_barplot(self):
-            dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\statistics\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            for col in df.columns:
-                print(col)
-
-            model_list = self.model_list
-
-            result_dic = {}
-
-            # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-            for ii in [1, 6, 2, 5, 3, 4]:
-                percentage_list = []
-                for model in model_list:
-                    col = f'{model}_color_map'
-                    df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
-                    df_ii = df_mask[df_mask[col] == ii]
-                    percent_ii = len(df_ii) / len(df_mask) * 100.0
-                    percentage_list.append(percent_ii)
-                result_dic[ii] = percentage_list
-            pprint(result_dic)
-
-            dic_variable_name = {1: '$\gamma$-',
-                                 6: '$\gamma$+',
-                                 2: 'CV rainfall intra-',
-                                 5: 'CV rainfall intra+',
-
-                                 3: 'CV rainfall inter-',
-
-                                 4: 'CV rainfall inter+',
-
-                                 }
-
-            # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
-            color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
-                         + ['#F7DAD4'] * (len(model_list) - 5)
-
-            # 用模型名作为行索引，便于对齐
-            df_new = pd.DataFrame(result_dic, index=model_list)
-
-            # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
-            for ii in [1, 6, 2, 5, 3, 4]:
-                vals = df_new[ii].values
-                n_all = len(vals)
-                n_obs = 4  # 前 4 个是 obs
-                gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
-
-                # 构造 x 位置：models 整体右移形成间隔
-                x = np.arange(n_all, dtype=float)
-                x[n_obs:] += gap
-
-                fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
-                ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
-
-                # 在第一个柱子的高度画虚线（只跨 models 区域）
-                y_ref = vals[0]  # 第一个柱子的高度
-                xmin = x[0] - 0.4  # 第一个柱子的左边缘
-                xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
-                ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
-
-                # 可选：标出 obs/models 分界
-                ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
-
-                # plt.ylabel('Area percentage (%)')
-                plt.xticks([])
-                ax.text(0.02, 0.98, dic_variable_name[ii],
-                        transform=ax.transAxes, ha='left', va='top',
-                        fontsize=12, fontfamily='Arial',
-                        bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
-                ax.set_ylim(0, 45)
-                plt.grid(axis='y', alpha=0.25)
-
-                plt.show()
-
-                #
-                # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
-                # plt.close()
-
-        def Figure2_robinson(self):
-
-            fdir_trend = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\\TRENDY_ensemble_median\\'
-            temp_root = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\slope\delta_multi_reg_3\\TRENDY_ensemble_median'
-            outdir = result_root + rf'3mm\FIGURE\Robinson\\'
-            T.mk_dir(outdir, force=True)
-            T.mk_dir(temp_root, force=True)
-
-            for f in os.listdir(fdir_trend):
-
-                if not f.endswith('.tif'):
+                col = f'{model}_{var}'
+                if col not in df.columns:
                     continue
 
-                if not 'color_map' in f:
+                vals = np.array(df[col], dtype=float)
+                vals[(vals > 99) | (vals < -99)] = np.nan
+                vals = vals[~np.isnan(vals)]
+
+                if len(vals) == 0:
                     continue
-                fpath = fdir_trend + f
 
-                plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
-                m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=6, is_discrete=True, colormap_n=7, )
+                mean_val = np.nanmean(vals)
+                sem_val = np.nanstd(vals) / np.sqrt(len(vals))  # 标准误
+                means.append(mean_val)
+                sems.append(sem_val)
+                valid_models.append(model)
 
-                # plt.show()
-                outf = outdir + f + '.pdf'
-                plt.savefig(outf)
-                plt.close()
+            # === 绘制柱状图 ===
+            x = np.arange(len(valid_models))
+            fig, ax = plt.subplots(figsize=(4, 3))
 
-        def TRENDY_barplot(self):
-            dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\obs_climate\Dataframe\\partial_correlation.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            # df=df.dropna(axis=0, how='any')
+            bars = ax.bar(
+                x, means,
+                # yerr=sems,
+                capsize=4,
+                color=color_list[:len(valid_models)],
+                edgecolor=[dark_colors[i] for i in range(len(valid_models))],
+                linewidth=1.2
+            )
 
-            variables_list = ['composite_LAI',
-                              'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                              'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                              'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                              'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                              'ORCHIDEE_S2_lai',
+            ax.axhline(0, color='gray', linestyle='--')
+            ax.set_xticks(x)
+            ax.set_xticklabels(valid_models, rotation=45, ha='right', fontsize=9)
+            ax.set_ylabel('Partial correlation', fontsize=10)
 
-                              'YIBs_S2_Monthly_lai']
-            result_dic = {}
-            result_stats = {}
-            values_beta_list = []
-            CI_list = []
-
-            for variable in variables_list:
-                values_beta = df[f'{variable}_detrended_sum_rainfall_growing_season_zscore'].values
-                values_beta = np.array(values_beta)
-                values_beta[values_beta > 100] = np.nan
-                values_beta[values_beta < -100] = np.nan
-
-                n = len(values_beta)
-                confidence = 0.95
-                std = np.nanstd(values_beta)
-                t_critical = stats.t.ppf((1 + confidence) / 2., n - 1)
-                margin_of_error = t_critical * std / np.sqrt(n)
-                ci_lower = np.nanmean(values_beta) - margin_of_error
-                ci_upper = np.nanmean(values_beta) + margin_of_error
-                CI_list.append([ci_lower, ci_upper])
-
-                values_beta_list.append(values_beta)
-            CI_list = np.array(CI_list)
-            CI_list_T = CI_list.T
-
-            values_beta_list = np.array(values_beta_list)
-
-            values_beta_list_mean = np.nanmean(values_beta_list, axis=1)
-            values_beta_list_std = np.nanstd(values_beta_list, axis=1)
-
-            # add legend
-            df_new = pd.DataFrame(result_dic)
-
-            fig, ax = plt.subplots(figsize=(self.map_width * 1.5, self.map_height))
-            dic_label_name = {'composite_LAI': 'Composite LAI',
-
-                              'CABLE-POP_S2_lai': 'CABLE-POP',
-                              'CLASSIC_S2_lai': 'CLASSIC',
-                              'CLM5': 'CLM5',
-                              'DLEM_S2_lai': 'DLEM',
-                              'IBIS_S2_lai': 'IBIS',
-                              'ISAM_S2_lai': 'ISAM',
-                              'ISBA-CTRIP_S2_lai': 'ISBA-CTRIP',
-                              'JSBACH_S2_lai': 'JSBACH',
-                              'JULES_S2_lai': 'JULES',
-                              'LPJ-GUESS_S2_lai': 'LPJ-GUESS',
-                              'LPX-Bern_S2_lai': 'LPX-Bern',
-                              'ORCHIDEE_S2_lai': 'ORCHIDEE',
-
-                              'YIBs_S2_Monthly_lai': 'YIBs',
-
-                              }
-
-            ## plot volin
-            plt.bar(variables_list, values_beta_list_mean, color='#96cccb', width=0.7, edgecolor='black',
-                    label='Trend in Beta', yerr=CI_list_T[1] - CI_list_T[0], capsize=3)
-            ## CI bar
-
-            plt.xticks(np.arange(len(variables_list)), variables_list, rotation=45)
-            plt.ylim(-.5, .5)
-            ## add y=0
-            plt.hlines(0, -0.5, len(variables_list) - 0.5, colors='black', linestyles='dashed')
-            plt.ylabel('Beta (%/100ppm/yr)')
-            plt.axhline(y=0, color='grey', linestyle='-')
-            ax.set_xticks(range(len(variables_list)))
-            ax.set_xticklabels(dic_label_name.values(), rotation=90, fontsize=10, font='Arial')
             plt.tight_layout()
             plt.show()
 
-        def Ternary_plot(self):
-            import numpy as np
-            import matplotlib.pyplot as plt
-            import mpltern
+            # plt.savefig(result_root + rf'\3mm\FIGURE\Figure5_comparison\barplot\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
 
-            dff = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Dataframe\\statistic.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            # df=df.dropna(axis=0, how='any')
-            obs_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g']
-            new_model_list = self.model_list + obs_list
+    def max_correlation_without_sign(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
 
-            result = []
-            for model in new_model_list:
-                gamma = df[f'{model}_sensitivity_zscore_contrib'].abs()  # gamma
-                cv_iav = df[f'{model}_rainfall_frenquency_zscore_contrib'].abs()  # CV_IAV rainfall
-                rfq = df[f'{model}_detrended_sum_rainfall_growing_season_zscore_contrib'].abs()  # rainfall frequency
+        model_list = self.model_list
 
-                gamma_mean = gamma.mean()  # gamma
-                cv_iav_mean = cv_iav.mean()  # CV_IAV rainfall
-                rfq_mean = rfq.mean()  # rainfall frequency
-                result.append([model, gamma_mean, rfq_mean, cv_iav_mean])
+        var_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
 
-            df_summary = pd.DataFrame(result, columns=["model", "Gamma", "rainfall_frenquency", "CV_IAV"])
+        for model in tqdm(model_list):
+            # if not 'TRENDY_ensemble_mean2' in model:
+            #     continue
 
-            # ------- 取绝对值 -------
-            cols = ["Gamma", "rainfall_frenquency", "CV_IAV"]
-            df_abs = df_summary[cols].abs()
+            outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
+            T.mk_dir(outdir, force=True)
 
-            # ------- 归一化 -------
-            sums = df_abs.sum(axis=1).replace(0, np.nan)  # 避免除0
-            df_summary["Gamma_normalize"] = df_abs["Gamma"] / sums
-            df_summary["rainfall_frenquency_normalize"] = df_abs["rainfall_frenquency"] / sums
-            df_summary["CV_IAV_normalize"] = df_abs["CV_IAV"] / sums
+            # === 拼接变量名称 ===
+            var_list_sens = [f'{model}_' + v for v in var_list]
 
-            # 把 sum=0 的情况填回 0
-            df_summary[["Gamma_normalize", "rainfall_frenquency_normalize", "CV_IAV_normalize"]] = \
-                df_summary[["Gamma_normalize", "rainfall_frenquency_normalize", "CV_IAV_normalize"]].fillna(0)
+            max_var_list = []
+            color_list = []
+            trend_val_list = []
 
-            fig = plt.figure(figsize=(6, 6))
-            ax = fig.add_subplot(projection="ternary")
+            for _, row in df.iterrows():
+                # === 提取该像素下的 sensitivity 值 ===
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
 
-            # 轴标签
-            ax.set_tlabel("CV IAV rainfall")  # 顶边
-            ax.set_llabel("rainfall frequency")  # 左边
-            ax.set_rlabel("Gamma")  # 右边
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    color_list.append(np.nan)
+                    trend_val_list.append(np.nan)
+                    continue
 
-            ax.grid(True, linestyle=":", alpha=0.5)
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_var = var_list[idx_max]  # 注意取原始名字 (e.g. 'sensitivity')
 
-            # 按照 (t, l, r) 顺序传值
-            ax.scatter(
-                df_summary["CV_IAV_normalize"],  # t = 顶边
-                df_summary["rainfall_frenquency_normalize"],  # l = 左边
-                df_summary["Gamma_normalize"],  # r = 右边
-                s=90, c="C0", edgecolor="k"
-            )
+                # === 嵌套逻辑：dominant + trend方向 ===
+                if 'sensitivity' in max_var:
+                        color = 1
+                elif 'Precip_sum_detrend_CV' in max_var:
 
-            # 标注模型名
-            for i, row in df_summary.iterrows():
-                ax.text(
-                    row["CV_IAV_normalize"],
-                    row["rainfall_frenquency_normalize"],
-                    row["Gamma_normalize"],
-                    row["model"], fontsize=9,
-                    ha="center", va="center"
-                )
+                        color = 2
 
-            plt.show()
+                elif 'CV_daily_rainfall_average' in max_var:
 
-        def plot_pdf(self):
-            dff = result_root + rf'3mm\Multiregression\Multiregression_result_residual\TRENDY_zscore\Dataframe\\statistic.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            # df=df.dropna(axis=0, how='any')
-            obs_list = ['composite_LAI', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g']
-            new_model_list = self.model_list + obs_list
-            flag = 0
+                        color = 3
 
-            fig, axes = plt.subplots(3, 6, figsize=(12, 18))  # Adjust figsize if too tight
-            axes = axes.flatten()
-            self.model_list = ['composite_LAI', 'GLOBMAP_LAI', 'LAI4g', 'SNU_LAI', 'TRENDY_ensemble',
-                               'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                               'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                               'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                               'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                               'ORCHIDEE_S2_lai', 'YIBs_S2_Monthly_lai',
-
-                               ]
-
-            for model in new_model_list:
-
-                result = {'gamma': df[f'{model}_sensitivity_zscore_contrib'].to_list(),
-                          'cv_iav': df[f'{model}_rainfall_frenquency_zscore_contrib'].to_list(),  # CV_IAV rainfall
-                          'rfq': df[f'{model}_detrended_sum_rainfall_growing_season_zscore_contrib'].to_list(),
-                          # rainfall frequency
-                          }
-
-                ## all model plot in the same layout
-                ax = axes[flag]
-
-                for var_name, values in result.items():
-                    if flag >= len(axes):
-                        break
-
-                    arr = np.array(values)
-                    arr[arr > 99] = np.nan
-                    arr[arr < -99] = np.nan
-                    arr = arr * 100
-                    arr = arr[~np.isnan(arr)]
-                    mean_val = np.mean(arr)
-                    # ax.axvline(mean_val, linestyle='--', linewidth=1, alpha=0.8)
-
-                    # sns.kdeplot(arr, fill=False, linewidth=2,label=var_name,ax=ax)
-                    sns.ecdfplot(arr, label=var_name, ax=ax, linewidth=2, )
-                ax.set_xlim(-30, 30)
-                ax.set_ylabel('')
-                ax.grid(True)
-                ax.set_title(model)
-                ax.legend(fontsize=6)
-
-                # plt.grid(True)
-
-                flag = flag + 1
-
-                #
-                #
-            plt.legend()
-            plt.show()
-
-            pass
-
-        def statistic_contribution_area(self):
-            dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\\statistics\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-
-            percentage_list = []
-            sum = 0
-
-            for ii in [1, 2, 3, 4, 5, 6]:
-                # df = df.dropna(subset=['TRENDY_ensemble_median_color_map'])
-                # df_ii = df[df['TRENDY_ensemble_median_color_map'] == ii]
-                # df = df.dropna(subset=['composite_LAI_median_color_map'])
-                # df_ii = df[df['composite_LAI_median_color_map'] == ii]
-
-                percent = len(df_ii) / len(df) * 100
-                sum = sum + percent
-                percentage_list.append(percent)
-            print(percentage_list)
-            print(sum);
-            # exit()
-
-            ## plot
-
-            color_list = [
-
-                '#f599a1', '#fcd590',
-                '#e73618', '#dae67a',
-                '#9fd7e9', '#a577ad',
-
-            ]
-
-            plt.figure(figsize=(3, 3))
-            plt.bar([1, 2, 3, 4, 5, 6], percentage_list, color=color_list)
-
-            plt.ylabel('Area precentage (%)')
-            # plt.show()
-            outdir = result_root + rf'\3mm\FIGURE\Robinson\\'
-            plt.savefig(outdir + '\\statistics_contribution_area_model.pdf', dpi=300)
-            plt.close()
-
-            pass
-
-            pass
-
-        def sensitivity_vs_climate_factors(self):
-            dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            df.dropna(inplace=True)
-
-            # 设置变量名
-            target_var_list = [
-                'composite_LAI_detrended_sum_rainfall_growing_season_zscore',
-                'composite_LAI_rainfall_frenquency_zscore']
-
-            color_list = ['#dd492c', '#c05f77', '#b5869a',
-                          '#bfa8b1', '#d5c1ca', '#e7dce1',
-                          ]
-
-            sand_color_list = ['#ffffe5', '#fffaca', '#fff0ae', '#fee391', '#fece65',
-                               '#feb642', '#fe9929', '#f27e1b', '#e1640e', '#cc4c02', '#aa3c03', '#882f05', '#662506']
-            aridity_color_list = ['#d73027', '#ea6f44', '#f48e52', '#fec279', '#fed690',
-                                  '#ffffbf', '#f7fccd', '#f0f9dc', '#e8f6ea', '#e0f3f8']
-            root_depth_list = [
-                '#f1e0b6',
-                '#e6c981',
-                '#d9b15a',
-                '#c89b43',
-                '#a88432',
-                '#7f6d28',
-                '#4f7f3b',
-                '#2e7031',
-                '#00441b'  # 深根
-            ]
-            short_vegetation_cover = ['#ffffcc',  # 极低覆盖
-                                      '#d9f0a3',
-                                      '#addd8e',
-                                      '#78c679',
-                                      '#41ab5d',
-                                      '#238443',
-                                      '#006837',
-                                      '#004529']
-
-            for target_var in target_var_list:
-
-                # bin_var = 'Burn_area_sum'
-                # bin_var = 'S_SAND'
-
-                bin_var = 'SOC'
-                # bin_var = 'sum_rainfall_mean'
-                # bin_var = 'Tree cover_mean'
-                # bin_var='Non_tree_vegetation_mean'
-                # bin_var = 'rooting_depth_05'
-                plt.hist(df[bin_var])
-                plt.show()
-                # bin_edges = np.arange(0, 101, 10)
-                # bin_edges = np.arange(200,1201,100)
-                # bin_edges = np.arange(0,501,50)
-                # bin_edges = np.arange(0, 4000, 500)
-                # bin_edges=np.arange(10,91,10)
-                # bin_edges = np.arange(0.2, 0.66, 0.05)
-                # bin_edges = np.arange(150,850,50)
-                bin_edges = np.arange(0, 0.5, 0.05)
-                # bin_edges = np.quantile(df[bin_var], np.linspace(0, 0.66, 11))
-                bin_labels = [f'{round(bin_edges[i], 2)}-{round(bin_edges[i + 1], 2)}' for i in
-                              range(len(bin_edges) - 1)]
-                # bin_labels = [f'{round(bin_edges[i ], 2)}' for i in range(len(bin_edges) - 1)]
-
-                df['bin'] = pd.cut(df[bin_var], bins=bin_edges, labels=bin_labels, include_lowest=True)
-
-                # 初始化结果字典
-                result_dic = {}
-                count_list = []
-
-                for label in bin_labels:
-                    df_bin = df[df['bin'] == label][[target_var]].dropna()
-
-                    if len(df_bin) == 0:
-                        result_dic[label] = [0, 0, 0, 0]
-                        continue
-
-                    mean_val = np.nanmean(df_bin[target_var])
-                    std_err = np.nanstd(df_bin[target_var]) / np.sqrt(len(df_bin))  # 标准误差
-                    result_dic[label] = [mean_val, std_err]
-                    count_list.append(len(df_bin))
-
-                # 构造 DataFrame
-                result_df = pd.DataFrame(result_dic).T
-                result_df.columns = ['mean', 'std_err']
-                result_df.index = bin_labels
-
-                # 画图
-
-                ax = result_df['mean'].plot(
-                    kind='bar',
-                    yerr=result_df['std_err'],
-                    figsize=(4, 3),
-                    color=aridity_color_list,
-                    capsize=3,
-                    error_kw={'elinewidth': 1, 'ecolor': 'gray'},
-                    edgecolor='gray',
-                )
-
-                ## add count
-
-                for i, bar in enumerate(ax.patches):
-                    height = bar.get_height()
-                    ax.text(bar.get_x() + bar.get_width() / 2,
-                            height + 0.02,  # 微调高度
-
-                            f'{count_list[i]}',
-                            ha='center', va='bottom', fontsize=10, rotation=90)
-
-                plt.axhline(y=0, color='gray', linestyle='-')
-                ## xtick every 100 label
-                xticks = ax.get_xticks()
-                # xticklabels = [label.get_text() for label in ax.get_xticklabels()]
-                # new_labels = [label if i % 2 == 0 else '' for i, label in enumerate(xticklabels)]
-                # ax.set_xticklabels(new_labels, rotation=0)
-
-                if target_var == 'detrended_sum_rainfall_CV_zscore_sensitivity':
-                    plt.ylabel('CV Interannual Rainfall (zscore)')
-
-
-                elif target_var == 'rainfall_frenquency_zscore_sensitivity':
-                    plt.ylabel('Fq Rainfall(zscore)')
-
-                if target_var == 'composite_LAI_beta_mean_zscore_contrib':
-                    plt.xticks([])
-                elif target_var == 'rainfall_frenquency_zscore_contrib':
-                    plt.xticks([])
                 else:
-                    plt.xticks(rotation=45)
+                    color = np.nan
 
-                #
-                plt.tight_layout()
-                plt.show()
-                # ## save pdf
-                # fig = ax.get_figure()
-                # outdir=result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_2\figure\\'
-                # T.mk_dir(outdir, force=True)
-                # fig.savefig(outdir + f'{target_var}_{bin_var}.pdf', dpi=300, bbox_inches='tight')
-                # plt.close(fig)
+                max_var_list.append(max_var)
+                color_list.append(color)
 
-        def cohens_d(self, x, y):
-            nx, ny = len(x), len(y)
-            if nx < 2 or ny < 2:
-                return np.nan
-            pooled = np.sqrt(((nx - 1) * np.var(x, ddof=1) + (ny - 1) * np.var(y, ddof=1)) / (nx + ny - 2))
-            return (np.nanmean(x) - np.nanmean(y)) / pooled if pooled > 0 else np.nan
 
-        def box_plot_test(self):
-            import numpy as np
-            import pandas as pd
-            import matplotlib.pyplot as plt
-            from matplotlib.patches import Patch
-            from scipy import stats
+            df['max_var'] = max_var_list
+            df['color'] = color_list
 
-            # ---------- load & clean ----------
-            dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\statistics.df'
-            df0 = T.load_df(dff)
-            df0 = self.df_clean(df0)
 
-            # variables to compare across panels
-            var_list = [
-                'sum_rainfall_trend', 'SM_ecosystem_year_trend', 'pi_growing_season_trend',
-                'sand_soil_grid', 'fire_ecosystem_year_sum', 'rooting_depth_05', ]
-            # df_postive=df0[df0['composite_LAI_detrended_sum_rainfall_growing_season_zscore_correlation']>0]
-            # df_negative=df0[df0['composite_LAI_detrended_sum_rainfall_growing_season_zscore_correlation']<0]
 
-            df_postive = df0[df0['composite_LAI_rainfall_frenquency_zscore_correlation'] > 0]
-            df_negative = df0[df0['composite_LAI_rainfall_frenquency_zscore_correlation'] < 0]
-            ## ttest
-            for var in var_list:
-                vals_pos = df_postive[var].tolist()
-                vals_pos_arr = np.array(vals_pos)
-                vals_pos_arr = vals_pos_arr[~np.isnan(vals_pos_arr)]
-                vals_neg = df_negative[var].tolist()
-                vals_neg_arr = np.array(vals_neg)
-                vals_neg_arr = vals_neg_arr[~np.isnan(vals_neg_arr)]
-                t, p = stats.ttest_ind(vals_pos_arr, vals_neg_arr, equal_var=False)
-                print(f'{var}: t={t:.3f}, p={p:.3f}')
+            # === 写出 color_map ===
+            outdir= outdir
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            out_tif = join(outdir, 'dominant_color_map_without_sign.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
 
-        def filter_data(self, df):
-            self.x_variable_range_dict_global_CRU = {
-                'pi_growing_season_trend': [0, 7],
-                'sum_rainfall_trend': [0, 7],
-                'SM_ecosystem_year_trend': [0, 1500],
-                'sand_soil_grid': [0, 800],
-                'rooting_depth_05': [0, 25],
-                'cwdx80_05_soil_grid': [0, 50], }
+    def max_correlation_with_sign(self):
 
-        def maximum_contribution(self):
-            fdir = self.outdir
-            array_dic_all = {}
-            array_arg = {}
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
 
-            var_name_list = []
-            for f in os.listdir(fdir):
-                if not f.endswith('.tif'):
+        model_list = self.model_list
+
+        var_list = [
+            'sensitivity',
+            'Precip_sum_detrend_CV',
+            'CV_daily_rainfall_average',
+        ]
+
+        for model in tqdm(model_list):
+            # if not 'TRENDY_ensemble_mean2' in model:
+            #     continue
+
+            outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
+            T.mk_dir(outdir, force=True)
+
+            # === 拼接变量名称 ===
+            var_list_sens = [f'{model}_' + v for v in var_list]
+
+            max_var_list = []
+            color_list = []
+            trend_val_list = []
+            max_var_sign_list = []
+
+            for _, row in df.iterrows():
+
+                vals_sens = np.array([row[v] for v in var_list_sens], dtype=float)
+                vals_sens[(vals_sens < -10) | (vals_sens > 10)] = np.nan
+
+                if np.all(np.isnan(vals_sens)):
+                    max_var_list.append(np.nan)
+                    max_var_sign_list.append(np.nan)
+                    color_list.append(np.nan)
                     continue
-                if not 'contrib' in f:
-                    continue
-                if 'max_label' in f:
-                    continue
-                if 'Ternary_plot' in f:
-                    continue
-                var_name = f.split('.')[0]
-                var_name_list.append(var_name)
-                print(f)
-                fpath = join(fdir, f)
-                spatial_dict = DIC_and_TIF().spatial_tif_to_dic(fpath)
-                array_dic_all[var_name] = spatial_dict
 
-            spatial_df = T.spatial_dics_to_df(array_dic_all)
-            max_key_list = []
-            max_val_list = []
-            for i, row in spatial_df.iterrows():
-                vals = row[var_name_list].tolist()
-                vals = np.array(vals)
-                var_name_list_array = np.array(var_name_list)
-                vals_no_nan = vals[~np.isnan(vals)]
-                var_name_list_array_no_nan = var_name_list_array[~np.isnan(vals)]
-                vals_dict = T.dict_zip(var_name_list_array_no_nan, vals_no_nan)
-                # if True in np.isnan(vals):
-                # max_key_list.append(np.nan)
-                # max_val_list.append(np.nan)
-                # continue
-                max_key = T.get_max_key_from_dict(vals_dict)
-                max_val = vals_dict[max_key]
-                max_key_list.append(max_key)
-                max_val_list.append(max_val)
-                # print(vals_dict)
-                # print(max_key)
-                # print(max_val)
-                # exit()
-            spatial_df['max_key'] = max_key_list
-            spatial_df['max_val'] = max_val_list
-            T.print_head_n(spatial_df)
-            spatial_df.dropna()
-            ## df to tif
-            dic_label = {'CV_intraannual_rainfall_ecosystem_year_contrib': 2,
-                         'detrended_sum_rainfall_CV_contrib': 3,
-                         'composite_LAI_beta_mean_contrib': 1,
+                # === 找最大绝对值 ===
+                idx_max = np.nanargmax(np.abs(vals_sens))
+                max_val = vals_sens[idx_max]
+                max_var = var_list_sens[idx_max]
 
-                         }
+                # === 符号 ===
+                max_var_sign = '+' if max_val > 0 else '-'
 
-            spatial_df['max_label'] = spatial_df['max_key'].map(dic_label)
-            # # ## calculate _percentage
-            # for ii in range(1, 5):
-            #     percent=spatial_df[spatial_df['max_label']==ii].shape[0]/spatial_df.shape[0]*100
-            #     percent=round(percent,2)
-            #     print(ii,percent)
-            #
-            #     plt.bar(ii,percent)
-            # # plt.show()
-            #
-            #
-            spatial_dict = T.df_to_spatial_dic(spatial_df, 'max_label')
-            DIC_and_TIF(pixelsize=0.5).pix_dic_to_tif(spatial_dict, self.outdir + 'max_label.tif')
+                # === 颜色编码 ===
+                if 'sensitivity' in max_var:
+                    color = 6 if max_val > 0 else 1
+                elif 'Precip_sum_detrend_CV' in max_var:
+                    color = 5 if max_val > 0 else 2
+                elif 'CV_daily_rainfall_average' in max_var:
+                    color = 4 if max_val > 0 else 3
 
-            dff_new = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\\Dataframe.df'
-            df = T.load_df(dff_new)
-            df = self.df_clean(df)
-            df = df.dropna()
+                else:
+                    color = np.nan
 
-            pix_list = df['pix'].tolist()
-            unique_pix_list = list(set(pix_list))
-            spatial_dic = {}
+                max_var_list.append(max_var)
+                max_var_sign_list.append(max_var_sign)
+                color_list.append(color)
 
-            for pix in unique_pix_list:
-                spatial_dic[pix] = 1
-            arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
-            plt.imshow(arr, vmin=-0.5, vmax=0.5, cmap='jet', interpolation='nearest')
-            plt.colorbar()
+            # === 写回结果 ===
+            df['max_var'] = max_var_list
+            df['max_var_sign'] = max_var_sign_list
+            df['color'] = color_list
+
+            # === 输出空间结果 ===
+            spatial_dic = T.df_to_spatial_dic(df, 'color')
+            outtif = join(outdir, 'color_map_six_category.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dic, outtif)
+
+            # arr = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+            # plt.imshow(arr, interpolation='nearest')
+            # plt.title(f'Max partial correlation variable ({model})')
+            # plt.colorbar(label='color code')
+            # plt.show()
+
+
+
+
+
+    def Plot_robinson(self):
+
+        fdir_trend = result_root + rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median2\\'
+        # fdir_trend = result_root + rf'\partial_correlation\Obs\result\\composite_LAI_median\\'
+        temp_root = result_root + rf'FIGURE\Robinson\\temp_root\\'
+        outdir = result_root + rf'FIGURE\Figure4\\Robinson\\'
+        T.mk_dir(outdir, force=True)
+        T.mk_dir(temp_root, force=True)
+
+
+        for f in os.listdir(fdir_trend):
+
+            if not f.endswith('.tif'):
+                continue
+
+            if not 'color_map' in f:
+                continue
+            fpath = fdir_trend + f
+
+            # plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
+            m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=3, is_discrete=True, colormap_n=4, )
+
+
+            # plt.show()
+            outf = outdir +'TRENDY_ensemble_median2.pdf'
+            # outf = outdir +'composite_LAI_median.pdf'
+            plt.savefig(outf)
+            plt.close()
+        T.open_path_and_file(outdir)
+
+    def statistic_contribution_area_barplot_withsign(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
+
+
+        for col in df.columns:
+                print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        pix_sets = []
+        for model in model_list:
+            col = f'{model}_color_map_six_category'
+            pix_valid = set(df[~df[col].isna()]['pix'])
+            pix_sets.append(pix_valid)
+
+        pix_common = set.intersection(*pix_sets)
+        df_common = df[df['pix'].isin(pix_common)]
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 2, 3, 4, 5, 6]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_color_map_six_category'
+
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'gamma-',
+                             2: 'CV_inter-',
+                             3:'CV_intra-',
+                             4:'CV_intra+',
+                             5:'CV_inter+',
+                             6:'gamma+'
+
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 2, 3, 4, 5, 6]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 70)
+            plt.grid(axis='y', alpha=0.25)
+
+
+            plt.show()
+            outdir=result_root + rf'\FIGURE\Figure4\\Figure4_six_category\\'
+            T.mk_dir(outdir)
+            outf=outdir+f'barplot_{ii}_six_category.pdf'
+            # plt.savefig(outf,dpi=300, bbox_inches='tight')
+            # plt.close()
+
+
+
+
+    def statistic_contribution_area_barplot(self):
+        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
+        # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
+
+
+        for col in df.columns:
+                print(col)
+
+        model_list=self.model_list
+
+
+        result_dic = {}
+
+        pix_sets = []
+        for model in model_list:
+            col = f'{model}_dominant_color_map_without_sign'
+            pix_valid = set(df[~df[col].isna()]['pix'])
+            pix_sets.append(pix_valid)
+
+        pix_common = set.intersection(*pix_sets)
+        df_common = df[df['pix'].isin(pix_common)]
+
+        # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
+        for ii in [1, 2, 3, ]:
+            percentage_list = []
+            for model in model_list:
+                col = f'{model}_dominant_color_map_without_sign'
+
+                df_mask = df.dropna(subset=[col])  # 不要改写 df 本体
+                df_ii = df_mask[df_mask[col] == ii]
+                percent_ii = len(df_ii) / len(df_mask) * 100.0
+                percentage_list.append(percent_ii)
+            result_dic[ii] = percentage_list
+        pprint(result_dic)
+
+        dic_variable_name = {1: 'gamma',
+                             2: 'CV_inter',
+                             3:'CV_intra',
+
+
+                             }
+
+        # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
+        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+                     + ['#F7DAD4'] * (len(model_list) - 5)
+
+        # 用模型名作为行索引，便于对齐
+        df_new = pd.DataFrame(result_dic, index=model_list)
+
+        # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
+        for ii in [1, 2, 3]:
+            vals = df_new[ii].values
+            n_all = len(vals)
+            n_obs = 4  # 前 4 个是 obs
+            gap = 1.2  # obs 与 models 间的空隙（单位≈一个柱宽）
+
+            # 构造 x 位置：models 整体右移形成间隔
+            x = np.arange(n_all, dtype=float)
+            x[n_obs:] += gap
+
+            fig, ax = plt.subplots(figsize=(self.map_width, self.map_height))
+            ax.bar(x, vals, color=color_list[:n_all], edgecolor='black', width=0.8)
+
+            # 在第一个柱子的高度画虚线（只跨 models 区域）
+            y_ref = vals[0]  # 第一个柱子的高度
+            xmin = x[0] - 0.4  # 第一个柱子的左边缘
+            xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
+            ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
+
+                # 可选：标出 obs/models 分界
+            ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
+
+            # plt.ylabel('Area percentage (%)')
+            plt.xticks([])
+            ax.text(0.02, 0.98, dic_variable_name[ii],
+                    transform=ax.transAxes, ha='left', va='top',
+                    fontsize=12, fontfamily='Arial',
+                    bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=1.5))
+            ax.set_ylim(0, 70)
+            plt.grid(axis='y', alpha=0.25)
+
+
             plt.show()
 
-            for ii in range(1, 4):
-                percent = df[df['max_label'] == ii].shape[0] / df.shape[0] * 100
-                percent = round(percent, 2)
-                print(ii, percent)
 
-                plt.bar(ii, percent)
-            plt.show()
+            # plt.savefig(result_root + rf'\FIGURE\Figure4\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
+            # plt.close()
 
-        def heatmap2(self):  ## plot trend as function of Aridity and precipitation trend
-            ## plot trends as function of inter precipitaiton CV and intra precipitation CV
-            dff = result_root + rf'3mm\Multiregression\partial_correlation\Obs\Dataframe\\statistics.df'
-            df = T.load_df(dff)
-            df = self.df_clean(df)
-            # df.dropna(inplace=True)
-            ###df =color map ==3 and 4
-            # df = df[df['color_map'].isin([2, 5])]
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
 
-            # df=df.dropna()
-            T.print_head_n(df)
-            x_var = 'sum_rainfall_trend'
+        df = df[df['landcover_classfication'] != 'Cropland']
 
-            y_var = 'SM_trend'
-            plt.hist(df[y_var])
-            plt.show()
-            plt.hist(df[x_var])
-            plt.show()
-            z_var = 'composite_LAI_detrended_sum_rainfall_growing_season_CV_zscore'
-            # z_var='Fire_sum_average'
-
-            bin_x = np.linspace(-4, 4, 6)
-            bin_y = np.linspace(-0.001, 0.001, 6)
-
-            # percentile_list=np.linspace(0,100,9)
-            # bin_x=np.percentile(df[x_var],percentile_list)
-            # print(bin_x)
-            # bin_y=np.percentile(df[y_var],percentile_list)
-            plt.figure()
-
-            matrix_dict, x_ticks_list, y_ticks_list = T.df_bin_2d(df, val_col_name=z_var,
-                                                                  col_name_x=x_var,
-                                                                  col_name_y=y_var, bin_x=bin_x, bin_y=bin_y)
-            self.plot_df_bin_2d_matrix(matrix_dict, -.5, .5, x_ticks_list, y_ticks_list, cmap='Viridis',
-                                       is_only_return_matrix=False)
-            plt.colorbar()
-            plt.xlabel(x_var)
-            plt.ylabel(y_var)
-            plt.show()
-
-            # plt.figure()
-
-            matrix_dict, x_ticks_list, y_ticks_list = self.df_bin_2d_sample_size(df, val_col_name=z_var,
-                                                                                 col_name_x=x_var,
-                                                                                 col_name_y=y_var, bin_x=bin_x,
-                                                                                 bin_y=bin_y)
-            T.plot_df_bin_2d_matrix(matrix_dict, 0, 100, x_ticks_list, y_ticks_list, cmap='RdBu',
-                                    is_only_return_matrix=False)
-
-            plt.colorbar()
-            plt.xlabel(x_var)
-            plt.ylabel(y_var)
-            plt.show()
-
-        def plot_df_bin_2d_matrix(self, matrix_dict, vmin, vmax, x_ticks_list, y_ticks_list, cmap='RdBu',
-                                  is_only_return_matrix=False):
-            keys = list(matrix_dict.keys())
-            r_list = []
-            c_list = []
-            for r, c in keys:
-                r_list.append(r)
-                c_list.append(c)
-            r_list = set(r_list)
-            c_list = set(c_list)
-
-            row = len(r_list)
-            col = len(c_list)
-            spatial = []
-            for r in range(row):
-                temp = []
-                for c in range(col):
-                    key = (r, c)
-                    if key in matrix_dict:
-                        val_pix = matrix_dict[key]
-                        temp.append(val_pix)
-                    else:
-                        temp.append(np.nan)
-                spatial.append(temp)
-
-            matrix = np.array(spatial, dtype=float)
-            matrix = matrix[::-1]
-            if is_only_return_matrix:
-                return matrix
-            plt.imshow(matrix, cmap='RdBu', vmin=vmin, vmax=vmax)
-            plt.xticks(range(len(c_list)), x_ticks_list)
-            plt.yticks(range(len(r_list)), y_ticks_list[::-1])
-
-        def df_bin_2d_sample_size(self, df, val_col_name, col_name_x, col_name_y, bin_x, bin_y, round_x=2, round_y=2):
-            df_group_y, _ = T.df_bin(df, col_name_y, bin_y)
-            matrix_dict = {}
-            y_ticks_list = []
-            x_ticks_dict = {}
-            flag1 = 0
-            for name_y, df_group_y_i in df_group_y:
-                matrix_i = []
-                y_ticks = (name_y[0].left + name_y[0].right) / 2
-                y_ticks = np.round(y_ticks, round_y)
-                y_ticks_list.append(y_ticks)
-                df_group_x, _ = T.df_bin(df_group_y_i, col_name_x, bin_x)
-                flag2 = 0
-                for name_x, df_group_x_i in df_group_x:
-                    vals = df_group_x_i[val_col_name].tolist()
-                    rt_mean = len(vals)
-                    matrix_i.append(rt_mean)
-                    x_ticks = (name_x[0].left + name_x[0].right) / 2
-                    x_ticks = np.round(x_ticks, round_x)
-                    x_ticks_dict[x_ticks] = 0
-                    key = (flag1, flag2)
-                    matrix_dict[key] = rt_mean
-                    flag2 += 1
-                flag1 += 1
-            x_ticks_list = list(x_ticks_dict.keys())
-            x_ticks_list.sort()
-            return matrix_dict, x_ticks_list, y_ticks_list
-
-        def df_clean(self, df):
-            T.print_head_n(df)
-            # df = df.dropna(subset=[self.y_variable])
-            # T.print_head_n(df)
-            # exit()
-            df = df[df['row'] > 60]
-            df = df[df['Aridity'] < 0.65]
-            df = df[df['LC_max'] < 10]
-            df = df[df['MODIS_LUCC'] != 12]
-
-            df = df[df['landcover_classfication'] != 'Cropland']
-
-            return df
-
-        def load_df(self):
-            dff = rf'D:\Project3\Result\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\Dataframe\Dataframe.df'
-            df = T.load_df(dff)
-            # exit()
-            # start_year = 0
-            # end_year = 21
-            # variable_list = self.xvar + self.y_var
-            # df = Dataframe_per_value_transform(df, variable_list, start_year, end_year).df
-            # T.print_head_n(df)
-            return df
+        return df
 
 
 def main():
     # Delta_regression().run()
 
 
-    # partial_correlation_obs().run()
-    partial_correlation_TRENDY().run()
+    partial_correlation_obs().run()
+    # partial_correlation_TRENDY().run()
 
 
     pass
