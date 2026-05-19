@@ -1892,8 +1892,8 @@ class Colormap():
     def __init__(self):
         pass
     def run(self):
-        self.colormap()
-        # self.statistic_contribution_area_individual_model()
+        # self.colormap()
+        self.statistic_contribution_area_individual_model()
         pass
 
     def colormap(self):
@@ -1948,7 +1948,7 @@ class Colormap():
             T.mk_dir(temp_fdir, True)
 
             color_list = [
-                # '#9EBD3A',
+                '#9EBD3A',
                 'lightseagreen',
                 '#a577ad',
                 '#fc945d',
@@ -1963,7 +1963,7 @@ class Colormap():
 
             # 画 Robinson 投影 + 栅格
             m, mappable = Plot_Robinson_TRENDY().plot_Robinson(
-                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=3, colormap_n=4,is_discrete=True
+                fpath, ax=ax, cmap=my_cmap2, vmin=1, vmax=4, colormap_n=5,is_discrete=True
             )
 
 
@@ -2015,11 +2015,11 @@ class Colormap():
 
 
     def statistic_contribution_area_individual_model(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\\review\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
-        model_list = ['TRENDY_ensemble_median_2',
+        model_list = ['composite_LAI_median','TRENDY_ensemble_median',
             'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
             'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
             'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
@@ -2042,7 +2042,7 @@ class Colormap():
             df = df.dropna(subset=[f'{model}_dominant_color_map_without_sign'])
 
 
-            for ii in [1, 2, 3,]:
+            for ii in [1, 2, 3,4]:
                 df_ii = df[df[f'{model}_dominant_color_map_without_sign'] == ii]
                 # df_ii = df[df['composite_LAI_median_color_map'] == ii]
 
@@ -2057,19 +2057,19 @@ class Colormap():
 
             color_list = ['#a577ad',
 
-                          '#dae67a', '#f599a1', ]
+                          '#dae67a', '#f599a1', '#f69E57']
 
             plt.figure(figsize=(3,3))
-            plt.bar([1, 2, 3, ], percentage_list, color=color_list)
+            plt.bar([1, 2, 3, 4], percentage_list, color=color_list)
             plt.ylim(0, 50)
             plt.xticks([])
             plt.title(model)
 
             plt.ylabel('Area(%)',fontsize=12)
-            # plt.show()
-            outdir = result_root + rf'\FIGURE\SI\\Colormap\\'
-            plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, )
-            plt.close()
+            plt.show()
+            # outdir = result_root + rf'\FIGURE\SI\\Colormap\\'
+            # plt.savefig(outdir + f'\\statistics_contribution_area_{model}.pdf', dpi=300, )
+            # plt.close()
 
 
 
@@ -3843,12 +3843,12 @@ def main():
 
 
     # Trends_obs_and_model().run()  ## Figure 1
-    Trends_CV_obs_and_model().run()  ## Figure 2
+    # Trends_CV_obs_and_model().run()  ## Figure 2
     # PLOT_dataframe().run()
     # TRENDY_CV_moving_window_robust().trend_analysis_plot()
     # TRENDY_CV().trend_analysis_plot()
     # Fire().run()
-    # Colormap().run()
+    Colormap().run()
     # Partial_correlation().run()
     # LAImax_LAImin_models().run()
     # PLOT_gamma().run()

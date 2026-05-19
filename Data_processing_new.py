@@ -1412,11 +1412,13 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\SNU_LAI\detrend\\'
-        outdir = result_root + rf'\\moving_window_extraction_raw\\\\moving_window_extraction\\SNU_LAI\\'
+        fdir_all =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\\'
+        outdir = result_root + rf'\\CRU_monthly\\extract_annual_growing_season_mean\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
+            if not 'VPD' in f:
+                continue
 
 
             if not f.endswith('.npy'):
@@ -1441,7 +1443,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]
+                time_series = dic[pix]['growing_season']
                 # plt.plot(time_series)
                 # plt.show()
 
@@ -1566,13 +1568,14 @@ class moving_window():
         window_size=15
 
 
-        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\moving_window_extraction_CV\\'
+        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\\moving_window_extraction_CV\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'sum' in f:
+            if not 'VPD' in f:
                 continue
+
 
 
             dic = T.load_npy(fdir + f)
@@ -1617,6 +1620,8 @@ class moving_window():
 
                     trend_list.append(cv)
                 print(len(trend_list))
+                # plt.plot(trend_list)
+                # plt.show()
 
                 trend_dic[pix]=trend_list
 
@@ -1694,8 +1699,8 @@ class moving_window():
 
     def moving_window_average_anaysis(self): ## each window calculating the average
 
-        fdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\'
-        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_average\\'
+        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\moving_window_extraction\\'
+        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\moving_window_extraction_average\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
@@ -1739,6 +1744,7 @@ class moving_window():
                     # print(average)
 
                     trend_list.append(average)
+                print(trend_list)
                 # plt.plot(trend_list)
                 #
                 # plt.show()
@@ -1986,8 +1992,9 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'Multiregression_contribution\Obs\review\X_review\zscore\\'
-        outdir =result_root + (rf'Multiregression_contribution\Obs\review\X_review\\zscore\\trend\\')
+        fdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
+        outdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
+
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):

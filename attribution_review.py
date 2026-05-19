@@ -146,10 +146,10 @@ class partial_correlation_obs:
         # #
         #
         #
-        self.plot_spatial_map_sig()
+        # self.plot_spatial_map_sig()
 
 
-        # self.statistic_corr_boxplot()
+        self.statistic_corr_boxplot()
         # self.statistic_percentage()
         #
 
@@ -715,7 +715,7 @@ class partial_correlation_obs:
         """
 
         # === 1. 读取数据 ===
-        dff = result_root + rf'\partial_correlation\Dataframe\\1mm_new\\Obs.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         print(len(df))
@@ -725,13 +725,16 @@ class partial_correlation_obs:
 
         # === 2. 变量设置 ===
         variable_list = [
+
             'sensitivity',
             'Precip_sum_detrend_CV',
             'CV_daily_rainfall_average',
+            'VPD_detrend_average',
         ]
 
         label_dic = {
             'sensitivity': r'$\gamma$',
+            'VPD_detrend_average': 'VPD',
             'Precip_sum_detrend_CV': r'$CV_{inter}$',
             'CV_daily_rainfall_average': r'$CV_{intra}$',
         }
@@ -741,15 +744,16 @@ class partial_correlation_obs:
         # === 4. 数据提取 ===
 
         for model in self.model_list:
-            if not 'composite_LAI_median' in model:
-                continue
+            # if not 'composite_LAI_median' in model:
+            #     continue
 
             result_dic = {}
 
 
             # print(len(df));exit()
             for variable in variable_list:
-                new_variable = f'{model}_{variable}_sig'
+                # new_variable = f'{model}_{variable}_sig'
+                new_variable = f'{model}_{variable}'
                 if new_variable not in df.columns:
                     continue
 
@@ -774,13 +778,13 @@ class partial_correlation_obs:
             x_labels = []
 
             for var in variable_list:
-                key = f'{model}_{var}_sig'
+                key = f'{model}_{var}'
                 if key in result_dic:
                     data_list.append(result_dic[key])
                     x_labels.append(label_dic[var])
 
                     # 设置颜色
-            color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f599a1']
+            color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f69E57']
             dark_colors = ['#774685', 'Olive', 'Salmon', '#c3646f']  # 可以改为你自定义的 darken_color 函数
 
             # 绘图
@@ -830,11 +834,11 @@ class partial_correlation_obs:
             plt.ylabel('Partial correlation', fontsize=10)
 
             plt.axhline(0, color='gray', linestyle='--')
-            # plt.tight_layout()
-            # plt.show()
+            plt.tight_layout()
+            plt.show()
 
-            outdir=result_root + rf'\FIGURE\SI\\'
-            Tools().mk_dir(outdir, force=True)
+            # outdir=result_root + rf'\FIGURE\SI\\'
+            # Tools().mk_dir(outdir, force=True)
 
             # outf=join(outdir,f'{model}_partial_correlation_boxplot_3mm.pdf')
             # plt.savefig(outf,bbox_inches='tight',dpi=300
@@ -897,6 +901,7 @@ class partial_correlation_TRENDY():
                            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
                            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                            'ORCHIDEE_S2_lai',
+
 
                            'YIBs_S2_Monthly_lai',
 
@@ -1489,8 +1494,6 @@ class partial_correlation_TRENDY():
 
         model_list=self.model_list
 
-
-
         arr_sensitivity = []
 
         for model in model_list:
@@ -1500,16 +1503,18 @@ class partial_correlation_TRENDY():
                     continue
                 if 'sensitivity' in f:
                     arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(join(fdir_i, f))
+                    arr = arr.astype(float)
+                    arr[arr > 99] = np.nan
+                    arr[arr < -99] = np.nan
                     arr_sensitivity.append(arr)
         arr_sensitivity = np.nanmedian(arr_sensitivity, axis=0)
-        arr_sensitivity[arr_sensitivity > 99] = np.nan
-        arr_sensitivity[arr_sensitivity < -99] = np.nan
+
         plt.imshow(arr_sensitivity, cmap='RdYlGn')
         plt.colorbar()
         plt.show()
-        outdir = result_root + rf'\partial_correlation\review\TRENDY\result\TRENDY_esnemble_median\sig_nomask\\'
+        outdir = result_root + rf'\partial_correlation\review\TRENDY\result\TRENDY_esnemble_mean\sig_nomask\\'
         T.mk_dir(outdir, force=True)
-        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_sensitivity, outdir + f'TRENDY_ensemble_sensitivity.tif')
+        DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_sensitivity, outdir + f'TRENDY_esnemble_mean_sensitivity.tif')
         #
 
 
@@ -1534,7 +1539,7 @@ class partial_correlation_TRENDY():
             plt.imshow(arr_ensemble, cmap='RdYlGn')
             plt.colorbar()
             plt.show()
-            outdir = result_root + rf'\partial_correlation\review\TRENDY\result\TRENDY_esnemble_median\sig_nomask\\'
+            outdir = result_root + rf'\partial_correlation\review\TRENDY\result\TRENDY_esnemble_mean\sig_nomask\\'
             T.mk_dir(outdir, force=True)
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_ensemble, outdir + f'{variable}.tif')
             #
@@ -1545,13 +1550,13 @@ class Delta_regression:
     def __init__(self):
         self.xvar = ['Precip_sum_detrend_CV_zscore',
                      'CV_daily_rainfall_average_zscore',
-                     'VPD_detrend_average_zscore']
+                     'VPD_detrend_CV_zscore']
 
         self.model_list = ['composite_LAI_median','composite_LAI_mean']
 
         # self.model_list = ['composite_LAI_mean','composite_LAI_median', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
 
-        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\\'
+        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\VPD_CV\\'
         T.mkdir(self.outdir, True)
 
         pass
@@ -1567,27 +1572,18 @@ class Delta_regression:
 
         ##### step 1
 
-        for model in self.model_list:
-            x_list=self.xvar+[model+'_sensitivity_zscore']
+        # for model in self.model_list:
+        #     x_list=self.xvar+[model+'_sensitivity_zscore']
         #     self.do_multi_regression(model, x_list)
-            ## not using below function
-            # self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
-
-
-            # self.calculate_trend_contribution(model,x_list)
+        #     ## not using below function
+        #     # self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
+        # #
+        # #
+        #     self.calculate_trend_contribution(model,x_list)
 
         ## step 2
         ### before calculating contribution, build dataframe
         self.statistic_contribution_no_residual()  ## use this
-
-
-        ###########################################3
-
-
-
-        # self.dominant_region_trends() not use
-
-
 
 
         pass
@@ -1597,11 +1593,13 @@ class Delta_regression:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir = result_root + rf'\Multiregression_contribution\Obs\\review\X_review\\'
-        outdir = result_root + rf'\Multiregression_contribution\Obs\review\X_review\\zscore\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\'
+        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\\X_review\\zscore\\'
         T.mk_dir(outdir, force=True)
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'VPD' in f:
+                continue
 
 
 
@@ -1657,7 +1655,7 @@ class Delta_regression:
 
     def build_df(self,):
 
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\X_review\zscore\\'
+        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
         all_dic = {}
 
         for f in os.listdir(fdir):
@@ -1682,7 +1680,7 @@ class Delta_regression:
         return df
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\Y\zscore\\'
+        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\'
 
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
@@ -1700,7 +1698,7 @@ class Delta_regression:
             # df[key_name] = df['pix'].map(dic)
             # T.print_head_n(df)
             df = T.add_spatial_dic_to_df(df, dic, key_name)
-        outdir=result_root+rf'\Multiregression_contribution\Obs\review\\Dataframe\\'
+        outdir=result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\\Dataframe\\'
         T.mk_dir(outdir, True)
         T.save_df(df, outdir + rf'\Dataframe.df')
         T.df_to_excel(df, outdir + rf'\Dataframe.xlsx')
@@ -1895,7 +1893,7 @@ class Delta_regression:
         contribution = slope(x, y) * trend(x) / trend(y) * 100
         """
 
-        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\X_review\\zscore\\trend\\'
+        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
         trend_dict = {}
 
         # === Load trend for each X variable ===
@@ -1928,7 +1926,7 @@ class Delta_regression:
 
 
         # === Load Y trend and p-value ===
-        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\trend\\'
+        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\trend\\'
         fy_trend = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_trend.tif')
         fy_pval = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
 
@@ -1982,7 +1980,7 @@ class Delta_regression:
         import numpy as np
         import os
 
-        dff = result_root + rf'Multiregression_contribution\Obs\review\Dataframe\\Statistics.df'
+        dff = result_root + rf'Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Statistics.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
@@ -2002,13 +2000,13 @@ class Delta_regression:
                 f'{model}_CV_daily_rainfall_average_zscore_trend_contrib',
                 f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib',
 
-                f'{model}_VPD_detrend_average_zscore_trend_contrib'
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib'
             ]
 
             label_map = {
                 f'{model}_sensitivity_zscore_trend_contrib': 'γ',
                 f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib': 'CV_inter',
-                f'{model}_VPD_detrend_average_zscore_trend_contrib': 'VPD',
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'CV_VPD',
                 f'{model}_CV_daily_rainfall_average_zscore_trend_contrib':'CV_intra'
 
             }
@@ -2025,8 +2023,10 @@ class Delta_regression:
 
             # === 计算平均值和标准误差 ===
             for var in fixed_order:
+                # print(df.columns);exit()
                 if var not in df.columns:
                     continue
+
                 vals = np.array(df[var].values, dtype=float)
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
@@ -2078,13 +2078,13 @@ class Delta_regression:
             # plt.tight_layout()
 
             # === 输出保存 ===
-            outdir =result_root + rf'Multiregression_contribution\Obs\review\\Figure\\'
-            print(outdir)
-            #
-            Tools().mk_dir(outdir, force=True)
-            outf = os.path.join(outdir, f'{model}_relative_contribution_1mm.pdf')
-            plt.savefig(outf, bbox_inches='tight', dpi=300)
-            # plt.show()
+            # outdir =result_root + rf'Multiregression_contribution\Obs\review\\Figure\\'
+            # print(outdir)
+            # #
+            # Tools().mk_dir(outdir, force=True)
+            # outf = os.path.join(outdir, f'{model}_relative_contribution_1mm.pdf')
+            # plt.savefig(outf, bbox_inches='tight', dpi=300)
+            plt.show()
             plt.close()
 
 
@@ -2164,7 +2164,7 @@ class Delta_regression:
 
 
     def load_df(self):
-        dff=result_root+rf'\Multiregression_contribution\Obs\review\Dataframe\\Dataframe.df'
+        dff=result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Dataframe.df'
 
         df = T.load_df(dff)
         # exit()
@@ -2195,12 +2195,12 @@ class partial_correlation_TRENDY_obs_comparision():
             'YIBs_S2_Monthly_lai',]
 
     def run(self):
-        self.statistic_barplot_partial_correlation()
+        # self.statistic_barplot_partial_correlation() ## not use
         # self.max_correlation_without_sign()
         # self.max_correlation_with_sign()
 
         # self.Plot_robinson()
-        # self.statistic_contribution_area_barplot()
+        self.statistic_contribution_area_barplot()
         # self.statistic_contribution_area_barplot_withsign()
         pass
 
@@ -2276,7 +2276,7 @@ class partial_correlation_TRENDY_obs_comparision():
             # plt.close()
 
     def max_correlation_without_sign(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
@@ -2285,16 +2285,16 @@ class partial_correlation_TRENDY_obs_comparision():
         model_list = self.model_list
 
         var_list = [
+
             'sensitivity',
             'Precip_sum_detrend_CV',
             'CV_daily_rainfall_average',
+            'VPD_detrend_average'
         ]
 
         for model in tqdm(model_list):
-            # if not 'TRENDY_ensemble_mean2' in model:
-            #     continue
 
-            outdir = result_root + rf'\partial_correlation\TRENDY\result\\{model}\\'
+            outdir = result_root + rf'\partial_correlation\review\TRENDY\result\\{model}\\'
             T.mk_dir(outdir, force=True)
 
             # === 拼接变量名称 ===
@@ -2330,6 +2330,8 @@ class partial_correlation_TRENDY_obs_comparision():
 
                         color = 3
 
+                elif 'VPD_detrend_average' in max_var:
+                    color = 4
                 else:
                     color = np.nan
 
@@ -2562,7 +2564,7 @@ class partial_correlation_TRENDY_obs_comparision():
 
 
     def statistic_contribution_area_barplot(self):
-        dff = result_root + rf'\partial_correlation\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
@@ -2587,7 +2589,7 @@ class partial_correlation_TRENDY_obs_comparision():
         df_common = df[df['pix'].isin(pix_common)]
 
         # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-        for ii in [1, 2, 3, ]:
+        for ii in [1, 2, 3, 4]:
             percentage_list = []
             for model in model_list:
                 col = f'{model}_dominant_color_map_without_sign'
@@ -2602,6 +2604,7 @@ class partial_correlation_TRENDY_obs_comparision():
         dic_variable_name = {1: 'gamma',
                              2: 'CV_inter',
                              3:'CV_intra',
+                             4:'VPD'
 
 
                              }
@@ -2614,7 +2617,7 @@ class partial_correlation_TRENDY_obs_comparision():
         df_new = pd.DataFrame(result_dic, index=model_list)
 
         # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
-        for ii in [1, 2, 3]:
+        for ii in [1, 2, 3,4]:
             vals = df_new[ii].values
             n_all = len(vals)
             n_obs = 4  # 前 4 个是 obs
@@ -2668,11 +2671,13 @@ class partial_correlation_TRENDY_obs_comparision():
 
 
 def main():
-    # Delta_regression().run()
+    Delta_regression().run()
+    # partial_correlation_obs().run()
 
-
-    partial_correlation_obs().run()
     # partial_correlation_TRENDY().run()
+    # partial_correlation_TRENDY_obs_comparision().run()
+
+
 
 
     pass
