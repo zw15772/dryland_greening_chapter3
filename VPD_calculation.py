@@ -95,7 +95,11 @@ class preprocessing_daily_VPD():
         # self.calculating_VPD()
         # self.aggregate_VPD_daily_method2()
         # self.extract_dryland_tiff()
-         self.tiff_to_dict()
+        #  self.tiff_to_dict()
+        # self.transform()
+        # self.deseasonal() ## not use
+        self.detrend()
+
 
     def unzip(self):
         import os
@@ -406,6 +410,206 @@ class preprocessing_daily_VPD():
                     join(outdir_i, 'per_pix_dic_000.npy'),
                     temp_dic
                 )
+
+    def transform(self):
+
+        fdir_all = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\dryland_tiff_dict\\'
+        outdir =rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\\transform\\'
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(106):
+            data_list.append(i)
+
+
+
+        for data in data_list:
+
+            dic_all_list = []
+            for fdir_i in os.listdir(fdir_all):
+
+                for f in os.listdir(fdir_all + fdir_i + '\\'):
+
+                    if not f.endswith('.npy'):
+                        continue
+                    if f.split('.')[0].split('_')[-1] != '%03d' % data:
+                        continue
+
+                    dict = np.load(fdir_all + fdir_i + '\\' + f, allow_pickle=True).item()
+                    dic_all_list.append(dict)
+
+            result_dic = {}
+
+
+            for pix in tqdm(dic_all_list[0].keys()):
+                result_list = []
+                for i in range(len(dic_all_list)):
+                    if pix not in dic_all_list[i].keys():
+                        continue
+                    else:
+                        # print(dic_all_list[i][pix])
+                        result_list.append(dic_all_list[i][pix][0:365])
+
+                result_dic[pix] = result_list
+            ## save
+            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+            # print(result_dic)
+    def detrend(self):
+        fdir_all = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\\transform\\'
+        outdir = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\detrend\\'
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(26):
+            data_list.append(i)
+
+        for data in data_list:
+
+            dic_all = np.load(fdir_all + f'per_pix_dic_%03d.npy' % data, allow_pickle=True).item()
+            result_dic = {}
+            outf = outdir + f'per_pix_dic_%03d' % data + '.npy'
+            print(outf)
+            # if isfile(outf):
+            #     continue
+            for pix in tqdm(dic_all.keys()):
+                vals = dic_all[pix]
+                vals = np.array(vals)
+                if np.isnan(np.mean(vals)):
+                    continue
+                # plt.imshow(vals)
+                # plt.show()
+                vals_flatten = vals.flatten()
+
+                #
+                if T.is_all_nan(vals_flatten):
+                    continue
+                if np.nanmean(vals_flatten) == 0:
+                    continue
+
+                detrend=T.detrend_vals(vals_flatten)
+                # plt.bar(range(len(vals_flatten)),vals_flatten)
+
+
+                # plt.bar(range(len(detrend)),detrend)
+                # plt.show()
+
+                detrend_reshape = detrend.reshape(-1, 365)
+                # plt.imshow(anomaly_reshape,vmin=-.1,vmax=.1)
+                # plt.show()
+
+                result_dic[pix] = detrend_reshape
+            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+        pass
+
+    def deseasonal(self):  ## temperature does not need to detrend
+        fdir_all = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\\transform\\'
+        outdir = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\deseasonal\\'
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(26):
+
+            data_list.append(i)
+
+        for data in data_list:
+            # if data !=5:
+            #     continue
+            dic_all = np.load(fdir_all + f'per_pix_dic_%03d.npy' % data, allow_pickle=True).item()
+            result_dic = {}
+            outf = outdir + f'per_pix_dic_%03d' % data + '.npy'
+            print(outf)
+            # if isfile(outf):
+            #     continue
+            for pix in tqdm(dic_all.keys()):
+                vals = dic_all[pix]
+                vals = np.array(vals)
+                if np.isnan(np.mean(vals)):
+                    continue
+                # plt.imshow(vals)
+                # plt.show()
+                vals_flatten = vals.flatten()
+                #
+                if T.is_all_nan(vals_flatten):
+                    continue
+
+                anomaly = self.daily_climatology_anomaly(vals_flatten)
+
+                anomaly_reshape = anomaly.reshape(-1, 365)
+                # plt.imshow(anomaly_reshape,vmin=-.1,vmax=.1)
+                # plt.show()
+
+                result_dic[pix] = anomaly_reshape
+            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+
+        pass
+
+    def daily_climatology_anomaly(self, vals):
+        '''
+        juping
+        :param vals: 40 * 365
+        :return:
+        '''
+        pix_anomaly = []
+        climatology_means = []
+        for day in range(1, 366):
+            one_day = []
+            for i in range(len(vals)):
+                d = i % 365 + 1
+                if day == d:
+                    one_day.append(vals[i])
+            mean = np.nanmean(one_day)
+            std = np.nanstd(one_day)
+            climatology_means.append(mean)
+        for i in range(len(vals)):
+            d_ind = i % 365
+            mean_ = climatology_means[d_ind]
+            anomaly = vals[i] - mean_
+            pix_anomaly.append(anomaly)
+        pix_anomaly = np.array(pix_anomaly)
+        return pix_anomaly
+
+    def detrend_deseasonal(self):
+        fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
+        outdir = data_root+rf'CRU-JRA\Tmax\\\deseasonal_detrend\\'
+        T.mk_dir(outdir, force=True)
+        # create_list from 000 t0 105
+        data_list = []
+        for i in range(106):
+
+            data_list.append(i)
+
+        for data in data_list:
+            dic_all = np.load(fdir_all + f'per_pix_dic_%03d.npy' % data, allow_pickle=True).item()
+            result_dic = {}
+            outf=outdir + f'per_pix_dic_%03d' % data+'.npy'
+            print(outf)
+            # if isfile(outf):
+            #     continue
+            for pix in tqdm(dic_all.keys()):
+                vals = dic_all[pix]
+                vals=np.array(vals)
+                vals_flatten = vals.flatten()
+                #
+                if T.is_all_nan(vals_flatten):
+                    continue
+
+                anomaly=self.daily_climatology_anomaly(vals_flatten)
+                anomaly_detrend=T.detrend_vals(anomaly)
+                # plt.bar(range(len(anomaly)),anomaly,color='red')
+                #
+                #
+                # #
+                # plt.bar(range(len(anomaly_detrend)),anomaly_detrend,color= 'b')
+                # plt.show()
+                anomaly_detrend_reshape = anomaly_detrend.reshape(-1, 365)
+
+                result_dic[pix] = anomaly_detrend_reshape
+            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+
+        pass
+
+
+
 def main():
 
     preprocessing_daily_VPD().run()
