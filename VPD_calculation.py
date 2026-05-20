@@ -700,6 +700,22 @@ class preprocessing_daily_VPD():
 
         outf = outdir_CV + 'CV_daily_VPD.npy'
         T.save_npy(result_dic, outf)
+class rainfall_VPD:
+    def __init__(self):
+       pass
+    def run(self):
+        pass
+    def correlation_analysis(self):
+        fdir=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_VPD_CV_daily\\'
+        outdir=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\correlation_analysis\\'
+        T.mk_dir(outdir,force=True)
+        CV_daily_VPD=T.load_npy(fdir+'CV_daily_VPD.npy')
+        for f in T.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            pix_list=T.load_npy(fdir+f)
+            pix_list=list(pix_list.keys())
+            pix_list=sorted(pix_list)
 
 
 

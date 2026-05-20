@@ -96,8 +96,8 @@ class partial_correlation_obs:
         self.data_root = 'D:/Project3/Data/'
         self.result_root = rf'D:/Project3/Result/Nov/partial_correlation/review/'
 
-        self.fdirX = self.result_root + rf'\input\\X\\'
-        self.fdirY = self.result_root + rf'\input\\Y\\'
+        self.fdirX = self.result_root + rf'obs\input\\X\\'
+        self.fdirY = self.result_root + rf'obs\input\\Y\\'
         # self.model_list = [
         #     'composite_LAI_median', 'LAI4g', 'GLOBMAP_LAI', 'SNU_LAI',
         #     'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
@@ -116,7 +116,7 @@ class partial_correlation_obs:
         # self.calc_colinearity_global()
         ##### step3 calculating
         self.xvar_list = [
-            'VPD_detrend_average',
+            'VPD_detrend_CV',
             'Precip_sum_detrend_CV',
             'CV_daily_rainfall_average']
         self.model_list = ['composite_LAI_mean',
@@ -125,31 +125,31 @@ class partial_correlation_obs:
         #                    'LAI4g',]
 
 
-        # for model in self.model_list:
-        #         self.outdir=self.result_root+rf'\result\\'+model+'\\'
+        for model in self.model_list:
+                self.outdir=self.result_root+rf'\result\\'+model+'\\'
+
+                T.mk_dir(self.outdir, force=True)
+                self.outpartial =  self.outdir + rf'\partial_corr_{model}.npy'
+                self.outpartial_pvalue =  self.outdir + rf'\partial_pvalue_{model}.npy'
         #
-        #         T.mk_dir(self.outdir, force=True)
-        #         self.outpartial =  self.outdir + rf'\partial_corr_{model}.npy'
-        #         self.outpartial_pvalue =  self.outdir + rf'\partial_pvalue_{model}.npy'
-        # #
-        #         y_var = f'{model}_detrend_CV.npy'
-        #         x_var_list = self.xvar_list + [f'{model}_sensitivity']
-        #
-        #
-        #         df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-        #         #
-        #         self.cal_partial_corr(df,x_var_list, )
-        # # #         #
-        # #         # # # # # # self.check_data()
-        #         self.plot_partial_correlation()
-        #         self.plot_partial_correlation_p_value()
+                y_var = f'{model}_detrend_CV.npy'
+                x_var_list = self.xvar_list + [f'{model}_sensitivity']
+
+
+                df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+                #
+                self.cal_partial_corr(df,x_var_list, )
+        # #         #
+        #         # # # # # # self.check_data()
+                self.plot_partial_correlation()
+                self.plot_partial_correlation_p_value()
         # #
         #
         #
         # self.plot_spatial_map_sig()
 
 
-        self.statistic_corr_boxplot()
+        # self.statistic_corr_boxplot()
         # self.statistic_percentage()
         #
 
@@ -1550,13 +1550,13 @@ class Delta_regression:
     def __init__(self):
         self.xvar = ['Precip_sum_detrend_CV_zscore',
                      'CV_daily_rainfall_average_zscore',
-                     'VPD_detrend_CV_zscore']
+                     'VPD_detrend_CV_zscore','CV_daily_VPD_average_zscore']
 
         self.model_list = ['composite_LAI_median','composite_LAI_mean']
 
         # self.model_list = ['composite_LAI_mean','composite_LAI_median', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
 
-        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\VPD_CV\\'
+        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\'
         T.mkdir(self.outdir, True)
 
         pass
@@ -1565,20 +1565,20 @@ class Delta_regression:
     def run(self):
 
         ## step 1 zscore
-        self.zscore()
+        # self.zscore()
         # # step 2 build dataframe manually
         # df=self.build_df()
         # self.append_attributes(df)
-
-        ##### step 1
-
+        #
+        # ##### step 1
+        #
         # for model in self.model_list:
         #     x_list=self.xvar+[model+'_sensitivity_zscore']
         #     self.do_multi_regression(model, x_list)
         #     ## not using below function
         #     # self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
         # #
-        # #
+        # # #
         #     self.calculate_trend_contribution(model,x_list)
 
         ## step 2
@@ -1593,8 +1593,8 @@ class Delta_regression:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\'
-        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\\X_review\\zscore\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\'
+        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\X_review\\zscore\\'
         T.mk_dir(outdir, force=True)
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
@@ -1655,7 +1655,7 @@ class Delta_regression:
 
     def build_df(self,):
 
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
+        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\'
         all_dic = {}
 
         for f in os.listdir(fdir):
@@ -1680,7 +1680,7 @@ class Delta_regression:
         return df
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\'
+        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\\'
 
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
@@ -1698,7 +1698,7 @@ class Delta_regression:
             # df[key_name] = df['pix'].map(dic)
             # T.print_head_n(df)
             df = T.add_spatial_dic_to_df(df, dic, key_name)
-        outdir=result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\\Dataframe\\'
+        outdir=result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\Dataframe\\'
         T.mk_dir(outdir, True)
         T.save_df(df, outdir + rf'\Dataframe.df')
         T.df_to_excel(df, outdir + rf'\Dataframe.xlsx')
@@ -1893,7 +1893,7 @@ class Delta_regression:
         contribution = slope(x, y) * trend(x) / trend(y) * 100
         """
 
-        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
+        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\trend\\'
         trend_dict = {}
 
         # === Load trend for each X variable ===
@@ -1926,7 +1926,7 @@ class Delta_regression:
 
 
         # === Load Y trend and p-value ===
-        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\trend\\'
+        fdir_Y = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\\trend\\'
         fy_trend = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_trend.tif')
         fy_pval = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
 
@@ -1980,7 +1980,7 @@ class Delta_regression:
         import numpy as np
         import os
 
-        dff = result_root + rf'Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Statistics.df'
+        dff = result_root + rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Dataframe\\Statistics.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
 
@@ -2000,14 +2000,16 @@ class Delta_regression:
                 f'{model}_CV_daily_rainfall_average_zscore_trend_contrib',
                 f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib',
 
-                f'{model}_VPD_detrend_CV_zscore_trend_contrib'
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib',
+                f'{model}_CV_daily_VPD_average_zscore_trend_contrib',
             ]
 
             label_map = {
                 f'{model}_sensitivity_zscore_trend_contrib': 'γ',
                 f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib': 'CV_inter',
-                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'CV_VPD',
-                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib':'CV_intra'
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'CV_VPD_inter',
+                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib':'CV_intra',
+                f'{model}_CV_daily_VPD_average_zscore_trend_contrib': 'CV_VPD_intra'
 
             }
 
@@ -2164,7 +2166,7 @@ class Delta_regression:
 
 
     def load_df(self):
-        dff=result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Dataframe.df'
+        dff=result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Dataframe\\Dataframe.df'
 
         df = T.load_df(dff)
         # exit()
@@ -2668,15 +2670,54 @@ class partial_correlation_TRENDY_obs_comparision():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+class check_Data:
+    def __init__(self):
+        pass
+    def plot_time_slices(self):
+        f=result_root + rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\CV_daily_VPD_average.npy'
+        result_dic=T.load_npy(f)
 
+        profile=self.profile_template()
+        outdir=result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\slices\\'
+        Tools().mk_dir(outdir,force=True)
+        outf=outdir+f'window_extraction_VPD_daily.tif'
+
+
+        DIC_and_DF().spatial_dict_to_tif(result_dic,profile,outf,bands_description=None,nodata=np.nan)
+
+    def profile_template(self):
+        profile = {'blockxsize': 432,
+                   'blockysize': 224,
+                   'compress': 'packbits',
+                   'count': 1,
+                   'crs': CRS().from_wkt(
+                       'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
+                       'AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],'
+                       'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
+                       'AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'),
+                   'driver': 'GTiff',
+                   'dtype': np.float32,
+                   'height': 360,
+                   'interleave': 'pixel',
+                   'nodata': None,
+                   'tiled': True,
+                   'transform': Affine(0.5, 0.0, -180.0,
+                                       0.0, -0.5, 90.0),
+                   'width':720}
+
+        return profile
+
+
+    pass
 
 def main():
-    Delta_regression().run()
-    # partial_correlation_obs().run()
+    # Delta_regression().run()
+    partial_correlation_obs().run()
 
     # partial_correlation_TRENDY().run()
     # partial_correlation_TRENDY_obs_comparision().run()
-
+    # check_Data().plot_time_slices()
+    #
 
 
 

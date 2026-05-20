@@ -1761,10 +1761,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\')
+                result_root +  rf'\partial_correlation\review\Dataframe\\')
         # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Statistics.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -2041,7 +2041,7 @@ class build_dataframe():
 
     def foo2(self, df):  # 新建trend
 
-        f = result_root + rf'\Multiregression_contribution\Obs\review\VPD_average\output\composite_LAI_median\composite_LAI_median_sensitivity_zscore.tif'
+        f = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\output\composite_LAI_median\composite_LAI_median_sensitivity_zscore.tif'
         array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(f)
         array = np.array(array, dtype=float)
         val_dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -2585,26 +2585,26 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\output\\'
+        fdir_all = result_root + rf'\partial_correlation\review\result\\'
         for fdir in os.listdir(fdir_all):
 
 
 
-            for f in os.listdir(join(fdir_all,fdir)):
+            # for f in os.listdir(join(fdir_all,fdir)):
+            #
+            #
+            #     if not f.endswith('.tif'):
+            #         continue
+            #
+            # #
+            fdir_sig=fdir_all+fdir+'\\sig_nomask\\'
+            # print(fdir_sig);exit()
+
+            for f in os.listdir(fdir_sig):
 
 
                 if not f.endswith('.tif'):
                     continue
-            #
-            # #
-            # fdir_sig=fdir_all+fdir+'\\sig_nomask\\'
-            # print(fdir_sig);exit()
-
-            # for f in os.listdir(fdir_sig):
-
-
-                # if not f.endswith('.tif'):
-                #     continue
 
                 variable=(f.split('.')[0])
                 if 'sensitivity' in variable:
@@ -2614,8 +2614,8 @@ class build_dataframe():
                 print(fname)
 
 
-                fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
-                # fpath=join(fdir_sig,f)
+                # fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
+                fpath=join(fdir_sig,f)
                 print(fpath)
 
 
@@ -2733,7 +2733,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\trend\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\trend\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue

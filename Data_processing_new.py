@@ -524,69 +524,6 @@ class processing_GLOBMAP():
 
         plt.show()
 
-    def moving_window(self):
-
-        fdir = result_root + rf'\GLOBMAP\\detrend\\'
-
-        dic = T.load_npy_dir(fdir)
-
-
-        window = 15
-        result_dic={}
-
-        for pix in tqdm(dic):
-
-            vals = np.array(dic[pix], dtype=float)
-
-            # 跳过长度不足
-            if len(vals) < window:
-                continue
-
-            moving_window_list = []
-
-            # moving window
-            for i in range(len(vals) - window + 1):
-                window_vals = vals[i:i + window]
-
-                moving_mean = np.nanmean(window_vals)
-
-                moving_window_list.append(moving_mean)
-
-            moving_window_list = np.array(moving_window_list)
-            if len(moving_window_list) == 24:
-                moving_window_list = np.append(moving_window_list, np.nan)
-
-            result_dic[pix] = moving_window_list
-        profile=self.profile_template()
-        outdir=result_root + rf'\\moving_window_extraction_raw\\slices\\'
-        Tools().mk_dir(outdir,force=True)
-        outf=outdir+f'GLOBMAP_moving_window_extraction_raw.tif'
-
-
-        DIC_and_DF().spatial_dict_to_tif(result_dic,profile,outf,bands_description=None,nodata=np.nan)
-
-    def profile_template(self):
-        profile = {'blockxsize': 432,
-                   'blockysize': 224,
-                   'compress': 'packbits',
-                   'count': 1,
-                   'crs': CRS().from_wkt(
-                       'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
-                       'AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],'
-                       'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
-                       'AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'),
-                   'driver': 'GTiff',
-                   'dtype': np.float32,
-                   'height': 360,
-                   'interleave': 'pixel',
-                   'nodata': None,
-                   'tiled': True,
-                   'transform': Affine(0.5, 0.0, -180.0,
-                                       0.0, -0.5, 90.0),
-                   'width':720}
-
-        return profile
-
 
 
 
@@ -1394,16 +1331,16 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/'
         pass
     def run(self):
-        self.moving_window_extraction()
+        # self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        self.moving_window_average_anaysis()
+        # self.moving_window_average_anaysis()
         # self.moving_window_max_anaysis()
         # self.moving_window_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        # self.trend_analysis()
+        self.trend_analysis()
 
 
 
@@ -1994,12 +1931,14 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
-        outdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
+        fdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\'
+        outdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\trend\\'
 
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
+            if not 'VPD' in f:
+                continue
 
 
 
