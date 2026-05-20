@@ -1394,16 +1394,16 @@ class moving_window():
         self.result_root = 'D:/Project3/Result/Nov/'
         pass
     def run(self):
-        # self.moving_window_extraction()
+        self.moving_window_extraction()
 
         # self.moving_window_CV_extraction_anaysis_LAI()
         # self.moving_window_CV_extraction_anaysis_rainfall()
-        # self.moving_window_average_anaysis()
+        self.moving_window_average_anaysis()
         # self.moving_window_max_anaysis()
         # self.moving_window_min_anaysis()
         # self.moving_window_std_anaysis()
         # self.moving_window_trend_anaysis()
-        self.trend_analysis()
+        # self.trend_analysis()
 
 
 
@@ -1412,12 +1412,12 @@ class moving_window():
     def moving_window_extraction(self):
 
 
-        fdir_all =result_root+ rf'\CRU_monthly\extract_annual_growing_season_mean\\'
-        outdir = result_root + rf'\\CRU_monthly\\extract_annual_growing_season_mean\\moving_window_extraction\\'
+        fdir_all =result_root+ rf'\CRU-JRA\extraction_rainfall_characteristic\\'
+        outdir = result_root + rf'\CRU-JRA\\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'VPD' in f:
+            if not 'CV_daily_VPD' in f:
                 continue
 
 
@@ -1428,7 +1428,7 @@ class moving_window():
 
 
             outf = outdir + f.split('.')[0] + '.npy'
-            print(outf)
+            print(outf);exit()
 
 
             # if os.path.isfile(outf):
@@ -1443,7 +1443,7 @@ class moving_window():
             for pix in tqdm(dic):
 
                 # time_series = dic[pix][mode]
-                time_series = dic[pix]['growing_season']
+                time_series = dic[pix]
                 # plt.plot(time_series)
                 # plt.show()
 
@@ -1568,8 +1568,8 @@ class moving_window():
         window_size=15
 
 
-        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\\moving_window_extraction_CV\\'
+        fdir = result_root + rf'\CRU-JRA\\\moving_window_extraction\\'
+        outdir =result_root+rf'\CRU-JRA\\moving_window_extraction_CV\\'
         T.mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
@@ -1699,10 +1699,12 @@ class moving_window():
 
     def moving_window_average_anaysis(self): ## each window calculating the average
 
-        fdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\moving_window_extraction\\'
-        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\moving_window_extraction_average\\'
+        fdir = result_root + rf'\CRU-JRA\\\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU-JRA\moving_window_extraction_average\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
+            if not 'VPD' in f:
+                continue
 
 
             dic = T.load_npy(fdir + f)

@@ -98,7 +98,9 @@ class preprocessing_daily_VPD():
         #  self.tiff_to_dict()
         # self.transform()
         # self.deseasonal() ## not use
-        self.detrend()
+        # self.detrend()
+        # self.extract_phenology_year_VPD()
+        self.extract_VPD_CV_daily()
 
 
     def unzip(self):
@@ -568,45 +570,136 @@ class preprocessing_daily_VPD():
         pix_anomaly = np.array(pix_anomaly)
         return pix_anomaly
 
-    def detrend_deseasonal(self):
-        fdir_all = data_root + rf'CRU-JRA\Tmax\transform\\'
-        outdir = data_root+rf'CRU-JRA\Tmax\\\deseasonal_detrend\\'
-        T.mk_dir(outdir, force=True)
-        # create_list from 000 t0 105
-        data_list = []
-        for i in range(106):
 
-            data_list.append(i)
+    def extract_phenology_year_VPD(self):
 
-        for data in data_list:
-            dic_all = np.load(fdir_all + f'per_pix_dic_%03d.npy' % data, allow_pickle=True).item()
-            result_dic = {}
-            outf=outdir + f'per_pix_dic_%03d' % data+'.npy'
-            print(outf)
-            # if isfile(outf):
+        fdir_all=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\detrend\\'
+        outdir = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\\\\extract_phenology_year\\'
+        Tools().mk_dir(outdir, force=True)
+        f_phenology = rf'D:\Project3\Data\LAI4g\4GST\\4GST_global.npy'
+        phenology_dic = T.load_npy(f_phenology)
+        for f in T.listdir(fdir_all):
+
+            outf = outdir + f
+            #
+            # if os.path.isfile(outf):
             #     continue
-            for pix in tqdm(dic_all.keys()):
-                vals = dic_all[pix]
-                vals=np.array(vals)
-                vals_flatten = vals.flatten()
-                #
-                if T.is_all_nan(vals_flatten):
+            # print(outf)
+            spatial_dict = dict(np.load(fdir_all + f, allow_pickle=True, encoding='latin1').item())
+
+            result_dic = {}
+            for pix in tqdm(spatial_dict):
+                if not pix in phenology_dic:
                     continue
 
-                anomaly=self.daily_climatology_anomaly(vals_flatten)
-                anomaly_detrend=T.detrend_vals(anomaly)
-                # plt.bar(range(len(anomaly)),anomaly,color='red')
-                #
-                #
-                # #
-                # plt.bar(range(len(anomaly_detrend)),anomaly_detrend,color= 'b')
-                # plt.show()
-                anomaly_detrend_reshape = anomaly_detrend.reshape(-1, 365)
+                r, c = pix
+                SOS=phenology_dic[pix]['Onsets']
+                SeasType=phenology_dic[pix]['SeasType']
+                if SeasType==2:
 
-                result_dic[pix] = anomaly_detrend_reshape
-            np.save(outdir + f'per_pix_dic_%03d' % data, result_dic)
+                    SOS=phenology_dic[pix]['Onsets']
+                    try:
+                        SOS=float(SOS)
 
-        pass
+                    except:
+                        continue
+
+                    SOS=int(SOS)
+
+                    EOS=phenology_dic[pix]['Offsets']
+                    EOS=int(EOS)
+
+
+                    time_series = spatial_dict[pix]
+
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[(EOS + 1):-(365 - EOS - 1)]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 365)
+                    non_growing_season_list = []
+                    growing_season_list = []
+                    for vals in time_series_flatten_extraction_reshape:
+                        if T.is_all_nan(vals):
+                            continue
+                        ## non-growing season +growing season is 365
+
+                        non_growing_season = vals[0:SOS]
+                        growing_season = vals[SOS:]
+                        non_growing_season_list.append(non_growing_season)
+                        growing_season_list.append(growing_season)
+                    # print(len(growing_season_list))
+                    non_growing_season_list = np.array(non_growing_season_list)
+                    growing_season_list = np.array(growing_season_list)
+
+
+                elif SeasType==3:
+                    # SeasClass=phenology_dic[pix]['SeasClss']
+                    # ## whole year is growing season
+                    # lon,lat=DIC_and_TIF().pix_to_lon_lat(pix)
+                    # print(lat,lon)
+                    # print(SeasType)
+                    # print(SeasClass)
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[365:]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 365)
+                    non_growing_season_list = []
+                    growing_season_list=time_series_flatten_extraction_reshape
+                elif SeasType==1:
+                    time_series = spatial_dict[pix]
+                    time_series = np.array(time_series)
+                    time_series_flatten = time_series.flatten()
+                    time_series_flatten_extraction = time_series_flatten[365:]
+                    time_series_flatten_extraction_reshape = time_series_flatten_extraction.reshape(-1, 365)
+                    non_growing_season_list = []
+                    growing_season_list = time_series_flatten_extraction_reshape
+
+
+                else:
+                    SeasClss=phenology_dic[pix]['SeasClss']
+                    print(SeasType,SeasClss)
+                    continue
+
+                result_dic[pix]={'SeasType':SeasType,
+                    'non_growing_season':non_growing_season_list,
+                              'growing_season':growing_season_list,
+                              'ecosystem_year':time_series_flatten_extraction_reshape}
+
+            np.save(outf, result_dic)
+
+    def extract_VPD_CV_daily(self):  ## extract CV of rainfall ready for multiregression
+        fdir = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_phenology_year\\'
+        outdir_CV = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_VPD_CV_daily\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]['growing_season']
+            # plt.imshow(vals)
+            # plt.show()
+
+            CV_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+                val = np.array(val)
+
+
+                CV = np.std(val) / np.mean(val) * 100
+                # print(CV)
+                CV_list.append(CV)
+            result_dic[pix] = CV_list
+
+        outf = outdir_CV + 'CV_daily_VPD.npy'
+        T.save_npy(result_dic, outf)
 
 
 

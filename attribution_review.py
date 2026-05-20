@@ -1565,7 +1565,7 @@ class Delta_regression:
     def run(self):
 
         ## step 1 zscore
-        # self.zscore()
+        self.zscore()
         # # step 2 build dataframe manually
         # df=self.build_df()
         # self.append_attributes(df)

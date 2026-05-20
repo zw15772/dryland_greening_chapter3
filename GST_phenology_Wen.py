@@ -84,7 +84,7 @@ class Phenology:
         # self.phenology_average_monthly()
 
         # self.GST()
-        #self.plot_4GST_df()
+        # self.plot_4GST_df()
         # self.read_4GST_df()
         self.plot_4GST_npy()  ### plot SOS and EOS
 
@@ -933,13 +933,15 @@ class Phenology:
         T.print_head_n(df_3)
 
     def plot_4GST_npy(self):  ##
-        f= rf'D:\Project3\Data\LAI4g\4GST_update\4GST_global.npy'
+        f= rf'D:\Project3\Data\LAI4g\4GST\4GST.npy'
         spatial_dic = T.load_npy(f)
         result_dic = {}
         vals_list = []
 
         for pix in spatial_dic:
-            val=spatial_dic[pix]['Offsets']
+            # val=spatial_dic[pix]['SeasType']
+            val = spatial_dic[pix]['Onsets']
+
 
             print(pix,val)
             try:
@@ -953,8 +955,8 @@ class Phenology:
         ## get unique values
         vals_list = np.unique(vals_list)
         print(vals_list)
-        outdir= rf'D:\Project3\Data\LAI4g\4GST_update\\tiff\\'
-        T.mk_dir(outdir,force=True)
+        # outdir= rf'D:\Project3\Data\LAI4g\4GST_update\\tiff\\'
+        # T.mk_dir(outdir,force=True)
 
 
         arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(result_dic)
@@ -962,7 +964,7 @@ class Phenology:
         plt.colorbar()
         plt.title('leaf senescence')
         plt.show()
-        DIC_and_TIF().arr_to_tif(arr, join(outdir, 'Offsets.tif'))
+        # DIC_and_TIF().arr_to_tif(arr, join(outdir, 'Offsets.tif'))
 
 
 
@@ -971,12 +973,27 @@ class Phenology:
 
 
 
+def check_data():
+    fdir=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_phenology_year\\'
 
+    result_dic={}
+
+    dic=T.load_npy_dir(join(fdir))
+    for pix in dic:
+        vals=dic[pix]
+        vals_len=len(vals)
+        result_dic[pix]=vals_len
+    arr=DIC_and_TIF().pix_dic_to_spatial_arr(result_dic)
+    plt.imshow(arr,interpolation='nearest',cmap='jet',vmin=38,vmax=39)
+
+    plt.colorbar()
+    plt.show()
 
 
 def main():
 
     Phenology().run()
+    # check_data()
 
     pass
 

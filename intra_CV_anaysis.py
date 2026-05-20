@@ -960,7 +960,7 @@ class extract_rainfall_annual_based_on_daily():
     def run(self):
         # self.define_quantile_threshold()
 
-        # self.extract_rainfall_CV()
+        self.extract_rainfall_CV()
         # self.extract_rainfall_std()
         # self.extract_rainfall_mean()
         # self.extract_rainfall_sum()
@@ -2070,7 +2070,7 @@ class Extract_rainfall_phenology_daily():
         # self.extract_rainfall_seasonality_all_year()
         # self.extract_rainfall_intensity()
         # self.extract_heavy_rainfall_days()
-        # self.extract_rainfall_CV()
+        self.extract_rainfall_CV()
         # self.average_analysis()
         # self.detrend_rainfall()
         self.extract_dry_year()
@@ -5991,8 +5991,8 @@ def main():
 
     #extract_heatevent().run()
     # extract_water_year().run()  ## extract water year and phenology year
-    # extract_rainfall_annual_based_on_daily().run()
-    Extract_rainfall_phenology_daily().run()  ## use this
+    extract_rainfall_annual_based_on_daily().run()
+    # Extract_rainfall_phenology_daily().run()  ## use this
     # extract_LAI_phenology().run()  ## use this
     # TRENDY_model().run()
     # check_correlation().run()
