@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
 T = Tools()
-results_root = rf'D:\Project3\Result\\'
+results_root = rf'D:\Project3\Result\\Nov\\'
 # data_root = rf'E:\Project3\Data\ERA5_daily\dict\\'
 
 
@@ -1763,24 +1763,28 @@ class Partial_correlation:
 class SHAP_CV():
 
     def __init__(self):
-        self.y_variable = 'composite_LAI_CV_anomaly'
+        self.y_variable = 'composite_LAI_median_detrend_CV_zscore'
 
         # self.this_class_png = results_root + 'ERA5\\SHAP\\png\\'
         self.threshold = '3mm'
-        self.this_class_png = results_root + rf'\{self.threshold}\SHAP_beta\\png\\RF_{self.y_variable}\\'
+        self.this_class_png = results_root + rf'RF\\\SHAP\\png\\RF_{self.y_variable}\\'
         T.mk_dir(self.this_class_png, force=True)
 
-        # self.dff = rf'E:\Project3\Result\3mm\ERA5\Dataframe\moving_window\\moving_window.df'
-        self.dff = results_root+rf'{self.threshold}\SHAP_beta\\Dataframe\\\moving_window2.df'
+        self.dff = rf'D:\Project3\Result\Nov\RF\Dataframe\\Dataframe.df'
+
 
         self.variable_list_rt()
-        self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-                          'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-                          'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-                          'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-                          'ORCHIDEE_S2_lai',
-                          'SDGVM_S2_lai',
-                          'YIBs_S2_Monthly_lai']
+        # self.variables_list = ['LAI4g', 'NDVI','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+        #                   'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+        #                   'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+        #                   'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+        #                   'ORCHIDEE_S2_lai',
+        #                   'SDGVM_S2_lai',
+        #                   'YIBs_S2_Monthly_lai']
+        self.variable_list=[  'composite_LAI_median_sensitivity_zscore',
+            'Precip_sum_detrend_CV_zscore',
+            'VPD_detrend_CV_zscore',
+            'CV_daily_rainfall_average_zscore',]
 
         ##----------------------------------
 
@@ -1788,7 +1792,7 @@ class SHAP_CV():
 
         ####################
 
-        self.x_variable_list = self.x_variable_list_CRU
+        self.x_variable_list = self.variable_list
         self.x_variable_range_dict = self.x_variable_range_dict_global_CRU
 
         pass
@@ -1802,7 +1806,7 @@ class SHAP_CV():
         # self.show_colinear()
         # self.check_spatial_plot()
         # self.AIC_stepwise(self.dff)
-        self.pdp_shap()
+        # self.pdp_shap()
         # # # # # #
         self.plot_pdp_shap()
         # self.plot_bar_landcover()
@@ -1987,53 +1991,10 @@ class SHAP_CV():
 
 
         self.x_variable_list_CRU = [
-            'composite_LAI_beta_mean_anomaly',
-
-
-
-        'CV_intraannual_rainfall_anomaly',
-            'sum_rainfall_anomaly',
-            # 'sum_rainfall_ecosystem_year_zscore',
-         # 'Burn_area_mean',
-         #    'beta_CVrainfall_interaction',
-
-            # 'Non_tree_vegetation_average',
-            'detrended_sum_rainfall_CV_anomaly',
-            # 'grass_trend',
-            # 'tress_trend',
-            # 'shrubs_trend',
-            #
-            #
-            # 'FVC_max_zscore',
-            # 'FVC_relative_change_trend',
-            # 'SM_average',
-            # 'Short_vegetation_change_1982-2016',
-            # 'tree_vegetation_mean',
-
-            # 'Non_tree_vegetation_trend',
-
-            # 'rainfall_frenquency',
-            # 'rainfall_intensity',
-            # 'rainfall_seasonality_all_year_trend',
-            # 'CV_intraannual_rainfall',
-            # 'rainfall_seasonality_all_year_growing_season',
-            # 'rainfall_seasonality_all_year',
-
-            # 'CV_intraannual_rainfall',
-            # 'pi_average',
-
-
-            # 'sum_rainfall_trend',
-            # 'cwdx80_05',
-
-            # 'fire_ecosystem_year_average_trend',
-            #
-            # 'sum_rainfall_growing_season',
-            # 'sum_rainfall',
-
-            #  'Aridity',
-            # 'heat_event_frenquency_zscore',
-            # 'dry_spell',
+            'composite_LAI_median_sensitivity_zscore',
+            'Precip_sum_detrend_CV_zscore',
+            'VPD_detrend_CV_zscore',
+            'CV_daily_rainfall_average_zscore',
             # 'heavy_rainfall_days',
             # 'Tmax_trend',
             # 'sand',
@@ -2280,7 +2241,7 @@ class SHAP_CV():
     def pdp_shap(self):
 
         dff = self.dff
-        outdir = join(self.this_class_png, 'pdp_shap_beta_anomaly')
+        outdir = join(self.this_class_png, )
 
         T.mk_dir(outdir, force=True)
         x_variable_list = self.x_variable_list_CRU
@@ -2763,7 +2724,7 @@ class SHAP_CV():
         df = self.df_clean(df)
         df_temp, start_dic, end_dic = self.filter_percentile(df)
 
-        inf_shap = join(self.this_class_png, 'pdp_shap_beta_anomaly', self.y_variable + '.shap.pkl')
+        inf_shap = join(self.this_class_png,  self.y_variable + '.shap.pkl')
         # print(isfile(inf_shap));exit()
         shap_values = T.load_dict_from_binary(inf_shap)
         print(shap_values)
@@ -2838,7 +2799,7 @@ class SHAP_CV():
             #     err,_,_ = self.uncertainty_err(SM)
             # print(df_i)
             # exit()
-            plt.subplot(4, 4, flag)
+            plt.subplot(2, 2, flag)
             plt.scatter(scatter_x_list, scatter_y_list, alpha=0.2, c='gray', marker='.', s=1, zorder=-1)
             # print(data_i[0])
             # exit()
@@ -2855,7 +2816,7 @@ class SHAP_CV():
             plt.xlabel(x_var, fontsize=12)
 
             flag += 1
-            plt.ylim(-5,5)
+            plt.ylim(-1,1)
 
         plt.suptitle(self.y_variable)
 

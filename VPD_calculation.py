@@ -100,7 +100,8 @@ class preprocessing_daily_VPD():
         # self.deseasonal() ## not use
         # self.detrend()
         # self.extract_phenology_year_VPD()
-        self.extract_VPD_CV_daily()
+        # self.extract_VPD_CV_daily()
+        self.extract_VPD_std_daily()
 
 
     def unzip(self):
@@ -700,6 +701,40 @@ class preprocessing_daily_VPD():
 
         outf = outdir_CV + 'CV_daily_VPD.npy'
         T.save_npy(result_dic, outf)
+
+    def extract_VPD_std_daily(self):  ## extract CV of rainfall ready for multiregression
+        fdir = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_phenology_year\\'
+        outdir_CV = rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_VPD_mean_daily\\'
+
+        T.mk_dir(outdir_CV, force=True)
+
+        spatial_dic = T.load_npy_dir(fdir)
+        result_dic = {}
+
+        for pix in tqdm(spatial_dic):
+            ### ui==if northern hemisphere
+            r, c = pix
+
+            vals = spatial_dic[pix]['growing_season']
+            # plt.imshow(vals)
+            # plt.show()
+
+            CV_list = []
+            for val in vals:
+                if T.is_all_nan(val):
+                    continue
+
+                val = np.array(val)
+
+
+                # CV = np.std(val)
+                CV=np.mean(val)
+                # print(CV)
+                CV_list.append(CV)
+            result_dic[pix] = CV_list
+
+        outf = outdir_CV + 'mean_daily_VPD.npy'
+        T.save_npy(result_dic, outf)
 class rainfall_VPD:
     def __init__(self):
        pass
@@ -717,11 +752,150 @@ class rainfall_VPD:
             pix_list=list(pix_list.keys())
             pix_list=sorted(pix_list)
 
+class check_Data:
+    def __init__(self):
+        pass
+    def run(self):
+        # self.plot_time_slices()
+        self.trend_analysis()
+        pass
+    def trend_analysis(self):  ##each window average trend
+
+        landcover_f = data_root + rf'/Base_data/glc_025\\glc2000_05.tif'
+        crop_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(landcover_f)
+        MODIS_mask_f = data_root + rf'/Base_data/MODIS_LUCC\\MODIS_LUCC_resample_05.tif'
+        MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
+        dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
+
+        fdir =rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\moving_window_extraction_std\\'
+        outdir = rf'D:\Project3\Result\Nov\CRU_monthly\extract_annual_growing_season_mean\detrend\moving_window_extraction_std\\trend\\'
+
+        Tools().mk_dir(outdir, force=True)
+
+        for f in os.listdir(fdir):
+
+
+
+
+            if not f.endswith('.npy'):
+                continue
+
+
+
+            outf = outdir + f.split('.')[0]
+            if os.path.isfile(outf + '_trend.tif'):
+                continue
+            print(outf)
+
+            if not f.endswith('.npy'):
+                continue
+            dic = np.load(fdir + f, allow_pickle=True, encoding='latin1').item()
+            # dic=T.load_npy_dir(fdir)
+
+            trend_dic = {}
+            p_value_dic = {}
+            for pix in tqdm(dic):
+                r, c = pix
+                if r < 60:
+                    continue
+                landcover_value = crop_mask[pix]
+                if landcover_value == 16 or landcover_value == 17 or landcover_value == 18:
+                    continue
+                if dic_modis_mask[pix] == 12:
+                    continue
+
+                    ## ignore the last one year
+
+                # time_series = dic[pix][:-1]
+                time_series = dic[pix]
+                # print((time_series))
+                # exit()
+                time_series = np.array(time_series)
+                average = np.nanmean(time_series)
+                # print(time_series)
+
+                if len(time_series) == 0:
+                    continue
+                # print(time_series)
+                ### if all valus are the same, then skip
+                # if len(set(time_series)) == 1:
+                #     continue
+                # print(time_series)
+
+                if np.nanstd(time_series) == 0:
+                    continue
+                try:
+
+                    # slope, intercept, r_value, p_value, std_err = stats.linregress(np.arange(len(time_series)), time_series)
+                    slope, b, r, p_value = T.nan_line_fit(np.arange(len(time_series)), time_series)
+                    trend_dic[pix] = slope
+                    p_value_dic[pix] = p_value
+                except:
+                    continue
+
+
+
+            arr_trend = D.pix_dic_to_spatial_arr(trend_dic)
+
+
+            p_value_arr = D.pix_dic_to_spatial_arr(p_value_dic)
+
+            # plt.imshow(arr_trend, cmap='jet', vmin=1, vmax=1)
+            #
+            # plt.colorbar()
+            # plt.title(f)
+            # plt.show()
+
+            D.arr_to_tif(arr_trend, outf + '_trend.tif')
+            D.arr_to_tif(p_value_arr, outf + '_p_value.tif')
+
+            np.save(outf + '_trend', arr_trend)
+            np.save(outf + '_p_value', p_value_arr)
+
+        T.open_path_and_file(outdir)
+
+    def plot_time_slices(self):
+        f=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_VPD_std_daily\\std_daily_VPD.npy'
+        result_dic=T.load_npy(f)
+
+        profile=self.profile_template()
+        outdir=rf'C:\Users\wenzhang1.BLUECAT\Desktop\VPD\extract_VPD_std_daily\\slices\\'
+        Tools().mk_dir(outdir,force=True)
+        outf=outdir+f'std.tif'
+
+
+        DIC_and_DF().spatial_dict_to_tif(result_dic,profile,outf,bands_description=None,nodata=np.nan)
+
+    def profile_template(self):
+        profile = {'blockxsize': 432,
+                   'blockysize': 224,
+                   'compress': 'packbits',
+                   'count': 1,
+                   'crs': CRS().from_wkt(
+                       'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],'
+                       'AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],'
+                       'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],'
+                       'AXIS["Latitude",NORTH],AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'),
+                   'driver': 'GTiff',
+                   'dtype': np.float32,
+                   'height': 360,
+                   'interleave': 'pixel',
+                   'nodata': None,
+                   'tiled': True,
+                   'transform': Affine(0.5, 0.0, -180.0,
+                                       0.0, -0.5, 90.0),
+                   'width':720}
+
+        return profile
+
+
+    pass
 
 
 def main():
 
-    preprocessing_daily_VPD().run()
+    # preprocessing_daily_VPD().run()
+    check_Data().run()
 
 
     pass

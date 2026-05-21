@@ -1350,11 +1350,11 @@ class moving_window():
 
 
         fdir_all =result_root+ rf'\CRU-JRA\extraction_rainfall_characteristic\\'
-        outdir = result_root + rf'\CRU-JRA\\\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU-JRA\\\extraction_rainfall_characteristic\\moving_window_extraction\\'
 
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir_all):
-            if not 'CV_daily_VPD' in f:
+            if not 'mean_daily_rainfall' in f:
                 continue
 
 
@@ -1365,7 +1365,7 @@ class moving_window():
 
 
             outf = outdir + f.split('.')[0] + '.npy'
-            print(outf);exit()
+            # print(outf);exit()
 
 
             # if os.path.isfile(outf):
@@ -1636,11 +1636,11 @@ class moving_window():
 
     def moving_window_average_anaysis(self): ## each window calculating the average
 
-        fdir = result_root + rf'\CRU-JRA\\\moving_window_extraction\\'
-        outdir = result_root + rf'\CRU-JRA\moving_window_extraction_average\\'
+        fdir = result_root + rf'\CRU-JRA\\\extraction_rainfall_characteristic\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_average\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'VPD' in f:
+            if not 'std_daily_rainfall' in f:
                 continue
 
 
@@ -1815,15 +1815,16 @@ class moving_window():
 
     def moving_window_std_anaysis(self):
 
-        fdir = result_root + rf'moving_window_extraction_raw\moving_window_extraction\\'
-        outdir = result_root + rf'\moving_window_extraction_raw\moving_window_mean\\'
+        fdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction\\'
+        outdir = result_root + rf'\CRU-JRA\extraction_rainfall_characteristic\moving_window_extraction_std\\'
         T.mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
 
 
+
             dic = T.load_npy(fdir + f)
 
-            outf = outdir + f.split('.')[0] + f'_mean.npy'
+            outf = outdir + f.split('.')[0] + f'_std.npy'
             print(outf)
 
             # if os.path.isfile(outf):
@@ -1854,12 +1855,12 @@ class moving_window():
 
                     if np.nanmean(time_series)==0:
                         continue
-                    # cv=np.nanstd(time_series)
-                    cv = np.nanmean(time_series)
+                    cv=np.nanstd(time_series)
+                    # cv = np.nanmean(time_series)
                     trend_list.append(cv)
                 # print(len(trend_list))
-                plt.plot(trend_list)
-                plt.show()
+                # plt.plot(trend_list)
+                # plt.show()
 
                 trend_dic[pix]=trend_list
 
@@ -1931,13 +1932,13 @@ class moving_window():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-        fdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\'
-        outdir =result_root+ rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\trend\\'
+        fdir =result_root+ rf'\partial_correlation\review\obs\input\X\\'
+        outdir =result_root+ rf'\partial_correlation\review\obs\input\X\\trend\\'
 
         Tools().mk_dir(outdir, force=True)
 
         for f in os.listdir(fdir):
-            if not 'VPD' in f:
+            if not 'std_daily_rainfall_average' in f:
                 continue
 
 
@@ -4008,14 +4009,16 @@ class processing_daily_rainfall():
                     continue
 
                 val = np.array(val)
-                val=val[val>5]
+                val=val[val>1]
 
-                CV = np.std(val) / np.mean(val) * 100
+                # CV = np.std(val) / np.mean(val) * 100
+                CV = np.mean(val)
                 # print(CV)
                 CV_list.append(CV)
             result_dic[pix] = CV_list
 
-        outf = outdir_CV + 'CV_daily_rainfall_5mm.npy'
+        # outf = outdir_CV + 'CV_daily_rainfall_5mm.npy'
+        outf = outdir_CV + 'mean_daily_rainfall.npy'
 
         np.save(outf, result_dic)
 

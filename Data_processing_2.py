@@ -1245,9 +1245,9 @@ class build_moving_window_dataframe():
     def __init__(self):
         self.threshold = '1mm'
         self.this_class_arr = (
-                    result_root + rf'\Dataframe\CVLAI\\')
+                result_root + rf'\Nov\\RF\\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'CVLAI_new.df'
+        self.dff = self.this_class_arr + rf'Dataframe.df'
     def run(self):
         df = self.__gen_df_init(self.dff)
         # df=self.build_df(df)
@@ -1415,7 +1415,7 @@ class build_moving_window_dataframe():
     def add_window_to_df(self, df):
 
 
-        fdir=result_root+rf'\Composite_LAI\std_mean\\'
+        fdir=result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\'
 
 
         for f in os.listdir(fdir):
@@ -1423,6 +1423,15 @@ class build_moving_window_dataframe():
 
 
             variable= f.split('.')[0]
+            # if variable not in ['VPD_detrend_CV_zscore',
+            #     'composite_LAI_mean_sensitivity_zscore',
+            #     'composite_LAI_median_sensitivity_zscore',
+            #     'Precip_sum_detrend_CV_zscore',
+            #     'CV_daily_rainfall_average_zscore']:
+            #     continue
+
+
+
 
             print(variable)
 
@@ -1761,10 +1770,10 @@ class build_dataframe():
     def __init__(self):
 
         self.this_class_arr = (
-                result_root +  rf'\partial_correlation\review\Dataframe\\')
-        # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\Dataframe\\')
+                result_root +  rf'\partial_correlation\review\\Dataframe\\')
+        # self.this_class_arr = (result_root+rf'\Multiregression_contribution\Obs\review\VPD_CV\Dataframe\Dataframe\\')
         Tools().mk_dir(self.this_class_arr, force=True)
-        self.dff = self.this_class_arr + rf'Dataframe.df'
+        self.dff = self.this_class_arr + rf'Dataframe_std.df'
         # self.this_class_arr = (result_root+rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_3\Dataframe\\')
 
 
@@ -1775,7 +1784,7 @@ class build_dataframe():
 
         df = self.__gen_df_init(self.dff)
         # df=self.foo1(df)
-        df=self.foo2(df)
+        # df=self.foo2(df)
         # df=self.add_multiregression_to_df(df)
         # df=self.build_df(df)
         # df=self.build_df_monthly(df)
@@ -1793,7 +1802,7 @@ class build_dataframe():
 
         df=self.add_trend_to_df_trendy(df)  ### add different scenarios of mild, moderate, extreme
         # df=self.add_sign_trendy(df)
-        df=self.add_trend_to_df(df)
+        # df=self.add_trend_to_df(df)
         # df=self.add_seasonality_to_df(df)
         # df=self.add_fire(df)
 
@@ -1802,17 +1811,17 @@ class build_dataframe():
         # # # # df=self.add_interaction_to_df(df)
 
         # # #
-        df=self.add_aridity_to_df(df)
-        df=self.add_dryland_nondryland_to_df(df)
-        df=self.add_MODIS_LUCC_to_df(df)
-        df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
-        df=self.add_landcover_classfication_to_df(df)
-        # # # # # # # # # df=self.dummies(df)
-        df=self.add_maxmium_LC_change(df)
-        df=self.add_row(df)
-        # # # # # # # # # # # # #
-        df=self.add_lat_lon_to_df(df)
-        df=self.add_weighted_average_LAICV(df)
+        # df=self.add_aridity_to_df(df)
+        # df=self.add_dryland_nondryland_to_df(df)
+        # df=self.add_MODIS_LUCC_to_df(df)
+        # df = self.add_landcover_data_to_df(df)  # 这两行代码一起运行
+        # df=self.add_landcover_classfication_to_df(df)
+        # # # # # # # # # # df=self.dummies(df)
+        # df=self.add_maxmium_LC_change(df)
+        # df=self.add_row(df)
+        # # # # # # # # # # # # # #
+        # df=self.add_lat_lon_to_df(df)
+        # df=self.add_weighted_average_LAICV(df)
         # df=self.add_continent_to_df(df)
         # df=self.add_residual_to_df(df)
 
@@ -2585,26 +2594,27 @@ class build_dataframe():
 
 
     def add_trend_to_df_trendy(self,df):
-        fdir_all = result_root + rf'\partial_correlation\review\result\\'
+        fdir_all = result_root + rf'partial_correlation\review\obs\result_std\\'
         for fdir in os.listdir(fdir_all):
+            # fdir_i=fdir_all+fdir+'\\coef\\'
 
 
 
-            # for f in os.listdir(join(fdir_all,fdir)):
-            #
-            #
-            #     if not f.endswith('.tif'):
-            #         continue
-            #
-            # #
-            fdir_sig=fdir_all+fdir+'\\sig_nomask\\'
-            # print(fdir_sig);exit()
-
-            for f in os.listdir(fdir_sig):
+            for f in os.listdir(join(fdir_all,fdir)):
 
 
                 if not f.endswith('.tif'):
                     continue
+
+            #
+            # fdir_sig=fdir_all+fdir+'\\sig_mask\\'
+            # print(fdir_sig);exit()
+
+            # for f in os.listdir(fdir_sig):
+            #
+            #
+            #     if not f.endswith('.tif'):
+            #         continue
 
                 variable=(f.split('.')[0])
                 if 'sensitivity' in variable:
@@ -2614,9 +2624,9 @@ class build_dataframe():
                 print(fname)
 
 
-                # fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
-                fpath=join(fdir_sig,f)
-                print(fpath)
+                fpath=join(fdir_all,fdir,f) ####### revise!!!!!!!
+                # fpath=join(fdir_sig,f)
+                # print(fpath);exit()
 
 
                 array, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
@@ -2733,7 +2743,7 @@ class build_dataframe():
         return df
 
     def add_trend_to_df(self, df):
-        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\trend\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\trend\\'
         for f in os.listdir(fdir):
             if not f.endswith('.tif'):
                 continue

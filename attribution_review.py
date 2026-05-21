@@ -1,7 +1,6 @@
 # coding='utf-8'
 import sys
 
-
 import lytools
 import pingouin
 import pingouin as pg
@@ -17,7 +16,6 @@ from scipy.ndimage import label
 from sklearn.linear_model import TheilSenRegressor
 from scipy.stats import t
 from statsmodels.sandbox.regression.gmm import results_class_dict
-
 
 version = sys.version_info.major
 assert version == 3, 'Python Version Error'
@@ -76,10 +74,10 @@ import pickle
 from dateutil import relativedelta
 from sklearn.inspection import permutation_importance
 from pprint import pprint
-T=Tools()
-D = DIC_and_TIF(pixelsize=0.5)
-centimeter_factor = 1/2.54
 
+T = Tools()
+D = DIC_and_TIF(pixelsize=0.5)
+centimeter_factor = 1 / 2.54
 
 this_root = 'D:\Project3\\'
 data_root = 'D:/Project3/Data/'
@@ -111,50 +109,53 @@ class partial_correlation_obs:
         # ]
 
         pass
+
     def run(self):
         # self.calculating_colinearity_pixel()
         # self.calc_colinearity_global()
         ##### step3 calculating
+
         self.xvar_list = [
-            'VPD_detrend_CV',
-            'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_average']
+            'VPD_detrend_std',
+            'std_daily_rainfall_average',
+            'Precip_sum_detrend_std',
+
+        ]
         self.model_list = ['composite_LAI_mean',
-                          'composite_LAI_median' ]
+                           'composite_LAI_median']
         # self.model_list = ['SNU_LAI', 'GLOBMAP_LAI',
         #                    'LAI4g',]
 
-
-        for model in self.model_list:
-                self.outdir=self.result_root+rf'\result\\'+model+'\\'
-
-                T.mk_dir(self.outdir, force=True)
-                self.outpartial =  self.outdir + rf'\partial_corr_{model}.npy'
-                self.outpartial_pvalue =  self.outdir + rf'\partial_pvalue_{model}.npy'
         #
-                y_var = f'{model}_detrend_CV.npy'
-                x_var_list = self.xvar_list + [f'{model}_sensitivity']
-
-
-                df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
-                #
-                self.cal_partial_corr(df,x_var_list, )
+        # for model in self.model_list:
+        #         self.outdir=self.result_root+rf'obs\result_std\\'+model+'\\'
+        #         # print(self.outdir);exit()
+        #
+        #         T.mk_dir(self.outdir, force=True)
+        #         self.outpartial =  self.outdir + rf'\partial_corr_{model}.npy'
+        #         self.outpartial_pvalue =  self.outdir + rf'\partial_pvalue_{model}.npy'
+        # #
+        #         y_var = f'{model}_detrend_std.npy'
+        #         x_var_list = self.xvar_list + [f'{model}_sensitivity']
+        #
+        #
+        #         df=self.build_df(self.fdirX,self.fdirY,x_var_list,y_var)
+        #         #
+        #         self.cal_partial_corr(df,x_var_list, )
         # #         #
         #         # # # # # # self.check_data()
-                self.plot_partial_correlation()
-                self.plot_partial_correlation_p_value()
+        #         self.plot_partial_correlation()
+        #         self.plot_partial_correlation_p_value()
         # #
         #
         #
         # self.plot_spatial_map_sig()
 
-
-        # self.statistic_corr_boxplot()
+        self.statistic_corr_boxplot()
         # self.statistic_percentage()
         #
 
         pass
-
 
     def calculating_colinearity_pixel(self):
 
@@ -192,7 +193,7 @@ class partial_correlation_obs:
 
             vals = []
             for v in var_names:
-                val=dic_all[v][pix]
+                val = dic_all[v][pix]
                 if isinstance(val, dict):
                     if 'intersensitivity_precip_val' in val:
                         arr = np.array(val['intersensitivity_precip_val'], dtype=float)
@@ -218,7 +219,7 @@ class partial_correlation_obs:
 
             # === (A) 计算相关矩阵 ===
             corr = df.corr()
-            plt.imshow(corr, interpolation='nearest', cmap='jet',vmin=-1,vmax=1)
+            plt.imshow(corr, interpolation='nearest', cmap='jet', vmin=-1, vmax=1)
             plt.colorbar()
             plt.title(pix)
             plt.show()
@@ -321,7 +322,7 @@ class partial_correlation_obs:
         for k, v in vif_result.items():
             print(f"{k}: {v:.2f}")
 
-    def build_df(self,fdir_X,fdir_Y,fx_list,fy):
+    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
         df = pd.DataFrame()
 
         filey = fdir_Y + fy
@@ -340,7 +341,7 @@ class partial_correlation_obs:
                 continue
             yvals = T.interp_nan(yvals)
             yvals = np.array(yvals)
-            yvals=yvals
+            yvals = yvals
             if yvals[0] == None:
                 continue
 
@@ -355,8 +356,7 @@ class partial_correlation_obs:
 
             # print(var_name)
             x_val_list = []
-            filex = fdir_X + xvar+'.npy'
-
+            filex = fdir_X + xvar + '.npy'
 
             # print(filex)
             # exit()
@@ -393,11 +393,11 @@ class partial_correlation_obs:
 
         return df
 
-    def cal_partial_corr(self,df,x_var_list, ):
-        outf_corr=self.outpartial
-        outf_pvalue=self.outpartial_pvalue
+    def cal_partial_corr(self, df, x_var_list, ):
+        outf_corr = self.outpartial
+        outf_pvalue = self.outpartial_pvalue
 
-        partial_correlation_dic= {}
+        partial_correlation_dic = {}
         partial_p_value_dic = {}
         for i, row in tqdm(df.iterrows(), total=len(df)):
             pix = row.pix
@@ -406,7 +406,6 @@ class partial_correlation_obs:
 
             if len(y_vals) == 0:
                 continue
-
 
             df_new = pd.DataFrame()
             x_var_list_valid = []
@@ -421,7 +420,6 @@ class partial_correlation_obs:
                 if np.isnan(np.nanmean(x_vals)):
                     continue
 
-
                 if len(x_vals) != len(y_vals):
                     continue
                 # print(x_vals)
@@ -429,7 +427,6 @@ class partial_correlation_obs:
                     continue
 
                 df_new[x] = x_vals
-
 
                 x_var_list_valid.append(x)
             if len(df_new) <= 3:
@@ -489,22 +486,16 @@ class partial_correlation_obs:
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-
-
         f_partial = self.outpartial
-
-
 
         partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
         # partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
-
 
         var_list = []
         for pix in partial_correlation_dic:
 
             vals = partial_correlation_dic[pix]
             # vals = partial_correlation_p_value_dic[pix]
-
 
             for var_i in vals:
                 var_list.append(var_i)
@@ -528,8 +519,6 @@ class partial_correlation_obs:
                 spatial_dic[pix] = val
             arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
 
-
-
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'{var_i}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
@@ -552,23 +541,14 @@ class partial_correlation_obs:
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-
         f_pvalue = self.outpartial_pvalue
 
-
-
-
         partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
-
 
         var_list = []
         for pix in partial_correlation_p_value_dic:
 
-
-
-
             vals = partial_correlation_p_value_dic[pix]
-
 
             for var_i in vals:
                 var_list.append(var_i)
@@ -612,29 +592,28 @@ class partial_correlation_obs:
 
         for model in model_list:
             variable_list = self.xvar_list
-            fdir = self.result_root + rf'\\obs\\result\\{model}\\'
+            fdir = self.result_root + rf'\\obs\\result_std\\{model}\\'
             print(fdir)
-            outdir = self.result_root + rf'\\obs\\result\\{model}\\\sig_nomask\\'
-            # outdir = self.result_root + rf'\result\\{model}\\\sig\\'
+            # outdir = self.result_root + rf'\\obs\\result\\{model}\\\sig_nomask\\'
+            outdir = self.result_root + rf'\obs\\result_std\\{model}\\\sig_mask\\'
             T.mk_dir(outdir, True)
             new_variable_list = variable_list + [f'{model}_sensitivity']
 
-            fdir_Y = result_root + rf'\Multiregression_contribution\Obs\input\Y\zscore\\trend\\'
-            fy_trend = join(fdir_Y, f'{model}_detrend_CV_zscore_trend.tif')
-            fy_trend_p_value = join(fdir_Y, f'{model}_detrend_CV_zscore_p_value.tif')
+            fdir_Y = result_root + rf'\partial_correlation\review\obs\input\Y\\trend\\'
+            fy_trend = join(fdir_Y, f'{model}_detrend_CV_trend.tif')
+            fy_trend_p_value = join(fdir_Y, f'{model}_detrend_CV_p_value.tif')
 
             arr_y_trend, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
-               fy_trend)
+                fy_trend)
             arr_y_trend_p_value, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(
                 fy_trend_p_value)
 
             ## mask
-            # mask = np.ones_like(arr_y_trend)
-            # mask[(arr_y_trend_p_value > 0.05) & (arr_y_trend <= 0)] = np.nan
+            mask = np.ones_like(arr_y_trend)
+            mask[(arr_y_trend_p_value > 0.05) & (arr_y_trend <= 0)] = np.nan
             # plt.imshow(arr_y_trend)
             # plt.colorbar()
             # plt.show()
-
 
             for variable in new_variable_list:
                 f_trend_path = fdir + f'{variable}.tif'
@@ -652,14 +631,13 @@ class partial_correlation_obs:
                 arr_corr[arr_pvalue > 0.05] = np.nan
 
                 # === ★ 叠加 LAI 正趋势掩膜 ★
-                # arr_corr[np.isnan(mask)] = np.nan
-
+                arr_corr[np.isnan(mask)] = np.nan
 
                 #
                 # plt.imshow(arr_corr)
                 # plt.colorbar()
                 # plt.show()
-                outf = outdir  + f'{variable}.tif'
+                outf = outdir + f'{variable}.tif'
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
 
     def statistic_percentage(self):
@@ -707,7 +685,6 @@ class partial_correlation_obs:
                 result_dic[new_variable] = [vals_pos_percent, vals_neg_percent]
         pprint(result_dic)
 
-
     def statistic_corr_boxplot(self):
         """
         绘制 partial correlation 的分布（仅针对 CVLAI 上升区域）
@@ -715,31 +692,28 @@ class partial_correlation_obs:
         """
 
         # === 1. 读取数据 ===
-        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Dataframe_std.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         print(len(df))
 
         # === 仅保留CVLAI显著上升的像素 ===
 
-
         # === 2. 变量设置 ===
         variable_list = [
 
             'sensitivity',
-            'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_average',
-            'VPD_detrend_average',
+            'Precip_sum_detrend_std',
+            'std_daily_rainfall_average',
+            'VPD_detrend_std',
         ]
 
         label_dic = {
             'sensitivity': r'$\gamma$',
-            'VPD_detrend_average': 'VPD',
-            'Precip_sum_detrend_CV': r'$CV_{inter}$',
-            'CV_daily_rainfall_average': r'$CV_{intra}$',
+            'VPD_detrend_std': 'VPDCV',
+            'Precip_sum_detrend_std': r'$CV_{inter}$',
+            'std_daily_rainfall_average': r'$CV_{intra}$',
         }
-
-
 
         # === 4. 数据提取 ===
 
@@ -749,6 +723,8 @@ class partial_correlation_obs:
 
             result_dic = {}
 
+            # df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
+            # df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
 
             # print(len(df));exit()
             for variable in variable_list:
@@ -757,28 +733,27 @@ class partial_correlation_obs:
                 if new_variable not in df.columns:
                     continue
 
-
                 vals = np.array(df[new_variable].tolist(), dtype=float)
                 vals[(vals > 99) | (vals < -99)] = np.nan
                 vals = vals[~np.isnan(vals)]
                 print(f'{variable}', len(vals))
 
-            #     plt.hist(vals, bins=30)
-            #     plt.axvline(np.mean(vals), color='g', label='Mean')
-            #     plt.axvline(np.median(vals), color='r', label='Median')
-            #     plt.legend()
-            #     plt.show()
+                #     plt.hist(vals, bins=30)
+                #     plt.axvline(np.mean(vals), color='g', label='Mean')
+                #     plt.axvline(np.median(vals), color='r', label='Median')
+                #     plt.legend()
+                #     plt.show()
 
                 # vals_mean=np.nanmean(vals)
                 # print(vals_mean)
                 result_dic[new_variable] = vals
 
-        # === 5. 按 variable_list 顺序组织数据 ===
+            # === 5. 按 variable_list 顺序组织数据 ===
             data_list = []
             x_labels = []
 
             for var in variable_list:
-                key = f'{model}_{var}'
+                key = f'{model}_{var}'  ######
                 if key in result_dic:
                     data_list.append(result_dic[key])
                     x_labels.append(label_dic[var])
@@ -846,8 +821,6 @@ class partial_correlation_obs:
             # )
             # plt.close()
 
-
-
     def darken_color(self, color, amount=0.7):
         """
         给颜色加深，amount 越小越深 (0~1之间)
@@ -855,9 +828,6 @@ class partial_correlation_obs:
         import matplotlib.colors as mcolors
         c = mcolors.to_rgb(color)
         return tuple([max(0, x * amount) for x in c])
-
-
-
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -872,6 +842,8 @@ class partial_correlation_obs:
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+
 class partial_correlation_TRENDY():
     def __init__(self):
         self.map_width = 8.2 * centimeter_factor
@@ -886,15 +858,16 @@ class partial_correlation_TRENDY():
         self.fdirY = self.result_root + rf'\input\\Y\\'
 
         pass
+
     def run(self):
         # self.calculating_colinearity_pixel()
         # self.calc_colinearity_global()
         ##### step3 calculating
         self.xvar_list = [
 
-            'VPD_detrend_average',
-            'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_average']
+            'VPD_detrend_CV',
+            'Precip_sum_detrend_CV', ]
+        # 'CV_daily_rainfall_average']
 
         self.model_list = ['CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
                            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
@@ -902,11 +875,11 @@ class partial_correlation_TRENDY():
                            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
                            'ORCHIDEE_S2_lai',
 
-
                            'YIBs_S2_Monthly_lai',
+                           'TRENDY_ensemble_median',
+                           'TRENDY_ensemble_mean',
 
                            ]
-
 
         # for model in self.model_list:
         #         self.outdir=self.result_root+rf'\result\\'+model+'\\'
@@ -928,12 +901,11 @@ class partial_correlation_TRENDY():
         #         self.plot_partial_correlation_p_value()
 
         # self.statistic_trend_bar()
-        # self.plot_spatial_map_sig_mask() ##这个是为了每一个model自己比
-        # self.plot_spatial_map_sig_nomask()  ## 这个是为了生成ensemble trendy
-        self.ensemble_partial_correlation()
+        self.plot_spatial_map_sig_mask()  ##这个是为了每一个model自己比
+        self.plot_spatial_map_sig_nomask()  ## 这个是为了生成ensemble trendy
+        # self.ensemble_partial_correlation()
 
         pass
-
 
     def calculating_colinearity_pixel(self):
 
@@ -971,7 +943,7 @@ class partial_correlation_TRENDY():
 
             vals = []
             for v in var_names:
-                val=dic_all[v][pix]
+                val = dic_all[v][pix]
                 if isinstance(val, dict):
                     if 'intersensitivity_precip_val' in val:
                         arr = np.array(val['intersensitivity_precip_val'], dtype=float)
@@ -997,7 +969,7 @@ class partial_correlation_TRENDY():
 
             # === (A) 计算相关矩阵 ===
             corr = df.corr()
-            plt.imshow(corr, interpolation='nearest', cmap='jet',vmin=-1,vmax=1)
+            plt.imshow(corr, interpolation='nearest', cmap='jet', vmin=-1, vmax=1)
             plt.colorbar()
             plt.title(pix)
             plt.show()
@@ -1100,7 +1072,7 @@ class partial_correlation_TRENDY():
         for k, v in vif_result.items():
             print(f"{k}: {v:.2f}")
 
-    def build_df(self,fdir_X,fdir_Y,fx_list,fy):
+    def build_df(self, fdir_X, fdir_Y, fx_list, fy):
         df = pd.DataFrame()
 
         filey = fdir_Y + fy
@@ -1119,7 +1091,7 @@ class partial_correlation_TRENDY():
                 continue
             yvals = T.interp_nan(yvals)
             yvals = np.array(yvals)
-            yvals=yvals
+            yvals = yvals
             if yvals[0] == None:
                 continue
 
@@ -1134,8 +1106,7 @@ class partial_correlation_TRENDY():
 
             # print(var_name)
             x_val_list = []
-            filex = fdir_X + xvar+'.npy'
-
+            filex = fdir_X + xvar + '.npy'
 
             # print(filex)
             # exit()
@@ -1172,11 +1143,11 @@ class partial_correlation_TRENDY():
 
         return df
 
-    def cal_partial_corr(self,df,x_var_list, ):
-        outf_corr=self.outpartial
-        outf_pvalue=self.outpartial_pvalue
+    def cal_partial_corr(self, df, x_var_list, ):
+        outf_corr = self.outpartial
+        outf_pvalue = self.outpartial_pvalue
 
-        partial_correlation_dic= {}
+        partial_correlation_dic = {}
         partial_p_value_dic = {}
         for i, row in tqdm(df.iterrows(), total=len(df)):
             pix = row.pix
@@ -1185,7 +1156,6 @@ class partial_correlation_TRENDY():
 
             if len(y_vals) == 0:
                 continue
-
 
             df_new = pd.DataFrame()
             x_var_list_valid = []
@@ -1200,7 +1170,6 @@ class partial_correlation_TRENDY():
                 if np.isnan(np.nanmean(x_vals)):
                     continue
 
-
                 if len(x_vals) != len(y_vals):
                     continue
                 # print(x_vals)
@@ -1208,7 +1177,6 @@ class partial_correlation_TRENDY():
                     continue
 
                 df_new[x] = x_vals
-
 
                 x_var_list_valid.append(x)
             if len(df_new) <= 3:
@@ -1267,22 +1235,16 @@ class partial_correlation_TRENDY():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-
-
         f_partial = self.outpartial
-
-
 
         partial_correlation_dic = np.load(f_partial, allow_pickle=True, encoding='latin1').item()
         # partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
-
 
         var_list = []
         for pix in partial_correlation_dic:
 
             vals = partial_correlation_dic[pix]
             # vals = partial_correlation_p_value_dic[pix]
-
 
             for var_i in vals:
                 var_list.append(var_i)
@@ -1306,8 +1268,6 @@ class partial_correlation_TRENDY():
                 spatial_dic[pix] = val
             arr = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
 
-
-
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr, self.outdir + f'{var_i}.tif')
             std = np.nanstd(arr)
             mean = np.nanmean(arr)
@@ -1330,23 +1290,14 @@ class partial_correlation_TRENDY():
         MODIS_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(MODIS_mask_f)
         dic_modis_mask = DIC_and_TIF().spatial_arr_to_dic(MODIS_mask)
 
-
         f_pvalue = self.outpartial_pvalue
 
-
-
-
         partial_correlation_p_value_dic = np.load(f_pvalue, allow_pickle=True, encoding='latin1').item()
-
 
         var_list = []
         for pix in partial_correlation_p_value_dic:
 
-
-
-
             vals = partial_correlation_p_value_dic[pix]
-
 
             for var_i in vals:
                 var_list.append(var_i)
@@ -1383,6 +1334,7 @@ class partial_correlation_TRENDY():
             # plt.colorbar()
 
         # plt.show()
+
     def plot_spatial_map_sig_mask(self):  ## mask
 
         model_list = self.model_list
@@ -1435,7 +1387,6 @@ class partial_correlation_TRENDY():
                 # plt.show()
                 outf = outdir + f'{variable}.tif'
                 DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_corr, outf)
-
 
     def plot_spatial_map_sig_nomask(self):  ## mask
 
@@ -1492,12 +1443,12 @@ class partial_correlation_TRENDY():
 
     def ensemble_partial_correlation(self):
 
-        model_list=self.model_list
+        model_list = self.model_list
 
         arr_sensitivity = []
 
         for model in model_list:
-            fdir_i=result_root+rf'\partial_correlation\review\TRENDY\result\{model}\sig_nomask\\'
+            fdir_i = result_root + rf'\partial_correlation\review\TRENDY\result\{model}\sig_nomask\\'
             for f in os.listdir(fdir_i):
                 if not f.endswith('.tif'):
                     continue
@@ -1517,16 +1468,12 @@ class partial_correlation_TRENDY():
         DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_sensitivity, outdir + f'TRENDY_esnemble_mean_sensitivity.tif')
         #
 
-
-
-
         for variable in self.xvar_list:
             arr_list = []
             for model in model_list:
+                fdir = result_root + rf'\partial_correlation\review\TRENDY\result\{model}\sig_nomask\\'
 
-                fdir=result_root+rf'\partial_correlation\review\TRENDY\result\{model}\sig_nomask\\'
-
-                fpath = join(fdir,f'{variable}.tif')
+                fpath = join(fdir, f'{variable}.tif')
                 arr, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(fpath)
                 arr[arr > 99] = np.nan
                 arr[arr < -99] = np.nan
@@ -1545,22 +1492,514 @@ class partial_correlation_TRENDY():
             #
 
 
-class Delta_regression:
+class PLSR:
 
     def __init__(self):
         self.xvar = ['Precip_sum_detrend_CV_zscore',
                      'CV_daily_rainfall_average_zscore',
-                     'VPD_detrend_CV_zscore','CV_daily_VPD_average_zscore']
+                     'VPD_detrend_CV_zscore', ]
 
-        self.model_list = ['composite_LAI_median','composite_LAI_mean']
+        self.model_list = ['composite_LAI_median', 'composite_LAI_mean']
 
         # self.model_list = ['composite_LAI_mean','composite_LAI_median', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
 
-        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\'
+        self.outdir = rf'D:\Project3\Result\Nov\PLSR\Obs\review\VPD_CV\\output\\'
         T.mkdir(self.outdir, True)
 
         pass
 
+    def run(self):
+        # df = self.build_df()
+        # self.append_attributes(df)
+
+        ##### step 1
+
+        # for model in self.model_list:
+        #     x_list=self.xvar+[model+'_sensitivity_zscore']
+        #     self.do_PLSR_regression(model,x_list)
+        #
+        #
+        #     self.calculate_trend_contribution(model,x_list)
+        self.statistic_contribution_no_residual()
+        pass
+
+    def df_clean(self, df):
+        T.print_head_n(df)
+        # df = df.dropna(subset=[self.y_variable])
+        # T.print_head_n(df)
+        # exit()
+        df = df[df['row'] > 60]
+        df = df[df['Aridity'] < 0.65]
+        df = df[df['LC_max'] < 10]
+        df = df[df['MODIS_LUCC'] != 12]
+
+        df = df[df['landcover_classfication'] != 'Cropland']
+
+        return df
+
+    def build_df(self, ):
+
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
+        all_dic = {}
+
+        for f in os.listdir(fdir):
+            if not f.endswith('.npy'):
+                continue
+            if not 'zscore' in f:
+                continue
+
+            fname = f.split('.')[0]
+
+            fpath = fdir + f
+
+            dic = T.load_npy(fpath)
+            key_name = fname
+
+            all_dic[key_name] = dic
+        # print(all_dic.keys())
+        df = T.spatial_dics_to_df(all_dic)
+        T.print_head_n(df)
+
+        return df
+
+    def append_attributes(self, df):  ## add attributes
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\'
+
+        for f in tqdm(os.listdir(fdir)):
+            if not f.endswith('.npy'):
+                continue
+            if not 'CV' in f:
+                continue
+
+            # array=np.load(fdir+f)
+            # dic = DIC_and_TIF().spatial_arr_to_dic(array)
+            dic = T.load_npy(fdir + f)
+            key_name = f.split('.')[0]
+            # if not key_name in var_list:
+            #     continue
+            print(key_name)
+
+            # df[key_name] = df['pix'].map(dic)
+            # T.print_head_n(df)
+            df = T.add_spatial_dic_to_df(df, dic, key_name)
+        outdir = result_root + rf'\PLSR\Obs\review\VPD_CV\\Dataframe\\'
+        T.mk_dir(outdir, True)
+        T.save_df(df, outdir + rf'\Dataframe.df')
+        T.df_to_excel(df, outdir + rf'\Dataframe.xlsx')
+
+        return df
+
+    # def append_value(self, df):  ##补齐
+    #
+    #
+    #
+    #     for col in df.columns:
+    #
+    #         vals_new = []
+    #
+    #         for i, row in tqdm(df.iterrows(), total=len(df), desc=f'append {col}'):
+    #             pix = row['pix']
+    #             r, c = pix
+    #             if r<60:
+    #                 continue
+    #             vals = row[col]
+    #             print(vals)
+    #             if type(vals) == float:
+    #                 vals_new.append(np.nan)
+    #                 continue
+    #             vals = np.array(vals)
+    #             print(len(vals))
+    #
+    #             if len(vals) == 25:
+    #
+    #                 vals = np.append(vals, np.nan)
+    #                 vals_new.append(vals)
+    #
+    #             vals_new.append(vals)
+    #
+    #             # exit()
+    #         df[col] = vals_new
+
+    # T.save_df(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.df')
+    # T.df_to_excel(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.xlsx')
+
+    def do_PLSR_regression(self, mode_name, x_list):
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.impute import SimpleImputer
+        outdir = self.outdir + f'{mode_name}\\'
+        T.mk_dir(outdir, force=True)
+        coef_spatial_dict = {}
+        vip_spatial_dict = {}
+
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        import statsmodels.api as sm
+        df = self.load_df()
+        T.print_head_n(df)
+
+        var_list = x_list + [mode_name + '_detrend_CV_zscore']
+
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+
+            pix = row['pix']
+
+            # ---------- 1. 收集所有变量 ----------
+            series_dict = {}
+            valid = True
+
+            for var in var_list:
+
+                val = row[var]
+
+                # 先判断是不是整体nan
+                if isinstance(val, float) and np.isnan(val):
+                    valid = False
+                    break
+                print(len(val))
+
+                try:
+                    arr = np.array(val, dtype=float)
+
+                except:
+                    valid = False
+                    break
+
+                if len(arr) < 10:
+                    valid = False
+                    break
+
+                if np.all(np.isnan(arr)):
+                    valid = False
+                    break
+                series_dict[var] = np.array(val)
+
+            if not valid:
+                continue
+
+            # ---------- 2. 对齐公共长度（关键） ----------
+            min_len = min(len(v) for v in series_dict.values())
+
+            for var in series_dict:
+                series_dict[var] = series_dict[var][-min_len:]
+
+            # ---------- 3. 构造 DataFrame（一次性） ----------
+            df_i = pd.DataFrame(series_dict)
+
+            # ---------- 4. 标准化（和 Methods 一致） ----------
+            X = df_i[x_list].values
+
+            # ---------- 5. 回归 ----------
+            try:
+
+                pls = PLSRegression(n_components=2)
+
+                pls.fit(X, df_i[mode_name + '_detrend_CV_zscore'].values)
+
+            except:
+                continue
+
+                # =====================================
+                # 7. coefficient
+                # =====================================
+
+            coef = pls.coef_.flatten()
+
+            coef_dict = {}
+
+            for var, c in zip(x_list, coef):
+                coef_dict[var] = c
+
+            coef_spatial_dict[pix] = coef_dict
+
+            # =====================================
+            # 8. VIP score
+            # =====================================
+
+            t = pls.x_scores_
+            w = pls.x_weights_
+            q = pls.y_loadings_
+
+            p, h = w.shape
+
+            vip = np.zeros((p,))
+
+            s = np.diag(t.T @ t @ q.T @ q)
+
+            total_s = np.sum(s)
+
+            for ii in range(p):
+                weight = np.array([
+                    (w[ii, j] / np.linalg.norm(w[:, j])) ** 2
+                    for j in range(h)
+                ])
+
+                vip[ii] = np.sqrt(
+                    p * np.sum(s * weight) / total_s
+                )
+
+            vip_dict = {}
+
+            for var, v in zip(x_list, vip):
+                vip_dict[var] = v
+
+            vip_spatial_dict[pix] = vip_dict
+
+        # =========================================================
+        # save coefficient maps
+        # =========================================================
+
+        df_coef = T.dic_to_df(coef_spatial_dict, 'pix')
+
+        coef_outdir = join(outdir, 'coef')
+        T.mk_dir(coef_outdir, force=True)
+
+        for x_var in x_list:
+            spatial_dict_i = T.df_to_spatial_dic(df_coef, x_var)
+
+            outf = join(coef_outdir, f'{x_var}.tif')
+
+            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
+
+        # =========================================================
+        # save VIP maps
+        # =========================================================
+
+        df_vip = T.dic_to_df(vip_spatial_dict, 'pix')
+
+        vip_outdir = join(outdir, 'VIP')
+        T.mk_dir(vip_outdir, force=True)
+
+        for x_var in x_list:
+            spatial_dict_i = T.df_to_spatial_dic(df_vip, x_var)
+
+            outf = join(vip_outdir, f'{x_var}.tif')
+
+            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
+
+            T.open_path_and_file(outdir)
+
+        pass
+
+    def load_df(self):
+        dff = result_root + rf'\PLSR\Obs\review\VPD_CV\Dataframe\\Dataframe.df'
+
+        df = T.load_df(dff)
+        # exit()
+        # start_year = 0
+        # end_year = 21
+        # variable_list = self.xvar + self.y_var
+        # df = Dataframe_per_value_transform(df, variable_list, start_year, end_year).df
+        # T.print_head_n(df)
+        return df
+
+    def calculate_trend_contribution(self, y_variable, x_list):
+        """
+        Calculate the trend contribution of each variable:
+        contribution = slope(x, y) * trend(x) / trend(y) * 100
+        """
+
+        trend_dir = result_root + rf'\PLSR\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
+        trend_dict = {}
+
+        # === Load trend for each X variable ===
+        for variable in x_list:
+            fpath = join(trend_dir, f'{variable}_trend.tif')
+
+            array, _, _, _, _ = ToRaster().raster2array(fpath)
+            array[array < -9999] = np.nan
+            spatial_dict = DIC_and_TIF().spatial_arr_to_dic(array)
+
+            for pix, val in tqdm(spatial_dict.items(), desc=f'Loading {variable} trend'):
+                if np.isnan(val):
+                    continue
+                if pix[0] < 60:  # skip high latitude
+                    continue
+                if pix not in trend_dict:
+                    trend_dict[pix] = {}
+                trend_dict[pix][variable] = val
+
+        # === Load multiregression slopes ===
+        fdir_slope = self.outdir + f'\\{y_variable}\\coef\\'
+
+        multiregression_dic = {}
+        for f in os.listdir(fdir_slope):
+            if not f.endswith('.tif') or 'contrib' in f:
+                continue
+            arr, _, _, _, _ = ToRaster().raster2array(join(fdir_slope, f))
+            multiregression_dic[f.split('.')[0]] = DIC_and_TIF().spatial_arr_to_dic(arr)
+
+        # === Load Y trend and p-value ===
+        fdir_Y = result_root + rf'\PLSR\Obs\review\VPD_CV\Y\zscore\\trend\\'
+        fy_trend = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_trend.tif')
+        fy_pval = join(fdir_Y, f'{y_variable}_detrend_CV_zscore_p_value.tif')
+
+        arr_y_trend, _, _, _, _ = ToRaster().raster2array(fy_trend)
+        arr_y_pval, _, _, _, _ = ToRaster().raster2array(fy_pval)
+
+        dic_y_trend = DIC_and_TIF().spatial_arr_to_dic(arr_y_trend)
+        dic_y_pval = DIC_and_TIF().spatial_arr_to_dic(arr_y_pval)
+
+        # === Calculate contribution ===
+        for var_i in x_list:
+            if var_i not in multiregression_dic:
+                print(f"Missing slope for {var_i}")
+                continue
+
+            spatial_dic = {}
+            for pix in tqdm(multiregression_dic[var_i], desc=f'Calculating {var_i} contribution'):
+                if pix not in trend_dict or var_i not in trend_dict[pix]:
+                    continue
+                if pix not in dic_y_trend or pix not in dic_y_pval:
+                    continue
+
+                trend_y = dic_y_trend[pix]
+                p_value = dic_y_pval[pix]
+                if np.isnan(trend_y) or np.isnan(p_value):
+                    continue
+                if p_value > 0.05 or abs(trend_y) < 1e-6:
+                    continue
+                if trend_y < 0:
+                    continue
+
+                val_multireg = multiregression_dic[var_i][pix]
+                if np.isnan(val_multireg) or val_multireg < -9999:
+                    continue
+
+                val_trend = trend_dict[pix][var_i]
+                val_contrib = val_multireg * val_trend / trend_y * 100
+                spatial_dic[pix] = val_contrib
+
+            # === Output contribution map ===
+            arr_contrib = DIC_and_TIF(pixelsize=0.5).pix_dic_to_spatial_arr(spatial_dic)
+            outpath = join(fdir_slope, f'{var_i}_trend_contrib.tif')
+            DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, outpath)
+
+    def statistic_contribution_no_residual(self):
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import os
+
+        dff = result_root + rf'PLSR\Obs\review\VPD_CV\Dataframe\\Statistics.df'
+        df = T.load_df(dff)
+        df = self.df_clean(df)
+
+        # === 配色方案 ===
+        color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f69E57']
+        dark_colors = ['#774685', 'Olive', 'Salmon', '#c3646f']  # 可以改为你自定义的 darken_color 函数
+
+        for model in self.model_list:
+            print(model)
+            # if not 'median' in model:
+            #     continue
+            # === 变量名 ===
+            fixed_order = [
+                f'{model}_sensitivity_zscore_trend_contrib',
+                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib',
+                f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib',
+
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib',
+                # f'{model}_CV_daily_VPD_average_zscore_trend_contrib',
+            ]
+
+            label_map = {
+                f'{model}_sensitivity_zscore_trend_contrib': 'γ',
+                f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib': 'Rainfallcv',
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'VPDcv',
+                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib': 'CV_intra',
+
+            }
+
+            means, sems, labels = [], [], []
+            print(len(df))
+
+            # df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
+            # df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
+            #
+            # print(len(df));exit()
+
+            # === 计算平均值和标准误差 ===
+            for var in fixed_order:
+                # print(df.columns);exit()
+                if var not in df.columns:
+                    continue
+
+                vals = np.array(df[var].values, dtype=float)
+                vals[(vals > 99) | (vals < -99)] = np.nan
+                vals = vals[~np.isnan(vals)]
+                # print(vals);exit()
+                if len(vals) == 0:
+                    continue
+
+                mean_val = np.nanmean(vals)
+                # print(np.std(vals));exit()
+                sem_val = np.nanstd(vals) / np.sqrt(len(vals))  # 标准误差
+
+                means.append(mean_val)
+                sems.append(sem_val)
+                labels.append(label_map[var])
+            print(sems)
+            # print(means);exit()
+            # print(f'{model}:', means)
+
+            # === 绘图 ===
+            fig, ax = plt.subplots(figsize=(4, 3))
+            x = np.arange(len(labels))
+            colors = color_list
+            edges = dark_colors
+
+            bars = ax.bar(
+                x, means, width=0.4,
+                color=colors, edgecolor=edges, linewidth=1.2, zorder=2
+            )
+
+            # 误差线
+            for xi, mean, sem, edge in zip(x, means, sems, edges):
+                ax.errorbar(
+                    xi, mean, yerr=sem,
+                    fmt='none', ecolor=edge, elinewidth=1.2, capsize=4, zorder=3
+                )
+
+            # 美化
+            ax.axhline(0, color='gray', linestyle='--', lw=1)
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels, fontsize=12)
+            ax.set_ylabel('Attribution of CVLAI (%)', fontsize=12)
+            ax.set_yticklabels(ax.get_yticks(), fontsize=12)
+            # ax.spines['top'].set_visible(False)
+            # ax.spines['right'].set_visible(False)
+            # ax.spines['left'].set_linewidth(1)
+            # ax.spines['bottom'].set_linewidth(1)
+            ax.tick_params(axis='y', width=1, length=3)
+            ax.tick_params(axis='x', width=1, length=0)
+            # plt.tight_layout()
+
+            # === 输出保存 ===
+            # outdir =result_root + rf'Multiregression_contribution\Obs\review\\Figure\\'
+            # print(outdir)
+            # #
+            # Tools().mk_dir(outdir, force=True)
+            # outf = os.path.join(outdir, f'{model}_relative_contribution_1mm.pdf')
+            # plt.savefig(outf, bbox_inches='tight', dpi=300)
+            plt.show()
+            plt.close()
+
+
+class Delta_regression:
+
+    def __init__(self):
+        self.xvar = ['Precip_sum_detrend_CV_zscore',
+                     # 'std_daily_rainfall_average_zscore',
+                     'VPD_detrend_CV_zscore', ]
+
+        self.model_list = ['composite_LAI_median', 'composite_LAI_mean']
+
+        # self.model_list = ['composite_LAI_mean','composite_LAI_median', 'SNU_LAI', 'GLOBMAP_LAI', 'LAI4g' ]
+
+        self.outdir = rf'D:\Project3\Result\Nov\Multiregression_contribution\Obs\review\VPD_CV\\'
+        T.mkdir(self.outdir, True)
+
+        pass
 
     def run(self):
 
@@ -1575,16 +2014,15 @@ class Delta_regression:
         # for model in self.model_list:
         #     x_list=self.xvar+[model+'_sensitivity_zscore']
         #     self.do_multi_regression(model, x_list)
-        #     ## not using below function
-        #     # self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
+        #     # not using below function
+        #     #####self.do_multi_regression_control_experiment(model,x_list) ## not use this but the result is the same
         # #
-        # # #
+        # #
         #     self.calculate_trend_contribution(model,x_list)
 
         ## step 2
         ### before calculating contribution, build dataframe
         self.statistic_contribution_no_residual()  ## use this
-
 
         pass
 
@@ -1593,15 +2031,11 @@ class Delta_regression:
         array_mask, originX, originY, pixelWidth, pixelHeight = ToRaster().raster2array(NDVI_mask_f)
         dic_dryland_mask = DIC_and_TIF().spatial_arr_to_dic(array_mask)
 
-        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\'
-        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\X_review\\zscore\\'
+        fdir = result_root + rf'Multiregression_contribution\Obs\review\VPD_CV\Y\\'
+        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\\Y\\zscore\\'
         T.mk_dir(outdir, force=True)
         Tools().mk_dir(outdir, force=True)
         for f in os.listdir(fdir):
-            if not 'VPD' in f:
-                continue
-
-
 
             dic = T.load_npy(fdir + f)
             outf = outdir + f.split('.')[0] + '_zscore.npy'
@@ -1653,9 +2087,9 @@ class Delta_regression:
                 ## save
             np.save(outf, zscore_dic)
 
-    def build_df(self,):
+    def build_df(self, ):
 
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\'
         all_dic = {}
 
         for f in os.listdir(fdir):
@@ -1676,16 +2110,16 @@ class Delta_regression:
         df = T.spatial_dics_to_df(all_dic)
         T.print_head_n(df)
 
-
         return df
 
     def append_attributes(self, df):  ## add attributes
-        fdir = result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\\'
+        fdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Y\zscore\\'
 
         for f in tqdm(os.listdir(fdir)):
             if not f.endswith('.npy'):
                 continue
-
+            if not 'CV' in f:
+                continue
 
             # array=np.load(fdir+f)
             # dic = DIC_and_TIF().spatial_arr_to_dic(array)
@@ -1698,15 +2132,12 @@ class Delta_regression:
             # df[key_name] = df['pix'].map(dic)
             # T.print_head_n(df)
             df = T.add_spatial_dic_to_df(df, dic, key_name)
-        outdir=result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\\Dataframe\\'
+        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\\Dataframe\\'
         T.mk_dir(outdir, True)
         T.save_df(df, outdir + rf'\Dataframe.df')
         T.df_to_excel(df, outdir + rf'\Dataframe.xlsx')
 
-
-
         return df
-
 
     # def append_value(self, df):  ##补齐
     #
@@ -1739,10 +2170,10 @@ class Delta_regression:
     #             # exit()
     #         df[col] = vals_new
 
-        # T.save_df(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.df')
-        # T.df_to_excel(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.xlsx')
+    # T.save_df(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.df')
+    # T.df_to_excel(df, result_root + rf'\Multiregression_contribution\Obs\Dataframe\Dataframe.xlsx')
 
-    def do_multi_regression(self,mode_name,x_list):
+    def do_multi_regression(self, mode_name, x_list):
         outdir = self.outdir + f'{mode_name}\\'
         T.mk_dir(outdir, force=True)
 
@@ -1752,7 +2183,7 @@ class Delta_regression:
         df = self.load_df()
         T.print_head_n(df)
 
-        var_list = x_list  + [mode_name+'_detrend_CV_zscore']
+        var_list = x_list + [mode_name + '_detrend_CV_zscore']
         spatial_dict = {}
         for i, row in tqdm(df.iterrows(), total=len(df)):
 
@@ -1763,8 +2194,27 @@ class Delta_regression:
             valid = True
 
             for var in var_list:
+
                 val = row[var]
-                if not isinstance(val, (list, np.ndarray)) or len(val) < 10:
+
+                # 先判断是不是整体nan
+                if isinstance(val, float) and np.isnan(val):
+                    valid = False
+                    break
+                print(len(val))
+
+                try:
+                    arr = np.array(val, dtype=float)
+
+                except:
+                    valid = False
+                    break
+
+                if len(arr) < 10:
+                    valid = False
+                    break
+
+                if np.all(np.isnan(arr)):
                     valid = False
                     break
                 series_dict[var] = np.array(val)
@@ -1783,7 +2233,6 @@ class Delta_regression:
 
             # ---------- 4. 标准化（和 Methods 一致） ----------
 
-
             # ---------- 5. 回归 ----------
             X = df_i[x_list]
             y = df_i[mode_name + '_detrend_CV_zscore']
@@ -1796,18 +2245,17 @@ class Delta_regression:
             spatial_dict[pix] = beta_dict
         df_beta = T.dic_to_df(spatial_dict, 'pix')
 
-
         for x_var in x_list:
-            spatial_dict_i = T.df_to_spatial_dic(df_beta,x_var)
-            outf = join(outdir,f'{x_var}.tif')
-            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i,outf)
+            spatial_dict_i = T.df_to_spatial_dic(df_beta, x_var)
+            outf = join(outdir, f'{x_var}.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
         T.open_path_and_file(self.outdir)
 
         pass
 
-    def do_multi_regression_control_experiment(self,mode_name,x_list):
-        outdir = self.outdir+f'{mode_name}\\'
-        T.mk_dir(outdir,force=True)
+    def do_multi_regression_control_experiment(self, mode_name, x_list):
+        outdir = self.outdir + f'{mode_name}\\'
+        T.mk_dir(outdir, force=True)
 
         import warnings
         warnings.filterwarnings("ignore", category=FutureWarning)
@@ -1815,9 +2263,9 @@ class Delta_regression:
         df = self.load_df()
         T.print_head_n(df)
 
-        var_list = x_list  + [mode_name+'_detrend_CV_zscore']
+        var_list = x_list + [mode_name + '_detrend_CV_zscore']
         spatial_dict = {}
-        for i,row in tqdm(df.iterrows(),total=len(df)):
+        for i, row in tqdm(df.iterrows(), total=len(df)):
             pix = row['pix']
 
             # === 检查变量是否都存在并获取长度 ===
@@ -1836,7 +2284,6 @@ class Delta_regression:
                 for k, v in length_dict.items():
                     print(f"   {k}: length={v}")
                 continue
-
 
             df_i = pd.DataFrame()
             success = 0
@@ -1857,9 +2304,9 @@ class Delta_regression:
             print(df_i[x_list])
             X = df_i[x_list]
 
-            y = df_i[mode_name+'_detrend_CV_zscore']
+            y = df_i[mode_name + '_detrend_CV_zscore']
 
-            X=sm.add_constant(X)
+            X = sm.add_constant(X)
             model = sm.OLS(y, X).fit()
             y_pred = model.predict(X)
             # delta_y = y - y_pred
@@ -1869,7 +2316,6 @@ class Delta_regression:
             for x_var in x_list:
                 X_constant = copy.copy(X)
 
-
                 X_constant[x_var] = X_constant[x_var][0]
                 y_pred_i = model.predict(X_constant)
                 delta_y = y_pred - y_pred_i
@@ -1878,13 +2324,12 @@ class Delta_regression:
                 beta = model_i.params[1]
                 dict_i[x_var] = beta
             spatial_dict[pix] = dict_i
-        df_beta = T.dic_to_df(spatial_dict,'pix')
-
+        df_beta = T.dic_to_df(spatial_dict, 'pix')
 
         for x_var in x_list:
-            spatial_dict_i = T.df_to_spatial_dic(df_beta,x_var)
-            outf = join(outdir,f'{x_var}.tif')
-            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i,outf)
+            spatial_dict_i = T.df_to_spatial_dic(df_beta, x_var)
+            outf = join(outdir, f'{x_var}.tif')
+            DIC_and_TIF().pix_dic_to_tif(spatial_dict_i, outf)
         T.open_path_and_file(outdir)
 
     def calculate_trend_contribution(self, y_variable, x_list):
@@ -1893,13 +2338,12 @@ class Delta_regression:
         contribution = slope(x, y) * trend(x) / trend(y) * 100
         """
 
-        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\zscore\\trend\\'
+        trend_dir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\X_review\\zscore\\trend\\'
         trend_dict = {}
 
         # === Load trend for each X variable ===
         for variable in x_list:
             fpath = join(trend_dir, f'{variable}_trend.tif')
-
 
             array, _, _, _, _ = ToRaster().raster2array(fpath)
             array[array < -9999] = np.nan
@@ -1923,7 +2367,6 @@ class Delta_regression:
                 continue
             arr, _, _, _, _ = ToRaster().raster2array(join(fdir_slope, f))
             multiregression_dic[f.split('.')[0]] = DIC_and_TIF().spatial_arr_to_dic(arr)
-
 
         # === Load Y trend and p-value ===
         fdir_Y = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Y\zscore\\trend\\'
@@ -1971,24 +2414,18 @@ class Delta_regression:
             outpath = join(fdir_slope, f'{var_i}_trend_contrib.tif')
             DIC_and_TIF(pixelsize=0.5).arr_to_tif(arr_contrib, outpath)
 
-
-
-
-
     def statistic_contribution_no_residual(self):
         import matplotlib.pyplot as plt
         import numpy as np
         import os
 
-        dff = result_root + rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Dataframe\\Statistics.df'
+        dff = result_root + rf'Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Statistics.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-
 
         # === 配色方案 ===
         color_list = ['#a577ad', 'yellowgreen', 'Pink', '#f69E57']
         dark_colors = ['#774685', 'Olive', 'Salmon', '#c3646f']  # 可以改为你自定义的 darken_color 函数
-
 
         for model in self.model_list:
             print(model)
@@ -1997,26 +2434,23 @@ class Delta_regression:
             # === 变量名 ===
             fixed_order = [
                 f'{model}_sensitivity_zscore_trend_contrib',
-                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib',
+                # f'{model}_CV_daily_rainfall_average_zscore_trend_contrib',
                 f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib',
 
                 f'{model}_VPD_detrend_CV_zscore_trend_contrib',
-                f'{model}_CV_daily_VPD_average_zscore_trend_contrib',
+                # f'{model}_CV_daily_VPD_average_zscore_trend_contrib',
             ]
 
             label_map = {
                 f'{model}_sensitivity_zscore_trend_contrib': 'γ',
-                f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib': 'CV_inter',
-                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'CV_VPD_inter',
-                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib':'CV_intra',
-                f'{model}_CV_daily_VPD_average_zscore_trend_contrib': 'CV_VPD_intra'
+                f'{model}_Precip_sum_detrend_CV_zscore_trend_contrib': 'Rainfallcv',
+                f'{model}_VPD_detrend_CV_zscore_trend_contrib': 'VPDcv',
+                f'{model}_CV_daily_rainfall_average_zscore_trend_contrib': 'CV_intra',
 
             }
 
             means, sems, labels = [], [], []
             print(len(df))
-
-
 
             df = df[df[f'{model}_detrend_CV_zscore_trend'] > 0]
             df = df[df[f'{model}_detrend_CV_zscore_p_value'] < 0.05]
@@ -2089,8 +2523,7 @@ class Delta_regression:
             plt.show()
             plt.close()
 
-
-    def darken_color(self,color, amount=0.7):
+    def darken_color(self, color, amount=0.7):
         """
         给颜色加深，amount 越小越深 (0~1之间)
         """
@@ -2098,21 +2531,19 @@ class Delta_regression:
         c = mcolors.to_rgb(color)
         return tuple([max(0, x * amount) for x in c])
 
-
     def statistic_contribution_area(self):
         dff = result_root + rf'\3mm\Multiregression\Multiregression_result_residual\OBS_zscore\slope\delta_multi_reg_5\statistics\\statistics.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         df = df.dropna(subset=['composite_LAI_color_map'])
 
-        percentage_list=[]
-        sum=0
+        percentage_list = []
+        sum = 0
 
-
-        for ii in [1,2,3,4,5,6]:
-            df_ii=df[df['composite_LAI_median_color_map']==ii]
-            percent=len(df_ii)/len(df)*100
-            sum=sum+percent
+        for ii in [1, 2, 3, 4, 5, 6]:
+            df_ii = df[df['composite_LAI_median_color_map'] == ii]
+            percent = len(df_ii) / len(df) * 100
+            sum = sum + percent
             percentage_list.append(percent)
         print(percentage_list)
         print(sum)
@@ -2127,27 +2558,19 @@ class Delta_regression:
 
         ]
 
-
-
-        plt.figure(figsize=(4,3))
-        plt.bar([1,2,3,4,5,6], percentage_list, color=color_list)
+        plt.figure(figsize=(4, 3))
+        plt.bar([1, 2, 3, 4, 5, 6], percentage_list, color=color_list)
         ## save fig
         plt.ylabel('Area precentage (%)')
 
         # plt.tight_layout()
-        outdir=result_root + (rf'\3mm\FIGURE\\Robinson\\')
-        T.mk_dir(outdir,force=True)
+        outdir = result_root + (rf'\3mm\FIGURE\\Robinson\\')
+        T.mk_dir(outdir, force=True)
         plt.show()
 
         # plt.savefig(outdir+'Area_precentage_composite_LAI_mean.pdf',dpi=300)
 
-
-
-
-
         pass
-
-
 
     def df_clean(self, df):
         T.print_head_n(df)
@@ -2159,14 +2582,12 @@ class Delta_regression:
         df = df[df['LC_max'] < 10]
         df = df[df['MODIS_LUCC'] != 12]
 
-
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
 
-
     def load_df(self):
-        dff=result_root+rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\Dataframe\\Dataframe.df'
+        dff = result_root + rf'\Multiregression_contribution\Obs\review\VPD_CV\Dataframe\\Dataframe.df'
 
         df = T.load_df(dff)
         # exit()
@@ -2176,6 +2597,7 @@ class Delta_regression:
         # df = Dataframe_per_value_transform(df, variable_list, start_year, end_year).df
         # T.print_head_n(df)
         return df
+
 
 class partial_correlation_TRENDY_obs_comparision():
     def __init__(self):
@@ -2187,14 +2609,14 @@ class partial_correlation_TRENDY_obs_comparision():
         #
         #
         # ]
-        self.model_list=[ 'composite_LAI_median',
-         'TRENDY_ensemble_median','CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
-            'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
-            'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
-            'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
-            'ORCHIDEE_S2_lai',
+        self.model_list = ['composite_LAI_median',
+                           'TRENDY_ensemble_median', 'CABLE-POP_S2_lai', 'CLASSIC_S2_lai',
+                           'CLM5', 'DLEM_S2_lai', 'IBIS_S2_lai', 'ISAM_S2_lai',
+                           'ISBA-CTRIP_S2_lai', 'JSBACH_S2_lai',
+                           'JULES_S2_lai', 'LPJ-GUESS_S2_lai', 'LPX-Bern_S2_lai',
+                           'ORCHIDEE_S2_lai',
 
-            'YIBs_S2_Monthly_lai',]
+                           'YIBs_S2_Monthly_lai', ]
 
     def run(self):
         # self.statistic_barplot_partial_correlation() ## not use
@@ -2206,13 +2628,12 @@ class partial_correlation_TRENDY_obs_comparision():
         # self.statistic_contribution_area_barplot_withsign()
         pass
 
-    def statistic_barplot_partial_correlation(self): ## not used
+    def statistic_barplot_partial_correlation(self):  ## not used
         dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
-        df=df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
+        df = df[df['composite_LAI_median_detrend_CV_zscore_p_value'] < 0.05]
         df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
-
 
         for col in df.columns:
             print(col)
@@ -2226,8 +2647,8 @@ class partial_correlation_TRENDY_obs_comparision():
 
         # === 准备保存结果 ===
 
-        color_list=['lightgrey']*len(model_list)
-        dark_colors=['grey']*len(model_list)
+        color_list = ['lightgrey'] * len(model_list)
+        dark_colors = ['grey'] * len(model_list)
 
         # === 开始绘图 ===
         for var in xvar_list:
@@ -2278,7 +2699,7 @@ class partial_correlation_TRENDY_obs_comparision():
             # plt.close()
 
     def max_correlation_without_sign(self):
-        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_model_comparision.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         df = df[df['composite_LAI_median_detrend_CV_zscore_trend'] > 0]
@@ -2290,8 +2711,8 @@ class partial_correlation_TRENDY_obs_comparision():
 
             'sensitivity',
             'Precip_sum_detrend_CV',
-            'CV_daily_rainfall_average',
-            'VPD_detrend_average'
+
+            'VPD_detrend_CV'
         ]
 
         for model in tqdm(model_list):
@@ -2323,31 +2744,28 @@ class partial_correlation_TRENDY_obs_comparision():
 
                 # === 嵌套逻辑：dominant + trend方向 ===
                 if 'sensitivity' in max_var:
-                        color = 1
+                    color = 1
                 elif 'Precip_sum_detrend_CV' in max_var:
 
-                        color = 2
+                    color = 2
 
-                elif 'CV_daily_rainfall_average' in max_var:
+                # elif 'CV_daily_rainfall_average' in max_var:
+                #
+                #         color = 3
 
-                        color = 3
-
-                elif 'VPD_detrend_average' in max_var:
-                    color = 4
+                elif 'VPD_detrend_CV' in max_var:
+                    color = 3
                 else:
                     color = np.nan
 
                 max_var_list.append(max_var)
                 color_list.append(color)
 
-
             df['max_var'] = max_var_list
             df['color'] = color_list
 
-
-
             # === 写出 color_map ===
-            outdir= outdir
+            outdir = outdir
             spatial_dic = T.df_to_spatial_dic(df, 'color')
             out_tif = join(outdir, 'dominant_color_map_without_sign.tif')
             DIC_and_TIF().pix_dic_to_tif(spatial_dic, out_tif)
@@ -2433,10 +2851,6 @@ class partial_correlation_TRENDY_obs_comparision():
             # plt.colorbar(label='color code')
             # plt.show()
 
-
-
-
-
     def Plot_robinson(self):
 
         fdir_trend = result_root + rf'\partial_correlation\TRENDY\result\TRENDY_ensemble_median2\\'
@@ -2445,7 +2859,6 @@ class partial_correlation_TRENDY_obs_comparision():
         outdir = result_root + rf'FIGURE\Figure4\\Robinson\\'
         T.mk_dir(outdir, force=True)
         T.mk_dir(temp_root, force=True)
-
 
         for f in os.listdir(fdir_trend):
 
@@ -2459,9 +2872,8 @@ class partial_correlation_TRENDY_obs_comparision():
             # plt.figure(figsize=(Plot_Robinson().map_width, Plot_Robinson().map_height))
             m, ret = Plot_Robinson().plot_Robinson(fpath, vmin=1, vmax=3, is_discrete=True, colormap_n=4, )
 
-
             # plt.show()
-            outf = outdir +'TRENDY_ensemble_median2.pdf'
+            outf = outdir + 'TRENDY_ensemble_median2.pdf'
             # outf = outdir +'composite_LAI_median.pdf'
             plt.savefig(outf)
             plt.close()
@@ -2474,12 +2886,10 @@ class partial_correlation_TRENDY_obs_comparision():
         # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
         # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
 
-
         for col in df.columns:
-                print(col)
+            print(col)
 
-        model_list=self.model_list
-
+        model_list = self.model_list
 
         result_dic = {}
 
@@ -2507,11 +2917,10 @@ class partial_correlation_TRENDY_obs_comparision():
 
         dic_variable_name = {1: 'gamma-',
                              2: 'CV_inter-',
-                             3:'CV_intra-',
-                             4:'CV_intra+',
-                             5:'CV_inter+',
-                             6:'gamma+'
-
+                             3: 'CV_intra-',
+                             4: 'CV_intra+',
+                             5: 'CV_inter+',
+                             6: 'gamma+'
 
                              }
 
@@ -2542,7 +2951,7 @@ class partial_correlation_TRENDY_obs_comparision():
             xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
             ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
 
-                # 可选：标出 obs/models 分界
+            # 可选：标出 obs/models 分界
             ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
 
             # plt.ylabel('Area percentage (%)')
@@ -2554,30 +2963,24 @@ class partial_correlation_TRENDY_obs_comparision():
             ax.set_ylim(0, 70)
             plt.grid(axis='y', alpha=0.25)
 
-
             plt.show()
-            outdir=result_root + rf'\FIGURE\Figure4\\Figure4_six_category\\'
+            outdir = result_root + rf'\FIGURE\Figure4\\Figure4_six_category\\'
             T.mk_dir(outdir)
-            outf=outdir+f'barplot_{ii}_six_category.pdf'
+            outf = outdir + f'barplot_{ii}_six_category.pdf'
             # plt.savefig(outf,dpi=300, bbox_inches='tight')
             # plt.close()
 
-
-
-
     def statistic_contribution_area_barplot(self):
-        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_TRENDY_comparison.df'
+        dff = result_root + rf'\partial_correlation\review\Dataframe\\Obs_model_comparision.df'
         df = T.load_df(dff)
         df = self.df_clean(df)
         # df=df[df['composite_LAI_median_detrend_CV_zscore_p_value']<0.05]
         # df=df[df['composite_LAI_median_detrend_CV_zscore_trend']>0]
 
-
         for col in df.columns:
-                print(col)
+            print(col)
 
-        model_list=self.model_list
-
+        model_list = self.model_list
 
         result_dic = {}
 
@@ -2591,7 +2994,7 @@ class partial_correlation_TRENDY_obs_comparision():
         df_common = df[df['pix'].isin(pix_common)]
 
         # —— 统计：各模型在每个组 ii 的面积百分比（分母用各自非空的样本）——
-        for ii in [1, 2, 3, 4]:
+        for ii in [1, 2, 3, ]:
             percentage_list = []
             for model in model_list:
                 col = f'{model}_dominant_color_map_without_sign'
@@ -2605,21 +3008,23 @@ class partial_correlation_TRENDY_obs_comparision():
 
         dic_variable_name = {1: 'gamma',
                              2: 'CV_inter',
-                             3:'CV_intra',
-                             4:'VPD'
 
+                             3: 'VPD'
 
                              }
 
         # 颜色：前四个为 obs，第五个（如 TRENDY ensemble）单独色，其余为统一色
-        color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
-                     + ['#F7DAD4'] * (len(model_list) - 5)
+        # color_list = ['#ADC9E4', '#EBF0FC', '#EBF0FC', '#EBF0FC', '#dd736c'] \
+        #              + ['#F7DAD4'] * (len(model_list) - 5)
+
+        color_list = ['#ADC9E4', 'yellow', ] \
+                     + ['#F7DAD4'] * (len(model_list))
 
         # 用模型名作为行索引，便于对齐
         df_new = pd.DataFrame(result_dic, index=model_list)
 
         # —— 画图：每个 ii 一张图，obs 与 models 留间隔，第一根柱子的高度画虚线（只跨 models）——
-        for ii in [1, 2, 3,4]:
+        for ii in [1, 2, 3, ]:
             vals = df_new[ii].values
             n_all = len(vals)
             n_obs = 4  # 前 4 个是 obs
@@ -2638,7 +3043,7 @@ class partial_correlation_TRENDY_obs_comparision():
             xmax = x[-1] + 0.4  # 最后一个柱子的右边缘
             ax.hlines(y_ref, xmin, xmax, colors='k', linestyles='--', linewidth=1.1, zorder=5)
 
-                # 可选：标出 obs/models 分界
+            # 可选：标出 obs/models 分界
             ax.axvline(x[n_obs] - 0.9, color='0.75', linestyle=':', linewidth=1)
 
             # plt.ylabel('Area percentage (%)')
@@ -2650,9 +3055,7 @@ class partial_correlation_TRENDY_obs_comparision():
             ax.set_ylim(0, 70)
             plt.grid(axis='y', alpha=0.25)
 
-
             plt.show()
-
 
             # plt.savefig(result_root + rf'\FIGURE\Figure4\\barplot_{ii}.pdf', dpi=300, bbox_inches='tight')
             # plt.close()
@@ -2670,20 +3073,38 @@ class partial_correlation_TRENDY_obs_comparision():
         df = df[df['landcover_classfication'] != 'Cropland']
 
         return df
+
+
 class check_Data:
     def __init__(self):
         pass
+
+    def run(self):
+        # self.plot_time_slices()
+        self.plot_spatial()
+        pass
+
+    def plot_spatial(self):
+        f = result_root + r'\partial_correlation\review\obs\input\X\\VPD_detrend_CV.npy'
+        dic = T.load_npy(f)
+        spatial_dic = {}
+        for pix in dic:
+            vals = dic[pix]
+            spatial_dic[pix] = len(vals)
+        array = DIC_and_TIF().pix_dic_to_spatial_arr(spatial_dic)
+        plt.imshow(array, interpolation='nearest')
+        plt.show()
+
     def plot_time_slices(self):
-        f=result_root + rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\CV_daily_VPD_average.npy'
-        result_dic=T.load_npy(f)
+        f = result_root + rf'Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\CV_daily_VPD_average.npy'
+        result_dic = T.load_npy(f)
 
-        profile=self.profile_template()
-        outdir=result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\slices\\'
-        Tools().mk_dir(outdir,force=True)
-        outf=outdir+f'window_extraction_VPD_daily.tif'
+        profile = self.profile_template()
+        outdir = result_root + rf'\Multiregression_contribution\Obs\review\VPD_inter_intra_CV\X_review\\slices\\'
+        Tools().mk_dir(outdir, force=True)
+        outf = outdir + f'window_extraction_VPD_daily.tif'
 
-
-        DIC_and_DF().spatial_dict_to_tif(result_dic,profile,outf,bands_description=None,nodata=np.nan)
+        DIC_and_DF().spatial_dict_to_tif(result_dic, profile, outf, bands_description=None, nodata=np.nan)
 
     def profile_template(self):
         profile = {'blockxsize': 432,
@@ -2703,25 +3124,211 @@ class check_Data:
                    'tiled': True,
                    'transform': Affine(0.5, 0.0, -180.0,
                                        0.0, -0.5, 90.0),
-                   'width':720}
+                   'width': 720}
 
         return profile
 
-
     pass
+
+
+class VIF:
+    def __init__(self):
+        pass
+
+    def run(self):
+        # self.calculating_vif()
+        self.calulating_corr()
+
+    def calculating_vif(self):
+
+        from statsmodels.stats.outliers_influence import variance_inflation_factor
+        from statsmodels.tools.tools import add_constant
+
+        variables = [
+            'composite_LAI_mean_sensitivity',
+            'Precip_sum_detrend_CV',
+            'VPD_detrend_CV',
+            'CV_daily_rainfall_average',
+
+        ]
+
+        fdir = result_root + rf'partial_correlation\review\obs\input\X\\'
+
+        all_dic = {}
+
+        # read all variables
+        for var in variables:
+            f = join(fdir, f'{var}.npy')
+
+            dic = T.load_npy(f)
+
+            all_dic[var] = dic
+
+        # common pixels
+        common_pix = set(all_dic[variables[0]].keys())
+
+        for var in variables[1:]:
+            common_pix &= set(all_dic[var].keys())
+
+        print('common pix:', len(common_pix))
+
+        rows = []
+
+        # pixel alignment
+        for pix in tqdm(common_pix):
+
+            vals_list = []
+
+            valid = True
+
+            for var in variables:
+                if var is 'composite_LAI_mean_sensitivity':
+                    vals = all_dic[var][pix]['intersensitivity_precip_val']
+                else:
+
+                    vals = np.array(all_dic[var][pix], dtype=float)
+
+                # 这里你自己决定：
+                # mean / first year / flatten
+
+                vals = vals[np.isfinite(vals)]
+
+                if len(vals) == 0:
+                    valid = False
+                    break
+
+                # example:
+                val = np.nanmean(vals)
+
+                vals_list.append(val)
+
+            if valid:
+                rows.append(vals_list)
+
+        X = pd.DataFrame(rows, columns=variables)
+
+        # clean
+        X = X.replace([np.inf, -np.inf], np.nan)
+
+        X = X.dropna()
+
+        print(X.head())
+
+        # add intercept
+        X = add_constant(X)
+
+        # calculate vif
+        vif_df = pd.DataFrame()
+
+        vif_df["Variable"] = X.columns
+
+        vif_df["VIF"] = [
+            variance_inflation_factor(X.values, i)
+            for i in range(X.shape[1])
+        ]
+
+        print(vif_df)
+
+    def calulating_corr(self):
+        variables = [
+            'composite_LAI_mean_sensitivity',
+            'Precip_sum_detrend_CV',
+            'VPD_detrend_CV',
+            'CV_daily_rainfall_average',
+
+        ]
+
+        fdir = result_root + rf'partial_correlation\review\obs\input\X\\'
+
+        all_dic = {}
+
+        # read all variables
+        for var in variables:
+            f = join(fdir, f'{var}.npy')
+
+            dic = T.load_npy(f)
+
+            all_dic[var] = dic
+
+        # common pixels
+        common_pix = set(all_dic[variables[0]].keys())
+
+        for var in variables[1:]:
+            common_pix &= set(all_dic[var].keys())
+
+        print('common pix:', len(common_pix))
+
+        rows = []
+
+        # pixel alignment
+        for pix in tqdm(common_pix):
+
+            vals_list = []
+
+            valid = True
+
+            for var in variables:
+                if var is 'composite_LAI_mean_sensitivity':
+                    vals = all_dic[var][pix]['intersensitivity_precip_val']
+                else:
+
+                    vals = np.array(all_dic[var][pix], dtype=float)
+
+                # 这里你自己决定：
+                # mean / first year / flatten
+
+                vals = vals[np.isfinite(vals)]
+
+                if len(vals) == 0:
+                    valid = False
+                    break
+
+                # example:
+                val = np.nanmean(vals)
+
+                vals_list.append(val)
+
+            if valid:
+                rows.append(vals_list)
+
+        X = pd.DataFrame(rows, columns=variables)
+        corr = X[variables].corr()
+
+        plt.imshow(corr, vmin=-1, vmax=1, cmap='RdBu_r')
+
+        plt.colorbar()
+
+        plt.xticks(range(len(variables)), variables, rotation=45)
+        plt.yticks(range(len(variables)), variables)
+
+        for i in range(len(variables)):
+            for j in range(len(variables)):
+                plt.text(
+                    j, i,
+                    round(corr.iloc[i, j], 2),
+                    ha='center',
+                    va='center'
+                )
+
+        plt.tight_layout()
+        plt.show()
+
+        pass
+
 
 def main():
     # Delta_regression().run()
-    partial_correlation_obs().run()
+    PLSR().run()
+    # partial_correlation_obs().run()
 
     # partial_correlation_TRENDY().run()
     # partial_correlation_TRENDY_obs_comparision().run()
-    # check_Data().plot_time_slices()
+    # check_Data().run()
+    # VIF().run()
     #
 
-
-
     pass
+
 
 if __name__ == '__main__':
     main()
